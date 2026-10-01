@@ -13,6 +13,8 @@ Builds use the package lock and explicit base-image versions. Registry image ava
 
 The container Vite configuration leaves ordinary host development unchanged. Compose mounts `src/` for hot reload without mounting over the container's installed dependencies. nginx `/status` checks static-server liveness; `/ready` passes through real backend readiness.
 
+The development stage transfers ownership of installed dependencies to the Node user so Vite can write its config bundle and dependency cache. Issue #6's companion CI checks exercise development startup and same-origin routing, then the static runtime.
+
 Validation with Node 24.21.0/npm 11.19.0: clean installation, lint, 16 tests, typecheck, production build, and resolved container/host routing checks pass. Full image builds and nginx checks are blocked because Docker Hub rejects unauthenticated image pulls with `toomanyrequests`. Keep the companion PRs draft until container and Compose runtime verification succeeds.
 
 In a managed proxy environment, pass the session CA as a BuildKit secret (`--secret id=proxy_ca,src="$CODEX_PROXY_CERT"`). The optional CA mount is consumed only during dependency installation, with certificate verification enabled, and is never copied into a layer. Ordinary local builds omit this secret.

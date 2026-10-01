@@ -10,6 +10,8 @@ RUN --mount=type=secret,id=proxy_ca \
 
 FROM dependencies AS development
 COPY --chown=node:node . .
+# Vite writes its config bundle and optimized dependency cache under node_modules.
+RUN chown -R node:node /app
 USER node
 EXPOSE 5173
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=6 \
