@@ -15,3 +15,5 @@ Issue #2 adds the Go HTTP executable, configuration, structured logging, health/
 PostgreSQL uses pgxpool; schema changes use a separate embedded Goose migration executable. Export a securely provisioned runtime DATABASE_URL before API startup, and a distinct MIGRATION_DATABASE_URL for migration commands. See the [database guide](../docs/database.md) for role privileges, TLS, migration safety, and disposable integration tests.
 
 Issue #7 adds typed append-oriented audit storage and a transaction helper for later mutations. See [the audit contract](../docs/audit-log.md) for allowlists, actor/correlation handling, explicit runtime grants and history-preserving rollback. No business mutation endpoint exists yet.
+
+Issue #8 adds identity storage, a one-time administrator bootstrap, Argon2id passwords and revocable cookie sessions. See [the identity contract](../docs/identity.md) for API errors, cookie/CSRF/origin policy, throttling, runtime grants and bootstrap procedure. RBAC and client scope remain #9; the login UI remains #12.

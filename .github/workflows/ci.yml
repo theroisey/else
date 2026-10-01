@@ -60,7 +60,7 @@ jobs:
           if [ -n "$files" ]; then printf '%s\n' "$files"; exit 1; fi
       - run: go vet ./...
       - run: go test -race -count=1 ./...
-      - run: CGO_ENABLED=0 go build -mod=readonly -trimpath ./cmd/api ./cmd/migrate ./cmd/healthcheck
+      - run: CGO_ENABLED=0 go build -mod=readonly -trimpath ./cmd/api ./cmd/migrate ./cmd/healthcheck ./cmd/bootstrap-admin
       - name: Publication permission and tag boundaries
         run: python3 scripts/test-publication.py
       - name: Workflow syntax and expressions

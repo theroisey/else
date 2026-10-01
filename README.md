@@ -6,9 +6,9 @@ Roisey Else is a client operations platform for financial tracking, pricing, tas
 
 The initial audit on 2026-10-01 found an empty GitHub repository and a local checkout containing only `AGENTS.md` and Obsidian settings. [Issue #1](https://github.com/theroisey/else/issues/1) establishes the repository baseline; [Issue #2](https://github.com/theroisey/else/issues/2) adds the Go HTTP foundation.
 
-The current working implementation contains engineering documentation, contribution templates, a Go HTTP foundation, and a typed React frontend with focused tests. PostgreSQL connection lifecycle and reversible migration tooling are implemented. Issue #5's containers and #6's [CI/tested-image publication](docs/ci.md) passed real main verification; [the Docker guide](docs/docker.md) documents local startup. Issue #7 adds [atomic audit infrastructure](docs/audit-log.md) for future mutations. Authentication and business modules are not implemented yet.
+The current implementation contains engineering documentation, a Go/PostgreSQL backend, a typed React frontend, verified containers/CI, and [atomic audit infrastructure](docs/audit-log.md). Issue #8 adds [secure identity and cookie sessions](docs/identity.md) on the backend. Login UI, RBAC, client scope and business modules remain later slices.
 
-Run the backend from `backend/` using `go run ./cmd/api` with Go 1.27.1. [The HTTP guide](docs/backend-http.md) documents configuration and verification. `/health` reports liveness; `/ready` checks actual PostgreSQL connectivity. Export runtime DATABASE_URL securely before API startup; [the database guide](docs/database.md) documents provisioning and separate migrations.
+Run the backend from `backend/` using `go run ./cmd/api` with Go 1.27.1. [The HTTP guide](docs/backend-http.md) documents configuration; [the identity guide](docs/identity.md) adds the required public origin, cookies, bootstrap and auth endpoints. `/health` reports liveness and `/ready` checks PostgreSQL. Export runtime DATABASE_URL securely before startup; [the database guide](docs/database.md) documents migrations and grants.
 
 Run the frontend from `frontend/` using `npm ci` and `npm run dev` with Node 24.21.0/npm 11.19.0. [The frontend guide](docs/frontend-foundation.md) documents checks and same-origin development routing. The screen displays real service availability; client operations are not implemented.
 
@@ -40,7 +40,7 @@ The frontend uses a monochrome operational design: compact navigation, dense tab
 
 ## Verification
 
-Issue #1 uses document/link/dependency review, ignore-rule checks, and generated-file whitespace validation; the original AGENTS.md formatting is preserved. Issue #2 adds Go formatting, vet, unit/race tests, and native/Linux builds. Issue #3 adds reproducible frontend installation, lint, typecheck, component/service tests, production build, dependency audit, and real-browser checks. Issue #4 adds real PostgreSQL migration/permission/readiness tests and a disposable integration runner. Issues #5/#6 provide verified application Docker builds and CI checks. Issue #7 adds audit rollback, privilege, payload-allowlist and correlation checks.
+Issue #1 uses document/link/dependency review, ignore-rule checks, and generated-file whitespace validation; the original AGENTS.md formatting is preserved. Issue #2 adds Go formatting, vet, unit/race tests, and native/Linux builds. Issue #3 adds reproducible frontend installation, lint, typecheck, component/service tests, production build, dependency audit, and real-browser checks. Issue #4 adds real PostgreSQL migration/permission/readiness tests and a disposable integration runner. Issues #5/#6 provide verified Docker builds and CI. Issue #7 adds audit atomicity/privilege checks; Issue #8 adds password, session, CSRF, throttle, bootstrap and identity permission checks.
 
 ## License
 

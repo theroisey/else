@@ -69,6 +69,12 @@ func routeLabel(path string) string {
 	switch path {
 	case "/health", "/ready":
 		return path
+	case "/api/v1/auth/login":
+		return "/api/v1/auth/login"
+	case "/api/v1/auth/logout":
+		return "/api/v1/auth/logout"
+	case "/api/v1/auth/session":
+		return "/api/v1/auth/session"
 	default:
 		return "unmatched"
 	}

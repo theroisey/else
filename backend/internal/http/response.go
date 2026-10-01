@@ -21,6 +21,10 @@ type errorResponse struct {
 }
 
 func writeError(w http.ResponseWriter, r *http.Request, status int, code, message string) {
+	WriteError(w, r, status, code, message)
+}
+
+func WriteError(w http.ResponseWriter, r *http.Request, status int, code, message string) {
 	var response errorResponse
 	response.Error.Code = code
 	response.Error.Message = message
@@ -29,6 +33,10 @@ func writeError(w http.ResponseWriter, r *http.Request, status int, code, messag
 }
 
 func writeJSON(w http.ResponseWriter, r *http.Request, status int, value any) {
+	WriteJSON(w, r, status, value)
+}
+
+func WriteJSON(w http.ResponseWriter, r *http.Request, status int, value any) {
 	// Encode before committing headers so encoding failures cannot yield partial JSON.
 	payload, err := json.Marshal(value)
 	if err != nil {

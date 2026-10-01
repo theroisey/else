@@ -207,7 +207,11 @@ func TestAuditStorageDeniesHistoryAccessAndDefendsBroadenedGrants(t *testing.T) 
 		}
 	}
 	assertCounts(t, f, admin, 1, 1)
-	if _, err := provider(t, f).Down(f.ctx); err == nil {
+	p := provider(t, f)
+	if _, err := p.Down(f.ctx); err != nil {
+		t.Fatal("empty identity migration did not roll back before audit check")
+	}
+	if _, err := p.Down(f.ctx); err == nil {
 		t.Fatal("rollback destroyed audit history")
 	}
 	assertCounts(t, f, admin, 1, 1)

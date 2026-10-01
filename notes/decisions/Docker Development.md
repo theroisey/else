@@ -10,7 +10,7 @@ tags:
 
 # Docker Development
 
-Issue [#5](https://github.com/theroisey/else/issues/5) packages the existing applications and adds local three-service orchestration. The owner merged frontend [PR #37](https://github.com/theroisey/else/pull/37) and backend/root [PR #38](https://github.com/theroisey/else/pull/38), and #5 closed. Both development branches were synchronized before Issue #6. Their runtime/container evidence remains incomplete; [[CI and Publication]] adds automated gates and a companion fix for non-root Vite cache ownership.
+Issue [#5](https://github.com/theroisey/else/issues/5) packages the existing applications and adds local three-service orchestration. The owner merged frontend [PR #37](https://github.com/theroisey/else/pull/37) and backend/root [PR #38](https://github.com/theroisey/else/pull/38), and #5 closed. [[CI and Publication]] subsequently supplied the combined runtime/container evidence and companion cache/quoting fixes.
 
 ## Decisions
 
@@ -21,6 +21,6 @@ Issue [#5](https://github.com/theroisey/else/issues/5) packages the existing app
 
 ## Evidence and limits
 
-Original source/configuration checks passed, but local Docker Hub pulls remained blocked by `toomanyrequests`; the owner merged #37/#38 with runtime verification incomplete. Issue #6's actual GitHub runs exposed the reserved database-name quoting bug and the non-root Vite cache ownership gap. Follow-up [PR #39](https://github.com/theroisey/else/pull/39) and [PR #40](https://github.com/theroisey/else/pull/40) correct those issues and pin all base manifests. [Run 36852928372](https://github.com/theroisey/else/actions/runs/36852928372) passes the full source/PostgreSQL/Compose suite, including builds, verified TLS, runtime privilege denials, migration round-trips, routing, readiness recovery, volume persistence, and non-root runtimes. The fixes await review/merge; controlled main publication remains pending.
+Local Docker Hub pulls remain blocked by `toomanyrequests`. Issue #6's actual GitHub runs exposed and verified fixes for the reserved database-name quoting bug and non-root Vite cache ownership. PRs #39/#40 were owner-merged; run 36856821215 passed all gates and the controlled main publication. Later slices continue using the same full source/PostgreSQL/Compose gate.
 
 See [Docker guide](../../docs/docker.md) for commands, renewal/reset boundaries, and proxy build secrets. [[Frontend Foundation]] remains the source of the browser behavior contract.

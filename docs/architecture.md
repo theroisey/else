@@ -18,13 +18,13 @@ Avoid generic repositories, provider interfaces, or service layers without consu
 
 Business APIs use `/api/v1`. Every implemented endpoint has a documented request/response/error contract shared with its frontend Issue. Collections have bounded pagination; filtering and sorting are explicit. Input validation rejects unsupported values, malformed identifiers, and inappropriate sizes without exposing internal errors.
 
-The [HTTP foundation](backend-http.md) defines the error envelope, request ID, and health/readiness semantics. Pagination belongs to the first collection API. This baseline does not invent frontend fields or unimplemented responses.
+The [HTTP foundation](backend-http.md) defines the error envelope, request ID, and health/readiness semantics. The [identity contract](identity.md) defines login, logout and current-session endpoints without adding business APIs. Pagination belongs to the first collection API.
 
 ## Security and client scope
 
 The backend denies access without a valid identity, required permission, and relevant client scope. Roles collect permissions; application code checks permissions rather than role names. Knowing a client or record ID never establishes access.
 
-Session, CSRF, password, rate-limit, and administrator bootstrap decisions are recorded in [Issue #8](https://github.com/theroisey/else/issues/8) before implementation. Global/client scope and grant rules are recorded in [Issue #9](https://github.com/theroisey/else/issues/9). No implicit administrator bypass or account-creation privilege is introduced here.
+Session, CSRF, password, rate-limit, and administrator bootstrap behavior follows the reviewed [Issue #8 identity contract](identity.md). Global/client scope and grant rules are recorded in [Issue #9](https://github.com/theroisey/else/issues/9). The bootstrap marker is not an authorization bypass; #9 consumes it into permissions.
 
 Integration credentials remain backend-only. Logs, URLs, frontend bundles, and audit payloads exclude secrets and sensitive payment references. Runtime database access and migration access have explicitly designed privileges.
 

@@ -46,7 +46,7 @@ compose up -d --wait postgres
 compose run --rm migrate up
 compose run --rm migrate down
 compose run --rm migrate up
-compose exec -T postgres psql -U postgres -d else -v ON_ERROR_STOP=1 -c 'GRANT USAGE ON SCHEMA app TO else_runtime; GRANT INSERT (actor_kind, actor_user_id, event_name, resource_kind, resource_id, client_id, request_id, before_state, after_state, metadata) ON app.audit_events TO else_runtime; GRANT EXECUTE ON FUNCTION app.audit_snapshot_allowed(jsonb) TO else_runtime' >/dev/null
+compose exec -T postgres psql -U postgres -d else < "$task_directory/backend/scripts/grant-runtime.sql" >/dev/null
 
 runtime_query() {
   compose exec -T postgres sh -eu -c '
@@ -58,6 +58,9 @@ runtime_query() {
 [ "$(runtime_query "SELECT rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication FROM pg_roles WHERE rolname = current_user")" = f ]
 for task_sql in 'CREATE SCHEMA forbidden_ci' 'CREATE TABLE public.forbidden_ci (id integer)' 'SELECT * FROM public.goose_db_version' 'SELECT * FROM app.audit_events' 'UPDATE app.audit_events SET event_name=$$fixture.updated$$' 'DELETE FROM app.audit_events' 'TRUNCATE app.audit_events' 'ALTER TABLE app.audit_events DISABLE TRIGGER audit_history_append_only'; do
   if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Runtime privilege boundary failed.' >&2; exit 1; fi
+done
+for task_sql in 'SELECT email FROM app.users' 'SELECT password_hash FROM app.users' 'SELECT token_hash FROM app.sessions' 'SELECT bootstrap_admin FROM app.users' 'UPDATE app.users SET bootstrap_admin=true' 'UPDATE app.users SET password_hash=$$secret$$' 'DELETE FROM app.users' 'DELETE FROM app.sessions' 'TRUNCATE app.users CASCADE'; do
+  if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Identity runtime privilege boundary failed.' >&2; exit 1; fi
 done
 if compose exec -T postgres sh -eu -c '
   export PGPASSWORD="$RUNTIME_PASSWORD" PGSSLMODE=verify-full PGSSLROOTCERT=/opt/else/tls-input/ca.crt
@@ -71,6 +74,8 @@ curl --fail --silent --show-error "$task_url/" >/dev/null
 curl --fail --silent --show-error "$task_url/health" >/dev/null
 curl --fail --silent --show-error "$task_url/ready" >/dev/null
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/unknown")" = 404 ]
+[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/auth/session")" = 401 ]
+[ "$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST --header 'Origin: https://invalid.example' --header 'Content-Type: application/json' --data '{"email":"nobody@example.com","password":"not-a-real-password"}' "$task_url/api/v1/auth/login")" = 403 ]
 compose stop postgres >/dev/null
 curl --fail --silent --show-error "$task_url/health" >/dev/null
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/ready")" = 503 ]
@@ -100,6 +105,7 @@ task_address=$(compose_production port frontend 8080)
 task_url="http://$task_address"
 for task_path in / /status /health /ready; do curl --fail --silent --show-error "$task_url$task_path" >/dev/null; done
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/unknown")" = 404 ]
+[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/auth/session")" = 401 ]
 for task_component in frontend backend; do
   task_image=$(compose_production images --quiet "$task_component")
   task_user=$(docker image inspect --format '{{.Config.User}}' "$task_image")

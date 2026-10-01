@@ -1,6 +1,6 @@
 ---
 type: decision
-status: pr-review
+status: merged
 created: 2026-10-01
 tags:
   - audit
@@ -20,7 +20,7 @@ Audit INSERT is column-scoped, with no runtime SELECT/update/delete/truncate or 
 
 Audit rollback locks and refuses nonempty history. No automatic deletion/retention; privileged retention policy needs a separate Issue. Empty full migration roundtrips remain reversible. Future identity/client FKs and read authorization belong to their own Issues.
 
-Go formatting/vet/race/static builds and tagged-suite compilation pass locally. All four actual gates pass in CI run 36858914108 for cea4720d25d096c489326035b950e1e1a1bfec24, including PostgreSQL rollback/permissions/correlation and Compose runtime/migrations. Publication is correctly skipped on the PR. Docker Hub's unauthenticated pull limit still blocks local container execution; GitHub supplied runtime evidence. PR #41 awaits owner review/merge.
+PR #41 was owner-merged. Its implementation and documentation runs passed all four gates; main run 36860620016 also passed and published the tested images. Docker Hub's unauthenticated pull limit still blocks local container execution; GitHub supplied runtime evidence. Issue #7 is complete.
 
 - [Issue #7](https://github.com/theroisey/else/issues/7)
 - [Audit contract](../../docs/audit-log.md)
