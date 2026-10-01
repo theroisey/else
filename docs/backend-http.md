@@ -4,9 +4,9 @@ Related Issue: [#2](https://github.com/theroisey/else/issues/2).
 
 ## Implemented scope
 
-The Go backend has configuration validation, structured JSON logging, server-owned request IDs, safe HTTP errors, liveness/readiness endpoints, timeouts, bounded headers, and graceful shutdown. It uses the standard library without third-party modules.
+The Go backend has configuration validation, structured JSON logging, server-owned request IDs, safe HTTP errors, liveness/readiness endpoints, timeouts, bounded headers, and graceful shutdown. HTTP transport uses the standard library; the database layer uses pgx and separate Goose migration tooling.
 
-PostgreSQL, migrations, authentication, business routes, audit persistence, Docker packaging, and CI remain separate roadmap work. No client records or write APIs are exposed.
+PostgreSQL connection lifecycle and migrations are implemented in the [database guide](database.md). Authentication, business routes, audit persistence, Docker packaging, and CI remain separate roadmap work. No client records or write APIs are exposed.
 
 The module requires Go 1.27.1, selected from the [official stable release metadata](https://go.dev/dl/?mode=json) during implementation. The verification toolchain was downloaded into temporary storage and checked against the official archive SHA-256; no global installation was changed.
 
@@ -15,6 +15,7 @@ The module requires Go 1.27.1, selected from the [official stable release metada
 From `backend/`, with the documented Go toolchain available:
 
 ```sh
+# Export DATABASE_URL securely as described in docs/database.md first.
 go run ./cmd/api
 ```
 
@@ -56,7 +57,7 @@ Present but empty configuration values fail validation. Validation errors name t
 - `/ready`: `200` with `{"status":"ready"}` only after a configured dependency checker succeeds before its deadline. Returns `503` while the checker is missing, fails, times out, or the server is draining.
 - `HEAD` returns the corresponding status and headers without a body.
 
-The executable deliberately has no dependency checker yet, so `/ready` returns `503`. Issue #4 wires actual PostgreSQL readiness through `ReadinessCheck(context.Context) error`. A checker must respect context cancellation and test every required dependency. A nil or timed-out checker must never be treated as healthy.
+The executable wires a real PostgreSQL pool check through `ReadinessCheck(context.Context) error`. Startup fails without a valid DATABASE_URL and successful connection; readiness is 200 while connectivity succeeds and 503 on a subsequent outage. A checker must respect context cancellation and test every required dependency. A nil or timed-out checker must never be treated as healthy.
 
 Accepted requests receive `X-Request-ID`, `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store`, and `X-Content-Type-Options: nosniff`. Caller-supplied request IDs are ignored; the backend creates a fresh ID and places it in request context for future services/audit integration.
 
