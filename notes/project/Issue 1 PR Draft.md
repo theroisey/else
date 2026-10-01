@@ -1,6 +1,6 @@
 ---
 type: pull-request-draft
-status: ready-for-pr
+status: open-draft-pr
 created: 2026-10-01
 tags:
   - project
@@ -10,9 +10,9 @@ tags:
 
 # Issue 1 PR Draft
 
-Proposed title: `docs: establish repository conventions and architecture baseline`
+PR title: `docs: establish repository conventions and architecture baseline`
 
-Target: `backend` into `main`, based on the approved empty-history bootstrap `6d4742d`. This document supplies the baseline PR description; the published PR link is recorded in Issue #1.
+Target: `backend` into `main`, based on the approved empty-history bootstrap `6d4742d`. Published draft: [PR #33](https://github.com/theroisey/else/pull/33). This document supplies the PR description and tracks review status.
 
 ## What changed
 
@@ -48,7 +48,7 @@ Not applicable: no UI is implemented.
 
 ## Testing Performed
 
-Verified 32 published Issue bodies, labels, milestone assignments, and an acyclic dependency graph through the GitHub API. Local checks resolve 139 Markdown links and all Wiki links; all 32 Issue references exist. Ignore-rule checks exclude 13 sensitive/generated paths and retain nine source/example/note paths. Whitespace validation passes for all 13 generated files, including untracked files. Five YAML/frontmatter blocks parse, and the Issue template includes all 15 required sections. AGENTS.md and existing Obsidian settings were not edited.
+Verified 32 published Issue bodies, labels, milestone assignments, and an acyclic dependency graph through the GitHub API. Local checks resolve 140 Markdown links and all Wiki links; all 32 Issue references exist. Ignore-rule checks exclude 13 sensitive/generated paths and retain nine source/example/note paths. Whitespace validation passes for all 13 generated files, including untracked files. Five YAML/frontmatter blocks parse, and the Issue template includes all 15 required sections. AGENTS.md and existing Obsidian settings were not edited.
 
 The full staged `git diff --cached --check` reports the supplied AGENTS.md's existing Markdown hard-break spaces at line 5 and extra blank line at EOF. The supplied contract is preserved byte-for-byte, verified by SHA-256; these original formatting findings remain visible rather than being reported as a passing full check.
 
@@ -62,7 +62,7 @@ No deployment. The owner approved and executed a one-time empty main commit to s
 
 - [x] Baseline acceptance verified
 - [x] Approved base commit exists; backend/frontend originate from main
-- [ ] Actual PR references Issue #1
+- [x] Actual PR references Issue #1
 - [x] Document links and dependency graph verified
 - [x] Ignore rules and whitespace verified
 - [x] Supplied AGENTS.md unchanged

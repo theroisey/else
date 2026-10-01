@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-All 32 Issues are open. Issue #1 has the baseline work and a prepared PR description. The owner approved the one-time empty main commit; development branches originate from that baseline. Issue #1 remains open until its PR is reviewed and merged. No production deployment is authorized or attempted.
+All 32 Issues are open. Issue #1 has the baseline work in draft PR #33, from backend into main. The owner approved the one-time empty main commit; development branches originate from that baseline. Issue #1 remains open until its PR is reviewed and merged. No production deployment is authorized or attempted.
