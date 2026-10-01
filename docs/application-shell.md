@@ -12,10 +12,14 @@ Related Issue: [#12](https://github.com/theroisey/else/issues/12). This frontend
 | `/app/access` | Requires a verified session; shows and refreshes only the caller's effective grants |
 | `/app/users` | Requires global `users.view`; account and scoped role administration |
 | `/app/roles` | Requires global `roles.view`; role definitions and controlled permission editing |
+| `/app/clients` | Requires some client view grant or global client create; authorized list or create-only context |
+| `/app/clients/new` | Requires global `clients.create`; full profile/contact/tag form |
+| `/app/clients/:id` | Requires exact-client `clients.view`; compact client workspace |
+| `/app/clients/:id/edit` | Requires exact-client view and update; archived records cannot be edited |
 | `/status` | Public real liveness/readiness checks |
 | `/interface` | Existing public local-state component review surface |
 
-Unknown routes show an explicit fallback. Navigation includes Workspace, My access, permission-guarded Users/Roles and Service status. [Administration](administration.md) consumes the owner-merged API. Clients, billing, audit inspection and releases await their scoped implementations.
+Unknown routes show an explicit fallback. Navigation includes Workspace, My access, permission-guarded Clients/Users/Roles and Service status. [Administration](administration.md) and [clients](client-interface.md) consume their owner-merged APIs. Billing, audit inspection and releases await their scoped implementations.
 
 ## Cookie and transport boundary
 
@@ -31,7 +35,7 @@ Initial identity load gates protected content. Lookup errors fail closed even wi
 
 Identity refreshes on focus, reconnection, every sixty seconds while visible and the My access button. Grant changes become visible on the next read. Every future backend operation must still authorize the current actor, permission and exact client. The frontend rejects unknown keys, scope mismatches, absent client context and cross-client grants. A global assignment satisfies a client permission only with an explicit valid client context. There are no role-name checks.
 
-`PermissionGuard` and `visibleDestinations` use the same predicate. New implemented destinations declare their requirement in the registry and use the matching route guard. Workspace/My access expose only the caller's identity and need a session, so no unrelated administrative permission is invented.
+`PermissionGuard` and `visibleDestinations` use the same permission policy. Clients navigation admits either some effective view grant or global create; client pages apply the corresponding collection/create/exact-client guard before loading data. Client route return paths accept only a canonical UUID with the implemented optional edit suffix, or the fixed create route. Filters remain in memory and are excluded from return URLs. Workspace/My access expose only the caller's identity and need a session, so no unrelated administrative permission is invented.
 
 ## Accessibility and visual review
 
@@ -47,6 +51,6 @@ Committed screenshots are explicitly synthetic visual fixtures from intercepted 
 
 Run lint, strict typecheck, Vitest, build and dependency audit. Component/service tests cover validation, password clearing, safe login/logout failures, cache removal, malformed/missing identity, retry, 401/timed expiry, exact-client permissions, guarded content, empty grants, return allowlisting and secure CSRF selection.
 
-The required **Browser authentication** CI job installs pinned Playwright/Chromium and runs `sh frontend/scripts/test-auth-browser.sh`. The runner refuses occupied app ports, creates disposable PostgreSQL 18, applies existing migrations/runtime grants, adds clearly synthetic viewer/administrator identities, builds Go and starts Vite. Four serial browser flows verify generic denied login, cookie flags, no credential persistence, real CSRF logout/auth audit counts, server-side expiry/reauthentication, revoked-grant refresh, administration writes and audit events, last-administrator protection, disablement/session revocation and responsive keyboard navigation. Traces, video, request bodies and raw cookie values are not recorded. The runner removes only its own database/processes/temp files on exit. Never provision these known test identities/passwords into a real environment.
+The required **Browser authentication** CI job installs pinned Playwright/Chromium and runs `sh frontend/scripts/test-auth-browser.sh`. The runner refuses occupied app ports, creates disposable PostgreSQL 18, applies existing migrations/runtime grants, adds clearly synthetic viewer/administrator identities, builds Go and starts Vite. Five serial browser flows verify generic denied login, cookie flags, no credential persistence, real CSRF logout/auth audit counts, server-side expiry/reauthentication, revoked-grant refresh, administration writes and audit events, last-administrator protection, disablement/session revocation, the client lifecycle and responsive keyboard navigation. Client verification uses a dedicated scoped viewer to respect the real per-identity login attempt budget. Traces, video, request bodies and raw cookie values are not recorded. The runner removes only its own database/processes/temp files on exit. Never provision these known test identities/passwords into a real environment.
 
-Local Docker pulls remain blocked by the anonymous Docker Hub limit. The administration slice also verifies all four browser flows locally using a newly created disposable PostgreSQL 17.11 database and system Chromium; CI remains authoritative for PostgreSQL 18/container checks. The earlier shell screenshots use intercepted visual fixtures; administration screenshots come from real isolated API data. Existing backend race, live PostgreSQL, container/TLS/migration and publication-boundary gates remain required; main publication also waits for browser authentication. No deployment is performed.
+Local Docker pulls remain blocked by the anonymous Docker Hub limit. The client slice verifies all five browser flows locally using a newly created disposable PostgreSQL 17.11 database and system Chromium; CI remains authoritative for PostgreSQL 18/container checks. The earlier shell screenshots use intercepted visual fixtures; administration/client screenshots come from real isolated API data. Existing backend race, live PostgreSQL, container/TLS/migration and publication-boundary gates remain required; main publication also waits for browser authentication. No deployment is performed.

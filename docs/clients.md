@@ -1,6 +1,6 @@
 # Client records and API
 
-Related Issue: [#13](https://github.com/theroisey/else/issues/13). This backend slice provides the contract for the client table/workspace UI in #14. It adds no product navigation or simulated client data.
+Related Issue: [#13](https://github.com/theroisey/else/issues/13), owner-merged in [PR #48](https://github.com/theroisey/else/pull/48). This backend slice provides the contract consumed by [the client interface](client-interface.md) in #14. Test data remains separate from real application records.
 
 ## Authorization and archival
 

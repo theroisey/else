@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#13](https://github.com/theroisey/else/issues/13), isolated client records and the audited client API. Issues #1–#12 are owner-merged. Administration frontend PR #47 is merged at `cf26da0`; both development branches were synchronized. Main [run 36923454442](https://github.com/theroisey/else/actions/runs/36923454442) passed all five gates and tested-image publication, including the repaired logout assertion. [The client contract](clients.md) documents exact-scope access, contacts/tags, archival, legacy scope history and rollout. Client UI follows separately in #14.
+Current slice: [#14](https://github.com/theroisey/else/issues/14), the authorized client table, validated forms and workspace navigation. Issues #1–#13 are owner-merged. Backend PR #48 is merged at `4efc7e8`; both development branches were synchronized. Main [run 36927463099](https://github.com/theroisey/else/actions/runs/36927463099) passed all five gates and tested-image publication. [The client contract](clients.md) documents exact-scope access, contacts/tags, archival, legacy scope history and rollout; [the interface](client-interface.md) consumes that API.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#12 are merged. Issue #13 adds the backend client contract with real records, bounded reads, exact authorization, atomic audit, revision protection and retained archival. Its PR closes #13 only after owner review/merge; #14 consumes that contract for UI. Password recovery and business domains remain later slices. No production deployment is authorized or performed.
+Issues #1–#13 are merged. Issue #14 consumes the client contract for bounded authorized lists, profile/contact/tag forms, explicit conflict recovery, confirmed archival and compact client workspaces. Its frontend PR closes #14 only after owner review/merge. Task API #15 is next after this UI slice; password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
