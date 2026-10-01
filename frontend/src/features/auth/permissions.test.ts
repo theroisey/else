@@ -9,6 +9,13 @@ const otherID = '22222222-2222-4222-8222-222222222222'
 const grants: Grant[] = [{ permission: 'roles.manage', scope: 'global' }, { permission: 'clients.view', scope: 'client', client_id: clientID }]
 
 describe('effective permissions', () => {
+  it.each(['tasks.create', 'tasks.update', 'tasks.delete'])('recognizes %s with exact client scope', (permission) => {
+    const scoped: Grant[] = [{ permission, scope: 'client', client_id: clientID }]
+    expect(hasPermission(scoped, { permission, scope: 'client', clientID })).toBe(true)
+    expect(hasPermission(scoped, { permission, scope: 'client', clientID: otherID })).toBe(false)
+    expect(hasPermission(scoped, { permission, scope: 'global' })).toBe(false)
+    expect(hasPermission([{ permission, scope: 'global' }], { permission, scope: 'client', clientID })).toBe(true)
+  })
   it('requires known identifiers and matching global/exact-client scope', () => {
     expect(hasPermission(grants, { permission: 'roles.manage', scope: 'global' })).toBe(true)
     expect(hasPermission(grants, { permission: 'clients.view', scope: 'client', clientID })).toBe(true)

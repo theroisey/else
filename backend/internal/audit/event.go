@@ -33,6 +33,8 @@ const (
 	Deleted           Action = "deleted"
 	Disabled          Action = "disabled"
 	PermissionChanged Action = "permission_changed"
+	Completed         Action = "completed"
+	Cancelled         Action = "cancelled"
 )
 
 type Source string
@@ -46,9 +48,10 @@ const (
 // Snapshot's initial allowlist contains universal record markers only. Domain
 // slices must add reviewed typed fields; raw DTOs/maps/strings cannot be stored.
 type Snapshot struct {
-	Exists   *bool   `json:"exists,omitempty"`
-	Revision *int64  `json:"revision,omitempty"`
-	Status   *string `json:"status,omitempty"`
+	Exists     *bool   `json:"exists,omitempty"`
+	Revision   *int64  `json:"revision,omitempty"`
+	Status     *string `json:"status,omitempty"`
+	TaskStatus *string `json:"task_status,omitempty"`
 }
 
 type Metadata struct {
@@ -94,6 +97,10 @@ func (e Event) encode() (before, after, metadata []byte, err error) {
 		if e.ResourceKind != "role" {
 			return nil, nil, nil, ErrInvalidEvent
 		}
+	case Completed, Cancelled:
+		if e.ResourceKind != "task" {
+			return nil, nil, nil, ErrInvalidEvent
+		}
 	default:
 		return nil, nil, nil, ErrInvalidEvent
 	}
@@ -103,6 +110,16 @@ func (e Event) encode() (before, after, metadata []byte, err error) {
 		return nil, nil, nil, ErrInvalidEvent
 	}
 	for _, snapshot := range []*Snapshot{e.Before, e.After} {
+		if snapshot != nil && snapshot.TaskStatus != nil {
+			if e.ResourceKind != "task" {
+				return nil, nil, nil, ErrInvalidEvent
+			}
+			switch *snapshot.TaskStatus {
+			case "backlog", "todo", "in_progress", "blocked", "review", "done", "cancelled":
+			default:
+				return nil, nil, nil, ErrInvalidEvent
+			}
+		}
 		if snapshot != nil && snapshot.Status != nil && *snapshot.Status != "active" && *snapshot.Status != "disabled" {
 			return nil, nil, nil, ErrInvalidEvent
 		}
