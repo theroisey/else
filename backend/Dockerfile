@@ -9,6 +9,7 @@ RUN --mount=type=secret,id=proxy_ca \
 COPY . .
 RUN go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/api ./cmd/api \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/migrate ./cmd/migrate \
+    && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/bootstrap-admin ./cmd/bootstrap-admin \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/healthcheck ./cmd/healthcheck
 
 FROM scratch AS common
@@ -19,6 +20,10 @@ FROM common AS migration
 COPY --from=build /out/migrate /migrate
 ENTRYPOINT ["/migrate"]
 CMD ["status"]
+
+FROM common AS bootstrap
+COPY --from=build /out/bootstrap-admin /bootstrap-admin
+ENTRYPOINT ["/bootstrap-admin"]
 
 FROM common AS production
 COPY --from=build /out/api /api

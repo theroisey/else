@@ -11,6 +11,7 @@ import (
 	"github.com/theroisey/else/backend/internal/config"
 	"github.com/theroisey/else/backend/internal/database"
 	httpapi "github.com/theroisey/else/backend/internal/http"
+	"github.com/theroisey/else/backend/internal/identity"
 )
 
 func main() {
@@ -43,7 +44,22 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		return 1
 	}
 	defer pool.Close()
-	server, err := httpapi.New(c, logger, pool.Ping)
+	authConfig, err := config.LoadAuth(lookup)
+	if err != nil {
+		logger.Error("invalid_configuration", "detail", err.Error())
+		return 1
+	}
+	identityService, err := identity.NewService(pool, identity.ArgonPasswords{})
+	if err != nil {
+		logger.Error("identity_startup_failed", "error_code", "identity_startup_failed")
+		return 1
+	}
+	authHandler, err := identity.NewHandler(identityService, authConfig, logger)
+	if err != nil {
+		logger.Error("identity_startup_failed", "error_code", "identity_startup_failed")
+		return 1
+	}
+	server, err := httpapi.New(c, logger, pool.Ping, authHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1

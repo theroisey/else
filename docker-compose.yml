@@ -28,6 +28,8 @@ services:
       target: production
     environment:
       DATABASE_URL: postgres://else_runtime:${RUNTIME_PASSWORD:?Missing runtime password}@postgres:5432/else?sslmode=verify-full&sslrootcert=/etc/else/ca.crt
+      AUTH_PUBLIC_ORIGIN: http://localhost:${FRONTEND_PORT:-5173}
+      AUTH_COOKIE_SECURE: "false"
     volumes:
       - ./docker/dev/tls/ca.crt:/etc/else/ca.crt:ro
     depends_on:
@@ -58,6 +60,23 @@ services:
       - ./docker/dev/tls/ca.crt:/etc/else/ca.crt:ro
     depends_on:
       postgres: {condition: service_healthy}
+    networks: [database]
+
+  bootstrap-admin:
+    profiles: [tools]
+    build:
+      context: ./backend
+      target: bootstrap
+    environment:
+      BOOTSTRAP_DATABASE_URL: postgres://else_migrator:${MIGRATOR_PASSWORD:?Missing migration password}@postgres:5432/else?sslmode=verify-full&sslrootcert=/etc/else/ca.crt
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-}
+    volumes:
+      - ./docker/dev/tls/ca.crt:/etc/else/ca.crt:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+    stdin_open: true
+    tty: true
     networks: [database]
 
 volumes:

@@ -23,7 +23,7 @@ Issue [#6](https://github.com/theroisey/else/issues/6) adds frontend, Go, Postgr
 
 Docker Hub still rejects local pulls with its unauthenticated rate limit after #37/#38 merged. The original Docker runtime gate remained unverified despite Issue #5 closing on owner merge. Redacted Compose diagnostics exposed `else` as an unquoted reserved SQL keyword; bootstrap provisioning and database documentation now quote it. Related frontend commits are integrated into the backend CI branch for combined verification while retaining the separate frontend PR. Node/Go/nginx and Dockerfile frontend digests are resolved and pinned.
 
-[PR run 36852928372](https://github.com/theroisey/else/actions/runs/36852928372) passes all four gates for implementation revision `a8ace7816d29e73ae54cf3cfe1168ea64370fe3c`, including development/static image builds, TLS/role checks, migrations, routing, readiness recovery, persistence, and non-root runtime verification. PR publication is skipped. The tested images export successfully; main-only artifact transfer/registry promotion and a controlled main publication remain unobserved. Issue #6 stays open for those acceptance checks after owner review/merge. No production deployment occurred.
+[PR run 36852928372](https://github.com/theroisey/else/actions/runs/36852928372) passed all four implementation gates. The owner merged PRs #39/#40, and [main run 36856821215](https://github.com/theroisey/else/actions/runs/36856821215) passed artifact transfer and GHCR publication. Issue #6 is closed. Later main run 36860620016 published the owner-merged audit revision through the same tested-image path. No production deployment occurred.
 
 See [CI guide](../../docs/ci.md) and [[Docker Development]].
 

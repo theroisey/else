@@ -6,7 +6,7 @@ Related Issue: [#2](https://github.com/theroisey/else/issues/2).
 
 The Go backend has configuration validation, structured JSON logging, server-owned request IDs, safe HTTP errors, liveness/readiness endpoints, timeouts, bounded headers, and graceful shutdown. HTTP transport uses the standard library; the database layer uses pgx and separate Goose migration tooling.
 
-PostgreSQL connection lifecycle and migrations are implemented in the [database guide](database.md). Audit persistence uses [the transaction contract](audit-log.md); [Docker](docker.md) and [CI](ci.md) are implemented. Authentication and business routes remain separate roadmap work. No client records or write APIs are exposed.
+PostgreSQL lifecycle is implemented in the [database guide](database.md), audit persistence in [the transaction contract](audit-log.md), and authentication in [the identity contract](identity.md). Docker and CI are implemented. Business routes, RBAC and client records are not exposed.
 
 The module requires Go 1.27.1, selected from the [official stable release metadata](https://go.dev/dl/?mode=json) during implementation. The verification toolchain was downloaded into temporary storage and checked against the official archive SHA-256; no global installation was changed.
 
@@ -46,12 +46,16 @@ gofmt -l cmd/api internal
 | `HTTP_SHUTDOWN_TIMEOUT` | `10s` | Positive Go duration, at most `5m` |
 | `HTTP_READINESS_TIMEOUT` | `2s` | Positive Go duration, less than write timeout, at most `5m` |
 | `HTTP_MAX_HEADER_BYTES` | `16384` | Integer 1024–65536 |
+| `AUTH_PUBLIC_ORIGIN` | required | Exact HTTP(S) origin; HTTPS required for secure cookies |
+| `AUTH_COOKIE_SECURE` | `true` | `false` only with an HTTP loopback origin |
 
 Present but empty configuration values fail validation. Validation errors name the setting and constraint, never its raw supplied value. Defaults bind locally; container binding and production TLS termination are documented by their future deployment Issues.
 
 ## Endpoint contract
 
 `GET` and `HEAD` are accepted on exactly `/health` and `/ready`. Unsupported methods return `405` with `Allow: GET, HEAD`. Unknown paths, including unimplemented `/api/v1` business routes, return `404`.
+
+The exact auth routes `/api/v1/auth/login`, `/api/v1/auth/logout`, and `/api/v1/auth/session` are described in [identity](identity.md). Other `/api/v1` paths remain 404.
 
 - `/health`: `200` with `{"status":"ok"}` when the process serves HTTP. It does not assert database or integration health.
 - `/ready`: `200` with `{"status":"ready"}` only after a configured dependency checker succeeds before its deadline. Returns `503` while the checker is missing, fails, times out, or the server is draining.
@@ -75,7 +79,7 @@ Handler errors use this envelope; the same structure applies to future versioned
 }
 ```
 
-Current codes are `not_found`, `method_not_allowed`, `not_ready`, and `internal_error`. Messages exclude raw internal errors, configuration values, dependency credentials, and stack traces. Errors arising in HTTP protocol parsing before handlers run may use standard library responses and do not have a generated request ID; do not assume an envelope exists for malformed transport input.
+Foundation codes include `not_found`, `method_not_allowed`, `not_ready`, and `internal_error`; auth adds stable codes documented in the identity guide. Messages exclude raw internal errors, configuration values, dependency credentials, and stack traces. Errors arising before handlers run may use standard-library responses without a generated request ID.
 
 No pagination convention is implemented until an actual collection API requires one. Business validation, permissions, and domain error codes are defined by their owning Issues.
 

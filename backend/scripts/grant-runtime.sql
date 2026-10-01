@@ -1,0 +1,19 @@
+-- Local Compose role provisioning after every migration up/down/up cycle.
+-- Production operators must substitute their separately provisioned runtime role.
+\set ON_ERROR_STOP on
+GRANT USAGE ON SCHEMA app TO else_runtime;
+GRANT INSERT (actor_kind, actor_user_id, event_name, resource_kind, resource_id,
+              client_id, request_id, before_state, after_state, metadata)
+ON app.audit_events TO else_runtime;
+GRANT EXECUTE ON FUNCTION app.audit_snapshot_allowed(jsonb) TO else_runtime;
+
+GRANT SELECT (id) ON app.users TO else_runtime;
+GRANT UPDATE (last_login_at, updated_at) ON app.users TO else_runtime;
+GRANT SELECT (id, expires_at, revoked_at) ON app.sessions TO else_runtime;
+GRANT INSERT (id, user_id, token_hash, csrf_hash, created_at, expires_at)
+ON app.sessions TO else_runtime;
+GRANT UPDATE (revoked_at) ON app.sessions TO else_runtime;
+GRANT EXECUTE ON FUNCTION app.authentication_identity(text),
+                          app.lock_authentication_identity(uuid),
+                          app.current_identity(bytea, timestamptz)
+TO else_runtime;
