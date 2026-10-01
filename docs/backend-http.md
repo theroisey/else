@@ -6,7 +6,7 @@ Related Issue: [#2](https://github.com/theroisey/else/issues/2).
 
 The Go backend has configuration validation, structured JSON logging, server-owned request IDs, safe HTTP errors, liveness/readiness endpoints, timeouts, bounded headers, and graceful shutdown. HTTP transport uses the standard library; the database layer uses pgx and separate Goose migration tooling.
 
-PostgreSQL lifecycle is implemented in the [database guide](database.md), audit persistence in [the transaction contract](audit-log.md), and authentication in [the identity contract](identity.md). Docker and CI are implemented. Business routes, RBAC and client records are not exposed.
+PostgreSQL lifecycle is implemented in the [database guide](database.md), audit persistence in [the transaction contract](audit-log.md), and authentication in [the identity contract](identity.md). Docker, CI and [RBAC](authorization.md) are implemented. [Administration](administration.md) adds user/role routes; client records and financial routes remain later work.
 
 The module requires Go 1.27.1, selected from the [official stable release metadata](https://go.dev/dl/?mode=json) during implementation. The verification toolchain was downloaded into temporary storage and checked against the official archive SHA-256; no global installation was changed.
 
@@ -55,7 +55,7 @@ Present but empty configuration values fail validation. Validation errors name t
 
 `GET` and `HEAD` are accepted on exactly `/health` and `/ready`. Unsupported methods return `405` with `Allow: GET, HEAD`. Unknown paths, including unimplemented `/api/v1` business routes, return `404`.
 
-The exact auth routes `/api/v1/auth/login`, `/api/v1/auth/logout`, and `/api/v1/auth/session` are described in [identity](identity.md). Other `/api/v1` paths remain 404.
+The exact auth routes `/api/v1/auth/login`, `/api/v1/auth/logout`, and `/api/v1/auth/session` are described in [identity](identity.md). User/role/permission routes are described in [administration](administration.md). Other unimplemented `/api/v1` paths return 404.
 
 - `/health`: `200` with `{"status":"ok"}` when the process serves HTTP. It does not assert database or integration health.
 - `/ready`: `200` with `{"status":"ready"}` only after a configured dependency checker succeeds before its deadline. Returns `503` while the checker is missing, fails, times out, or the server is draining.

@@ -64,6 +64,11 @@ var permissionScopes = map[Permission]Scope{
 	TasksView: Client, TasksManage: Client, AnalyticsView: Client, IntegrationsManage: Client,
 }
 
+func KnownPermission(permission Permission) bool {
+	_, known := permissionScopes[permission]
+	return known
+}
+
 type Grant struct {
 	Permission Permission `json:"permission"`
 	Scope      Scope      `json:"scope"`

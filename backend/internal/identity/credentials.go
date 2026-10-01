@@ -94,6 +94,17 @@ func canonicalEmail(value string) (string, bool) {
 	return value, len(value) >= 3 && len(value) <= 254 && emailPattern.MatchString(value)
 }
 
+// NormalizeProfile shares identity's canonical email/name contract with the
+// administration domain, without exposing credential internals.
+func NormalizeProfile(email, name string) (string, string, error) {
+	email, ok := canonicalEmail(email)
+	name = strings.TrimSpace(name)
+	if !ok || !validDisplayName(name) {
+		return "", "", ErrInvalidInput
+	}
+	return email, name, nil
+}
+
 func validDisplayName(value string) bool {
 	return utf8.ValidString(value) && value == strings.TrimSpace(value) && utf8.RuneCountInString(value) >= 1 && utf8.RuneCountInString(value) <= 100
 }

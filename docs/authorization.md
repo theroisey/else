@@ -49,4 +49,4 @@ Migration `000004_create_authorization.sql` adds protected permission, role, rol
 
 Integration coverage exercises the Initial Administrator/Finance/Viewer matrix, global and exact-client scope, Viewer mutation denial, Finance role-administration denial, unknown permissions, disabled users, delegated escalation attempts, audited assignment/revocation, audit-failure rollback, bootstrap conversion, runtime table denial and migration rollback behavior. The Compose permission probe covers the same storage boundary.
 
-No user/role administration endpoints, client records or business-domain APIs are added by this slice; those remain Issues #10 and #13.
+Issue #10 adds the [user/role administration API](administration.md), including storage guards that protect the final active administrator across account and grant removals. Client records and business-domain APIs remain later slices.

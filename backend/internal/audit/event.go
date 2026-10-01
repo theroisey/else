@@ -27,10 +27,12 @@ type Actor struct {
 type Action string
 
 const (
-	Created  Action = "created"
-	Updated  Action = "updated"
-	Archived Action = "archived"
-	Deleted  Action = "deleted"
+	Created           Action = "created"
+	Updated           Action = "updated"
+	Archived          Action = "archived"
+	Deleted           Action = "deleted"
+	Disabled          Action = "disabled"
+	PermissionChanged Action = "permission_changed"
 )
 
 type Source string
@@ -44,8 +46,9 @@ const (
 // Snapshot's initial allowlist contains universal record markers only. Domain
 // slices must add reviewed typed fields; raw DTOs/maps/strings cannot be stored.
 type Snapshot struct {
-	Exists   *bool  `json:"exists,omitempty"`
-	Revision *int64 `json:"revision,omitempty"`
+	Exists   *bool   `json:"exists,omitempty"`
+	Revision *int64  `json:"revision,omitempty"`
+	Status   *string `json:"status,omitempty"`
 }
 
 type Metadata struct {
@@ -83,6 +86,14 @@ func (e Event) encode() (before, after, metadata []byte, err error) {
 	}
 	switch e.Action {
 	case Created, Updated, Archived, Deleted:
+	case Disabled:
+		if e.ResourceKind != "user" {
+			return nil, nil, nil, ErrInvalidEvent
+		}
+	case PermissionChanged:
+		if e.ResourceKind != "role" {
+			return nil, nil, nil, ErrInvalidEvent
+		}
 	default:
 		return nil, nil, nil, ErrInvalidEvent
 	}
@@ -92,6 +103,9 @@ func (e Event) encode() (before, after, metadata []byte, err error) {
 		return nil, nil, nil, ErrInvalidEvent
 	}
 	for _, snapshot := range []*Snapshot{e.Before, e.After} {
+		if snapshot != nil && snapshot.Status != nil && *snapshot.Status != "active" && *snapshot.Status != "disabled" {
+			return nil, nil, nil, ErrInvalidEvent
+		}
 		if snapshot != nil && snapshot.Revision != nil && *snapshot.Revision < 0 {
 			return nil, nil, nil, ErrInvalidEvent
 		}

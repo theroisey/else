@@ -129,6 +129,25 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (Session,
 	return session, true
 }
 
+// AuthenticateRequest shares the existing cookie/current-identity boundary
+// with protected domains. Actor identity never comes from request JSON.
+func (h *Handler) AuthenticateRequest(w http.ResponseWriter, r *http.Request) (Session, bool) {
+	return h.authenticate(w, r)
+}
+
+// VerifyMutation requires the exact public Origin, JSON, and session-bound CSRF.
+func (h *Handler) VerifyMutation(w http.ResponseWriter, r *http.Request, session Session) bool {
+	if !h.requireUnsafe(w, r) {
+		return false
+	}
+	cookie, err := r.Cookie(h.csrfCookieName())
+	if err != nil || !h.service.ValidCSRF(session, cookie.Value, r.Header.Get("X-CSRF-Token")) {
+		httpapi.WriteError(w, r, http.StatusForbidden, "csrf_failed", "Request verification failed.")
+		return false
+	}
+	return true
+}
+
 func (h *Handler) requireMethod(w http.ResponseWriter, r *http.Request, method string) bool {
 	if r.Method == method {
 		return true
