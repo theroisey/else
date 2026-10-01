@@ -11,6 +11,8 @@ docker build --target production -t else-frontend:local frontend
 
 Builds use the package lock and explicit base-image versions. Registry image availability and immutable digest resolution must be verified before release publication in Issue #6. No runtime database secrets are passed to the frontend. The build context includes only application source/configuration and package manifests; local environment files, keys, dependencies, and generated output are excluded.
 
-The container Vite configuration leaves ordinary host development unchanged. Compose may mount `src/` and `public/` for hot reload without mounting over the container's installed dependencies. nginx `/status` checks static-server liveness; `/ready` passes through real backend readiness.
+The container Vite configuration leaves ordinary host development unchanged. Compose mounts `src/` for hot reload without mounting over the container's installed dependencies. nginx `/status` checks static-server liveness; `/ready` passes through real backend readiness.
+
+Validation with Node 24.21.0/npm 11.19.0: clean installation, lint, 16 tests, typecheck, production build, and resolved container/host routing checks pass. Full image builds and nginx checks are blocked because Docker Hub rejects unauthenticated image pulls with `toomanyrequests`. Keep the companion PRs draft until container and Compose runtime verification succeeds.
 
 In a managed proxy environment, pass the session CA as a BuildKit secret (`--secret id=proxy_ca,src="$CODEX_PROXY_CERT"`). The optional CA mount is consumed only during dependency installation, with certificate verification enabled, and is never copied into a layer. Ordinary local builds omit this secret.

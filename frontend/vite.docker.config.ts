@@ -1,5 +1,5 @@
 import { mergeConfig } from 'vite'
-import base from './vite.config'
+import base from './vite.config.ts'
 
 // Container-only networking; host development retains its loopback defaults.
 export default mergeConfig(base, {

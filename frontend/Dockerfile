@@ -5,7 +5,8 @@ COPY package.json package-lock.json .npmrc ./
 # Optional session CA remains outside image layers; normal local builds need none.
 RUN --mount=type=secret,id=proxy_ca \
     if [ -f /run/secrets/proxy_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; fi; \
-    npm ci --strict-ssl=true
+    npm install --global npm@11.19.0 --strict-ssl=true \
+    && npm ci --strict-ssl=true
 
 FROM dependencies AS development
 COPY --chown=node:node . .
