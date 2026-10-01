@@ -1,6 +1,6 @@
 ---
 type: pull-request-draft
-status: open-draft-pr
+status: merged
 created: 2026-10-01
 tags:
   - project
@@ -12,7 +12,7 @@ tags:
 
 PR title: `docs: establish repository conventions and architecture baseline`
 
-Target: `backend` into `main`, based on the approved empty-history bootstrap `6d4742d`. Published draft: [PR #33](https://github.com/theroisey/else/pull/33). This document supplies the PR description and tracks review status.
+Target: `backend` into `main`, based on the approved empty-history bootstrap `6d4742d`. Merged: [PR #33](https://github.com/theroisey/else/pull/33), by repository owner ygtdmr at 2026-10-01 08:09:02 UTC. Merge commit: `dc01a0d854eb1b3005fd588ded9468ae308216c4`. Issue #1 is closed. All permanent branches were synchronized before the Issue #2 PR. The sections below preserve the reviewed baseline description and verification.
 
 ## What changed
 

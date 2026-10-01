@@ -1,0 +1,121 @@
+package httpapi
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"io"
+	"log/slog"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/theroisey/else/backend/internal/config"
+)
+
+func testConfig(t *testing.T) config.Config {
+	t.Helper()
+	c, err := config.Load(func(string) (string, bool) { return "", false })
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+
+func testServer(t *testing.T, readiness ReadinessCheck) *Server {
+	t.Helper()
+	s, err := New(testConfig(t), slog.New(slog.NewJSONHandler(io.Discard, nil)), readiness)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+func TestHealthReadinessAndSafeErrors(t *testing.T) {
+	for _, test := range []struct {
+		name, method, path, code string
+		check                    ReadinessCheck
+		status                   int
+	}{
+		{"liveness without database", "GET", "/health", "", nil, 200},
+		{"unconfigured readiness", "GET", "/ready", "not_ready", nil, 503},
+		{"successful real check", "GET", "/ready", "", func(context.Context) error { return nil }, 200},
+		{"failed dependency", "GET", "/ready", "not_ready", func(context.Context) error { return errors.New("password=secret-value") }, 503},
+		{"no business routes", "GET", "/api/v1/clients", "not_found", nil, 404},
+		{"exact health path", "GET", "/health/", "not_found", nil, 404},
+		{"mutation denied", "POST", "/health", "method_not_allowed", nil, 405},
+		{"readiness mutation denied", "DELETE", "/ready", "method_not_allowed", nil, 405},
+		{"head liveness", "HEAD", "/health", "", nil, 200},
+		{"head readiness", "HEAD", "/ready", "not_ready", nil, 503},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			s := testServer(t, test.check)
+			r := httptest.NewRequest(test.method, test.path, nil)
+			w := httptest.NewRecorder()
+			s.httpServer.Handler.ServeHTTP(w, r)
+			if w.Code != test.status {
+				t.Fatalf("status = %d, want %d", w.Code, test.status)
+			}
+			if w.Header().Get("X-Request-ID") == "" || w.Header().Get("Cache-Control") != "no-store" ||
+				w.Header().Get("X-Content-Type-Options") != "nosniff" || !strings.HasPrefix(w.Header().Get("Content-Type"), "application/json") {
+				t.Fatalf("missing safe response headers: %v", w.Header())
+			}
+			if test.method == "HEAD" {
+				if w.Body.Len() != 0 {
+					t.Fatal("HEAD returned a body")
+				}
+				return
+			}
+			if strings.Contains(w.Body.String(), "secret-value") {
+				t.Fatal("dependency error leaked")
+			}
+			if test.code != "" {
+				var response errorResponse
+				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+					t.Fatal(err)
+				}
+				if response.Error.Code != test.code || response.Error.RequestID != w.Header().Get("X-Request-ID") {
+					t.Fatalf("unsafe or inconsistent error envelope: %+v", response)
+				}
+			}
+			if test.status == 405 && w.Header().Get("Allow") != "GET, HEAD" {
+				t.Fatal("405 missing allowed methods")
+			}
+		})
+	}
+}
+
+func TestReadinessReceivesDeadlineAndRequestID(t *testing.T) {
+	c := testConfig(t)
+	c.ReadinessTimeout = 10 * time.Millisecond
+	var checkID string
+	s, err := New(c, slog.New(slog.NewJSONHandler(io.Discard, nil)), func(ctx context.Context) error {
+		if _, exists := ctx.Deadline(); !exists {
+			t.Error("readiness check has no deadline")
+		}
+		checkID = RequestID(ctx)
+		<-ctx.Done()
+		// Even a checker that incorrectly returns nil after cancellation must
+		// not turn the timed-out dependency into a healthy response.
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", "/ready", nil))
+	if w.Code != 503 || checkID == "" || checkID != w.Header().Get("X-Request-ID") {
+		t.Fatalf("timeout or correlation contract failed: status %d, id %q", w.Code, checkID)
+	}
+}
+
+func TestReadinessWhileDraining(t *testing.T) {
+	s := testServer(t, func(context.Context) error { t.Fatal("draining server checked dependencies"); return nil })
+	s.draining.Store(true)
+	w := httptest.NewRecorder()
+	s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", "/ready", nil))
+	if w.Code != 503 {
+		t.Fatalf("draining server returned %d", w.Code)
+	}
+}

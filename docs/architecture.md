@@ -18,7 +18,7 @@ Avoid generic repositories, provider interfaces, or service layers without consu
 
 Business APIs use `/api/v1`. Every implemented endpoint has a documented request/response/error contract shared with its frontend Issue. Collections have bounded pagination; filtering and sorting are explicit. Input validation rejects unsupported values, malformed identifiers, and inappropriate sizes without exposing internal errors.
 
-The foundation Issue defines the error envelope, pagination convention, request ID, and health/readiness semantics. This baseline does not invent frontend fields or unimplemented responses.
+The [HTTP foundation](backend-http.md) defines the error envelope, request ID, and health/readiness semantics. Pagination belongs to the first collection API. This baseline does not invent frontend fields or unimplemented responses.
 
 ## Security and client scope
 
@@ -54,4 +54,4 @@ Do not add decorative analytics or pretend integrations exist. Loading, empty, e
 
 CI gates precede registry publication. Only tested `main` revisions produce production GHCR images. Containers are immutable; the application does not overwrite its own executable. A future deployment target or automatic rollout requires a separately recorded decision and explicit authority.
 
-The repository currently has no commits. [Repository bootstrap](repository-bootstrap.md) identifies the one-time prerequisite for this branch workflow.
+The repository was initialized through the approved empty commit described in [repository bootstrap](repository-bootstrap.md). The one-time exception is consumed; subsequent changes to main use PRs.
