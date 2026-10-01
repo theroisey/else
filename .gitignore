@@ -1,0 +1,31 @@
+# Local secrets. Example configuration may be versioned.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Frontend dependencies and generated output.
+node_modules/
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Backend and test output.
+/backend/bin/
+/backend/api
+*.test
+*.out
+
+# Local logs, editor state, and operating-system files.
+*.log
+.DS_Store
+.idea/
+.vscode/
+
+# Obsidian UI state is local; Markdown notes remain versioned.
+/notes/.obsidian/
+/notes/.trash/
