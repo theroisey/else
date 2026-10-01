@@ -1,6 +1,6 @@
 ---
 type: decision
-status: pr-review
+status: merged
 created: 2026-10-01
 tags:
   - authorization
@@ -23,3 +23,5 @@ Client UUIDs are opaque scope keys until Issue #13 adds client records and refer
 - [[PostgreSQL Foundation]]
 - [Authorization contract](../../docs/authorization.md)
 - [Issue #9](https://github.com/theroisey/else/issues/9)
+- [Merged PR #43](https://github.com/theroisey/else/pull/43)
+- [Main verification and publication](https://github.com/theroisey/else/actions/runs/36870754791)

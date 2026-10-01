@@ -41,6 +41,8 @@ describe('foundation application', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
     const user = userEvent.setup()
     await user.tab()
+    expect(screen.getByRole('link', { name: 'Interface review' })).toHaveFocus()
+    await user.tab()
     expect(button).toHaveFocus()
     await user.keyboard('{Enter}')
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))

@@ -1,6 +1,7 @@
 import { useIsFetching, useQueryClient } from '@tanstack/react-query'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowRotateRight } from '@fortawesome/free-solid-svg-icons'
+import { Link } from 'react-router'
+import { Button, buttonStyles } from '../../components/ui'
 import { ServiceCheck } from './ServiceCheck'
 
 export function FoundationPage() {
@@ -12,7 +13,7 @@ export function FoundationPage() {
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
           <span className="font-semibold tracking-tight">ROISEY ELSE</span>
-          <span className="eyebrow text-right">Development foundation</span>
+          <Link className={buttonStyles({ variant: 'ghost', size: 'compact' })} to="/interface">Interface review</Link>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-10 sm:py-14">
@@ -21,11 +22,14 @@ export function FoundationPage() {
             <h1 className="text-2xl font-semibold tracking-tight">Service status</h1>
             <p className="mt-2 max-w-xl text-muted">Current availability of the backend and its required services.</p>
           </div>
-          <button className="control inline-flex" type="button" disabled={checking}
-            onClick={() => { void client.invalidateQueries({ queryKey: ['service-status'] }) }}>
-            <FontAwesomeIcon icon={faArrowRotateRight} aria-hidden="true" />
-            {checking ? 'Checking services' : 'Check again'}
-          </button>
+          <Button
+            icon={faArrowRotateRight}
+            loading={checking}
+            loadingLabel="Checking services"
+            onClick={() => { void client.invalidateQueries({ queryKey: ['service-status'] }) }}
+          >
+            Check again
+          </Button>
         </div>
         <section aria-label="Service checks" aria-live="polite" aria-busy={checking}
           className="mt-8 rounded-md border border-line bg-surface px-5">

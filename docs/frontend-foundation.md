@@ -43,7 +43,7 @@ No public build variables or integration credentials exist. This screen introduc
 
 `src/app/` contains routing, query defaults, and minimal foundation styles. `src/features/foundation/` contains the service-status screen and its contract decoder. `src/services/` owns HTTP access; `src/test/` owns shared test cleanup. Domain folders are added when their own Issues deliver actual consumers.
 
-The initial screen uses thin borders, monochrome surfaces, small radii, restrained typography, responsive status rows, text status labels, visible keyboard focus, and a polite live region. The Font Awesome refresh icon accompanies a text button. No remote font or icon kit is loaded. Comprehensive design tokens/primitives and the application shell remain Issues #11/#12.
+The initial screen uses thin borders, monochrome surfaces, small radii, restrained typography, responsive status rows, text status labels, visible keyboard focus, and a polite live region. The Font Awesome refresh icon accompanies a text button. No remote font or icon kit is loaded. Issue #11 now provides the shared [interface tokens and primitives](interface-foundation.md); the authenticated application shell remains Issue #12.
 
 [Desktop screenshot](screenshots/frontend-foundation-desktop.png) and [mobile screenshot](screenshots/frontend-foundation-mobile.png) were captured from the real backend/Vite flow. They contain no customer data.
 

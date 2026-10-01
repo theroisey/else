@@ -1,23 +1,97 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #f5f5f3;
+  --color-canvas: #f4f4f1;
   --color-surface: #ffffff;
-  --color-ink: #111111;
-  --color-muted: #626262;
-  --color-line: #ddddda;
-  --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --color-surface-subtle: #eeeeea;
+  --color-surface-strong: #e3e3dd;
+  --color-ink: #171716;
+  --color-ink-soft: #343432;
+  --color-muted: #5f5f5a;
+  --color-line: #d3d3cd;
+  --color-line-strong: #85857e;
+  --color-focus: #171716;
+  --color-success-surface: #edf7f0;
+  --color-success-line: #86aa92;
+  --color-success-ink: #24573a;
+  --color-warning-surface: #fff6dc;
+  --color-warning-line: #c3a45a;
+  --color-warning-ink: #704700;
+  --color-danger-surface: #fff0ef;
+  --color-danger-line: #c9908b;
+  --color-danger-strong: #a12a24;
+  --color-danger-ink: #811f1a;
+  --font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --radius-sm: 0.1875rem;
+  --radius-md: 0.3125rem;
+  --shadow-dialog: 0 1.5rem 4rem rgb(23 23 22 / 18%);
+  --spacing: 0.25rem;
 }
 
 @layer base {
-  body { @apply m-0 bg-canvas font-sans text-sm text-ink antialiased; }
+  :root {
+    color-scheme: light;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  * { box-sizing: border-box; }
+  html { min-width: 20rem; background: var(--color-canvas); }
+  body { @apply m-0 min-h-dvh bg-canvas font-sans text-sm leading-5 text-ink antialiased; }
+  button, input, select, textarea { font: inherit; }
   button, a { -webkit-tap-highlight-color: transparent; }
-  :focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }
   button:disabled { cursor: not-allowed; }
+  ::selection { background: var(--color-ink); color: var(--color-surface); }
+
+  :focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 @layer components {
-  .eyebrow { @apply text-xs font-semibold uppercase tracking-widest text-muted; }
-  .control { @apply items-center justify-center gap-2 rounded border border-line bg-surface px-3 py-2 text-sm font-medium hover:border-ink disabled:opacity-50; }
-  .status { @apply rounded border border-line px-2 py-1 text-xs font-medium; }
+  .eyebrow { @apply text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-muted; }
+
+  .ui-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm border font-semibold leading-5 transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .ui-input {
+    @apply min-h-10 w-full rounded-sm border border-line-strong bg-surface px-3 py-2 text-sm text-ink shadow-none transition-colors placeholder:text-muted hover:border-ink disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-muted;
+  }
+
+  .ui-status {
+    @apply inline-flex min-h-6 w-fit items-center rounded-full border px-2 py-0.5 text-xs font-semibold leading-4;
+  }
+
+  .ui-table { @apply min-w-full border-collapse text-left text-sm; }
+  .ui-table thead { @apply bg-surface-subtle text-xs uppercase tracking-wider text-muted; }
+  .ui-table th { @apply border-b border-line px-4 py-3 font-semibold; }
+  .ui-table td { @apply border-b border-line px-4 py-3 align-middle; }
+  .ui-table tbody tr:last-child td { @apply border-b-0; }
+  .ui-table tbody tr:last-child th { @apply border-b-0; }
+  .ui-table tbody tr:hover { @apply bg-surface-subtle/60; }
+
+  .ui-dialog {
+    @apply fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100%-2rem))] overflow-visible border-0 bg-transparent p-0 text-ink;
+  }
+
+  .ui-dialog::backdrop { background: rgb(23 23 22 / 48%); }
+
+  .ui-dialog-panel {
+    @apply grid max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-md border border-line bg-surface p-5 shadow-dialog sm:p-6;
+  }
+
+  .review-grid { @apply grid gap-4 lg:grid-cols-2; }
+  .review-card { @apply rounded-md border border-line bg-surface p-5 sm:p-6; }
 }

@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#9](https://github.com/theroisey/else/issues/9), permission-based RBAC and client-scope policy on backend. Issues #1–#8 are owner-merged. Both development branches were synchronized to identity merge `affb3b4` before authorization work. [The authorization contract](authorization.md) records scope, delegation, bootstrap and deny-by-default decisions.
+Current slice: [#11](https://github.com/theroisey/else/issues/11), monochrome tokens and accessible UI primitives on frontend. Issues #1–#9 are owner-merged. Both development branches were synchronized to RBAC merge `576a48f` before interface work. [The interface foundation](interface-foundation.md) records token, primitive and accessibility decisions.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#8 are merged. Issue #9 adds protected role/permission storage, deny-by-default global/client evaluation, escalation-safe audited assignment primitives, bootstrap-role conversion and scoped permissions in current identity. User/role administration routes, login UI, client records, recovery and business domains remain later Issues. No production deployment is authorized or performed.
+Issues #1–#9 are merged. Issue #11 adds shared monochrome/semantic tokens, accessible Button/TextField/Status/Table/Dialog primitives, a non-operational review route, component interactions, measured contrast and responsive Chromium evidence. The authenticated shell, user/role administration routes, client records, recovery and business domains remain later Issues. No production deployment is authorized or performed.
