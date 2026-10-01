@@ -18,7 +18,7 @@ An actor assigning or revoking a role must hold global `roles.manage` and every 
 
 Assignment creation/revocation and `role_assignment.created`/`role_assignment.archived` audit events share one database transaction. Audit failure rolls the assignment mutation back. Bootstrap creates the first user, assigns the ordinary Initial Administrator role and appends both audit events atomically. Migration `000004_create_authorization.sql` also converts an existing Issue #8 bootstrap marker into the same audited assignment. The marker remains identity initialization history and is never an authorization bypass.
 
-Client IDs are opaque nonzero UUID scope keys in this slice because the client table belongs to Issue #13. That later migration must add the relational client boundary without weakening the exact-match authorization rule.
+Issue #13 adds [real clients and the scope registry](clients.md). Existing opaque scope history is preserved without fabricated profiles; new scoped assignments require an actual active client. Real client lookups still require the exact permission and ID. Archived clients retain read/history access while domain edits and new assignments are refused.
 
 ## Current identity representation
 
@@ -49,4 +49,4 @@ Migration `000004_create_authorization.sql` adds protected permission, role, rol
 
 Integration coverage exercises the Initial Administrator/Finance/Viewer matrix, global and exact-client scope, Viewer mutation denial, Finance role-administration denial, unknown permissions, disabled users, delegated escalation attempts, audited assignment/revocation, audit-failure rollback, bootstrap conversion, runtime table denial and migration rollback behavior. The Compose permission probe covers the same storage boundary.
 
-Issue #10 adds the [user/role administration API](administration.md), including storage guards that protect the final active administrator across account and grant removals. Client records and business-domain APIs remain later slices.
+Issue #10 delivers [user/role administration](administration.md), including final-administrator storage guards. Issue #13 adds the [client API](clients.md); client UI and business modules remain later slices.

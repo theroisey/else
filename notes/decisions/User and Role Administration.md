@@ -1,6 +1,6 @@
 ---
 type: decision
-status: frontend-review
+status: owner-merged
 created: 2026-10-01
 tags:
   - authorization
@@ -10,6 +10,8 @@ tags:
 ---
 
 # User and Role Administration
+
+Frontend PR #47 is owner-merged at `cf26da0`. Main run 36923454442 passed all gates and tested-image publication. Issue #13 now requires real active clients for new scoped assignments; historical archived/legacy grants remain readable as grants and revocable, without inventing client profiles.
 
 Issue #10 is cross-cutting: backend API first, separately reviewed frontend after owner merge. Do not close the issue with only the backend PR. Prerequisite PR #45 is owner-merged at `5d2d125`; both permanent development branches were synchronized. Main run [36905309471](https://github.com/theroisey/else/actions/runs/36905309471) passed all five gates and tested-image publication.
 
@@ -31,7 +33,7 @@ Local checks pass: lint, strict typecheck, production build, 54 component/servic
 
 The pre-implementation policy is [Issue comment 5937805664](https://github.com/theroisey/else/issues/10#issuecomment-5937805664). Recovery means an active user with both global users.manage and roles.manage, using arbitrary roles. All removals preserve one once present; self-disable is refused. Existing authorization advisory locking is shared with account disablement and ALWAYS grant/status triggers. Volatile reads after acquiring the lock matter for concurrency; a stable snapshot could miss the prior removal. Narrow database functions recheck live permissions under this same lock.
 
-Account disablement, all session revocations, revision increment and safe audit markers are atomic. Role replacement adds permissions before revoking obsolete ones, and requires global control of the union of old/new keys. The initial built-in roles are API read-only. There is no deletion, reactivation or password reset. Keyset pages use immutable UUIDs and limit+1 reads; revisions protect user and role edits. Clients remain opaque exact-match scope UUIDs until #13.
+Account disablement, all session revocations, revision increment and safe audit markers are atomic. Role replacement adds permissions before revoking obsolete ones, and requires global control of the union of old/new keys. The initial built-in roles are API read-only. There is no deletion, reactivation or password reset. Keyset pages use immutable UUIDs and limit+1 reads; revisions protect user and role edits. Issue #13's [[Client Records and Scope History]] adds the relational scope boundary.
 
 Migration 000005 is additive with runtime EXECUTE only. It extends audit actions only for user.disabled and role.permission_changed and snapshots only for active/disabled status. Populated rollback is refused; empty rollback recreates functions, so reapply grants after up. Password/profile/session values never enter audit or error logs. This frontend slice adds no migration, API change, dependencies or runtime configuration.
 
