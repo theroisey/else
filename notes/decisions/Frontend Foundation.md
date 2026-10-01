@@ -1,6 +1,6 @@
 ---
 type: decision
-status: validated-ready-for-review
+status: pr-open-for-review
 created: 2026-10-01
 tags:
   - architecture
@@ -30,4 +30,5 @@ Docker and CI are deferred to #5/#6 rather than reported as passed. Issue #3 rem
 
 - [[HTTP Foundation]]
 - [Issue #3](https://github.com/theroisey/else/issues/3)
+- [PR #35](https://github.com/theroisey/else/pull/35)
 - [Frontend foundation guide](../../docs/frontend-foundation.md)
