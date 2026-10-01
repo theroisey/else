@@ -1,6 +1,6 @@
 # Docker development environment
 
-Related Issue: [#5](https://github.com/theroisey/else/issues/5). Requires both companion frontend and backend container PRs. Docker Engine with BuildKit, Compose 2.24.4 or newer, and host `openssl` are required. The version-pinned Node 24.21.0 and Go 1.27.1 build images follow the repository's toolchain contract. PostgreSQL 18.3 is pinned by digest.
+Related Issue: [#5](https://github.com/theroisey/else/issues/5), merged through frontend #37 and backend #38. Docker Engine with BuildKit, Compose 2.24.4 or newer, and host `openssl` are required. Node 24.21.0, Go 1.27.1, PostgreSQL 18.3, nginx, and the Dockerfile frontend are pinned by version and digest. [Issue #6's CI guide](ci.md) describes isolated development/runtime verification and publication gates.
 
 ## First startup
 
@@ -59,4 +59,4 @@ Changing `.env` does not change passwords in an initialized database. Never disc
 
 Compose base/production/proxy configuration, shell syntax, generated-certificate hostname acceptance/rejection, private credential/key permissions, ignore rules, and refusal to overwrite existing credentials are validated. Go 1.27.1 formatting, vet, unit/race tests, and static binary builds pass. Node 24.21.0/npm 11.19.0 installation, lint, 16 frontend tests, typecheck, production build, and resolved container/host routing checks pass.
 
-Full image builds, service startup, TLS/role probes against PostgreSQL, migration round-trip, nginx routing, readiness recovery, and persistence checks remain blocked by Docker Hub's unauthenticated pull limit in the current managed environment. No container gate is claimed as passing. Base-image digests for Node, Go, and nginx must be resolved and verified when registry access is restored; version tags currently select those images. CI/publication is Issue #6, and this implementation must stay draft until the container checks pass.
+Local image builds remain blocked by Docker Hub's unauthenticated pull limit. Issue #6's [GitHub PR run 36852928372](https://github.com/theroisey/else/actions/runs/36852928372) passes all source, PostgreSQL, and combined Compose gates, including development/static-runtime image builds, TLS/role checks, migration round-trips, same-origin routing, readiness recovery, persistence, and non-root runtimes. The gate exposed the unquoted reserved database name; provisioning now quotes "else", and the companion frontend fix supplies writable Vite caches. Those corrections are verified together in CI PR #40 and await review/merge. Base-image digests are resolved and pinned. Main publication remains unobserved.
