@@ -219,6 +219,10 @@ func (h *Handler) write(w http.ResponseWriter, r *http.Request, parts []string, 
 		if !decode(w, r, &input) {
 			return
 		}
+		if !validID(input.RoleID) || (input.ClientID != "" && !validID(input.ClientID)) {
+			h.fail(w, r, ErrInvalid)
+			return
+		}
 		if !input.Confirm {
 			h.fail(w, r, ErrInvalid)
 			return

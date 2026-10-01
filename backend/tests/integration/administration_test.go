@@ -346,6 +346,12 @@ func TestAdministrationRoleHTTPContractAndScopedAssignments(t *testing.T) {
 		assertStatus(t, f.request(t, &f.login, http.MethodGet, path, nil, nil), http.StatusOK, "")
 	}
 	input := map[string]any{"role_id": roleID, "scope": "client", "client_id": clientAID, "confirm": true}
+	input["role_id"] = strings.ReplaceAll(roleID, "-", "")
+	assertStatus(t, f.request(t, &f.login, http.MethodPost, "users/"+target.ID+"/roles", input, nil), http.StatusBadRequest, "invalid_request")
+	input["role_id"] = roleID
+	input["client_id"] = strings.ReplaceAll(clientAID, "-", "")
+	assertStatus(t, f.request(t, &f.login, http.MethodPost, "users/"+target.ID+"/roles", input, nil), http.StatusBadRequest, "invalid_request")
+	input["client_id"] = clientAID
 	w = f.request(t, &f.login, http.MethodPost, "users/"+target.ID+"/roles", input, nil)
 	assertStatus(t, w, http.StatusCreated, "")
 	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || result.Data.ID == "" {
