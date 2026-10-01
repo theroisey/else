@@ -46,7 +46,7 @@ Persist timestamps in UTC and retain timezone intent where scheduling requires i
 
 Use shared monochrome tokens, compact navigation, structured tables, restrained radii, thin borders, and tabular numerals. Semantic colors identify states and are accompanied by text. Density serves scanning without compromising focus visibility or keyboard use.
 
-Do not add decorative analytics or pretend integrations exist. Loading, empty, error, success, unauthorized, and disabled states are designed for real features. Only implemented destinations are actionable.
+Do not add decorative analytics or pretend integrations exist. Loading, empty, error, success, unauthorized, and disabled states are designed for real features. Only implemented destinations are actionable. The [frontend foundation](frontend-foundation.md) establishes routing, queries, and public health transport without speculative product pages.
 
 ## Branches and deployment
 

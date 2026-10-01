@@ -1,11 +1,21 @@
 # Frontend
 
-This directory owns the React application. Production code and tooling start in [Issue #3](https://github.com/theroisey/else/issues/3); design tokens and primitives start in [Issue #11](https://github.com/theroisey/else/issues/11).
+The React/TypeScript application uses Vite, Tailwind CSS, Font Awesome, React Router, and TanStack Query. It provides a development foundation screen with real backend liveness/readiness checks, explicit failure/loading states, keyboard refresh, and an unknown-route fallback.
 
-Use React, TypeScript, Vite, Tailwind CSS, and Font Awesome. React Router, TanStack Query, React Hook Form, Zod, and TanStack Table serve actual routes, queries, forms, and tables as those consumers arrive. Do not install overlapping libraries or unused charting dependencies.
+Use Node 24.21.0 and npm 11.19.0:
 
-Organize source by domain under `src/features/`; shared UI belongs under `src/components/`. Keep API access behind services and business rules outside components. Backend enforcement remains authoritative even when the UI hides a restricted action.
+```sh
+nvm use
+npm ci
+npm run dev
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
 
-Implement frontend changes on `frontend`. The initial `frontend` branch originates from the approved empty `main` baseline; [the bootstrap record](../docs/repository-bootstrap.md) documents initialization.
+Run the Go backend separately on `127.0.0.1:8080`. Vite serves `127.0.0.1:5173` and proxies only `/health` and `/ready` during development. Readiness stays unavailable until real persistence is wired. See the [foundation guide](../docs/frontend-foundation.md) for contracts, query defaults, security, screenshots, and deployment limits.
 
-No frontend runtime or package manifest exists yet. Required lint, typecheck, test, and build commands arrive with Issue #3.
+Application routing and query defaults live under `src/app/`, foundation behavior under `src/features/foundation/`, and HTTP access under `src/services/`. New domains and shared components arrive with their actual consumers. The full design system is Issue #11; real login and application navigation are #12. Forms/tables/charting dependencies are added when needed by their owning slices.
+
+Implement frontend changes on `frontend`. Backend permissions remain authoritative. No business APIs, customer metrics, credentials, or sessions are simulated here. Docker/production routing and CI remain #5/#6.
