@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#2](https://github.com/theroisey/else/issues/2), implemented and validated for a separate backend PR. The baseline [#1](https://github.com/theroisey/else/issues/1) was merged through [PR #33](https://github.com/theroisey/else/pull/33); main, frontend, and backend were synchronized before publishing the HTTP foundation.
+Current slice: [#2](https://github.com/theroisey/else/issues/2), implemented, validated, and published in [PR #34](https://github.com/theroisey/else/pull/34). The baseline [#1](https://github.com/theroisey/else/issues/1) was merged through [PR #33](https://github.com/theroisey/else/pull/33); main, frontend, and backend were synchronized before publishing the HTTP foundation.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issue #1 is closed after the owner merged PR #33. The other 31 roadmap Issues remain open. Issue #2 is implemented and tested, with its separate backend PR prepared after branch synchronization. The one-time empty main initialization is complete and its exception consumed. Issues remain open until review and merge. No later implementation Issue or production deployment is started.
+Issue #1 is closed after the owner merged PR #33. The other 31 roadmap Issues remain open. Issue #2 is implemented and tested, with its separate [backend PR #34](https://github.com/theroisey/else/pull/34) open for review after branch synchronization. The one-time empty main initialization is complete and its exception consumed. Issues remain open until review and merge. No later implementation Issue or production deployment is started.

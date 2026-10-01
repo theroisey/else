@@ -1,6 +1,6 @@
 ---
 type: decision
-status: validated-ready-for-review
+status: pr-open-for-review
 created: 2026-10-01
 tags:
   - architecture
@@ -38,4 +38,5 @@ Docker packaging and CI are not implemented in this Issue. No global toolchain i
 
 - [[Repository Bootstrap Decision]]
 - [Issue #2](https://github.com/theroisey/else/issues/2)
+- [PR #34](https://github.com/theroisey/else/pull/34)
 - [HTTP foundation contract](../../docs/backend-http.md)
