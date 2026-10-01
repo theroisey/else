@@ -16,7 +16,7 @@ PR #45 is owner-merged at `5d2d125`. Main CI run 36905309471 passed all checks a
 
 Initial load and identity lookup errors withhold protected content; 401/absolute expiry clears private cache and returns to login. Focus/reconnection/periodic/manual refresh updates grants. Failed logout retains the true state rather than claiming revocation. Return paths are allowlisted destinations held in router memory.
 
-Only workspace/current access/login and existing public status/interface routes exist. Workspace/My access expose the caller's own identity, so no unrelated permission is invented. Future destinations require matching permission guards; backend authorization remains mandatory. Unknown keys and absent/wrong client scope deny. No business placeholder links or role-name checks exist.
+Workspace/current access/login and public status/interface routes were delivered by #12. Issue #10 adds Users/Roles destinations with exact global view guards after the backend API merge. Workspace/My access expose the caller's own identity, so no unrelated permission is invented. Future destinations require matching permission guards; backend authorization remains mandatory. Unknown keys and absent/wrong client scope deny. No business placeholder links or role-name checks exist.
 
 Playwright is the single new test dependency, justified by real login/logout/expiry verification. A read-only CI job uses disposable PostgreSQL 18, reviewed migrations/runtime grants and synthetic test credentials without backend source/schema changes. Main publication depends on it. Raw cookies, traces, video and authentication request bodies are excluded; only safe synthetic UI screenshots are retained.
 
@@ -25,5 +25,6 @@ Local Docker Hub pulls remain rate-limited. Committed screenshots use intercepte
 - [[Identity and Sessions]]
 - [[Authorization and Client Scope]]
 - [[Interface Foundation]]
+- [[User and Role Administration]]
 - [Application shell contract](../../docs/application-shell.md)
 - [Issue #12](https://github.com/theroisey/else/issues/12)

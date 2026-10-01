@@ -12,6 +12,10 @@ const permissionScopes: Record<string, 'global' | 'client'> = {
 
 export type PermissionRequirement = { permission: string; scope: 'global' } | { permission: string; scope: 'client'; clientID: string }
 
+export function permissionScope(key: string) {
+  return Object.hasOwn(permissionScopes, key) ? permissionScopes[key] : undefined
+}
+
 export function hasPermission(grants: readonly Grant[], required: PermissionRequirement) {
   if (!Object.hasOwn(permissionScopes, required.permission) || permissionScopes[required.permission] !== required.scope) return false
   if (required.scope === 'client' && !isUUID(required.clientID)) return false

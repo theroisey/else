@@ -84,7 +84,7 @@ describe('cookie session UI', () => {
     const user = userEvent.setup()
     await user.click(screen.getByText('Browser Fixture', { selector: 'summary span' }))
     await user.click(screen.getByRole('button', { name: 'Sign out' }))
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument())
     expect(client.getQueryData(['private', 'fixture'])).toBeUndefined()
     expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/v1/auth/logout')
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: 'POST', body: '{}', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'a'.repeat(43) } })

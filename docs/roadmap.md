@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#10](https://github.com/theroisey/else/issues/10), authorized user/role administration. Issues #1–#9, #11 and #12 are owner-merged. Both development branches were synchronized to shell merge `5d2d125`; main CI/publication passed. [The administration contract](administration.md) defines the backend API and recovery policy; frontend forms follow after the API PR is merged.
+Current slice: [#10](https://github.com/theroisey/else/issues/10), authorized user/role administration. Issues #1–#9, #11 and #12 are owner-merged. Backend PR #46 is owner-merged at `a184bc9`; both development branches were synchronized before frontend work. [The administration guide](administration.md) defines the API, recovery policy and frontend flows. Main run [36913982322](https://github.com/theroisey/else/actions/runs/36913982322) passed backend, PostgreSQL 18, container and browser gates, but the existing logout assertion failed and publication was skipped. This frontend slice fixes that assertion and requires all gates before review readiness.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#9, #11 and #12 are merged. Issue #10 adds the administration backend contract with guarded recovery, atomic audit and bounded reads. Its frontend tables/forms remain required before closing the issue. Client records, password recovery and business domains remain later slices. No production deployment is authorized or performed.
+Issues #1–#9, #11 and #12 are merged. Issue #10's backend is merged; frontend review adds guarded tables/forms, confirmations, scoped delegation, revision recovery and real API browser evidence. Issue #10 remains open until owner merge. Client records, password recovery and business domains remain later slices. No production deployment is authorized or performed.

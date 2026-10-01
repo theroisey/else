@@ -1,6 +1,6 @@
-# User and role administration API
+# User and role administration
 
-Backend portion of [Issue #10](https://github.com/theroisey/else/issues/10). The frontend forms and tables follow in a separate frontend PR after this contract is merged. No administration navigation is exposed by this backend slice.
+[Issue #10](https://github.com/theroisey/else/issues/10) delivers the API and its separately reviewed frontend. The backend is owner-merged in [PR #46](https://github.com/theroisey/else/pull/46); this frontend slice consumes that contract.
 
 ## Authentication and permissions
 
@@ -58,4 +58,20 @@ Apply migrations as the separate owner, then apply the reviewed EXECUTE grants i
 
 Unit checks cover profile/permission validation, strict decoding and secret-free failures. Disposable database tests cover paginated HTTP contracts, revisions, permissions and browser security, scope isolation, escalation denial, built-in protection, custom recovery roles, concurrent removals, existing mutator protection, session revocation, safe audit markers and rollback of every mutation type when audit insertion fails. Full migration roundtrip and populated refusal remain in the integration suite. CI supplies PostgreSQL 18, container and real browser-authentication checks.
 
-The frontend PR must consume these fields, add permission-guarded user/role destinations, loading/error/empty tables, validated forms, confirmed disablement/permission/assignment actions, revision-conflict recovery and critical-form tests. It must clear passwords after submissions and keep them out of browser persistence and query/mutation caches. Issue #10 remains open until that UI work is verified.
+The frontend has `/app/users` and `/app/roles`, requiring global `users.view` and `roles.view` respectively. Navigation and direct routes share the permission predicate. Account writes require `users.manage`; assignment and role writes require `roles.manage`, with effective delegation checked at the requested scope. Built-in definitions remain read only. Disabled accounts cannot receive new assignments; self-disable controls are absent. Backend checks remain authoritative on every request.
+
+Tables read 25 records at a time, with previous/next cursor navigation, refresh and loading/empty/error states. Forms validate profiles, password byte bounds and globally controlled role permissions. Disablement, role permission replacement and assignment addition/removal require a separate confirmation with initial Cancel focus. Successful writes invalidate administration reads and refresh identity. A 401/403 refreshes identity to remove stale access; logout/session loss removes private queries.
+
+Profile conflicts offer an explicit reload that discards the draft and reads the current revision. Role conflicts require cancelling the confirmation, closing the editor, refreshing and reopening before reviewing again. Safe error messages preserve the backend's last-administrator refusal without displaying raw response details. Exact client UUIDs are entered until client records arrive in #13.
+
+Initial passwords use an uncontrolled field and clear before each server attempt. They never enter query/mutation caches, browser storage, URLs or telemetry. Transport uses fixed same-origin paths, bounded validated envelopes, no-store, rejected redirects, timeouts and the existing CSRF cookie selection; it adds no dependencies or runtime configuration.
+
+Frontend tests cover denied deep links, view-only controls, validation/password clearing, loading/error/retry/empty states, cursor navigation, stale profile revisions, built-in protection and confirmed scoped assignment/removal. Four serial real API browser flows now include administration, safe audit event checks, last-administrator denial, live-session revocation after disablement, keyboard confirmations and responsive containment. Traces, video, cookies and request bodies are excluded from artifacts.
+
+Local verification uses disposable PostgreSQL 17.11 and system Chromium; CI uses the existing isolated PostgreSQL 18 runner and pinned Playwright Chromium. Local Docker image pulls remain rate-limited, so container evidence comes from CI. All screenshots below show visibly identified synthetic data from the real local API; they are not production records or a product demo mode.
+
+- Users: [desktop](screenshots/administration-users-desktop.png), [tablet](screenshots/administration-users-tablet.png), [mobile](screenshots/administration-users-mobile.png)
+- Roles: [desktop](screenshots/administration-roles-desktop.png), [mobile](screenshots/administration-roles-mobile.png)
+- Forms: [mobile account creation](screenshots/administration-account-mobile.png), [confirmed disablement](screenshots/administration-disable.png)
+
+Issue #10 remains open for owner review/merge. Client records, password reset, reactivation and deletion remain outside this slice.

@@ -10,10 +10,12 @@ Related Issue: [#12](https://github.com/theroisey/else/issues/12). This frontend
 | `/login` | Checks identity, then signs in or returns to an implemented requested destination |
 | `/app` | Requires a verified session; shows the real account and absolute expiry in the device timezone |
 | `/app/access` | Requires a verified session; shows and refreshes only the caller's effective grants |
+| `/app/users` | Requires global `users.view`; account and scoped role administration |
+| `/app/roles` | Requires global `roles.view`; role definitions and controlled permission editing |
 | `/status` | Public real liveness/readiness checks |
 | `/interface` | Existing public local-state component review surface |
 
-Unknown routes show an explicit fallback. Navigation includes only Workspace, My access and Service status. Administration, clients, billing, audit inspection and releases have no placeholder routes; their Issues must deliver real pages and backend boundaries before registering destinations.
+Unknown routes show an explicit fallback. Navigation includes Workspace, My access, permission-guarded Users/Roles and Service status. [Administration](administration.md) consumes the owner-merged API. Clients, billing, audit inspection and releases await their scoped implementations.
 
 ## Cookie and transport boundary
 
@@ -45,6 +47,6 @@ Committed screenshots are explicitly synthetic visual fixtures from intercepted 
 
 Run lint, strict typecheck, Vitest, build and dependency audit. Component/service tests cover validation, password clearing, safe login/logout failures, cache removal, malformed/missing identity, retry, 401/timed expiry, exact-client permissions, guarded content, empty grants, return allowlisting and secure CSRF selection.
 
-The required **Browser authentication** CI job installs pinned Playwright/Chromium and runs `sh frontend/scripts/test-auth-browser.sh`. The runner refuses occupied app ports, creates disposable PostgreSQL 18, applies existing migrations/runtime grants, adds a clearly synthetic test identity, builds Go and starts Vite. Three serial browser flows verify generic denied login, cookie flags, no credential persistence, real CSRF logout/auth audit counts, server-side expiry/reauthentication, revoked-grant refresh and responsive keyboard navigation. Traces, video, request bodies and raw cookie values are not recorded. The runner removes only its own database/processes/temp files on exit. Never provision this known test identity/password into a real environment.
+The required **Browser authentication** CI job installs pinned Playwright/Chromium and runs `sh frontend/scripts/test-auth-browser.sh`. The runner refuses occupied app ports, creates disposable PostgreSQL 18, applies existing migrations/runtime grants, adds clearly synthetic viewer/administrator identities, builds Go and starts Vite. Four serial browser flows verify generic denied login, cookie flags, no credential persistence, real CSRF logout/auth audit counts, server-side expiry/reauthentication, revoked-grant refresh, administration writes and audit events, last-administrator protection, disablement/session revocation and responsive keyboard navigation. Traces, video, request bodies and raw cookie values are not recorded. The runner removes only its own database/processes/temp files on exit. Never provision these known test identities/passwords into a real environment.
 
-Local Docker pulls remain blocked by the anonymous Docker Hub limit; real API/browser verification runs in CI. Local Chromium renders actual routes with visual fixtures at desktop/tablet/mobile widths, plus a 320px/100-character-name containment check and keyboard table/account interactions. Existing backend race, live PostgreSQL, container/TLS/migration and publication-boundary gates remain required; main publication now also waits for browser authentication. No deployment is performed.
+Local Docker pulls remain blocked by the anonymous Docker Hub limit. The administration slice also verifies all four browser flows locally using a newly created disposable PostgreSQL 17.11 database and system Chromium; CI remains authoritative for PostgreSQL 18/container checks. The earlier shell screenshots use intercepted visual fixtures; administration screenshots come from real isolated API data. Existing backend race, live PostgreSQL, container/TLS/migration and publication-boundary gates remain required; main publication also waits for browser authentication. No deployment is performed.
