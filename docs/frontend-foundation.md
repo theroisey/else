@@ -4,7 +4,7 @@ Related Issue: [#3](https://github.com/theroisey/else/issues/3).
 
 ## Scope
 
-A React/TypeScript frontend runs through Vite with Tailwind CSS and Font Awesome. React Router owns the foundation route and an accessible unknown-page fallback. TanStack Query owns cancellable, bounded public service checks and manual refresh. This is a development foundation, not a client dashboard or authenticated application shell.
+A React/TypeScript frontend runs through Vite with Tailwind CSS and Font Awesome. React Router owns the public `/status` route and an accessible unknown-page fallback. TanStack Query owns cancellable, bounded public service checks and manual refresh. Issue #12 adds the separate [authenticated application shell](application-shell.md); this guide describes the public foundation screen.
 
 The screen checks the implemented Go `/health` and `/ready` contracts. It has loading, unavailable, error, success, and disabled-refresh states. Backend failures and malformed responses never become fabricated availability. There are no customer fixtures, business routes, charts, writes, login forms, or inactive navigation items.
 
@@ -27,7 +27,7 @@ npm run preview
 
 If nvm is unavailable, install the documented Node version with your chosen version manager. Do not disable engine checking to run an unsupported toolchain. Use `npm ci` for reproducible installs. The optional `fsevents` install script is explicitly denied; the foundation builds and runs with the portable watcher. Review new dependency lifecycle scripts individually rather than granting blanket permission.
 
-Run the [Go backend](backend-http.md) separately on its default loopback address `127.0.0.1:8080`. The Vite development server binds `127.0.0.1:5173` and refuses to silently select another occupied port. Only exact `/health` and `/ready` paths proxy to the local backend. No wildcard business API forwarding or frontend CORS workaround is introduced.
+Run the [Go backend](backend-http.md) separately on its default loopback address `127.0.0.1:8080`. The Vite development server binds `127.0.0.1:5173` and refuses to silently select another occupied port. Exact `/health` and `/ready` paths proxy to the backend; Issue #12 also forwards versioned `/api/v1/` for real auth. No frontend CORS workaround is introduced.
 
 ## Transport and query contract
 
@@ -37,13 +37,13 @@ Only `200` with the expected `status` is available. Readiness `503` with a valid
 
 Queries are stale after 15 seconds and unused data is collected after 60 seconds. There are no automatic retries or focus-triggered requests. **Check again** refreshes both checks; it is disabled during requests. A failed refresh replaces a previously successful status rather than retaining a misleading badge.
 
-No public build variables or integration credentials exist. This screen introduces no browser credential storage or authentication policy. Future session/CSRF requirements belong to Issue #8, and permission-aware navigation belongs to #12.
+No public build variables or integration credentials exist. This screen introduces no browser credential storage or authentication policy. The [identity contract](identity.md) defines session/CSRF requirements; the [application shell](application-shell.md) consumes them separately.
 
 ## Structure and visual scope
 
 `src/app/` contains routing, query defaults, and minimal foundation styles. `src/features/foundation/` contains the service-status screen and its contract decoder. `src/services/` owns HTTP access; `src/test/` owns shared test cleanup. Domain folders are added when their own Issues deliver actual consumers.
 
-The initial screen uses thin borders, monochrome surfaces, small radii, restrained typography, responsive status rows, text status labels, visible keyboard focus, and a polite live region. The Font Awesome refresh icon accompanies a text button. No remote font or icon kit is loaded. Issue #11 now provides the shared [interface tokens and primitives](interface-foundation.md); the authenticated application shell remains Issue #12.
+The initial screen uses thin borders, monochrome surfaces, small radii, restrained typography, responsive status rows, text status labels, visible keyboard focus, and a polite live region. The Font Awesome refresh icon accompanies a text button. No remote font or icon kit is loaded. Issue #11 provides shared [interface tokens and primitives](interface-foundation.md); Issue #12 adds the [authenticated shell](application-shell.md).
 
 [Desktop screenshot](screenshots/frontend-foundation-desktop.png) and [mobile screenshot](screenshots/frontend-foundation-mobile.png) were captured from the real backend/Vite flow. They contain no customer data.
 

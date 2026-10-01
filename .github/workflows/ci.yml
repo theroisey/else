@@ -39,6 +39,39 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  browser-auth:
+    name: Browser authentication
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.21.0
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: 1.27.1
+          cache-dependency-path: backend/go.sum
+      - run: npm install --global npm@11.19.0
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Real API cookie-session browser flows
+        run: sh frontend/scripts/test-auth-browser.sh
+      - name: Retain safe synthetic browser screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-auth-screenshots
+          path: frontend/test-results/**/*.png
+          if-no-files-found: ignore
+          retention-days: 7
+
   backend:
     name: Backend checks
     runs-on: ubuntu-24.04
@@ -108,7 +141,7 @@ jobs:
 
   publish:
     name: Publish tested main images
-    needs: [frontend, backend, migrations, containers]
+    needs: [frontend, browser-auth, backend, migrations, containers]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
     timeout-minutes: 15

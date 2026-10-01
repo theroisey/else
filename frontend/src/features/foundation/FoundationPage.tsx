@@ -13,7 +13,10 @@ export function FoundationPage() {
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
           <span className="font-semibold tracking-tight">ROISEY ELSE</span>
-          <Link className={buttonStyles({ variant: 'ghost', size: 'compact' })} to="/interface">Interface review</Link>
+          <div className="flex flex-wrap gap-2">
+            <Link className={buttonStyles({ variant: 'ghost', size: 'compact' })} to="/interface">Interface review</Link>
+            <Link className={buttonStyles({ variant: 'ghost', size: 'compact' })} to="/app">Workspace</Link>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-10 sm:py-14">

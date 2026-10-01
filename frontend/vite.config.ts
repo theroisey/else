@@ -11,10 +11,12 @@ export default defineConfig({
     proxy: {
       '^/health$': { target: 'http://127.0.0.1:8080' },
       '^/ready$': { target: 'http://127.0.0.1:8080' },
+      '^/api/v1/': { target: 'http://127.0.0.1:8080' },
     },
   },
   preview: { host: '127.0.0.1', strictPort: true, proxy: {} },
   test: {
+    include: ['src/**/*.test.{ts,tsx}'],
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     clearMocks: true,
