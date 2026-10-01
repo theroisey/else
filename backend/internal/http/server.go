@@ -19,8 +19,21 @@ type Server struct {
 	readiness      ReadinessCheck
 	auth           http.Handler
 	administration http.Handler
+	clients        http.Handler
 	draining       atomic.Bool
 	httpServer     *http.Server
+}
+
+func NewWithClients(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients http.Handler) (*Server, error) {
+	if clients == nil {
+		return nil, fmt.Errorf("client handler is required")
+	}
+	server, err := NewWithAdministration(c, logger, readiness, auth, administration)
+	if err != nil {
+		return nil, err
+	}
+	server.clients = clients
+	return server, nil
 }
 
 func NewWithAdministration(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration http.Handler) (*Server, error) {

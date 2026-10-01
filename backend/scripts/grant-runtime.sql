@@ -24,6 +24,9 @@ GRANT EXECUTE ON FUNCTION app.authentication_identity(text),
                           app.revoke_permission_assignment(uuid, uuid, timestamptz)
 TO else_runtime;
 
+GRANT EXECUTE ON FUNCTION app.client_read(uuid,uuid),app.client_list(uuid,uuid,integer,text,text,text,boolean),
+ app.client_write(uuid,uuid,bigint,jsonb,boolean) TO else_runtime;
+
 GRANT EXECUTE ON FUNCTION app.admin_users(uuid,uuid,integer),app.admin_user(uuid,uuid),
                           app.admin_roles(uuid,uuid,integer),app.admin_role(uuid,uuid),app.admin_catalog(uuid),
                           app.admin_assignments(uuid,uuid,uuid,integer),app.admin_create_user(uuid,uuid,text,text,text),

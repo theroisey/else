@@ -8,6 +8,8 @@ Place the entry point under `cmd/api`, implementation domains under `internal`, 
 
 Business endpoints use `/api/v1`. Every external input is validated, every resource lookup enforces permission and client scope, and significant successful mutations persist an audit event atomically. Money uses exact minor units or decimal arithmetic; timestamps use UTC.
 
+The [client API](../docs/clients.md) provides bounded list/detail reads, full profile/contact/tag replacement and confirmed archival. Existing role assignments retain access history; new scoped assignments require real active clients. See the guide for revisions, legacy scopes, safe audit fields and migration/rollback policy. Client UI is owned by #14.
+
 Implement backend changes on `backend`. Root-level repository documentation and shared infrastructure may use a coordinated backend PR without unrelated frontend implementation. See [bootstrap instructions](../docs/repository-bootstrap.md).
 
 Issue #2 adds the Go HTTP executable, configuration, structured logging, health/readiness, bounded shutdown, and focused unit/lifecycle tests. See [the HTTP foundation guide](../docs/backend-http.md) for configuration, response contracts, and run/check commands. Issue #4 adds PostgreSQL pools and reversible migrations; readiness checks real connectivity. Business routes are not implemented yet.

@@ -22,6 +22,7 @@ const (
 
 func TestPermissionMatrixScopeAndPrivilegeEscalation(t *testing.T) {
 	f := newIdentityFixture(t)
+	seedClientScopes(t, f)
 	adminID := f.bootstrap(t)
 	hash, err := (identity.ArgonPasswords{}).Hash(bootstrapPassword)
 	if err != nil {
@@ -107,6 +108,7 @@ func TestPermissionMatrixScopeAndPrivilegeEscalation(t *testing.T) {
 
 func TestRoleAssignmentAuditFailureRollsBackAndRuntimeCannotBypassPolicy(t *testing.T) {
 	f := newIdentityFixture(t)
+	seedClientScopes(t, f)
 	adminID := f.bootstrap(t)
 	hash, err := (identity.ArgonPasswords{}).Hash(bootstrapPassword)
 	if err != nil {
@@ -164,7 +166,7 @@ func TestAuthorizationMigrationConsumesExistingBootstrapMarker(t *testing.T) {
 		VALUES ($1::uuid,$2,$3,$4,true)`, viewerUserID, bootstrapEmail, bootstrapName, hash); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := p.Up(f.ctx); err != nil {
+	if _, err := p.UpTo(f.ctx, 4); err != nil {
 		t.Fatal(err)
 	}
 	var assignments, events int

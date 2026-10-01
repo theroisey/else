@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/theroisey/else/backend/internal/audit"
@@ -162,6 +163,10 @@ func (s *Service) AssignRole(ctx context.Context, actorID, targetID, roleID stri
 			After: &audit.Snapshot{Exists: &exists}, Metadata: audit.Metadata{Source: audit.HTTP}}, nil
 	})
 	if err != nil {
+		var failure *pgconn.PgError
+		if errors.As(err, &failure) && failure.Code == "42501" {
+			return "", ErrDenied
+		}
 		return "", err
 	}
 	return id, nil

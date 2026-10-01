@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -13,6 +14,29 @@ import (
 
 	"github.com/theroisey/else/backend/internal/config"
 )
+
+func TestClientRoutesUseProtectedAdapter(t *testing.T) {
+	var paths []string
+	protected := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paths = append(paths, r.URL.Path)
+		w.WriteHeader(http.StatusUnauthorized)
+	})
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	s, err := NewWithClients(testConfig(t), logger, nil, protected, protected, protected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/api/v1/clients", "/api/v1/clients/11111111-1111-4111-8111-111111111111", "/api/v1/clients/11111111-1111-4111-8111-111111111111/archive"} {
+		w := httptest.NewRecorder()
+		s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("POST", path, nil))
+		if w.Code != http.StatusUnauthorized {
+			t.Fatal("client route bypassed adapter")
+		}
+	}
+	if len(paths) != 3 {
+		t.Fatal("client route not registered")
+	}
+}
 
 func testConfig(t *testing.T) config.Config {
 	t.Helper()

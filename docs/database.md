@@ -10,6 +10,8 @@ API startup now requires valid database configuration and a successful real conn
 
 Readiness currently verifies connection availability, not domain-table compatibility or provider health. The deployment sequence must apply migrations and reviewed runtime grants before starting a version that needs them; identity and administration APIs require their schema contracts.
 
+The [client contract](clients.md) adds migration 000006: real client/contact/tag relations, preserved legacy scope IDs and a foreign key for existing role assignment history. New scoped assignments require an active client. Scope-only rollback preserves old grants; populated rollback is refused. Apply owner migrations and reviewed runtime EXECUTE grants before serving the client API.
+
 ## Configuration and credentials
 
 Export the relevant secret URL from environment-specific secret management, without printing it. URLs require an explicit `postgres`/`postgresql` scheme, username, nonempty password, host, numeric port, database name, and exactly one `sslmode`. Percent-encode credentials containing URL-special characters.
