@@ -3,7 +3,9 @@ import { buttonStyles } from '../components/ui'
 import { FoundationPage } from '../features/foundation/FoundationPage'
 import { InterfaceReviewPage } from '../features/interface-review/InterfaceReviewPage'
 import { AuthProvider } from '../features/auth/AuthProvider'
-import { AuthGuard } from '../features/auth/AuthGuard'
+import { AuthGuard, PermissionGuard } from '../features/auth/AuthGuard'
+import { UsersPage } from '../features/administration/UsersPage'
+import { RolesPage } from '../features/administration/RolesPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { ApplicationShell } from '../features/shell/ApplicationShell'
 import { WorkspacePage } from '../features/shell/WorkspacePage'
@@ -25,6 +27,16 @@ export function App() {
           <Route path="/app" element={<ApplicationShell />}>
             <Route index element={<WorkspacePage />} />
             <Route path="access" element={<AccessPage />} />
+            <Route path="users" element={
+              <PermissionGuard required={{ permission: 'users.view', scope: 'global' }}>
+                <UsersPage />
+              </PermissionGuard>
+            } />
+            <Route path="roles" element={
+              <PermissionGuard required={{ permission: 'roles.view', scope: 'global' }}>
+                <RolesPage />
+              </PermissionGuard>
+            } />
             <Route path="*" element={<section><h1 className="text-2xl font-semibold">Page not found</h1><p className="mt-3 text-muted">This destination is not available.</p><Link className={buttonStyles({ className: 'mt-6' })} to="/app">Open workspace</Link></section>} />
           </Route>
         </Route>
