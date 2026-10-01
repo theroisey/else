@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#7](https://github.com/theroisey/else/issues/7), transaction-aware audit storage and writer on backend. Issues #1–#6 are closed after owner merges and verification. [Main run 36856821215](https://github.com/theroisey/else/actions/runs/36856821215) passed all four gates and published both tested GHCR images; [the CI guide](ci.md) records content digests. Both development branches were synchronized before this slice.
+Current slice: [#7](https://github.com/theroisey/else/issues/7), transaction-aware audit storage and writer in [backend PR #41](https://github.com/theroisey/else/pull/41). All four implementation gates pass in [CI run 36858914108](https://github.com/theroisey/else/actions/runs/36858914108). Issues #1–#6 are closed after owner merges and verification. [Main run 36856821215](https://github.com/theroisey/else/actions/runs/36856821215) passed all four gates and published both tested GHCR images; [the CI guide](ci.md) records content digests. Both development branches were synchronized before this slice.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#6 are closed. Issue #7 adds the append-oriented audit migration, mandatory transactional writer, typed safe payloads and shared server-owned correlation. Authentication, read endpoints and domain mutations remain later Issues. Audit runtime grants are explicit, and rollback refuses nonempty history. Local PostgreSQL/container execution remains blocked by Docker Hub's unauthenticated pull limit; actual CI evidence must be recorded before claiming these gates. No production deployment is authorized or performed.
+Issues #1–#6 are closed. Issue #7 adds the append-oriented audit migration, mandatory transactional writer, typed safe payloads and shared server-owned correlation. Authentication, read endpoints and domain mutations remain later Issues. Audit runtime grants are explicit, and rollback refuses nonempty history. Local PostgreSQL/container execution remains blocked by Docker Hub's unauthenticated pull limit; GitHub provided successful PostgreSQL and Compose evidence in [CI run 36858914108](https://github.com/theroisey/else/actions/runs/36858914108). Issue #7 awaits owner review/merge. No production deployment is authorized or performed.
