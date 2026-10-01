@@ -70,8 +70,8 @@ describe('cookie session UI', () => {
     expect(screen.getByRole('table')).toHaveTextContent('clients.view')
     expect(screen.queryByText('roles.manage')).not.toBeInTheDocument()
     const navigation = within(screen.getByRole('navigation', { name: 'Application' }))
-    expect(navigation.getAllByRole('link').map((link) => link.textContent)).toEqual(['Workspace', 'My access', 'Service status'])
-    expect(screen.queryByRole('link', { name: 'Clients' })).not.toBeInTheDocument()
+    expect(navigation.getAllByRole('link').map((link) => link.textContent)).toEqual(['Workspace', 'My access', 'Clients', 'Service status'])
+    expect(screen.getByRole('link', { name: 'Clients' })).toBeInTheDocument()
   })
 
   it('revokes through real transport semantics and removes cached private state', async () => {
