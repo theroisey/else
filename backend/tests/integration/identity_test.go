@@ -131,7 +131,11 @@ func TestIdentityBootstrapIsOneTimeAuditedAndHistoryPreserving(t *testing.T) {
 	if _, err := identity.Bootstrap(correlation.New(f.base.ctx), f.adminPool, identity.ArgonPasswords{}, "other@example.com", "Other Admin", bootstrapPassword); !errors.Is(err, identity.ErrAlreadyInitialized) {
 		t.Fatal("repeat bootstrap was not refused")
 	}
-	if _, err := provider(t, f.base).Down(f.base.ctx); err == nil {
+	p := provider(t, f.base)
+	if _, err := p.Down(f.base.ctx); err != nil {
+		t.Fatal("empty client rollback failed")
+	}
+	if _, err := p.Down(f.base.ctx); err == nil {
 		t.Fatal("identity rollback destroyed nonempty data")
 	}
 	var count int

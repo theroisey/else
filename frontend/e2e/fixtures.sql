@@ -1,5 +1,8 @@
 -- Test-only identity, deliberately public synthetic password:
 -- "clearly synthetic browser password". Never provision this in a real environment.
+-- Real synthetic scope record required by the client assignment boundary.
+INSERT INTO app.client_scopes(id) VALUES ('22222222-2222-4222-8222-222222222222');
+INSERT INTO app.clients(id,name) VALUES ('22222222-2222-4222-8222-222222222222','Synthetic Browser Client');
 INSERT INTO app.users (id, email, display_name, password_hash) VALUES
 ('11111111-1111-4111-8111-111111111111', 'browser.fixture@example.com', 'Browser Fixture',
  '$argon2id$v=19$m=19456,t=2,p=1$Zml4dHVyZS1vbmx5c2FsdA$q44qWGtBzhKQ/qhlHB+AxsHnTl623ugz2P+BkSW2ZxQ');

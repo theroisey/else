@@ -34,6 +34,7 @@ type administrationFixture struct {
 func newAdministrationFixture(t *testing.T) *administrationFixture {
 	t.Helper()
 	f := newIdentityFixture(t)
+	seedClientScopes(t, f)
 	if _, err := f.admin.Exec(f.base.ctx, `GRANT EXECUTE ON FUNCTION
 		app.admin_users(uuid,uuid,integer),app.admin_user(uuid,uuid),app.admin_roles(uuid,uuid,integer),app.admin_role(uuid,uuid),
 		app.admin_catalog(uuid),app.admin_assignments(uuid,uuid,uuid,integer),
@@ -475,6 +476,9 @@ func TestAdministrationMigrationPreservesPopulatedIdentityAndAuthorization(t *te
 	f := newIdentityFixture(t)
 	p := provider(t, f.base)
 	if _, err := p.Down(f.base.ctx); err != nil {
+		t.Fatal("empty client rollback failed", err)
+	}
+	if _, err := p.Down(f.base.ctx); err != nil {
 		t.Fatal("empty administration rollback failed", err)
 	}
 	user := f.bootstrap(t)
@@ -494,6 +498,9 @@ func TestAdministrationMigrationPreservesPopulatedIdentityAndAuthorization(t *te
 	}
 	if _, err := f.service.Current(f.base.ctx, login.Token); err != nil {
 		t.Fatal("upgrade invalidated an existing session")
+	}
+	if _, err := p.Down(f.base.ctx); err != nil {
+		t.Fatal("empty client rollback failed", err)
 	}
 	if _, err := p.Down(f.base.ctx); err == nil {
 		t.Fatal("populated administration rollback was allowed")

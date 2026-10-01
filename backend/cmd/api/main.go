@@ -10,6 +10,7 @@ import (
 
 	"github.com/theroisey/else/backend/internal/administration"
 	"github.com/theroisey/else/backend/internal/authorization"
+	"github.com/theroisey/else/backend/internal/clients"
 	"github.com/theroisey/else/backend/internal/config"
 	"github.com/theroisey/else/backend/internal/database"
 	httpapi "github.com/theroisey/else/backend/internal/http"
@@ -76,7 +77,17 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("administration_startup_failed", "error_code", "administration_startup_failed")
 		return 1
 	}
-	server, err := httpapi.NewWithAdministration(c, logger, pool.Ping, authHandler, administrationHandler)
+	clientService, err := clients.NewService(pool)
+	if err != nil {
+		logger.Error("client_startup_failed", "error_code", "client_startup_failed")
+		return 1
+	}
+	clientHandler, err := clients.NewHandler(clientService, authHandler, logger)
+	if err != nil {
+		logger.Error("client_startup_failed", "error_code", "client_startup_failed")
+		return 1
+	}
+	server, err := httpapi.NewWithClients(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1

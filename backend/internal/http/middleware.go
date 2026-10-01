@@ -76,9 +76,12 @@ func routeLabel(path string) string {
 		return "/api/v1/auth/logout"
 	case "/api/v1/auth/session":
 		return "/api/v1/auth/session"
-	case "/api/v1/users", "/api/v1/roles", "/api/v1/permissions":
+	case "/api/v1/users", "/api/v1/roles", "/api/v1/permissions", "/api/v1/clients":
 		return path
 	default:
+		if strings.HasPrefix(path, "/api/v1/clients/") {
+			return "/api/v1/clients/*"
+		}
 		if strings.HasPrefix(path, "/api/v1/users/") {
 			return "/api/v1/users/*"
 		}
