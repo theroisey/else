@@ -46,6 +46,18 @@ func (e *Error) Unwrap() error { return e.cause }
 // No event is written for reads or failed operations. Commit errors can have an
 // unknown outcome: callers must reconcile, rather than blindly retry mutations.
 func WithTransaction(ctx context.Context, pool *pgxpool.Pool, mutate func(context.Context, Queries) (Event, error)) error {
+	if mutate == nil {
+		return ErrInvalidEvent
+	}
+	return WithTransactionEvents(ctx, pool, func(ctx context.Context, q Queries) ([]Event, error) {
+		event, err := mutate(ctx, q)
+		return []Event{event}, err
+	})
+}
+
+// WithTransactionEvents is the multi-event form used when one business
+// operation necessarily changes more than one auditable resource.
+func WithTransactionEvents(ctx context.Context, pool *pgxpool.Pool, mutate func(context.Context, Queries) ([]Event, error)) error {
 	if correlation.ID(ctx) == "" {
 		return ErrMissingCorrelation
 	}
@@ -62,22 +74,27 @@ func WithTransaction(ctx context.Context, pool *pgxpool.Pool, mutate func(contex
 		defer cancel()
 		_ = tx.Rollback(cleanup) // ErrTxClosed after commit; pgx discards on rollback failure.
 	}()
-	event, err := mutate(ctx, queries{tx: tx})
+	events, err := mutate(ctx, queries{tx: tx})
 	if err != nil {
 		return &Error{Operation: "mutation", cause: err}
 	}
-	before, after, metadata, err := event.encode()
-	if err != nil {
-		return err
+	if len(events) == 0 {
+		return ErrInvalidEvent
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO app.audit_events
-		(actor_kind, actor_user_id, event_name, resource_kind, resource_id, client_id,
-		 request_id, before_state, after_state, metadata)
-		VALUES ($1, $2::uuid, $3, $4, $5::uuid, $6::uuid, $7, $8::jsonb, $9::jsonb, $10::jsonb)`,
-		event.Actor.Kind, nullable(event.Actor.UserID), event.ResourceKind+"."+string(event.Action),
-		event.ResourceKind, event.ResourceID, nullable(event.ClientID), correlation.ID(ctx), before, after, metadata)
-	if err != nil {
-		return &Error{Operation: "audit insert", cause: err}
+	for _, event := range events {
+		before, after, metadata, err := event.encode()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, `INSERT INTO app.audit_events
+			(actor_kind, actor_user_id, event_name, resource_kind, resource_id, client_id,
+			 request_id, before_state, after_state, metadata)
+			VALUES ($1, $2::uuid, $3, $4, $5::uuid, $6::uuid, $7, $8::jsonb, $9::jsonb, $10::jsonb)`,
+			event.Actor.Kind, nullable(event.Actor.UserID), event.ResourceKind+"."+string(event.Action),
+			event.ResourceKind, event.ResourceID, nullable(event.ClientID), correlation.ID(ctx), before, after, metadata)
+		if err != nil {
+			return &Error{Operation: "audit insert", cause: err}
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return &Error{Operation: "commit", cause: err}

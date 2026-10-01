@@ -27,7 +27,7 @@ Logs contain fixed authentication event/error codes and the server request ID, w
 A successful response sets both cookies and returns only safe current identity data:
 
 ```json
-{"data":{"user":{"id":"uuid","email":"person@example.com","display_name":"Person"},"session":{"expires_at":"2026-10-01T23:00:00Z"}}}
+{"data":{"user":{"id":"uuid","email":"person@example.com","display_name":"Person","permissions":[{"permission":"roles.manage","scope":"global"}]},"session":{"expires_at":"2026-10-01T23:00:00Z"}}}
 ```
 
 `GET /api/v1/auth/session` returns the same shape for a valid session. `POST /api/v1/auth/logout` requires `Origin`, JSON content type, both cookies and `X-CSRF-Token`, revokes the session, clears both cookies and returns 204. The frontend reads the CSRF cookie for the header; no endpoint returns the value in JSON.
@@ -50,7 +50,7 @@ Production operators should apply the equivalent statements from that file with 
 
 ## Initial administrator bootstrap
 
-Bootstrap uses the migration owner through a separate `BOOTSTRAP_DATABASE_URL`; the API process never receives it. It acquires a transaction advisory lock, requires zero existing users, reads the password from an interactive terminal without echo, creates exactly one active identity with `bootstrap_admin=true`, and writes its audit event in the same transaction. A repeat attempt fails. The marker grants no application permission and is never returned or checked as authorization; Issue #9 must consume it into the initial RBAC assignment.
+Bootstrap uses the migration owner through a separate `BOOTSTRAP_DATABASE_URL`; the API process never receives it. It acquires a transaction advisory lock, requires zero existing users, reads the password from an interactive terminal without echo, creates exactly one active identity with `bootstrap_admin=true`, assigns the ordinary Initial Administrator role, and writes both audit events in the same transaction. A repeat attempt fails. The marker grants no application permission and is never returned or checked as authorization; [Issue #9](authorization.md) consumes it into the initial RBAC assignment.
 
 For local Compose after migration and runtime grants:
 
@@ -60,7 +60,7 @@ BOOTSTRAP_ADMIN_NAME='Initial Administrator' \
 docker compose run --rm bootstrap-admin
 ```
 
-Enter the password only at the prompt. Do not pass it in an argument, environment variable, shell history or `.env`. For a non-Compose environment, set the two non-secret identity fields and `BOOTSTRAP_DATABASE_URL` privately, then run `go run ./cmd/bootstrap-admin` from `backend/` in a terminal. Protect and remove bootstrap/migration credentials after initialization. Since #9 is separate, this identity can authenticate but has no domain permissions yet.
+Enter the password only at the prompt. Do not pass it in an argument, environment variable, shell history or `.env`. For a non-Compose environment, set the two non-secret identity fields and `BOOTSTRAP_DATABASE_URL` privately, then run `go run ./cmd/bootstrap-admin` from `backend/` in a terminal. Protect and remove bootstrap/migration credentials after initialization. The resulting identity receives the Initial Administrator permission set through a normal global role assignment.
 
 ## Verification
 

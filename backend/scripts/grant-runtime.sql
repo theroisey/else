@@ -15,5 +15,11 @@ ON app.sessions TO else_runtime;
 GRANT UPDATE (revoked_at) ON app.sessions TO else_runtime;
 GRANT EXECUTE ON FUNCTION app.authentication_identity(text),
                           app.lock_authentication_identity(uuid),
-                          app.current_identity(bytea, timestamptz)
+                          app.current_identity(bytea, timestamptz),
+                          app.authorization_grants(uuid),
+                          app.authorization_allowed(uuid, text, uuid),
+                          app.create_role_assignment(uuid, uuid, uuid, text, uuid, uuid, timestamptz),
+                          app.revoke_role_assignment(uuid, uuid, timestamptz),
+                          app.create_permission_assignment(uuid, uuid, text, uuid, timestamptz),
+                          app.revoke_permission_assignment(uuid, uuid, timestamptz)
 TO else_runtime;

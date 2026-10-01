@@ -4,7 +4,7 @@ Related Issue: [#4](https://github.com/theroisey/else/issues/4).
 
 ## Implemented contract
 
-The API owns a bounded pgx connection pool using an explicit runtime `DATABASE_URL`. The separate migration executable uses `MIGRATION_DATABASE_URL`, pgx's database/sql adapter, and embedded Goose SQL migrations. The HTTP process never performs schema changes. Issue #7 adds [protected audit storage](audit-log.md); Issue #8 adds [identity/session storage](identity.md). Business-domain tables remain unimplemented.
+The API owns a bounded pgx connection pool using an explicit runtime `DATABASE_URL`. The separate migration executable uses `MIGRATION_DATABASE_URL`, pgx's database/sql adapter, and embedded Goose SQL migrations. The HTTP process never performs schema changes. Issue #7 adds [protected audit storage](audit-log.md); Issue #8 adds [identity/session storage](identity.md); Issue #9 adds [protected authorization storage](authorization.md). Business-domain tables remain unimplemented.
 
 API startup now requires valid database configuration and a successful real connection check. This intentionally replaces Issue #2's unconfigured executable: configure PostgreSQL before starting the API. Invalid/missing settings or unavailable startup dependencies exit with a safe structured error. Once serving, `/health` remains process liveness and `/ready` calls the real pool with the existing request deadline. An outage produces readiness 503 while liveness remains 200; reconnecting restores readiness.
 
@@ -41,7 +41,7 @@ REVOKE ALL ON SCHEMA public FROM PUBLIC;
 GRANT USAGE, CREATE ON SCHEMA public TO else_migrator;
 ```
 
-Set the migrator password interactively with psql `\password else_migrator` and the runtime password with `\password else_runtime`, or use approved secret provisioning. Export the corresponding URLs privately. Run migrations with the migration identity. After migrations, apply the reviewed audit and identity grants in [the audit guide](audit-log.md) and [identity guide](identity.md). Local Compose uses:
+Set the migrator password interactively with psql `\password else_migrator` and the runtime password with `\password else_runtime`, or use approved secret provisioning. Export the corresponding URLs privately. Run migrations with the migration identity. After migrations, apply the reviewed audit, identity and authorization grants in [the audit guide](audit-log.md), [identity guide](identity.md) and [authorization guide](authorization.md). Local Compose uses:
 
 ```sh
 docker compose exec -T postgres psql -U postgres -d else < backend/scripts/grant-runtime.sql

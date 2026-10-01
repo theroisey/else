@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/theroisey/else/backend/internal/authorization"
 	"github.com/theroisey/else/backend/internal/config"
 	"github.com/theroisey/else/backend/internal/database"
 	httpapi "github.com/theroisey/else/backend/internal/http"
@@ -49,7 +50,12 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("invalid_configuration", "detail", err.Error())
 		return 1
 	}
-	identityService, err := identity.NewService(pool, identity.ArgonPasswords{})
+	authorizationService, err := authorization.NewService(pool)
+	if err != nil {
+		logger.Error("authorization_startup_failed", "error_code", "authorization_startup_failed")
+		return 1
+	}
+	identityService, err := identity.NewService(pool, identity.ArgonPasswords{}, authorizationService)
 	if err != nil {
 		logger.Error("identity_startup_failed", "error_code", "identity_startup_failed")
 		return 1
