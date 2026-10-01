@@ -18,6 +18,9 @@ cleanup() {
   task_result=$?
   trap - EXIT INT TERM
   if [ "$task_initialized" = true ]; then
+    if [ "$task_result" -ne 0 ]; then
+      compose logs --no-color --tail 100 2>&1 | python3 "$task_directory/backend/scripts/redact-compose-logs.py" "$task_directory/.env" || true
+    fi
     compose down --volumes --remove-orphans >/dev/null || task_result=1
   fi
   rm -rf "$task_directory"
