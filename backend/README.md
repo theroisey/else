@@ -10,4 +10,4 @@ Business endpoints use `/api/v1`. Every external input is validated, every resou
 
 Implement backend changes on `backend`. Root-level repository documentation and shared infrastructure may use a coordinated backend PR without unrelated frontend implementation. See [bootstrap instructions](../docs/repository-bootstrap.md).
 
-No Go module, executable, database schema, or test harness exists yet. Formatting, vet, tests, and build commands arrive with Issue #2; migration verification arrives with Issue #4.
+Issue #2 adds the Go HTTP executable, configuration, structured logging, health/readiness, bounded shutdown, and focused unit/lifecycle tests. See [the HTTP foundation guide](../docs/backend-http.md) for configuration, response contracts, and run/check commands. PostgreSQL, migrations, and business routes are not implemented yet; `/ready` deliberately returns 503 until a real dependency checker is wired.

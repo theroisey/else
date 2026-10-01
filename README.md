@@ -4,9 +4,11 @@ Roisey Else is a client operations platform for financial tracking, pricing, tas
 
 ## Current state
 
-The initial audit on 2026-10-01 found an empty GitHub repository and a local checkout containing only `AGENTS.md` and Obsidian settings. The first implementation addresses [Issue #1: repository conventions and architecture baseline](https://github.com/theroisey/else/issues/1).
+The initial audit on 2026-10-01 found an empty GitHub repository and a local checkout containing only `AGENTS.md` and Obsidian settings. [Issue #1](https://github.com/theroisey/else/issues/1) establishes the repository baseline; [Issue #2](https://github.com/theroisey/else/issues/2) adds the Go HTTP foundation.
 
-This baseline contains engineering documentation and contribution templates. Application code, database migrations, Docker services, automated checks, and authentication are not implemented yet. There is no application startup command at this stage.
+The current working implementation contains engineering documentation, contribution templates, and a Go HTTP foundation with focused tests. Database migrations, Docker services, CI, authentication, frontend runtime, and business modules are not implemented yet.
+
+Run the backend from `backend/` using `go run ./cmd/api` with Go 1.27.1. [The HTTP guide](docs/backend-http.md) documents configuration and verification. `/health` reports liveness; `/ready` remains 503 until real dependency readiness is implemented.
 
 ## Engineering contract
 
@@ -36,7 +38,7 @@ The frontend uses a monochrome operational design: compact navigation, dense tab
 
 ## Verification
 
-Issue #1 uses document/link/dependency review, ignore-rule checks, and whitespace validation. Runtime test, lint, typecheck, migration, and Docker commands will be added by their foundation Issues. These missing checks must not be reported as passing.
+Issue #1 uses document/link/dependency review, ignore-rule checks, and generated-file whitespace validation; the original AGENTS.md formatting is preserved. Issue #2 adds Go formatting, vet, unit/race tests, and native/Linux builds. Frontend, migration, Docker, and CI checks arrive in their own foundation Issues and are not reported as passing before they exist.
 
 ## License
 

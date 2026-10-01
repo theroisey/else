@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-First active slice: [#1](https://github.com/theroisey/else/issues/1). Start no other implementation Issue until this baseline is reviewed and its prerequisites are resolved.
+Current slice: [#2](https://github.com/theroisey/else/issues/2), implemented and validated for a separate backend PR. The baseline [#1](https://github.com/theroisey/else/issues/1) was merged through [PR #33](https://github.com/theroisey/else/pull/33); main, frontend, and backend were synchronized before publishing the HTTP foundation.
 
 ## Verified starting state
 
@@ -95,7 +95,7 @@ Security, critical-flow tests, performance evidence, and deployment readiness.
 
 #1, #2, #3, #4, #5, #6, #7, #8, #9, #11, #12, #10, #13, #14, #15, #16, #17, #18, #22, #28, #19, #20, #21, #23, #24, #25, #26, #27, #29, #30, #31, #32.
 
-This is one valid order that honors prerequisites and milestone grouping. Independent ready Issues can be scheduled separately, but this execution implements only Issue #1. Numeric Issue order is not dependency order: user administration #10 follows the real login/shell #12, which follows design primitives #11.
+This is one valid order that honors prerequisites and milestone grouping. Independent ready Issues can be scheduled separately; each execution completes one coherent slice. Numeric Issue order is not dependency order: user administration #10 follows the real login/shell #12, which follows design primitives #11.
 
 ## Coordination rules
 
@@ -108,8 +108,8 @@ This is one valid order that honors prerequisites and milestone grouping. Indepe
 
 ## Scope limits
 
-Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install dependencies, generate business schemas, or implement runtime behavior. Command palette, task attachments/comments, recurring reminder delivery, additional providers, and executable release rollouts require separately scoped Issues.
+Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install dependencies, generate business schemas, or implement runtime behavior. Issue #2 adds only the Go HTTP foundation. Command palette, task attachments/comments, recurring reminder delivery, additional providers, and executable release rollouts require separately scoped Issues.
 
 ## Current status
 
-All 32 Issues are open. Issue #1 has the baseline work in draft PR #33, from backend into main. The owner approved the one-time empty main commit; development branches originate from that baseline. Issue #1 remains open until its PR is reviewed and merged. No production deployment is authorized or attempted.
+Issue #1 is closed after the owner merged PR #33. The other 31 roadmap Issues remain open. Issue #2 is implemented and tested, with its separate backend PR prepared after branch synchronization. The one-time empty main initialization is complete and its exception consumed. Issues remain open until review and merge. No later implementation Issue or production deployment is started.
