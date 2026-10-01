@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import { createQueryClient } from './query-client'
 
-function renderApp(path = '/') {
+function renderApp(path = '/status') {
   const client = createQueryClient()
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><App /></MemoryRouter></QueryClientProvider>)
   return client
@@ -42,6 +42,8 @@ describe('foundation application', () => {
     const user = userEvent.setup()
     await user.tab()
     expect(screen.getByRole('link', { name: 'Interface review' })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('link', { name: 'Workspace' })).toHaveFocus()
     await user.tab()
     expect(button).toHaveFocus()
     await user.keyboard('{Enter}')

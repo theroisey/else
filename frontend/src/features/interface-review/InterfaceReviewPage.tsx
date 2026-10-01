@@ -41,7 +41,7 @@ export function InterfaceReviewPage() {
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <span className="font-semibold tracking-tight">ROISEY ELSE</span>
-          <Link className={buttonStyles({ variant: 'ghost', size: 'compact' })} to="/">
+          <Link className={buttonStyles({ variant: 'ghost', size: 'compact' })} to="/status">
             <span aria-hidden="true">←</span>
             Service status
           </Link>

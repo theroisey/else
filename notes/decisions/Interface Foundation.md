@@ -1,6 +1,6 @@
 ---
 type: decision
-status: pr-review
+status: merged
 created: 2026-10-01
 tags:
   - frontend
@@ -21,3 +21,5 @@ The `/interface` route is a working development review surface with local state 
 - [[Frontend Foundation]]
 - [Interface foundation guide](../../docs/interface-foundation.md)
 - [Issue #11](https://github.com/theroisey/else/issues/11)
+- [Merged PR #44](https://github.com/theroisey/else/pull/44)
+- [Main verification and publication](https://github.com/theroisey/else/actions/runs/36899970874)
