@@ -6,7 +6,7 @@ Roisey Else is a client operations platform for financial tracking, pricing, tas
 
 The initial audit on 2026-10-01 found an empty GitHub repository and a local checkout containing only `AGENTS.md` and Obsidian settings. [Issue #1](https://github.com/theroisey/else/issues/1) establishes the repository baseline; [Issue #2](https://github.com/theroisey/else/issues/2) adds the Go HTTP foundation.
 
-The current working implementation contains engineering documentation, contribution templates, a Go HTTP foundation, and a typed React frontend with focused tests. PostgreSQL connection lifecycle and reversible migration tooling are implemented. Issue #5 proposes companion container PRs; [the Docker guide](docs/docker.md) documents local startup and the incomplete container verification gate. CI, authentication, and business modules are not implemented yet.
+The current working implementation contains engineering documentation, contribution templates, a Go HTTP foundation, and a typed React frontend with focused tests. PostgreSQL connection lifecycle and reversible migration tooling are implemented. Issue #5's container PRs are merged; [the Docker guide](docs/docker.md) documents local startup and the incomplete runtime verification gate. Issue #6 proposes [CI and tested-image publication](docs/ci.md). Authentication and business modules are not implemented yet.
 
 Run the backend from `backend/` using `go run ./cmd/api` with Go 1.27.1. [The HTTP guide](docs/backend-http.md) documents configuration and verification. `/health` reports liveness; `/ready` checks actual PostgreSQL connectivity. Export runtime DATABASE_URL securely before API startup; [the database guide](docs/database.md) documents provisioning and separate migrations.
 
