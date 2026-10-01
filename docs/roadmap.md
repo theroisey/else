@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#4](https://github.com/theroisey/else/issues/4), PostgreSQL connection lifecycle and reversible migration tooling. The frontend foundation [#3](https://github.com/theroisey/else/issues/3) was merged through [PR #35](https://github.com/theroisey/else/pull/35); all permanent branches were synchronized before backend development.
+Current slice: [#4](https://github.com/theroisey/else/issues/4), PostgreSQL connection lifecycle and reversible migration tooling, published in [PR #36](https://github.com/theroisey/else/pull/36). The frontend foundation [#3](https://github.com/theroisey/else/issues/3) was merged through [PR #35](https://github.com/theroisey/else/pull/35); all permanent branches were synchronized before backend development.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#3 are closed after owner merges of PRs #33–#35. The other 29 roadmap Issues remain open. Issue #4 is implemented and verified for a separate backend PR. The one-time empty main initialization is complete and its exception consumed. Issues remain open until review and merge. No later implementation Issue or production deployment is started.
+Issues #1–#3 are closed after owner merges of PRs #33–#35. The other 29 roadmap Issues remain open. Issue #4 is implemented and verified in [backend PR #36](https://github.com/theroisey/else/pull/36), open for review. The one-time empty main initialization is complete and its exception consumed. Issues remain open until review and merge. No later implementation Issue or production deployment is started.

@@ -1,6 +1,6 @@
 ---
 type: decision
-status: validated-ready-for-review
+status: pr-open-for-review
 created: 2026-10-01
 tags:
   - architecture
@@ -35,4 +35,5 @@ Issue #5 must respect the initial TLS contract for PostgreSQL container hostname
 - [[HTTP Foundation]]
 - [[Frontend Foundation]]
 - [Issue #4](https://github.com/theroisey/else/issues/4)
+- [PR #36](https://github.com/theroisey/else/pull/36)
 - [Database guide](../../docs/database.md)
