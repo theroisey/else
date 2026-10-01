@@ -29,9 +29,9 @@ Provision identities outside ordinary application startup. A trusted administrat
 ```sql
 CREATE ROLE else_migrator LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
 CREATE ROLE else_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
-CREATE DATABASE else OWNER else_migrator;
-REVOKE ALL ON DATABASE else FROM PUBLIC;
-GRANT CONNECT ON DATABASE else TO else_migrator, else_runtime;
+CREATE DATABASE "else" OWNER else_migrator;
+REVOKE ALL ON DATABASE "else" FROM PUBLIC;
+GRANT CONNECT ON DATABASE "else" TO else_migrator, else_runtime;
 ```
 
 Connect administratively to the new `else` database and revoke public schema grants:
