@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implementation-in-progress
+status: pr-review
 created: 2026-10-01
 tags:
   - authentication
@@ -18,7 +18,9 @@ Runtime database access uses narrow security-definer lookup functions and explic
 
 The interactive migration-owner bootstrap succeeds only on an empty user table and creates a single marked identity plus atomic audit. The marker is not authorization; #9 consumes it into RBAC. No self-registration, recovery, MFA, roles, client scope or frontend UI enters this slice.
 
-Local Go checks and tagged PostgreSQL-suite compilation precede actual CI evidence. Docker Hub's unauthenticated pull limit blocks local runtime execution. See [the identity contract](../../docs/identity.md), Issue #8 and the eventual PR for final evidence.
+Local module/format/vet/race/static-build and tagged-suite compilation checks pass. CI run 36865279033 passes all four actual gates for `0fa3130ca1edd6f5796f20d1fbfceba4ef68c4f2`, including PostgreSQL identity/rollback/permission tests and full Compose development/static runtime verification. Publication correctly skipped on the PR. Docker Hub's unauthenticated pull limit still blocks local runtime execution; GitHub supplied the evidence. PR #42 awaits owner review/merge.
 
 - [[Audit Infrastructure]]
 - [[PostgreSQL Foundation]]
+- [PR #42](https://github.com/theroisey/else/pull/42)
+- [Verified CI](https://github.com/theroisey/else/actions/runs/36865279033)

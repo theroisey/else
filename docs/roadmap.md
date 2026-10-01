@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#7 are merged and closed. Issue #8 adds identity/session storage, one-time bootstrap, Argon2id verification, exact-origin and CSRF-protected cookie sessions, bounded login throttling and audited login/logout mutations. Login UI, RBAC/client scope, recovery and business domains remain later Issues. Local PostgreSQL/container execution is blocked by Docker Hub's unauthenticated pull limit; actual CI evidence must be recorded before review. No production deployment is authorized or performed.
+Issues #1–#7 are merged and closed. Issue #8 adds identity/session storage, one-time bootstrap, Argon2id verification, exact-origin and CSRF-protected cookie sessions, bounded login throttling and audited login/logout mutations in [PR #42](https://github.com/theroisey/else/pull/42). All implementation gates pass in [CI run 36865279033](https://github.com/theroisey/else/actions/runs/36865279033); owner review/merge remains. Login UI, RBAC/client scope, recovery and business domains remain later Issues. No production deployment is authorized or performed.
