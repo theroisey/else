@@ -62,6 +62,9 @@ done
 for task_sql in 'SELECT email FROM app.users' 'SELECT password_hash FROM app.users' 'SELECT token_hash FROM app.sessions' 'SELECT bootstrap_admin FROM app.users' 'UPDATE app.users SET bootstrap_admin=true' 'UPDATE app.users SET password_hash=$$secret$$' 'DELETE FROM app.users' 'DELETE FROM app.sessions' 'TRUNCATE app.users CASCADE'; do
   if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Identity runtime privilege boundary failed.' >&2; exit 1; fi
 done
+for task_sql in 'SELECT * FROM app.permissions' 'SELECT * FROM app.roles' 'SELECT * FROM app.role_permissions' 'SELECT * FROM app.user_roles' 'INSERT INTO app.user_roles (id,user_id,role_id,scope_kind) VALUES (gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),$$global$$)' 'UPDATE app.user_roles SET revoked_at=now()' 'DELETE FROM app.user_roles' 'TRUNCATE app.user_roles'; do
+  if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Authorization runtime privilege boundary failed.' >&2; exit 1; fi
+done
 if compose exec -T postgres sh -eu -c '
   export PGPASSWORD="$RUNTIME_PASSWORD" PGSSLMODE=verify-full PGSSLROOTCERT=/opt/else/tls-input/ca.crt
   psql -h localhost -U else_runtime -d else -v ON_ERROR_STOP=1 -c "SELECT 1"

@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/theroisey/else/backend/internal/audit"
+	"github.com/theroisey/else/backend/internal/authorization"
 )
 
 const SessionLifetime = 12 * time.Hour
@@ -18,12 +19,18 @@ type Service struct {
 	passwords Passwords
 	dummyHash string
 	now       func() time.Time
+	grants    GrantReader
+}
+
+type GrantReader interface {
+	Grants(context.Context, string) ([]authorization.Grant, error)
 }
 
 type User struct {
-	ID          string `json:"id"`
-	Email       string `json:"email"`
-	DisplayName string `json:"display_name"`
+	ID          string                `json:"id"`
+	Email       string                `json:"email"`
+	DisplayName string                `json:"display_name"`
+	Permissions []authorization.Grant `json:"permissions"`
 }
 type Session struct {
 	ID        string
@@ -36,7 +43,7 @@ type LoginResult struct {
 	Token, CSRF string
 }
 
-func NewService(pool *pgxpool.Pool, passwords Passwords) (*Service, error) {
+func NewService(pool *pgxpool.Pool, passwords Passwords, readers ...GrantReader) (*Service, error) {
 	if pool == nil || passwords == nil {
 		return nil, ErrInvalidInput
 	}
@@ -44,7 +51,14 @@ func NewService(pool *pgxpool.Pool, passwords Passwords) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Service{pool: pool, passwords: passwords, dummyHash: dummy, now: time.Now}, nil
+	var grants GrantReader
+	if len(readers) > 1 {
+		return nil, ErrInvalidInput
+	}
+	if len(readers) == 1 {
+		grants = readers[0]
+	}
+	return &Service{pool: pool, passwords: passwords, dummyHash: dummy, now: time.Now, grants: grants}, nil
 }
 
 func (s *Service) Login(ctx context.Context, suppliedEmail, password string) (LoginResult, error) {
@@ -64,6 +78,9 @@ func (s *Service) Login(ctx context.Context, suppliedEmail, password string) (Lo
 	verified := s.passwords.Verify(verifyHash, password)
 	if !found || !validEmail || !validPassword(password) || !verified || status != "active" {
 		return LoginResult{}, ErrInvalidCredentials
+	}
+	if err := s.loadGrants(ctx, &user); err != nil {
+		return LoginResult{}, err
 	}
 	sessionID, err := newID()
 	if err != nil {
@@ -117,7 +134,23 @@ func (s *Service) Current(ctx context.Context, token string) (Session, error) {
 		return Session{}, ErrUnauthorized
 	}
 	copy(session.csrfHash[:], csrf)
+	if err := s.loadGrants(ctx, &session.User); err != nil {
+		return Session{}, err
+	}
 	return session, nil
+}
+
+func (s *Service) loadGrants(ctx context.Context, user *User) error {
+	user.Permissions = make([]authorization.Grant, 0)
+	if s.grants == nil {
+		return nil
+	}
+	grants, err := s.grants.Grants(ctx, user.ID)
+	if err != nil {
+		return err
+	}
+	user.Permissions = grants
+	return nil
 }
 
 func (s *Service) ValidCSRF(session Session, cookie, header string) bool {

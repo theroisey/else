@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#8](https://github.com/theroisey/else/issues/8), secure identity and cookie sessions on backend. Issues #1–#7 are owner-merged; audit PR #41 and its [main run 36860620016](https://github.com/theroisey/else/actions/runs/36860620016) passed all gates/publication. Both development branches were synchronized before identity work. [The identity contract](identity.md) records security and bootstrap decisions.
+Current slice: [#9](https://github.com/theroisey/else/issues/9), permission-based RBAC and client-scope policy on backend. Issues #1–#8 are owner-merged. Both development branches were synchronized to identity merge `affb3b4` before authorization work. [The authorization contract](authorization.md) records scope, delegation, bootstrap and deny-by-default decisions.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#7 are merged and closed. Issue #8 adds identity/session storage, one-time bootstrap, Argon2id verification, exact-origin and CSRF-protected cookie sessions, bounded login throttling and audited login/logout mutations in [PR #42](https://github.com/theroisey/else/pull/42). All implementation gates pass in [CI run 36865279033](https://github.com/theroisey/else/actions/runs/36865279033); owner review/merge remains. Login UI, RBAC/client scope, recovery and business domains remain later Issues. No production deployment is authorized or performed.
+Issues #1–#8 are merged. Issue #9 adds protected role/permission storage, deny-by-default global/client evaluation, escalation-safe audited assignment primitives, bootstrap-role conversion and scoped permissions in current identity. User/role administration routes, login UI, client records, recovery and business domains remain later Issues. No production deployment is authorized or performed.

@@ -23,6 +23,7 @@ import (
 )
 
 const fixtureID = "11111111-1111-4111-8111-111111111111"
+const secondFixtureID = "11111111-1111-4111-8111-111111111112"
 
 func auditEvent() audit.Event {
 	exists := true
@@ -117,6 +118,32 @@ func TestAuditCommitAndHTTPCorrelation(t *testing.T) {
 	}
 }
 
+func TestAuditMultipleEventsAreAtomic(t *testing.T) {
+	for _, validSecond := range []bool{true, false} {
+		f, admin, pool, _ := auditFixture(t)
+		err := audit.WithTransactionEvents(correlation.New(f.ctx), pool, func(ctx context.Context, q audit.Queries) ([]audit.Event, error) {
+			first, err := insertBusiness(ctx, q)
+			second := first
+			second.ResourceID = secondFixtureID
+			if !validSecond {
+				second.ResourceID = "invalid"
+			}
+			return []audit.Event{first, second}, err
+		})
+		if validSecond {
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertCounts(t, f, admin, 1, 2)
+		} else {
+			if err == nil {
+				t.Fatal("invalid second event committed a partial operation")
+			}
+			assertCounts(t, f, admin, 0, 0)
+		}
+	}
+}
+
 func TestAuditFailuresRollbackBusinessWrites(t *testing.T) {
 	for _, scenario := range []string{"permission", "callback", "invalid event", "cancel", "panic", "missing correlation"} {
 		t.Run(scenario, func(t *testing.T) {
@@ -208,6 +235,9 @@ func TestAuditStorageDeniesHistoryAccessAndDefendsBroadenedGrants(t *testing.T) 
 	}
 	assertCounts(t, f, admin, 1, 1)
 	p := provider(t, f)
+	if _, err := p.Down(f.ctx); err != nil {
+		t.Fatal("empty authorization migration did not roll back before audit check")
+	}
 	if _, err := p.Down(f.ctx); err != nil {
 		t.Fatal("empty identity migration did not roll back before audit check")
 	}

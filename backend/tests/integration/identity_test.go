@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/theroisey/else/backend/internal/authorization"
 	"github.com/theroisey/else/backend/internal/config"
 	"github.com/theroisey/else/backend/internal/correlation"
 	"github.com/theroisey/else/backend/internal/database"
@@ -35,6 +36,7 @@ type identityFixture struct {
 	runtime     *pgxpool.Pool
 	runtimeRole string
 	service     *identity.Service
+	authorizer  *authorization.Service
 }
 
 func newIdentityFixture(t *testing.T) *identityFixture {
@@ -59,6 +61,7 @@ func newIdentityFixture(t *testing.T) *identityFixture {
 		"GRANT INSERT (id,user_id,token_hash,csrf_hash,created_at,expires_at) ON app.sessions TO " + quoted,
 		"GRANT UPDATE (revoked_at) ON app.sessions TO " + quoted,
 		"GRANT EXECUTE ON FUNCTION app.authentication_identity(text), app.lock_authentication_identity(uuid), app.current_identity(bytea,timestamptz) TO " + quoted,
+		"GRANT EXECUTE ON FUNCTION app.authorization_grants(uuid), app.authorization_allowed(uuid,text,uuid), app.create_role_assignment(uuid,uuid,uuid,text,uuid,uuid,timestamptz), app.revoke_role_assignment(uuid,uuid,timestamptz), app.create_permission_assignment(uuid,uuid,text,uuid,timestamptz), app.revoke_permission_assignment(uuid,uuid,timestamptz) TO " + quoted,
 		"GRANT INSERT " + auditColumns + " ON app.audit_events TO " + quoted,
 		"GRANT EXECUTE ON FUNCTION app.audit_snapshot_allowed(jsonb) TO " + quoted,
 	} {
@@ -71,11 +74,15 @@ func newIdentityFixture(t *testing.T) *identityFixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(runtime.Close)
-	service, err := identity.NewService(runtime, identity.ArgonPasswords{})
+	authorizer, err := authorization.NewService(runtime)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &identityFixture{base: f, admin: admin, adminPool: adminPool, runtime: runtime, runtimeRole: quoted, service: service}
+	service, err := identity.NewService(runtime, identity.ArgonPasswords{}, authorizer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &identityFixture{base: f, admin: admin, adminPool: adminPool, runtime: runtime, runtimeRole: quoted, service: service, authorizer: authorizer}
 }
 
 func (f *identityFixture) bootstrap(t *testing.T) string {
@@ -97,6 +104,12 @@ func TestIdentityBootstrapIsOneTimeAuditedAndHistoryPreserving(t *testing.T) {
 	if err != nil || email != bootstrapEmail || name != bootstrapName || status != "active" || !marker || event != "user.created" || strings.Contains(hash, bootstrapPassword) || !(identity.ArgonPasswords{}).Verify(hash, bootstrapPassword) {
 		t.Fatal("bootstrap identity or audit contract failed")
 	}
+	var assignments, assignmentEvents int
+	if err := f.admin.QueryRow(f.base.ctx, `SELECT
+		(SELECT count(*) FROM app.user_roles WHERE user_id=$1::uuid AND role_id=$2::uuid AND scope_kind='global' AND revoked_at IS NULL),
+		(SELECT count(*) FROM app.audit_events WHERE event_name='role_assignment.created')`, id, authorization.InitialAdministratorRoleID).Scan(&assignments, &assignmentEvents); err != nil || assignments != 1 || assignmentEvents != 1 {
+		t.Fatal("bootstrap administrator role assignment was not atomically audited")
+	}
 	if _, err := identity.Bootstrap(correlation.New(f.base.ctx), f.adminPool, identity.ArgonPasswords{}, "other@example.com", "Other Admin", bootstrapPassword); !errors.Is(err, identity.ErrAlreadyInitialized) {
 		t.Fatal("repeat bootstrap was not refused")
 	}
@@ -116,7 +129,7 @@ func TestSessionLifecycleUsesHashedTokensAndAtomicAudit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if login.Session.User.ID != userID || login.Session.User.Email != bootstrapEmail || login.Token == "" || login.CSRF == "" {
+	if login.Session.User.ID != userID || login.Session.User.Email != bootstrapEmail || login.Token == "" || login.CSRF == "" || len(login.Session.User.Permissions) != 19 {
 		t.Fatal("login result missing safe identity/session data")
 	}
 	var tokenHash, csrfHash []byte
@@ -125,7 +138,7 @@ func TestSessionLifecycleUsesHashedTokensAndAtomicAudit(t *testing.T) {
 		t.Fatal("session secrets were not stored as fixed digests")
 	}
 	current, err := f.service.Current(f.base.ctx, login.Token)
-	if err != nil || current.User.ID != userID {
+	if err != nil || current.User.ID != userID || len(current.User.Permissions) != 19 {
 		t.Fatal("current session lookup failed")
 	}
 	if !f.service.ValidCSRF(current, login.CSRF, login.CSRF) || f.service.ValidCSRF(current, login.CSRF, "wrong") {
@@ -240,6 +253,9 @@ func TestAuthHTTPContractEnforcesOriginCSRFAndSafeResponses(t *testing.T) {
 	success := loginRequest(bootstrapEmail, bootstrapPassword, authConfig.PublicOrigin)
 	if success.Code != http.StatusOK {
 		t.Fatalf("login failed: %d %s", success.Code, success.Body.String())
+	}
+	if !strings.Contains(success.Body.String(), `"permission":"roles.manage"`) || !strings.Contains(success.Body.String(), `"scope":"global"`) {
+		t.Fatal("current identity omitted effective permission grants")
 	}
 	var sessionCookie, csrfCookie *http.Cookie
 	for _, cookie := range success.Result().Cookies() {
