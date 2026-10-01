@@ -28,3 +28,5 @@ Docker Hub still rejects local pulls with its unauthenticated rate limit after #
 See [CI guide](../../docs/ci.md) and [[Docker Development]].
 
 Local actionlint 1.7.7, shell syntax, Compose CI/production configuration, event/permission/action-pin inspection, and eight simulated publication tests pass. The publication tests reject PR/tag/feature events and unsafe versions, require the tested revision, preserve SHA aliases on repeat promotion, refuse version reassignment, and prevent an older run from changing latest. Registry/network simulation is not publication evidence.
+
+Owner merges #39/#40 are verified. Main run 36856821215 succeeded for d050bb76d5e9dcb6241175c946d089c255a32aa7, including tested-image artifact transfer and both SHA/latest uploads. Issue #6 is closed. Both development branches are synchronized before #7. No deployment occurred. See [[../../docs/ci|CI guide]] for registry content digests.

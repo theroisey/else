@@ -30,7 +30,7 @@ Integration credentials remain backend-only. Logs, URLs, frontend bundles, and a
 
 ## Audit and activity
 
-[Issue #7](https://github.com/theroisey/else/issues/7) establishes append-oriented audit infrastructure before business mutations. A successful significant mutation and its audit event share a database transaction. Safe field allowlists govern snapshots and metadata; passwords, tokens, and provider credentials never enter audit records.
+[Issue #7](https://github.com/theroisey/else/issues/7) establishes [append-oriented audit infrastructure](audit-log.md) before business mutations. A successful significant mutation and its audit event share a database transaction. Safe field allowlists govern snapshots and metadata; passwords, tokens, and provider credentials never enter audit records.
 
 User-facing activity is a separate safe projection of confirmed events, introduced by [Issue #22](https://github.com/theroisey/else/issues/22). It is not a substitute for audit history and must not reveal restricted audit data.
 

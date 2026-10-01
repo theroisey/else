@@ -48,7 +48,7 @@ func TestGracefulShutdownWaitsForActiveRequestAndDisablesReadiness(t *testing.T)
 	release := make(chan struct{})
 	shutdownStarted := make(chan struct{})
 	s.httpServer.RegisterOnShutdown(func() { close(shutdownStarted) })
-	s.httpServer.Handler = requestMiddleware(s.logger, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	s.httpServer.Handler = RequestMiddleware(s.logger, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/slow" {
 			s.handler(w, r)
 			return

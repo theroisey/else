@@ -13,3 +13,5 @@ Implement backend changes on `backend`. Root-level repository documentation and 
 Issue #2 adds the Go HTTP executable, configuration, structured logging, health/readiness, bounded shutdown, and focused unit/lifecycle tests. See [the HTTP foundation guide](../docs/backend-http.md) for configuration, response contracts, and run/check commands. Issue #4 adds PostgreSQL pools and reversible migrations; readiness checks real connectivity. Business routes are not implemented yet.
 
 PostgreSQL uses pgxpool; schema changes use a separate embedded Goose migration executable. Export a securely provisioned runtime DATABASE_URL before API startup, and a distinct MIGRATION_DATABASE_URL for migration commands. See the [database guide](../docs/database.md) for role privileges, TLS, migration safety, and disposable integration tests.
+
+Issue #7 adds typed append-oriented audit storage and a transaction helper for later mutations. See [the audit contract](../docs/audit-log.md) for allowlists, actor/correlation handling, explicit runtime grants and history-preserving rollback. No business mutation endpoint exists yet.

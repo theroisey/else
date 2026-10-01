@@ -6,7 +6,7 @@ Related Issue: [#2](https://github.com/theroisey/else/issues/2).
 
 The Go backend has configuration validation, structured JSON logging, server-owned request IDs, safe HTTP errors, liveness/readiness endpoints, timeouts, bounded headers, and graceful shutdown. HTTP transport uses the standard library; the database layer uses pgx and separate Goose migration tooling.
 
-PostgreSQL connection lifecycle and migrations are implemented in the [database guide](database.md). Authentication, business routes, audit persistence, Docker packaging, and CI remain separate roadmap work. No client records or write APIs are exposed.
+PostgreSQL connection lifecycle and migrations are implemented in the [database guide](database.md). Audit persistence uses [the transaction contract](audit-log.md); [Docker](docker.md) and [CI](ci.md) are implemented. Authentication and business routes remain separate roadmap work. No client records or write APIs are exposed.
 
 The module requires Go 1.27.1, selected from the [official stable release metadata](https://go.dev/dl/?mode=json) during implementation. The verification toolchain was downloaded into temporary storage and checked against the official archive SHA-256; no global installation was changed.
 
@@ -59,7 +59,7 @@ Present but empty configuration values fail validation. Validation errors name t
 
 The executable wires a real PostgreSQL pool check through `ReadinessCheck(context.Context) error`. Startup fails without a valid DATABASE_URL and successful connection; readiness is 200 while connectivity succeeds and 503 on a subsequent outage. A checker must respect context cancellation and test every required dependency. A nil or timed-out checker must never be treated as healthy.
 
-Accepted requests receive `X-Request-ID`, `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store`, and `X-Content-Type-Options: nosniff`. Caller-supplied request IDs are ignored; the backend creates a fresh ID and places it in request context for future services/audit integration.
+Accepted requests receive `X-Request-ID`, `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store`, and `X-Content-Type-Options: nosniff`. Caller-supplied request IDs are ignored; the backend creates a fresh ID and places it in shared internal/correlation context for application services and audit INSERT. The reusable RequestMiddleware owns ID generation; trusted jobs/CLI operations use correlation.New.
 
 ## Error contract
 

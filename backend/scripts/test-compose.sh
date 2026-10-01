@@ -46,7 +46,7 @@ compose up -d --wait postgres
 compose run --rm migrate up
 compose run --rm migrate down
 compose run --rm migrate up
-compose exec -T postgres psql -U postgres -d else -v ON_ERROR_STOP=1 -c 'GRANT USAGE ON SCHEMA app TO else_runtime' >/dev/null
+compose exec -T postgres psql -U postgres -d else -v ON_ERROR_STOP=1 -c 'GRANT USAGE ON SCHEMA app TO else_runtime; GRANT INSERT (actor_kind, actor_user_id, event_name, resource_kind, resource_id, client_id, request_id, before_state, after_state, metadata) ON app.audit_events TO else_runtime; GRANT EXECUTE ON FUNCTION app.audit_snapshot_allowed(jsonb) TO else_runtime' >/dev/null
 
 runtime_query() {
   compose exec -T postgres sh -eu -c '
@@ -56,7 +56,7 @@ runtime_query() {
 }
 [ "$(runtime_query 'SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()')" = t ]
 [ "$(runtime_query "SELECT rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication FROM pg_roles WHERE rolname = current_user")" = f ]
-for task_sql in 'CREATE SCHEMA forbidden_ci' 'CREATE TABLE public.forbidden_ci (id integer)' 'SELECT * FROM public.goose_db_version'; do
+for task_sql in 'CREATE SCHEMA forbidden_ci' 'CREATE TABLE public.forbidden_ci (id integer)' 'SELECT * FROM public.goose_db_version' 'SELECT * FROM app.audit_events' 'UPDATE app.audit_events SET event_name=$$fixture.updated$$' 'DELETE FROM app.audit_events' 'TRUNCATE app.audit_events' 'ALTER TABLE app.audit_events DISABLE TRIGGER audit_history_append_only'; do
   if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Runtime privilege boundary failed.' >&2; exit 1; fi
 done
 if compose exec -T postgres sh -eu -c '

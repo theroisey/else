@@ -11,7 +11,7 @@ sh docker/dev/prepare.sh
 docker compose build frontend backend migrate
 docker compose up -d --wait postgres
 docker compose run --rm migrate up
-docker compose exec -T postgres psql -U postgres -d else -v ON_ERROR_STOP=1 -c 'GRANT USAGE ON SCHEMA app TO else_runtime'
+docker compose exec -T postgres psql -U postgres -d else -v ON_ERROR_STOP=1 -c 'GRANT USAGE ON SCHEMA app TO else_runtime; GRANT INSERT (actor_kind, actor_user_id, event_name, resource_kind, resource_id, client_id, request_id, before_state, after_state, metadata) ON app.audit_events TO else_runtime; GRANT EXECUTE ON FUNCTION app.audit_snapshot_allowed(jsonb) TO else_runtime'
 docker compose up -d --wait
 ```
 
@@ -53,7 +53,7 @@ When a managed cloud environment supplies `CODEX_PROXY_CERT`, add `-f docker-com
 
 ## Disposable reset
 
-Changing `.env` does not change passwords in an initialized database. Never discard a volume to fix credentials for valuable data. Only when all data in this local development project is disposable, `docker compose down --volumes` removes it permanently. Then remove this project's `.env` and `docker/dev/tls/`, run preparation again, and repeat first startup. Rollback with `docker compose run --rm migrate down` reverts one migration; the baseline refuses to remove a nonempty application schema.
+Changing `.env` does not change passwords in an initialized database. Never discard a volume to fix credentials for valuable data. Only when all data in this local development project is disposable, `docker compose down --volumes` removes it permanently. Then remove this project's `.env` and `docker/dev/tls/`, run preparation again, and repeat first startup. Rollback with `docker compose run --rm migrate down` reverts one migration; the audit migration refuses nonempty history, and the baseline refuses a nonempty application schema. Reapply explicit grants after an empty audit down/up. See [audit storage](audit-log.md).
 
 ## Validation status
 

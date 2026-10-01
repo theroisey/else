@@ -30,7 +30,7 @@ func New(c config.Config, logger *slog.Logger, readiness ReadinessCheck) (*Serve
 	}
 	s := &Server{config: c, logger: logger, readiness: readiness}
 	s.httpServer = &http.Server{
-		Addr: c.Address, Handler: requestMiddleware(logger, http.HandlerFunc(s.handler)),
+		Addr: c.Address, Handler: RequestMiddleware(logger, http.HandlerFunc(s.handler)),
 		ReadHeaderTimeout: c.ReadHeaderTimeout, ReadTimeout: c.ReadTimeout,
 		WriteTimeout: c.WriteTimeout, IdleTimeout: c.IdleTimeout,
 		MaxHeaderBytes: c.MaxHeaderBytes,

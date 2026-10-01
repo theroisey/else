@@ -6,7 +6,7 @@ Roisey Else is a client operations platform for financial tracking, pricing, tas
 
 The initial audit on 2026-10-01 found an empty GitHub repository and a local checkout containing only `AGENTS.md` and Obsidian settings. [Issue #1](https://github.com/theroisey/else/issues/1) establishes the repository baseline; [Issue #2](https://github.com/theroisey/else/issues/2) adds the Go HTTP foundation.
 
-The current working implementation contains engineering documentation, contribution templates, a Go HTTP foundation, and a typed React frontend with focused tests. PostgreSQL connection lifecycle and reversible migration tooling are implemented. Issue #5's container PRs are merged; [the Docker guide](docs/docker.md) documents local startup and the incomplete runtime verification gate. Issue #6 proposes [CI and tested-image publication](docs/ci.md). Authentication and business modules are not implemented yet.
+The current working implementation contains engineering documentation, contribution templates, a Go HTTP foundation, and a typed React frontend with focused tests. PostgreSQL connection lifecycle and reversible migration tooling are implemented. Issue #5's containers and #6's [CI/tested-image publication](docs/ci.md) passed real main verification; [the Docker guide](docs/docker.md) documents local startup. Issue #7 adds [atomic audit infrastructure](docs/audit-log.md) for future mutations. Authentication and business modules are not implemented yet.
 
 Run the backend from `backend/` using `go run ./cmd/api` with Go 1.27.1. [The HTTP guide](docs/backend-http.md) documents configuration and verification. `/health` reports liveness; `/ready` checks actual PostgreSQL connectivity. Export runtime DATABASE_URL securely before API startup; [the database guide](docs/database.md) documents provisioning and separate migrations.
 
@@ -22,7 +22,7 @@ The owner approved a one-time empty root commit to establish the initial PR base
 
 - [frontend/](frontend/README.md): React, TypeScript, Vite, Tailwind CSS, and Font Awesome application.
 - [backend/](backend/README.md): Go API, PostgreSQL access, migrations, permission checks, and audit infrastructure.
-- `.github/`: issue templates, PR templates, and later CI workflows.
+- `.github/`: issue templates, PR templates, and CI workflows.
 - [docs/](docs/architecture.md): architecture, contracts, and operating documentation.
 - [notes/](notes/project/Repository%20Audit.md): Obsidian-compatible project memory. Local Obsidian UI settings are excluded from Git.
 
@@ -40,7 +40,7 @@ The frontend uses a monochrome operational design: compact navigation, dense tab
 
 ## Verification
 
-Issue #1 uses document/link/dependency review, ignore-rule checks, and generated-file whitespace validation; the original AGENTS.md formatting is preserved. Issue #2 adds Go formatting, vet, unit/race tests, and native/Linux builds. Issue #3 adds reproducible frontend installation, lint, typecheck, component/service tests, production build, dependency audit, and real-browser checks. Issue #4 adds real PostgreSQL migration/permission/readiness tests and a disposable integration runner. Application Docker builds and CI checks arrive in #5/#6 and are not reported as passing before they exist.
+Issue #1 uses document/link/dependency review, ignore-rule checks, and generated-file whitespace validation; the original AGENTS.md formatting is preserved. Issue #2 adds Go formatting, vet, unit/race tests, and native/Linux builds. Issue #3 adds reproducible frontend installation, lint, typecheck, component/service tests, production build, dependency audit, and real-browser checks. Issue #4 adds real PostgreSQL migration/permission/readiness tests and a disposable integration runner. Issues #5/#6 provide verified application Docker builds and CI checks. Issue #7 adds audit rollback, privilege, payload-allowlist and correlation checks.
 
 ## License
 
