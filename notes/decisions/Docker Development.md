@@ -10,7 +10,7 @@ tags:
 
 # Docker Development
 
-Issue [#5](https://github.com/theroisey/else/issues/5) packages the existing applications and adds local three-service orchestration. Frontend packaging and backend/root orchestration have separate companion PRs; both are required for a runnable checkout.
+Issue [#5](https://github.com/theroisey/else/issues/5) packages the existing applications and adds local three-service orchestration. Frontend packaging [PR #37](https://github.com/theroisey/else/pull/37) and backend/root orchestration [PR #38](https://github.com/theroisey/else/pull/38) are draft companion PRs; both are required for a runnable checkout. Merge #37 first, synchronize backend with main, then verify the combined stack before #38 merges. Issue #5 remains open.
 
 ## Decisions
 

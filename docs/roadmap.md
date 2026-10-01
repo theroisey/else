@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#5](https://github.com/theroisey/else/issues/5), three-service Docker development packaging. PostgreSQL [#4](https://github.com/theroisey/else/issues/4) is merged through [PR #36](https://github.com/theroisey/else/pull/36). Both development branches were synchronized before the companion frontend/backend container changes. [The Docker guide](docker.md) records startup and verification limits.
+Current slice: [#5](https://github.com/theroisey/else/issues/5), three-service Docker development packaging, proposed in draft [frontend PR #37](https://github.com/theroisey/else/pull/37) and [backend PR #38](https://github.com/theroisey/else/pull/38). PostgreSQL [#4](https://github.com/theroisey/else/issues/4) is merged through [PR #36](https://github.com/theroisey/else/pull/36). Both development branches were synchronized before these companion changes. [The Docker guide](docker.md) records startup and verification limits.
 
 ## Verified starting state
 
