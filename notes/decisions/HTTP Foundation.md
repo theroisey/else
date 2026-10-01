@@ -1,6 +1,6 @@
 ---
 type: decision
-status: pr-open-for-review
+status: merged
 created: 2026-10-01
 tags:
   - architecture
@@ -32,7 +32,7 @@ The owner merged documentation baseline PR #33 at 2026-10-01 08:09:02 UTC (merge
 
 Go formatting, vet, unit tests and race tests pass. Native macOS and static Linux/amd64 binaries build successfully. A native binary smoke check verifies liveness, intentionally unavailable readiness, safe 404/405 responses, HEAD, generated request IDs, enforced header limits, secret-safe logs, and SIGTERM exit. Real listener tests prove graceful completion and force-close on shutdown deadline.
 
-Docker packaging and CI are not implemented in this Issue. No global toolchain installation or production deployment occurs. Issue #2 stays open until its separate PR is reviewed and merged. No later feature is included in this slice.
+Docker packaging and CI are not implemented in this Issue. No global toolchain installation or production deployment occurs. The owner merged PR #34 at 2026-10-01 08:19:28 UTC (1952ed3b9893dfd99658fe59a8519226455e1726), closing Issue #2. All permanent branches were synchronized before Issue #3 started. No later feature is included in this slice.
 
 ## Related
 
