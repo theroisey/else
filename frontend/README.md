@@ -1,6 +1,6 @@
 # Frontend
 
-The React/TypeScript application uses Vite, Tailwind CSS, Font Awesome, React Router, and TanStack Query. It provides real cookie-session login/logout, a responsive guarded shell, the signed-in account's current access, permission-guarded user/role administration, public service checks and a bounded component review route.
+The React/TypeScript application uses Vite, Tailwind CSS, Font Awesome, React Router, and TanStack Query. It provides real cookie-session login/logout, a responsive guarded shell, the signed-in account's current access, permission-guarded user/role administration, authorized client records and workspaces, public service checks and a bounded component review route. React Hook Form and Zod handle the full client profile/contact/tag form.
 
 Use Node 24.21.0 and npm 11.19.0:
 
@@ -19,3 +19,5 @@ Run the Go backend separately on `127.0.0.1:8080`. Vite serves `127.0.0.1:5173` 
 Application routing and query defaults live under `src/app/`, auth transport/session/permission behavior under `src/features/auth/`, navigation/account/current identity under `src/features/shell/`, account/role transport and forms under `src/features/administration/`, foundation behavior under `src/features/foundation/`, and shared primitives under `src/components/ui/`. The [administration guide](../docs/administration.md) covers confirmation, revisions, delegation, password clearing and test evidence. The [interface foundation](../docs/interface-foundation.md) has a `/interface` review route.
 
 Implement frontend changes on `frontend`. Backend permissions remain authoritative. The application has no fixture/demo authentication or simulated business metrics. Component/visual tests use labelled synthetic fixtures; `sh frontend/scripts/test-auth-browser.sh` from the repository root runs Playwright against disposable PostgreSQL and the real Go API. Install Chromium with `npx playwright install chromium` from `frontend/` first. Never run test fixtures against an existing database. Docker/production routing and CI are established by #5/#6; browser authentication is an additional required gate.
+
+Client pages, bounded response schemas and domain operations live in `src/features/clients/`; [the client interface guide](../docs/client-interface.md) covers filters, exact-client guards, full replacement forms, archive confirmation and screenshots. Client routes load separately so form/schema dependencies stay out of initial login/public page bundles. Administration and clients share the same authenticated JSON transport under `src/services/authenticated.ts`; each domain validates its own paths, responses and query contract.

@@ -1,4 +1,5 @@
 import { Link, Navigate, Outlet, Route, Routes } from 'react-router'
+import { lazy } from 'react'
 import { buttonStyles } from '../components/ui'
 import { FoundationPage } from '../features/foundation/FoundationPage'
 import { InterfaceReviewPage } from '../features/interface-review/InterfaceReviewPage'
@@ -10,6 +11,11 @@ import { LoginPage } from '../features/auth/LoginPage'
 import { ApplicationShell } from '../features/shell/ApplicationShell'
 import { WorkspacePage } from '../features/shell/WorkspacePage'
 import { AccessPage } from '../features/shell/AccessPage'
+import { ClientRoute } from '../features/clients/ClientRoute'
+
+const ClientsPage = lazy(() => import('../features/clients/ClientsPage').then(m => ({ default: m.ClientsPage })))
+const ClientEditorPage = lazy(() => import('../features/clients/ClientEditorPage').then(m => ({ default: m.ClientEditorPage })))
+const ClientWorkspacePage = lazy(() => import('../features/clients/ClientWorkspacePage').then(m => ({ default: m.ClientWorkspacePage })))
 
 function AuthArea() {
   return <AuthProvider><Outlet /></AuthProvider>
@@ -27,6 +33,10 @@ export function App() {
           <Route path="/app" element={<ApplicationShell />}>
             <Route index element={<WorkspacePage />} />
             <Route path="access" element={<AccessPage />} />
+            <Route path="clients" element={<ClientRoute><ClientsPage /></ClientRoute>} />
+            <Route path="clients/new" element={<ClientRoute><ClientEditorPage create /></ClientRoute>} />
+            <Route path="clients/:id" element={<ClientRoute><ClientWorkspacePage /></ClientRoute>} />
+            <Route path="clients/:id/edit" element={<ClientRoute><ClientEditorPage /></ClientRoute>} />
             <Route path="users" element={
               <PermissionGuard required={{ permission: 'users.view', scope: 'global' }}>
                 <UsersPage />

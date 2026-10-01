@@ -24,3 +24,10 @@ export function hasPermission(grants: readonly Grant[], required: PermissionRequ
       : grant.scope === 'global' || (grant.scope === 'client' && grant.client_id === required.clientID)
   ))
 }
+
+export function canListClients(grants: readonly Grant[]) {
+  return grants.some(g => g.permission === 'clients.view' && (g.scope === 'global' || (g.scope === 'client' && isUUID(g.client_id))))
+}
+export function canOpenClients(grants: readonly Grant[]) {
+  return canListClients(grants) || hasPermission(grants, { permission: 'clients.create', scope: 'global' })
+}

@@ -13,7 +13,9 @@ export function ApplicationShell() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const toggleRef = useRef<HTMLButtonElement>(null)
   const firstLinkRef = useRef<HTMLAnchorElement>(null)
-  const current = navigation.find((item) => item.path === location.pathname)
+  const current = navigation.find((item) => item.path === location.pathname || (item.path === '/app/clients' && location.pathname.startsWith('/app/clients/')))
+  const clientContext = current?.path === '/app/clients' && location.pathname !== current.path
+    ? location.pathname === '/app/clients/new' ? 'Create client' : location.pathname.endsWith('/edit') ? 'Edit client' : 'Client workspace' : ''
 
   function closeNavigation() {
     setMobileOpen(false)
@@ -41,7 +43,7 @@ export function ApplicationShell() {
           {navigation.map((item, index) => <NavLink key={item.path} to={item.path} end ref={index === 0 ? firstLinkRef : undefined} onClick={() => {
             setMobileOpen(false)
             window.requestAnimationFrame(() => document.getElementById('workspace-content')?.focus())
-          }} className={({ isActive }) => `flex min-h-10 items-center gap-3 rounded-sm border px-3 py-2 font-semibold ${isActive ? 'border-line bg-surface-subtle text-ink' : 'border-transparent text-muted hover:bg-surface-subtle hover:text-ink'}`}>
+          }} className={({ isActive }) => `flex min-h-10 items-center gap-3 rounded-sm border px-3 py-2 font-semibold ${isActive || (item.path === '/app/clients' && clientContext) ? 'border-line bg-surface-subtle text-ink' : 'border-transparent text-muted hover:bg-surface-subtle hover:text-ink'}`}>
             <FontAwesomeIcon icon={item.icon} className="w-4" aria-hidden="true" />{item.label}
           </NavLink>)}
           <Link to="/status" className="mt-5 min-h-10 border-t border-line px-3 pt-4 text-sm text-muted underline underline-offset-4">Service status</Link>
@@ -49,7 +51,7 @@ export function ApplicationShell() {
       </aside>
       <main id="workspace-content" tabIndex={-1} className="min-w-0 px-5 py-6 sm:px-8 sm:py-8">
         <nav aria-label="Breadcrumb" className="mb-8 text-xs text-muted">
-          <ol className="flex flex-wrap items-center gap-2"><li><Link className="underline underline-offset-4" to="/app">Roisey Else</Link></li><li aria-hidden="true">/</li><li aria-current="page">{current?.label ?? 'Page not found'}</li></ol>
+          <ol className="flex flex-wrap items-center gap-2"><li><Link className="underline underline-offset-4" to="/app">Roisey Else</Link></li><li aria-hidden="true">/</li>{clientContext ? <><li><Link className="underline underline-offset-4" to="/app/clients">Clients</Link></li><li aria-hidden="true">/</li></> : null}<li aria-current="page">{clientContext || current?.label || 'Page not found'}</li></ol>
         </nav>
         <Outlet />
       </main>
