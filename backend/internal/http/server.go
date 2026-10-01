@@ -14,12 +14,25 @@ import (
 )
 
 type Server struct {
-	config     config.Config
-	logger     *slog.Logger
-	readiness  ReadinessCheck
-	auth       http.Handler
-	draining   atomic.Bool
-	httpServer *http.Server
+	config         config.Config
+	logger         *slog.Logger
+	readiness      ReadinessCheck
+	auth           http.Handler
+	administration http.Handler
+	draining       atomic.Bool
+	httpServer     *http.Server
+}
+
+func NewWithAdministration(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration http.Handler) (*Server, error) {
+	if auth == nil || administration == nil {
+		return nil, fmt.Errorf("protected handlers are required")
+	}
+	server, err := New(c, logger, readiness, auth)
+	if err != nil {
+		return nil, err
+	}
+	server.administration = administration
+	return server, nil
 }
 
 func New(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth ...http.Handler) (*Server, error) {

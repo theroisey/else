@@ -1,6 +1,6 @@
 ---
 type: decision
-status: pr-review
+status: owner-merged
 created: 2026-10-01
 tags:
   - frontend
@@ -11,6 +11,8 @@ tags:
 # Application Shell and Session Recovery
 
 Issue #12 consumes the backend cookie-session and flattened-grant contracts. Auth stays same-origin; HTTPS reads only the host-prefixed CSRF cookie. Passwords clear after attempts and stay out of mutation caches/browser persistence. Go owns authentication audit records.
+
+PR #45 is owner-merged at `5d2d125`. Main CI run 36905309471 passed all checks and tested-image publication. Both permanent development branches were synchronized before Issue #10 began.
 
 Initial load and identity lookup errors withhold protected content; 401/absolute expiry clears private cache and returns to login. Focus/reconnection/periodic/manual refresh updates grants. Failed logout retains the true state rather than claiming revocation. Return paths are allowlisted destinations held in router memory.
 

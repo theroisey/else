@@ -94,6 +94,24 @@ func (f *identityFixture) bootstrap(t *testing.T) string {
 	return id
 }
 
+// Session tests disable their subject while a separate recovery administrator
+// remains. The administration migration protects the final administrator.
+func (f *identityFixture) retainAdministrator(t *testing.T) {
+	t.Helper()
+	hash, err := (identity.ArgonPasswords{}).Hash(bootstrapPassword)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.admin.Exec(f.base.ctx, `INSERT INTO app.users (id,email,display_name,password_hash)
+		VALUES ($1::uuid,'recovery@example.com','Recovery Administrator',$2)`, managerUserID, hash); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.admin.Exec(f.base.ctx, `INSERT INTO app.user_roles (id,user_id,role_id,scope_kind)
+		VALUES (gen_random_uuid(),$1::uuid,$2::uuid,'global')`, managerUserID, authorization.InitialAdministratorRoleID); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestIdentityBootstrapIsOneTimeAuditedAndHistoryPreserving(t *testing.T) {
 	f := newIdentityFixture(t)
 	id := f.bootstrap(t)
@@ -159,6 +177,7 @@ func TestSessionLifecycleUsesHashedTokensAndAtomicAudit(t *testing.T) {
 func TestAuthenticationFailuresDoNotEnumerateAndAuditFailureRollsBack(t *testing.T) {
 	f := newIdentityFixture(t)
 	userID := f.bootstrap(t)
+	f.retainAdministrator(t)
 	for _, attempt := range []struct{ email, password string }{{bootstrapEmail, "wrong-password-value"}, {"missing@example.com", "wrong-password-value"}} {
 		if _, err := f.service.Login(correlation.New(f.base.ctx), attempt.email, attempt.password); !errors.Is(err, identity.ErrInvalidCredentials) {
 			t.Fatal("invalid credentials were distinguishable")
@@ -189,6 +208,7 @@ func TestAuthenticationFailuresDoNotEnumerateAndAuditFailureRollsBack(t *testing
 func TestExpiredAndDisabledSessionsAreUnauthorized(t *testing.T) {
 	f := newIdentityFixture(t)
 	userID := f.bootstrap(t)
+	f.retainAdministrator(t)
 	login, err := f.service.Login(correlation.New(f.base.ctx), bootstrapEmail, bootstrapPassword)
 	if err != nil {
 		t.Fatal(err)

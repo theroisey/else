@@ -62,6 +62,31 @@ func TestTransactionRequiresCorrelationBeforeMutation(t *testing.T) {
 	}
 }
 
+func TestAdministrationActionsAndStatusAreAllowlisted(t *testing.T) {
+	status := "disabled"
+	for _, input := range []struct {
+		kind   string
+		action Action
+	}{{"user", Disabled}, {"role", PermissionChanged}} {
+		e := validEvent()
+		e.ResourceKind, e.Action = input.kind, input.action
+		e.After = &Snapshot{Status: &status}
+		if _, _, _, err := e.encode(); err != nil {
+			t.Fatal("typed administration event rejected", err)
+		}
+		e.ResourceKind = "fixture"
+		if _, _, _, err := e.encode(); !errors.Is(err, ErrInvalidEvent) {
+			t.Fatal("administration action applied to wrong resource")
+		}
+	}
+	status = "password=secret"
+	e := validEvent()
+	e.After = &Snapshot{Status: &status}
+	if _, _, _, err := e.encode(); !errors.Is(err, ErrInvalidEvent) {
+		t.Fatal("untrusted account status accepted")
+	}
+}
+
 func TestErrorRetainsCauseWithoutExposingIt(t *testing.T) {
 	cause := errors.New("password=secret")
 	err := &Error{Operation: "audit insert", cause: cause}

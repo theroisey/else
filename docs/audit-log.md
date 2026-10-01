@@ -1,6 +1,6 @@
 # Audit storage and atomic mutations
 
-Issue [#7](https://github.com/theroisey/else/issues/7) introduces internal audit infrastructure. There are no audit read endpoints, customer activity, authenticated writes, or frontend changes. Later domains must route significant successful mutations through this contract and enforce their own authorization/client scope before changing data.
+Issue [#7](https://github.com/theroisey/else/issues/7) introduces internal audit infrastructure. Identity, authorization and [administration](administration.md) now use it for authenticated writes. There are no audit read endpoints or customer activity. Each domain must route significant successful mutations through this contract and enforce its own authorization/client scope before changing data.
 
 ## Transaction contract
 
@@ -16,7 +16,7 @@ Events contain a server-owned resource kind constant, resource UUID, one of crea
 
 Before authentication, trusted internal operations explicitly use `Actor{Kind: audit.System}` with no user ID. This grants no public authorization and adds no mutation endpoint. Future authenticated adapters supply `audit.User` and the verified user UUID; actor IDs must never come from a request body. Deleted actors must retain historical identifiers when identity retention is designed.
 
-Snapshot fields are initially restricted to optional `Exists` boolean and nonnegative int64 `Revision`. Nil snapshots persist as JSON null. Metadata requires one source enum: http/job/cli. No arbitrary map, raw DTO, free text, password, token, connection string, IP or user agent field exists. Resource kinds must be reviewed code constants, never caller input. Future domains add reviewed typed fields and matching database allowlists in new migrations; don't serialize whole entities. These record markers do not pretend to implement domain-specific before/after details.
+Snapshot fields are restricted to optional `Exists` boolean, nonnegative int64 `Revision`, and `Status` with only `active`/`disabled` allowed. Administration migration 000005 adds this status field and only the named actions `user.disabled` and `role.permission_changed`. Nil snapshots persist as JSON null. Metadata requires one source enum: http/job/cli. No arbitrary map, raw DTO, free text, password, token, connection string, IP or user agent field exists. Resource kinds must be reviewed code constants, never caller input. Future domains add reviewed typed fields and matching database allowlists in new migrations; don't serialize whole entities.
 
 Each snapshot is bounded to 1024 serialized bytes and metadata to 256; SQL checks also restrict JSON shape, keys, types and sizes. The fixed types are well below these limits. Unit tests demonstrate sensitive unknown DTO fields cannot survive typed serialization; PostgreSQL tests reject raw SQL attempts to bypass the allowlists.
 

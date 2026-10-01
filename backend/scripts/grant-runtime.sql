@@ -23,3 +23,11 @@ GRANT EXECUTE ON FUNCTION app.authentication_identity(text),
                           app.create_permission_assignment(uuid, uuid, text, uuid, timestamptz),
                           app.revoke_permission_assignment(uuid, uuid, timestamptz)
 TO else_runtime;
+
+GRANT EXECUTE ON FUNCTION app.admin_users(uuid,uuid,integer),app.admin_user(uuid,uuid),
+                          app.admin_roles(uuid,uuid,integer),app.admin_role(uuid,uuid),app.admin_catalog(uuid),
+                          app.admin_assignments(uuid,uuid,uuid,integer),app.admin_create_user(uuid,uuid,text,text,text),
+                          app.admin_update_user(uuid,uuid,bigint,text,text),app.admin_disable_user(uuid,uuid,bigint),
+                          app.admin_create_role(uuid,uuid,text,text[]),app.admin_replace_permissions(uuid,uuid,bigint,text[]),
+                          app.admin_revoke_assignment(uuid,uuid,uuid,timestamptz)
+TO else_runtime;

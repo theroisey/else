@@ -236,6 +236,9 @@ func TestAuditStorageDeniesHistoryAccessAndDefendsBroadenedGrants(t *testing.T) 
 	assertCounts(t, f, admin, 1, 1)
 	p := provider(t, f)
 	if _, err := p.Down(f.ctx); err != nil {
+		t.Fatal("empty administration migration did not roll back before audit check")
+	}
+	if _, err := p.Down(f.ctx); err != nil {
 		t.Fatal("empty authorization migration did not roll back before audit check")
 	}
 	if _, err := p.Down(f.ctx); err != nil {
@@ -250,7 +253,7 @@ func TestAuditStorageDeniesHistoryAccessAndDefendsBroadenedGrants(t *testing.T) 
 func TestAuditDatabasePayloadAllowlists(t *testing.T) {
 	f, admin, pool, _ := auditFixture(t)
 	ctx := correlation.New(f.ctx)
-	for _, payload := range []string{`{"password":"secret"}`, `{"token":"secret"}`, `{"exists":"secret"}`, `{"revision":-1}`, `{"revision":1.5}`, `{"revision":9223372036854775808}`, `{"revision":null}`, `[]`, `"secret"`, `{"free_text":"` + strings.Repeat("x", 1100) + `"}`} {
+	for _, payload := range []string{`{"password":"secret"}`, `{"token":"secret"}`, `{"status":"secret"}`, `{"status":null}`, `{"status":1}`, `{"exists":"secret"}`, `{"revision":-1}`, `{"revision":1.5}`, `{"revision":9223372036854775808}`, `{"revision":null}`, `[]`, `"secret"`, `{"free_text":"` + strings.Repeat("x", 1100) + `"}`} {
 		_, err := pool.Exec(ctx, `INSERT INTO app.audit_events `+auditColumns+` VALUES ('system', NULL, 'fixture.created', 'fixture', $1::uuid, NULL, $2, $3::jsonb, 'null', '{"source":"cli"}')`, fixtureID, correlation.ID(ctx), payload)
 		if err == nil {
 			t.Fatal("database accepted unapproved snapshot")

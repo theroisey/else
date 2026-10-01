@@ -63,6 +63,21 @@ func TestPanicRecoveryNeverExposesPanicValue(t *testing.T) {
 	}
 }
 
+func TestAdministrationRouteLogsOmitRecordIdentifiersAndQueryValues(t *testing.T) {
+	for _, path := range []string{"/api/v1/users/private-secret/roles?cursor=query-secret", "/api/v1/roles/private-secret/permissions"} {
+		var output bytes.Buffer
+		handler := RequestMiddleware(slog.New(slog.NewJSONHandler(&output, nil)), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(403) }))
+		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", path, nil))
+		var event map[string]any
+		if err := json.Unmarshal(output.Bytes(), &event); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(output.String(), "secret") || event["route"] == "unmatched" {
+			t.Fatal("administration logging exposed record details or lost its safe route label")
+		}
+	}
+}
+
 func TestPanicAfterCommittedHeadersAbortsResponse(t *testing.T) {
 	var output bytes.Buffer
 	handler := RequestMiddleware(slog.New(slog.NewJSONHandler(&output, nil)), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
