@@ -93,7 +93,7 @@ This administrator must be able to create/drop the uniquely named test databases
 
 Coverage includes up/no-op/down/up, migration states, UTC sessions, transaction failure and retry, preserved data after refused rollback, cross-session lock contention/cancellation/recovery, negative runtime privileges, bounded startup failure, and real HTTP readiness through a database outage/recovery. Binary smoke checks also verify separate migration/runtime identities, safe process logs, and graceful SIGTERM shutdown.
 
-Three-service development orchestration and production Docker images remain #5; GitHub Actions gates remain #6. Running a PostgreSQL test container does not constitute a passing application Docker build or production deployment.
+Three-service development orchestration and local runtime-image verification are proposed in #5; [the Docker guide](docker.md) preserves verified TLS and documents explicit migration/role steps and current verification blockers. GitHub Actions gates remain #6. Running a PostgreSQL test container does not constitute a passing application Docker build or production deployment.
 
 ## References
 
