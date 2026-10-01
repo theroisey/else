@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#14](https://github.com/theroisey/else/issues/14), the authorized client table, validated forms and workspace navigation. Issues #1–#13 are owner-merged. Backend PR #48 is merged at `4efc7e8`; both development branches were synchronized. Main [run 36927463099](https://github.com/theroisey/else/actions/runs/36927463099) passed all five gates and tested-image publication. [The client contract](clients.md) documents exact-scope access, contacts/tags, archival, legacy scope history and rollout; [the interface](client-interface.md) consumes that API.
+Current slice: [#15](https://github.com/theroisey/else/issues/15), the audited client task API and explicit state transitions. Issues #1–#14 are owner-merged. Frontend PR #49 is merged at `97aae34`; both development branches were synchronized. Main [run 36933129639](https://github.com/theroisey/else/actions/runs/36933129639) passed all five gates and tested-image publication. [The task contract](tasks.md) documents exact-scope capabilities, assignees, state transitions, archival and rollout; task UI remains #16.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#13 are merged. Issue #14 consumes the client contract for bounded authorized lists, profile/contact/tag forms, explicit conflict recovery, confirmed archival and compact client workspaces. Its frontend PR closes #14 only after owner review/merge. Task API #15 is next after this UI slice; password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#14 are merged. Issue #15 adds the task API, granular write capabilities with legacy manage compatibility, eligible scoped assignees, explicit transitions and timestamps, bounded queries and atomic safe audit history. Its backend PR closes #15 only after owner review/merge. Task interface #16 is next; password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
