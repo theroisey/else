@@ -6,6 +6,8 @@
 *.key
 *.p12
 *.pfx
+/docker/dev/tls/
+/docker/dev/.prepare.*/
 
 # Frontend dependencies and generated output.
 node_modules/
