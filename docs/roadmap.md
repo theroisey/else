@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#6](https://github.com/theroisey/else/issues/6), CI checks and main-only tested-image publication. Docker [#5](https://github.com/theroisey/else/issues/5) merged through [frontend PR #37](https://github.com/theroisey/else/pull/37) and [backend PR #38](https://github.com/theroisey/else/pull/38); both development branches were synchronized. [The CI guide](ci.md) documents automated gates and the [Docker guide](docker.md) preserves the unverified runtime boundary.
+Current slice: [#6](https://github.com/theroisey/else/issues/6), implemented in [frontend PR #39](https://github.com/theroisey/else/pull/39) and [CI PR #40](https://github.com/theroisey/else/pull/40). All four PR gates pass in [run 36852928372](https://github.com/theroisey/else/actions/runs/36852928372); controlled main publication awaits owner review/merge. Docker [#5](https://github.com/theroisey/else/issues/5) merged through #37/#38 and both branches were synchronized. [The CI guide](ci.md) documents the remaining publication evidence.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#5 are closed after owner merges of PRs #33–#38. The other 27 roadmap Issues remain open. Issue #6 adds source, migration, and container gates plus tested-image publication, with a companion frontend cache-ownership fix. Local container validation remains blocked by Docker Hub's unauthenticated pull limit; Issue #5's merge does not establish that evidence. Issue #6 stays open until real PR checks and an owner-approved main publication are observed. The one-time empty main initialization is complete and its exception consumed. No later implementation Issue or production deployment is started.
+Issues #1–#5 are closed after owner merges of PRs #33–#38. The other 27 roadmap Issues remain open. Issue #6 adds source, migration, and container gates plus tested-image publication, with companion frontend fixes and corrected PostgreSQL bootstrap quoting. All four actual PR gates pass; publication is correctly skipped on PRs. Local container pulls remain rate-limited, but GitHub runtime evidence is recorded. Issue #6 stays open until an owner-approved main publication is observed. The one-time empty main initialization is complete and its exception consumed. No later implementation Issue or production deployment is started.

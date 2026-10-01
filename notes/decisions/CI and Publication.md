@@ -10,7 +10,7 @@ tags:
 
 # CI and Publication
 
-Issue [#6](https://github.com/theroisey/else/issues/6) adds frontend, Go, PostgreSQL, and Compose gates plus main-only GHCR publication. Official Action references use resolved full commit SHAs; package-write permission is isolated to the publication job, which depends on every check.
+Issue [#6](https://github.com/theroisey/else/issues/6) adds frontend, Go, PostgreSQL, and Compose gates plus main-only GHCR publication in [CI PR #40](https://github.com/theroisey/else/pull/40), with separately reviewable frontend fixes in [PR #39](https://github.com/theroisey/else/pull/39). Official Action references use resolved full commit SHAs; package-write permission is isolated to the publication job, which depends on every check.
 
 ## Decisions
 
@@ -21,7 +21,9 @@ Issue [#6](https://github.com/theroisey/else/issues/6) adds frontend, Go, Postgr
 
 ## Verification boundaries
 
-Docker Hub still rejects local pulls with its unauthenticated rate limit after #37/#38 merged. The original Docker runtime gate remains unverified despite Issue #5 closing on owner merge. CI/container and controlled main publication must be reported from observed runs, not inferred from static configuration. Node/Go/nginx digest resolution remains incomplete until registry access returns.
+Docker Hub still rejects local pulls with its unauthenticated rate limit after #37/#38 merged. The original Docker runtime gate remained unverified despite Issue #5 closing on owner merge. Redacted Compose diagnostics exposed `else` as an unquoted reserved SQL keyword; bootstrap provisioning and database documentation now quote it. Related frontend commits are integrated into the backend CI branch for combined verification while retaining the separate frontend PR. Node/Go/nginx and Dockerfile frontend digests are resolved and pinned.
+
+[PR run 36852928372](https://github.com/theroisey/else/actions/runs/36852928372) passes all four gates for implementation revision `a8ace7816d29e73ae54cf3cfe1168ea64370fe3c`, including development/static image builds, TLS/role checks, migrations, routing, readiness recovery, persistence, and non-root runtime verification. PR publication is skipped. The tested images export successfully; main-only artifact transfer/registry promotion and a controlled main publication remain unobserved. Issue #6 stays open for those acceptance checks after owner review/merge. No production deployment occurred.
 
 See [CI guide](../../docs/ci.md) and [[Docker Development]].
 

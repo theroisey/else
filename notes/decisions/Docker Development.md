@@ -1,6 +1,6 @@
 ---
 type: decision
-status: merged-unverified
+status: verified-in-followup-pr
 created: 2026-10-01
 tags:
   - architecture
@@ -21,6 +21,6 @@ Issue [#5](https://github.com/theroisey/else/issues/5) packages the existing app
 
 ## Evidence and limits
 
-Compose configurations, shell syntax, certificate hostname checks (including rejection), secret file permissions/ignore rules, and refusal to overwrite credentials validate. Go 1.27.1 formatting/vet/race tests/static builds and Node 24.21.0/npm 11.19.0 installation/lint/16 tests/typecheck/build/routing checks pass. The managed environment has Docker Engine access but no cached images. Docker Hub still rejects Node pulls with `toomanyrequests` after the merge. Container build/startup, TLS/role behavior, migrations, nginx routing, and persistence remain unverified. The original PRs were draft with this warning, then owner-merged; Issue #6's checks must resolve the evidence gap. Node/Go/nginx versions are explicit; immutable digest resolution remains incomplete.
+Original source/configuration checks passed, but local Docker Hub pulls remained blocked by `toomanyrequests`; the owner merged #37/#38 with runtime verification incomplete. Issue #6's actual GitHub runs exposed the reserved database-name quoting bug and the non-root Vite cache ownership gap. Follow-up [PR #39](https://github.com/theroisey/else/pull/39) and [PR #40](https://github.com/theroisey/else/pull/40) correct those issues and pin all base manifests. [Run 36852928372](https://github.com/theroisey/else/actions/runs/36852928372) passes the full source/PostgreSQL/Compose suite, including builds, verified TLS, runtime privilege denials, migration round-trips, routing, readiness recovery, volume persistence, and non-root runtimes. The fixes await review/merge; controlled main publication remains pending.
 
 See [Docker guide](../../docs/docker.md) for commands, renewal/reset boundaries, and proxy build secrets. [[Frontend Foundation]] remains the source of the browser behavior contract.
