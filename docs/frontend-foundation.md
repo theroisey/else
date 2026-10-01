@@ -33,7 +33,7 @@ Run the [Go backend](backend-http.md) separately on its default loopback address
 
 HTTP access lives in `src/services/http.ts`; the feature service decodes the documented endpoint shapes. Components use queries rather than sending requests directly. Requests are same-origin, use `credentials: same-origin`, disable cache, reject redirects, and combine query cancellation with a five-second timeout. Modern browsers must support `AbortSignal.any` and `AbortSignal.timeout`.
 
-Only `200` with the expected `status` is available. Readiness `503` with a valid `not_ready` envelope is displayed as **Not ready**. Missing/malformed JSON, incorrect content type, other status codes, and network failures are **Check failed**. Raw response bodies and network errors never appear in the UI. Backend readiness remains unavailable until Issue #4 implements a real dependency checker.
+Only `200` with the expected `status` is available. Readiness `503` with a valid `not_ready` envelope is displayed as **Not ready**. Missing/malformed JSON, incorrect content type, other status codes, and network failures are **Check failed**. Raw response bodies and network errors never appear in the UI. Issue #4 now implements the real PostgreSQL checker: readiness is available when connectivity succeeds and unavailable during an outage.
 
 Queries are stale after 15 seconds and unused data is collected after 60 seconds. There are no automatic retries or focus-triggered requests. **Check again** refreshes both checks; it is disabled during requests. A failed refresh replaces a previously successful status rather than retaining a misleading badge.
 

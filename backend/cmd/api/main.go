@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/theroisey/else/backend/internal/config"
+	"github.com/theroisey/else/backend/internal/database"
 	httpapi "github.com/theroisey/else/backend/internal/http"
 )
 
@@ -28,7 +29,21 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		return 1
 	}
 	logger := slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{Level: c.LogLevel}))
-	server, err := httpapi.New(c, logger, nil)
+	if ctx.Err() != nil {
+		return 0
+	}
+	dbConfig, err := config.LoadDatabase(lookup, "DATABASE_URL")
+	if err != nil {
+		logger.Error("invalid_configuration", "detail", err.Error())
+		return 1
+	}
+	pool, err := database.Open(ctx, dbConfig)
+	if err != nil {
+		logger.Error("database_startup_failed", "error_code", database.FailureCode(err))
+		return 1
+	}
+	defer pool.Close()
+	server, err := httpapi.New(c, logger, pool.Ping)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1

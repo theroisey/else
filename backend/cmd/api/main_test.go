@@ -36,3 +36,13 @@ func TestCanceledStartupSucceedsWithoutListening(t *testing.T) {
 		t.Fatalf("canceled startup returned %d", code)
 	}
 }
+
+func TestMissingDatabaseConfigurationFailsSafely(t *testing.T) {
+	var output bytes.Buffer
+	if code := run(context.Background(), func(string) (string, bool) { return "", false }, &output); code != 1 {
+		t.Fatal("missing database URL accepted")
+	}
+	if !strings.Contains(output.String(), "DATABASE_URL") {
+		t.Fatal("missing safe setting diagnostic")
+	}
+}

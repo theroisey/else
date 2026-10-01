@@ -36,7 +36,7 @@ User-facing activity is a separate safe projection of confirmed events, introduc
 
 ## Persistence and historical integrity
 
-Schema changes use deterministic versioned migrations with documented compatibility, lock behavior, and rollback. Important relationships use constraints and indexes. Client archival preserves linked historical records.
+The [PostgreSQL foundation](database.md) implements runtime pools and separate embedded Goose migrations. Schema changes use deterministic versioned migrations with documented compatibility, lock behavior, and rollback. Important relationships use constraints and indexes. Client archival preserves linked historical records.
 
 Financial business logic uses integer minor units or decimal values with explicit currency. Tax, rounding, refunds, overpayment, cancellation, and versioning policies are resolved in finance Issues before coding. Current pricing cannot mutate historical billing values.
 
