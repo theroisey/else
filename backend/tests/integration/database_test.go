@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
@@ -83,13 +84,17 @@ func settings(t *testing.T, raw string) config.Database {
 }
 
 func provider(t *testing.T, f *fixture) *goose.Provider {
+	return providerFiles(t, f, migrations.Files)
+}
+
+func providerFiles(t *testing.T, f *fixture, files fs.FS) *goose.Provider {
 	t.Helper()
 	db, err := database.OpenMigration(f.ctx, settings(t, f.URL))
 	if err != nil {
 		t.Fatal("migration connection failed")
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	p, err := database.MigrationProvider(db, migrations.Files)
+	p, err := database.MigrationProvider(db, files)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +114,7 @@ func connection(t *testing.T, f *fixture) *pgx.Conn {
 func TestMigrationRoundTripAndUTC(t *testing.T) {
 	f := newFixture(t)
 	p := provider(t, f)
-	for _, direction := range []string{"up", "up", "down", "up"} {
+	for step, direction := range []string{"up", "up", "down", "down", "up"} {
 		var err error
 		if direction == "up" {
 			_, err = p.Up(f.ctx)
@@ -120,15 +125,17 @@ func TestMigrationRoundTripAndUTC(t *testing.T) {
 			t.Fatal(err)
 		}
 		rows, err := p.Status(f.ctx)
-		if err != nil || len(rows) != 1 {
+		if err != nil || len(rows) != 2 {
 			t.Fatal("migration status failed")
 		}
-		want := goose.StateApplied
-		if direction == "down" {
-			want = goose.StatePending
-		}
-		if rows[0].State != want {
-			t.Fatal("incorrect migration state")
+		for index, row := range rows {
+			want := goose.StateApplied
+			if step == 3 || (step == 2 && index == 1) {
+				want = goose.StatePending
+			}
+			if row.State != want {
+				t.Fatal("incorrect migration state")
+			}
 		}
 	}
 	pool, err := database.Open(f.ctx, settings(t, f.URL))
@@ -157,7 +164,7 @@ func TestMigrationRoundTripAndUTC(t *testing.T) {
 
 func TestFailedMigrationRollsBackAndPreservesVersion(t *testing.T) {
 	f := newFixture(t)
-	p := provider(t, f)
+	p := providerFiles(t, f, fstest.MapFS{"000001_create_app_schema.sql": {Data: mustReadBaseline(t)}})
 	if _, err := p.Up(f.ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +208,7 @@ func mustReadBaseline(t *testing.T) []byte {
 
 func TestBaselineRollbackRefusesToCascadeThroughData(t *testing.T) {
 	f := newFixture(t)
-	p := provider(t, f)
+	p := providerFiles(t, f, fstest.MapFS{"000001_create_app_schema.sql": {Data: mustReadBaseline(t)}})
 	if _, err := p.Up(f.ctx); err != nil {
 		t.Fatal(err)
 	}

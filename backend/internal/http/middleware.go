@@ -1,11 +1,11 @@
 package httpapi
 
 import (
-	"context"
-	"crypto/rand"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/theroisey/else/backend/internal/correlation"
 )
 
 type responseRecorder struct {
@@ -34,13 +34,14 @@ func (w *responseRecorder) Unwrap() http.ResponseWriter {
 	return w.ResponseWriter
 }
 
-func requestMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
+// RequestMiddleware supplies server-owned correlation and safe request logging.
+func RequestMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
-		id := rand.Text()
+		r = r.WithContext(correlation.New(r.Context()))
+		id := correlation.ID(r.Context())
 		// A server-owned ID prevents caller-controlled correlation or log injection.
 		w.Header().Set("X-Request-ID", id)
-		r = r.WithContext(context.WithValue(r.Context(), requestIDKey{}, id))
 		recorder := &responseRecorder{ResponseWriter: w, status: http.StatusOK}
 		aborted := false
 		defer func() {

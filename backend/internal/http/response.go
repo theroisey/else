@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+
+	"github.com/theroisey/else/backend/internal/correlation"
 )
 
-type requestIDKey struct{}
-
 func RequestID(ctx context.Context) string {
-	value, _ := ctx.Value(requestIDKey{}).(string)
-	return value
+	return correlation.ID(ctx)
 }
 
 type errorResponse struct {

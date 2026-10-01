@@ -16,7 +16,7 @@ func TestRequestLogsExcludeSensitiveInputAndUseServerOwnedIDs(t *testing.T) {
 	ids := map[string]bool{}
 	for range 2 {
 		var contextID string
-		handler := requestMiddleware(logger, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler := RequestMiddleware(logger, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			contextID = RequestID(r.Context())
 			writeError(w, r, 404, "not_found", "Resource not found.")
 		}))
@@ -50,7 +50,7 @@ func TestRequestLogsExcludeSensitiveInputAndUseServerOwnedIDs(t *testing.T) {
 
 func TestPanicRecoveryNeverExposesPanicValue(t *testing.T) {
 	var output bytes.Buffer
-	handler := requestMiddleware(slog.New(slog.NewJSONHandler(&output, nil)), http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+	handler := RequestMiddleware(slog.New(slog.NewJSONHandler(&output, nil)), http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic("password=panic-secret")
 	}))
 	w := httptest.NewRecorder()
@@ -65,7 +65,7 @@ func TestPanicRecoveryNeverExposesPanicValue(t *testing.T) {
 
 func TestPanicAfterCommittedHeadersAbortsResponse(t *testing.T) {
 	var output bytes.Buffer
-	handler := requestMiddleware(slog.New(slog.NewJSONHandler(&output, nil)), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := RequestMiddleware(slog.New(slog.NewJSONHandler(&output, nil)), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		panic("late-panic-secret")
 	}))
