@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#16](https://github.com/theroisey/else/issues/16), the client task table and editing flow. Issues #1–#15 are owner-merged. Backend PR #50 is merged at `9b42a90`; both development branches were synchronized. Main [run 36959187201](https://github.com/theroisey/else/actions/runs/36959187201) passed all five gates and tested-image publication. [The task contract](tasks.md) documents exact-scope capabilities, assignees, state transitions, archival and rollout; [the task interface](task-interface.md) implements those controls.
+Current slice: [#17](https://github.com/theroisey/else/issues/17), client planning and linked milestones, beginning with its separately reviewed backend contract. Issues #1–#16 are owner-merged. Frontend PR #51 is merged at `bf435f0`; both development branches were synchronized. Main [run 36964008720](https://github.com/theroisey/else/actions/runs/36964008720) passed all five gates and tested-image publication. [The planning contract](planning.md) documents permissions, independent revisions, date windows, explicit lifecycle, historical task links and rollout. Planning UI follows owner merge of this backend slice.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#15 are merged. Issue #16 adds task tables, metadata forms, permission-aware transitions/reopening, overdue indicators, conflict recovery and confirmed archival. Its frontend PR closes #16 only after owner review/merge. Planning, reminders, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#16 are merged. Issue #17 adds client planning and linked milestones through separately reviewed backend and frontend slices. The backend references #17 and leaves it open; the frontend closes it after owner review/merge. Reminders, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.

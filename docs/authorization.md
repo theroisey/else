@@ -20,7 +20,9 @@ Assignment creation/revocation and `role_assignment.created`/`role_assignment.ar
 
 Issue #13 adds [real clients and the scope registry](clients.md). Existing opaque scope history is preserved without fabricated profiles; new scoped assignments require an actual active client. Real client lookups still require the exact permission and ID. Archived clients retain read/history access while domain edits and new assignments are refused.
 
-Issue #15 adds client-scoped `tasks.create`, `tasks.update`, `tasks.delete`. The task API treats existing `tasks.manage` as the aggregate for those three writes, without granting view or reinterpreting unrelated catalog checks/delegation. Initial Administrator receives explicit seed links; custom roles do not expand. New/changed assignees require active exact-client `tasks.view`. See [the task contract](tasks.md) for history and picker boundaries. Current identity/catalog contain 22 known keys.
+Issue #15 adds client-scoped `tasks.create`, `tasks.update`, `tasks.delete`. The task API treats existing `tasks.manage` as the aggregate for those three writes, without granting view or reinterpreting unrelated catalog checks/delegation. Initial Administrator receives explicit seed links; custom roles do not expand. New/changed assignees require active exact-client `tasks.view`. See [the task contract](tasks.md) for history and picker boundaries.
+
+Issue #17 adds client-scoped `planning.view`, `planning.create`, `planning.update`, `planning.archive`. Planning writes require view alongside the matching write capability; no aggregate exists. Only Initial Administrator receives explicit seed links. Historical authorship and task links grant no access. New links additionally require task view; unchanged references survive task archival/revocation. See [the planning contract](planning.md). Current identity/catalog contain 26 known keys.
 
 ## Current identity representation
 
@@ -51,4 +53,4 @@ Migration `000004_create_authorization.sql` adds protected permission, role, rol
 
 Integration coverage exercises the Initial Administrator/Finance/Viewer matrix, global and exact-client scope, Viewer mutation denial, Finance role-administration denial, unknown permissions, disabled users, delegated escalation attempts, audited assignment/revocation, audit-failure rollback, bootstrap conversion, runtime table denial and migration rollback behavior. The Compose permission probe covers the same storage boundary.
 
-Issue #10 delivers [user/role administration](administration.md), including final-administrator storage guards. Issues #13/#14 deliver client API/UI, and #15 adds the [task API](tasks.md); task UI and remaining business modules are later slices.
+Issue #10 delivers [user/role administration](administration.md), including final-administrator storage guards. Issues #13/#14 deliver client API/UI, #15/#16 deliver task API/UI, and #17 begins the [planning contract](planning.md). Planning UI and remaining business modules follow separately.

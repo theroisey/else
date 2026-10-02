@@ -1,6 +1,6 @@
 ---
 type: decision
-status: frontend-review
+status: active
 created: 2026-10-02
 tags:
   - tasks
@@ -24,6 +24,8 @@ Device IANA timezone is explicit in display/forms. Changed local dates convert t
 Real mobile browser checks exposed off-screen absolute screen-reader labels inside inline table forms. Positioning the existing Table's scroll wrapper relative anchors those labels and keeps horizontal overflow inside the keyboard-scrollable region; hiding accessible labels is unnecessary.
 
 97 frontend tests and six real-API browser flows verify the UI and audit outcomes. Local PostgreSQL 17.11 is disposable; CI remains responsible for PostgreSQL 18, pinned Chromium and container gates before readiness. Browser captures contain labelled synthetic records only; traces/video and credential-bearing artifacts remain off. Planning/reminders/comments/attachments are separate Issues.
+
+Owner merged PR #51 at `bf435f0`. Main run 36964008720 passed all five gates and tested-image publication; both development branches were synchronized before the backend planning slice. See [[Planning Lifecycle and Historical Task Links]].
 
 - [[Task State and Assignee Scope]]
 - [[Client Interface and Workspace]]
