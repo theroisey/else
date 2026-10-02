@@ -19,6 +19,7 @@ import (
 	httpapi "github.com/theroisey/else/backend/internal/http"
 	"github.com/theroisey/else/backend/internal/identity"
 	"github.com/theroisey/else/backend/internal/planning"
+	"github.com/theroisey/else/backend/internal/pricing"
 	"github.com/theroisey/else/backend/internal/reminders"
 	"github.com/theroisey/else/backend/internal/tasks"
 )
@@ -153,7 +154,17 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("billing_startup_failed", "error_code", "billing_startup_failed")
 		return 1
 	}
-	server, err := httpapi.NewWithBilling(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler)
+	pricingService, err := pricing.NewService(pool)
+	if err != nil {
+		logger.Error("pricing_startup_failed", "error_code", "pricing_startup_failed")
+		return 1
+	}
+	pricingHandler, err := pricing.NewHandler(pricingService, authHandler, logger)
+	if err != nil {
+		logger.Error("pricing_startup_failed", "error_code", "pricing_startup_failed")
+		return 1
+	}
+	server, err := httpapi.NewWithPricing(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler, pricingHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1
