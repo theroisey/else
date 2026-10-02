@@ -1,6 +1,6 @@
 # Exact collections and payment API
 
-Issue [#19](https://github.com/theroisey/else/issues/19). The [financial and API policy](https://github.com/theroisey/else/issues/19#issuecomment-5956500604) was recorded before implementation. Owner-merged audit compatibility #60 and permission compatibility #61 prepare the existing consumers. PR #61 merged at `2693164`; both branches were synchronized and main [run 37032475739](https://github.com/theroisey/else/actions/runs/37032475739) passed all gates/publication. Finance UI follows separately in #20.
+Issue [#19](https://github.com/theroisey/else/issues/19). The [financial and API policy](https://github.com/theroisey/else/issues/19#issuecomment-5956500604) was recorded before implementation. Owner-merged audit compatibility #60 and permission compatibility #61 prepare the existing consumers. PR #61 merged at `2693164`; both branches were synchronized and main [run 37032475739](https://github.com/theroisey/else/actions/runs/37032475739) passed all gates/publication. PR #62 was owner-merged at `26f2454` and main [run 37038850280](https://github.com/theroisey/else/actions/runs/37038850280) passed. Issue #20 consumes this API in the [finance workspace](billing-interface.md).
 
 ## Exact money and currency
 

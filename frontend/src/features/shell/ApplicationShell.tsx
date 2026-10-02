@@ -23,7 +23,9 @@ export function ApplicationShell() {
       : location.pathname.endsWith('/new') ? 'Create plan' : location.pathname.endsWith('/edit') ? 'Edit plan' : location.pathname.endsWith('/plans') ? 'Planning' : 'Plan details' : ''
   const activityContext = /^\/app\/clients\/[^/]+\/activity$/.test(location.pathname) ? 'Activity' : ''
   const auditContext = /^\/app\/clients\/[^/]+\/audit$/.test(location.pathname) ? 'Audit history' : ''
-  const clientContext = auditContext || activityContext || reminderContext || taskContext || planningContext || (current?.path === '/app/clients' && location.pathname !== current.path
+  const billingContext = /^\/app\/clients\/[^/]+\/billing(?:\/|$)/.test(location.pathname)
+    ? location.pathname.endsWith('/new') ? 'Create collection' : location.pathname.endsWith('/edit') ? 'Edit collection' : location.pathname.endsWith('/billing') ? 'Finance' : 'Collection details' : ''
+  const clientContext = billingContext || auditContext || activityContext || reminderContext || taskContext || planningContext || (current?.path === '/app/clients' && location.pathname !== current.path
     ? location.pathname === '/app/clients/new' ? 'Create client' : location.pathname.endsWith('/edit') ? 'Edit client' : 'Client workspace' : '')
 
   function closeNavigation() {

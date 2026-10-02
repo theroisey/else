@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#19](https://github.com/theroisey/else/issues/19), implementing the [exact collections/payment backend](billing.md) after owner-merged audit and permission consumer prerequisites #60/#61. Issues #1–#18, #22 and #28 are owner-merged. PR #61 merged at `2693164`; both branches were synchronized. Main [run 37032475739](https://github.com/theroisey/else/actions/runs/37032475739) passed all five gates and tested-image publication. The recorded financial policy precedes migration 12 and the API, including exact minor-unit strings, guarded append-only payments, retained cancellation history and currency-separated summaries. Backend owner review remains pending; finance UI follows in #20.
+Current slice: [#20](https://github.com/theroisey/else/issues/20), the [finance workspace](billing-interface.md), after owner-merged PR #62 delivered the [exact billing API](billing.md). Issues #1–#19, #22 and #28 are owner-merged. PR #62 merged at `26f2454`; both development branches synchronized and main [run 37038850280](https://github.com/theroisey/else/actions/runs/37038850280) passed. The recorded UI policy covers exact currency input, backend balances, explicit command recovery, reference masking and permanent cancellation history. Finance owner review remains pending; versioned pricing #21 follows after this slice merges.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#18, #22 and #28 are owner-merged. Issue #19 now implements its separately reviewed financial policy/collections/payment API after both consumer prerequisites merged. Overall acceptance requires backend CI and owner review; finance UI follows #20. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#19, #22 and #28 are owner-merged. Issue #20 delivers the finance interface with currency-separated server summaries, exact collection forms, guarded payment confirmation/recovery, masked history and deliberate cancellation. Overall acceptance requires final-head CI and owner review; versioned pricing #21 is next after merge. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.

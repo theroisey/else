@@ -12,6 +12,7 @@ import { ApplicationShell } from '../features/shell/ApplicationShell'
 import { WorkspacePage } from '../features/shell/WorkspacePage'
 import { AccessPage } from '../features/shell/AccessPage'
 import { ClientRoute } from '../features/clients/ClientRoute'
+import { PaymentRecoveryBoundary } from '../features/billing/PaymentRecovery'
 
 const ClientsPage = lazy(() => import('../features/clients/ClientsPage').then(m => ({ default: m.ClientsPage })))
 const ClientEditorPage = lazy(() => import('../features/clients/ClientEditorPage').then(m => ({ default: m.ClientEditorPage })))
@@ -28,9 +29,12 @@ const ReminderDetailPage = lazy(() => import('../features/reminders/ReminderDeta
 const ReminderEditorPage = lazy(() => import('../features/reminders/ReminderEditorPage').then(m => ({ default: m.ReminderEditorPage })))
 const ActivityPage = lazy(() => import('../features/activity/ActivityPage').then(m => ({ default: m.ActivityPage })))
 const AuditPage = lazy(() => import('../features/audit/AuditPage').then(m => ({ default: m.AuditPage })))
+const BillingListPage = lazy(() => import('../features/billing/BillingListPage').then(m => ({ default: m.BillingListPage })))
+const BillingDetailPage = lazy(() => import('../features/billing/BillingDetailPage').then(m => ({ default: m.BillingDetailPage })))
+const BillingEditorPage = lazy(() => import('../features/billing/BillingEditorPage').then(m => ({ default: m.BillingEditorPage })))
 
 function AuthArea() {
-  return <AuthProvider><Outlet /></AuthProvider>
+  return <AuthProvider><PaymentRecoveryBoundary><Outlet /></PaymentRecoveryBoundary></AuthProvider>
 }
 
 export function App() {
@@ -52,6 +56,10 @@ export function App() {
             <Route path="clients/:id/edit" element={<ClientRoute><ClientEditorPage /></ClientRoute>} />
             <Route path="clients/:id/activity" element={<ClientRoute name="Activity"><ActivityPage /></ClientRoute>} />
             <Route path="clients/:id/audit" element={<ClientRoute name="Audit"><AuditPage client /></ClientRoute>} />
+            <Route path="clients/:id/billing" element={<ClientRoute name="Finance"><BillingListPage /></ClientRoute>} />
+            <Route path="clients/:id/billing/new" element={<ClientRoute name="Finance"><BillingEditorPage create /></ClientRoute>} />
+            <Route path="clients/:id/billing/:collectionID" element={<ClientRoute name="Finance"><BillingDetailPage /></ClientRoute>} />
+            <Route path="clients/:id/billing/:collectionID/edit" element={<ClientRoute name="Finance"><BillingEditorPage /></ClientRoute>} />
             <Route path="clients/:id/tasks" element={<ClientRoute name="Task"><TaskListPage /></ClientRoute>} />
             <Route path="clients/:id/tasks/new" element={<ClientRoute name="Task"><TaskEditorPage create /></ClientRoute>} />
             <Route path="clients/:id/tasks/:taskID" element={<ClientRoute name="Task"><TaskDetailPage /></ClientRoute>} />
