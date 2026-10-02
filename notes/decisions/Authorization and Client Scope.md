@@ -25,3 +25,11 @@ Client UUIDs are opaque scope keys until Issue #13 adds client records and refer
 - [Issue #9](https://github.com/theroisey/else/issues/9)
 - [Merged PR #43](https://github.com/theroisey/else/pull/43)
 - [Main verification and publication](https://github.com/theroisey/else/actions/runs/36870754791)
+
+## Billing permission consumer preparation
+
+Issue #19's [recorded permission contract](https://github.com/theroisey/else/issues/19#issuecomment-5955336416) prepares client-defined billing.create/update/delete in the frontend known-key map before the backend adds definitions. Administration catalog and role parsers otherwise reject expanded responses. Identity parsing already retains structurally valid future keys; capability checks still reject unknown identifiers. The current runtime catalog/seeds remain 30 keys, while the prepared consumer knows 33. No runtime grant, money calculation, API or finance screen is added.
+
+Each new key requires exact-client scope or a global assignment with an explicit valid client. Legacy billing.manage, billing.view and other write keys never imply a new capability; write keys never imply view. Delegation still needs global roles.manage and every applicable grant, while global role-definition changes require global control. Future backend writes require view plus their specific write permission; cancellation uses confirmed billing.delete. Only Initial Administrator will receive default links, leaving Finance and custom roles to explicit grants.
+
+Seven contract cases and one component flow verify identity preservation, expanded/legacy role/catalog responses, scope/delegation negatives, unknown-key rejection and the confirmed role-edit command. Monetary/refund/reversal/rounding/overdue policy and collections/payment implementation remain pending in #19. Owner-merged audit compatibility #60 at c030361 passed all main gates/publication in run 37024225863; both permanent branches were synchronized before this slice. Owner review remains the merge boundary.
