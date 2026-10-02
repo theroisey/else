@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/theroisey/else/backend/internal/timezone"
@@ -39,6 +40,7 @@ const (
 	Completed         Action = "completed"
 	Cancelled         Action = "cancelled"
 	Dismissed         Action = "dismissed"
+	PaymentRecorded   Action = "payment_recorded"
 )
 
 type Source string
@@ -60,6 +62,10 @@ type Snapshot struct {
 	ReminderStatus      *string    `json:"reminder_status,omitempty"`
 	ReminderScheduledAt *time.Time `json:"reminder_scheduled_at,omitempty"`
 	ReminderTimezone    *string    `json:"reminder_timezone,omitempty"`
+	BillingStatus       *string    `json:"billing_status,omitempty"`
+	Currency            *string    `json:"currency,omitempty"`
+	AmountMinor         *string    `json:"amount_minor,omitempty"`
+	PaidMinor           *string    `json:"paid_minor,omitempty"`
 }
 
 type Metadata struct {
@@ -110,7 +116,11 @@ func (e Event) encode() (before, after, metadata []byte, err error) {
 			return nil, nil, nil, ErrInvalidEvent
 		}
 	case Cancelled:
-		if e.ResourceKind != "task" {
+		if e.ResourceKind != "task" && e.ResourceKind != "billing" {
+			return nil, nil, nil, ErrInvalidEvent
+		}
+	case PaymentRecorded:
+		if e.ResourceKind != "billing" {
 			return nil, nil, nil, ErrInvalidEvent
 		}
 	case Dismissed:
@@ -123,12 +133,35 @@ func (e Event) encode() (before, after, metadata []byte, err error) {
 	if e.ResourceKind == "reminder" && e.Action != Created && e.Action != Updated && e.Action != Completed && e.Action != Dismissed {
 		return nil, nil, nil, ErrInvalidEvent
 	}
+	if e.ResourceKind == "billing" && e.Action != Created && e.Action != Updated && e.Action != PaymentRecorded && e.Action != Cancelled {
+		return nil, nil, nil, ErrInvalidEvent
+	}
 	switch e.Metadata.Source {
 	case HTTP, Job, CLI:
 	default:
 		return nil, nil, nil, ErrInvalidEvent
 	}
 	for _, snapshot := range []*Snapshot{e.Before, e.After} {
+		if snapshot != nil && (snapshot.BillingStatus != nil || snapshot.Currency != nil || snapshot.AmountMinor != nil || snapshot.PaidMinor != nil) {
+			if e.ResourceKind != "billing" || snapshot.BillingStatus == nil || snapshot.Currency == nil || snapshot.AmountMinor == nil || snapshot.PaidMinor == nil {
+				return nil, nil, nil, ErrInvalidEvent
+			}
+			switch *snapshot.BillingStatus {
+			case "pending", "partially_paid", "paid", "overdue", "cancelled":
+			default:
+				return nil, nil, nil, ErrInvalidEvent
+			}
+			switch *snapshot.Currency {
+			case "USD", "EUR", "GBP", "TRY", "JPY", "KWD":
+			default:
+				return nil, nil, nil, ErrInvalidEvent
+			}
+			total, te := strconv.ParseInt(*snapshot.AmountMinor, 10, 64)
+			paid, pe := strconv.ParseInt(*snapshot.PaidMinor, 10, 64)
+			if te != nil || pe != nil || total <= 0 || paid < 0 || paid > total || strconv.FormatInt(total, 10) != *snapshot.AmountMinor || strconv.FormatInt(paid, 10) != *snapshot.PaidMinor {
+				return nil, nil, nil, ErrInvalidEvent
+			}
+		}
 		if snapshot != nil && (snapshot.ReminderStatus != nil || snapshot.ReminderScheduledAt != nil || snapshot.ReminderTimezone != nil) {
 			if e.ResourceKind != "reminder" {
 				return nil, nil, nil, ErrInvalidEvent

@@ -468,6 +468,9 @@ func TestAuditReadRuntimeAndPublicCannotReadOrChangeRawHistory(t *testing.T) {
 }
 func TestAuditReaderMigrationPreservesPopulatedAuditBusinessAndPermissions(t *testing.T) {
 	f := newAuditReadFixture(t)
+	if _, err := provider(t, f.base).DownTo(f.base.ctx, 11); err != nil {
+		t.Fatal(err)
+	}
 	f.seedBusiness(t)
 	digest := func() string {
 		var v string
@@ -478,13 +481,13 @@ func TestAuditReaderMigrationPreservesPopulatedAuditBusinessAndPermissions(t *te
 	}
 	before := digest()
 	p := provider(t, f.base)
-	if _, err := p.Down(f.base.ctx); err != nil {
+	if _, err := p.DownTo(f.base.ctx, 10); err != nil {
 		t.Fatal(err)
 	}
 	if digest() != before {
 		t.Fatal("reader down changed retained history")
 	}
-	if _, err := p.Up(f.base.ctx); err != nil {
+	if _, err := p.UpTo(f.base.ctx, 11); err != nil {
 		t.Fatal(err)
 	}
 	if digest() != before {

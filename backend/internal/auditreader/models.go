@@ -93,7 +93,9 @@ func validEvent(v string) bool {
 	case "completed":
 		return p[0] == "task" || p[0] == "reminder"
 	case "cancelled":
-		return p[0] == "task"
+		return p[0] == "task" || p[0] == "billing"
+	case "payment_recorded":
+		return p[0] == "billing"
 	case "dismissed":
 		return p[0] == "reminder"
 	}
