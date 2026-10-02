@@ -17,7 +17,8 @@ import { CopyRecoveryBoundary } from '../features/pricing/CopyRecovery'
 
 const ClientsPage = lazy(() => import('../features/clients/ClientsPage').then(m => ({ default: m.ClientsPage })))
 const ClientEditorPage = lazy(() => import('../features/clients/ClientEditorPage').then(m => ({ default: m.ClientEditorPage })))
-const ClientWorkspacePage = lazy(() => import('../features/clients/ClientWorkspacePage').then(m => ({ default: m.ClientWorkspacePage })))
+const OverviewPage = lazy(() => import('../features/overview/OverviewPage').then(m => ({ default: m.OverviewPage })))
+const ClientProfilePage = lazy(() => import('../features/clients/ClientProfilePage').then(m => ({ default: m.ClientProfilePage })))
 const TaskListPage = lazy(() => import('../features/tasks/TaskListPage').then(m => ({ default: m.TaskListPage })))
 const TaskDetailPage = lazy(() => import('../features/tasks/TaskDetailPage').then(m => ({ default: m.TaskDetailPage })))
 const TaskEditorPage = lazy(() => import('../features/tasks/TaskEditorPage').then(m => ({ default: m.TaskEditorPage })))
@@ -56,7 +57,8 @@ export function App() {
             <Route path="audit" element={<ClientRoute name="Audit"><AuditPage /></ClientRoute>} />
             <Route path="clients" element={<ClientRoute><ClientsPage /></ClientRoute>} />
             <Route path="clients/new" element={<ClientRoute><ClientEditorPage create /></ClientRoute>} />
-            <Route path="clients/:id" element={<ClientRoute><ClientWorkspacePage /></ClientRoute>} />
+            <Route path="clients/:id" element={<ClientRoute name="Overview"><OverviewPage /></ClientRoute>} />
+            <Route path="clients/:id/profile" element={<ClientRoute><ClientProfilePage /></ClientRoute>} />
             <Route path="clients/:id/edit" element={<ClientRoute><ClientEditorPage /></ClientRoute>} />
             <Route path="clients/:id/activity" element={<ClientRoute name="Activity"><ActivityPage /></ClientRoute>} />
             <Route path="clients/:id/audit" element={<ClientRoute name="Audit"><AuditPage client /></ClientRoute>} />

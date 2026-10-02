@@ -49,6 +49,8 @@ function setup(path = '/app/clients', session = identity, override: Override = (
     if (url.startsWith('/api/v1/clients?')) return Promise.resolve(json(page([record])))
     if (url === `/api/v1/clients/${id}` && init?.method === 'GET')
       return Promise.resolve(json({ data: record }))
+    if (url === `/api/v1/clients/${id}/overview`)
+      return Promise.resolve(json({ data: { client: {id,name:record.name,status:'active',archived_at:null},as_of:date,horizon_end:'2026-10-08T00:00:00Z' } }))
     return Promise.resolve(
       json({
         data: { id, revision: init?.method === 'POST' && url === '/api/v1/clients' ? 1 : 2 },
@@ -177,7 +179,7 @@ it('uses server cursors in both directions and resets them when applying API fil
   })
 })
 it('shows no mutation controls to a scoped viewer and keeps unavailable modules non-actionable', async () => {
-  setup(`/app/clients/${id}`, {
+  setup(`/app/clients/${id}/profile`, {
     ...identity,
     user: {
       ...identity.user,
@@ -188,8 +190,9 @@ it('shows no mutation controls to a scoped viewer and keeps unavailable modules 
   expect(screen.queryByRole('link', { name: 'Edit client' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Archive client' })).not.toBeInTheDocument()
   const modules = within(screen.getByRole('navigation', { name: 'Client modules' }))
-  expect(modules.getByText('Billing · Unavailable')).toBeInTheDocument()
-  expect(modules.queryAllByRole('link')).toHaveLength(0)
+  expect(modules.getByText('Marketing · Unavailable')).toBeInTheDocument()
+  expect(modules.getByRole('link', {name:'Overview'})).toBeInTheDocument()
+  expect(modules.queryAllByRole('link')).toHaveLength(1)
 })
 it('validates form fields, contacts and tags before sending normalized creation', async () => {
   const { fetcher } = setup('/app/clients/new')
@@ -249,7 +252,7 @@ it('preserves stale drafts until explicit reload and replaces contacts using the
 })
 it('requires deliberate archive confirmation and retains archived readable history', async () => {
   let archived = false
-  const { fetcher } = setup(`/app/clients/${id}`, identity, (path) => {
+  const { fetcher } = setup(`/app/clients/${id}/profile`, identity, (path) => {
     if (path.endsWith('/archive')) {
       archived = true
       return json({ data: { id, revision: 2 } })
@@ -338,7 +341,7 @@ it('does not reuse a cached client list after grants shrink within the same iden
 })
 
 it('withholds archive success after conflict and requires cancellation before another review', async () => {
-  setup('/app/clients/' + id, identity, (path) =>
+  setup('/app/clients/' + id + '/profile', identity, (path) =>
     path.endsWith('/archive') ? json({ error: { code: 'conflict' } }, 409) : undefined,
   )
   const u = userEvent.setup()

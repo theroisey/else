@@ -277,6 +277,7 @@ test('client records use real pagination, forms, conflict recovery, scoped acces
     await page.screenshot({ path: testInfo.outputPath(`client-workspace-${viewport.width}.png`), fullPage: true })
   }
   await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.getByRole('link', { name: 'Profile', exact: true }).click()
   await page.getByRole('link', { name: 'Edit client', exact: true }).click()
   await expect(page.getByLabel('Contact 1 name', { exact: true })).toHaveValue('Client Contact Fixture')
   // Simulate another editor using the same real endpoint and revision boundary.
@@ -318,6 +319,7 @@ test('client records use real pagination, forms, conflict recovery, scoped acces
     await expect(viewer.getByText('Updated Client Fixture', { exact: true })).toHaveCount(0)
   } finally { await viewerContext.close() }
 
+  await page.getByRole('link', { name: 'Profile', exact: true }).click()
   await page.getByRole('button', { name: 'Archive client', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused()
   expect(database(`SELECT revision::text FROM app.clients WHERE id='${clientID}'`)).toBe('3')
@@ -1260,4 +1262,107 @@ test('finance preserves exact currencies, reconciles a lost payment response and
   await page.goto(`${path}/${kwd}`)
   await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
   await expect(page.getByRole('table',{name:'Collection payments'})).toHaveCount(0)
+})
+
+test('overview reconciles real sources in one bounded request and omits revoked domains', async ({ page }, testInfo) => {
+  test.setTimeout(120_000)
+  const client='a5555555-5555-4555-8555-555555555555',actor='a1111111-1111-4111-8111-111111111111',role='a2222222-2222-4222-8222-222222222222',path=`/app/clients/${client}`,base=`/api/v1/clients/${client}`
+  database(`
+    INSERT INTO app.client_scopes(id) VALUES('${client}');
+    INSERT INTO app.clients(id,name) VALUES('${client}','Synthetic overview client');
+    INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actor}','overview.fixture@example.com','Overview Fixture',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444';
+    INSERT INTO app.roles(id,role_key,display_name) VALUES('${role}','overview_fixture','Synthetic overview role');
+    INSERT INTO app.role_permissions(id,role_id,permission_key) SELECT gen_random_uuid(),'${role}',permission_key FROM app.permissions WHERE permission_key IN ('clients.view','tasks.view','tasks.create','reminders.view','reminders.create','billing.view','billing.create','billing.update','billing.delete','activity.view');
+    INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),'${actor}','${role}','client','${client}');
+  `)
+  await page.goto(path)
+  await page.getByLabel('Email',{exact:true}).fill('overview.fixture@example.com')
+  await page.getByLabel('Password',{exact:true}).fill('clearly synthetic browser password')
+  await page.getByRole('button',{name:'Sign in',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Synthetic overview client',exact:true})).toBeVisible()
+  await expect(page.getByText('No overdue tasks.',{exact:true})).toBeVisible()
+  await expect(page.getByText('No balances recorded yet.',{exact:true})).toBeVisible()
+  await markTaskScreenshot(page)
+  await page.screenshot({path:testInfo.outputPath('overview-empty.png'),fullPage:true})
+
+  const seeded=await page.evaluate(async({client,actor})=>{
+    const token=document.cookie.split('; ').find(c=>c.startsWith('else_csrf='))?.slice('else_csrf='.length)??''
+    const headers={'Content-Type':'application/json','X-CSRF-Token':token},base=`/api/v1/clients/${client}`
+    async function post(path:string,body:unknown){const r=await fetch(base+path,{method:'POST',headers,body:JSON.stringify(body)});if(!r.ok)throw new Error(`Synthetic seed request rejected ${path} ${r.status}`);return (await r.json()).data}
+    for(let i=1;i<=12;i++){
+      // Separate task and reminder deadlines from the overview request clock.
+      const scheduled=new Date(Date.now()+(i<=6?-86400000:(i-6)*3600000))
+      const due=scheduled.toISOString()
+      await post('/tasks',{title:`Synthetic ${i<=6?'overdue':'upcoming'} task ${i} · A deliberately long operational title for wrapping`,description:'Synthetic private task description',priority:'urgent',assignee_id:null,start_at:null,due_at:due,tags:[]})
+      const reminderTime=scheduled
+      await post('/reminders',{title:`Synthetic ${i<=6?'due':'upcoming'} reminder ${i}`,description:'Synthetic private reminder description',owner_id:actor,scheduled_local:new Date(reminderTime.getTime()+10800000).toISOString().slice(0,23),timezone:'Europe/Istanbul',utc_offset_seconds:10800,resource:null})
+    }
+    const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10)
+    for(const currency of ['USD','USD','EUR','GBP','TRY','JPY','KWD'])await post('/billing',{description:'Synthetic overview obligation',internal_note:'Synthetic private finance note',amount_minor:currency==='USD'?'9223372036854775807':'100',currency,due_date:yesterday})
+    const cancelled=await post('/billing',{description:'Synthetic cancelled overview obligation',internal_note:'',amount_minor:'100',currency:'USD',due_date:yesterday})
+    await post(`/billing/${cancelled.id}/payments`,{command_id:crypto.randomUUID(),amount_minor:'25',currency:'USD',paid_on:new Date().toISOString().slice(0,10),method:'cash',reference:'Synthetic private payment reference',note:'',expected_revision:cancelled.revision})
+    await post(`/billing/${cancelled.id}/cancel`,{expected_revision:'2',confirm:true})
+    const summary=await(await fetch(base+'/billing/summary')).json()
+    return {summary:summary.data}
+  },{client,actor})
+  const reads:string[]=[]
+  page.on('request',r=>{const url=new URL(r.url());if(url.pathname.startsWith('/api/v1/'))reads.push(url.pathname+url.search)})
+  const auditBefore=database(`SELECT count(*)::text FROM app.audit_events WHERE client_id='${client}'`)
+  const aggregatePromise=page.waitForResponse(r=>new URL(r.url()).pathname===base+'/overview')
+  await page.getByRole('button',{name:'Refresh overview',exact:true}).click()
+  const aggregate=(await(await aggregatePromise).json()).data
+  await expect(page.getByRole('heading',{name:'Financial position',exact:true})).toBeVisible()
+  expect(aggregate.finance.currencies).toEqual(seeded.summary)
+  expect(aggregate.finance.currencies.find((t:{currency:string})=>t.currency==='USD')).toMatchObject({amount_minor:'18446744073709551614',cancelled_amount_minor:'100',cancelled_paid_minor:'25'})
+  expect(reads.filter(v=>v===base+'/overview')).toHaveLength(1)
+  expect(reads.every(v=>v===base+'/overview'||v==='/api/v1/auth/session')).toBe(true)
+  for(const name of ['Overdue tasks','Tasks due soon','Due reminders','Upcoming reminders'])await expect(page.getByRole('list',{name,exact:true}).getByRole('listitem')).toHaveCount(5)
+  await expect(page.getByRole('list',{name:'Recent client activity',exact:true}).getByRole('listitem')).toHaveCount(5)
+  await expect(page.getByText('USD 184,467,440,737,095,516.14',{exact:true})).toHaveCount(3)
+  expect(await page.locator('main').innerText()).not.toContain('Synthetic private')
+  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE client_id='${client}'`)).toBe(auditBefore)
+  for(const viewport of [{width:1440,height:1000},{width:820,height:1050},{width:390,height:844}]){
+    await page.setViewportSize(viewport);await markTaskScreenshot(page)
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth===document.documentElement.clientWidth)).toBe(true)
+    await page.screenshot({path:testInfo.outputPath(`overview-${viewport.width}.png`),fullPage:true})
+  }
+  const firstTask=page.getByRole('list',{name:'Overdue tasks',exact:true}).getByRole('link').first()
+  const taskTitle=await firstTask.innerText()
+  await firstTask.focus();await expect(firstTask).toBeFocused();await page.keyboard.press('Enter')
+  await expect(page.getByRole('heading',{name:taskTitle,exact:true})).toBeVisible()
+  reads.length=0
+  await page.getByRole('link',{name:'Overview',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Synthetic overview client',exact:true})).toBeVisible()
+  expect(reads.filter(v=>v===base+'/overview')).toHaveLength(1)
+  expect(reads.every(v=>v===base+'/overview'||v==='/api/v1/auth/session')).toBe(true)
+
+  await page.route(`**${base}/overview`,async route=>{await route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:{code:'internal_error',message:'Synthetic private failure'}})})})
+  await page.getByRole('button',{name:'Refresh overview',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Overview unavailable',exact:true})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Financial position',exact:true})).toHaveCount(0)
+  expect(await page.locator('main').innerText()).not.toContain('Synthetic private failure')
+  await markTaskScreenshot(page);await page.screenshot({path:testInfo.outputPath('overview-error-mobile.png'),fullPage:true})
+  await page.unroute(`**${base}/overview`)
+  await page.getByRole('button',{name:'Try again',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Financial position',exact:true})).toBeVisible()
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key IN ('billing.view','tasks.view')`)
+  await page.getByRole('button',{name:'Refresh overview',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Synthetic overview client',exact:true})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Financial position',exact:true})).toHaveCount(0)
+  await expect(page.getByRole('heading',{name:'Overdue tasks',exact:true})).toHaveCount(0)
+  await expect(page.getByRole('heading',{name:'Due reminders',exact:true})).toBeVisible()
+  await expect(page.getByText('Task created.',{exact:true})).toHaveCount(0)
+  database(`UPDATE app.clients SET archived_at=clock_timestamp(),revision=revision+1,updated_at=clock_timestamp() WHERE id='${client}'`)
+  await page.getByRole('button',{name:'Refresh overview',exact:true}).click()
+  await expect(page.getByText(/overview and history remain readable/)).toBeVisible()
+  await page.getByRole('link',{name:'Profile',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Profile',exact:true})).toBeVisible()
+  await expect(page.getByRole('button',{name:'Archive client',exact:true})).toHaveCount(0)
+  await page.getByRole('link',{name:'Overview',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Synthetic overview client',exact:true})).toBeVisible()
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='clients.view'`)
+  await page.getByRole('button',{name:'Refresh overview',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Due reminders',exact:true})).toHaveCount(0)
+  expect(await page.evaluate(()=>localStorage.length+sessionStorage.length)).toBe(0)
 })

@@ -8,7 +8,8 @@ Clients navigation appears for some effective `clients.view` grant or global `cl
 
 - `/app/clients`: searchable authorized table, or create-only context.
 - `/app/clients/new`: complete profile/contact/tag form.
-- `/app/clients/:id`: profile, contacts, timestamps, compact header and Overview.
+- `/app/clients/:id`: [operational overview](overview-interface.md) with compact context and authorized attention/finance/activity.
+- `/app/clients/:id/profile`: full profile, contacts, timestamps, edit/archive controls and a link back to Overview.
 - `/app/clients/:id/edit`: active profile replacement form.
 
 Overview is implemented. Issue #16 adds a [Tasks module](task-interface.md) link only for effective exact-client `tasks.view`; task-only users can open validated task deep links without client-profile access. The compact Additional modules disclosure identifies remaining unavailable modules as plain text, with no fake metrics, placeholder links or actions. Archived profiles remain readable to authorized users with no edit, archive or restore controls. Client navigation remains selected on detail/edit/task routes when available; breadcrumbs and cancel links lead back to actual destinations.

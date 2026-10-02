@@ -70,6 +70,7 @@ const event = z
     )
   })
 export type ActivityEvent = z.infer<typeof event>
+export const activityEventSchema = event
 const page = z
   .object({
     data: z.array(event).max(25),

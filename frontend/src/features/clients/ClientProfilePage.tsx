@@ -8,7 +8,7 @@ import { AccessDenied, ClientError } from './Shared'
 import * as api from './service'
 import type { Client } from './models'
 
-export function ClientWorkspacePage() {
+export function ClientProfilePage() {
   const { id = '' } = useParams()
   return <ClientWorkspace key={id} id={id} />
 }
@@ -121,11 +121,12 @@ function ClientWorkspace({ id }: { id: string }) {
         aria-label="Client modules"
         className="mb-6 flex flex-wrap gap-2 border-b border-line pb-4"
       >
+        <Link className={buttonStyles()} to={`/app/clients/${id}`}>Overview</Link>
         <span
           aria-current="page"
           className="rounded-sm border border-line bg-surface px-3 py-2 font-semibold"
         >
-          Overview
+          Profile
         </span>
         {hasPermission(grants, {permission:'tasks.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/tasks`}>Tasks</Link> : null}
         {hasPermission(grants, {permission:'planning.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/plans`}>Planning</Link> : null}
@@ -140,8 +141,6 @@ function ClientWorkspace({ id }: { id: string }) {
           </summary>
           <ul className="mt-2 grid gap-2 rounded-md border border-line bg-surface p-3 sm:grid-cols-2">
             {[
-              'Reminders',
-              'Billing',
               'Marketing',
               'E-commerce',
               'Web analytics',

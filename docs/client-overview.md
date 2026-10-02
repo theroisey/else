@@ -1,6 +1,6 @@
 # Authorized client operational overview
 
-Related Issue: [#23](https://github.com/theroisey/else/issues/23). This backend slice consumes owner-merged tasks, reminders, finance, pricing and activity. The [financial/access policy](https://github.com/theroisey/else/issues/23#issuecomment-5960242616) preceded implementation. The overview interface follows in a separate frontend PR after owner merge; #23 remains open for its responsive/accessibility acceptance.
+Related Issue: [#23](https://github.com/theroisey/else/issues/23). This backend slice consumes owner-merged tasks, reminders, finance, pricing and activity. The [financial/access policy](https://github.com/theroisey/else/issues/23#issuecomment-5960242616) preceded implementation. The owner merged PR #66 at `378e5cf` after all five final-head gates passed; main run 37060547663 passed and both branches synchronized. The [overview interface](overview-interface.md) consumes this contract in a separate frontend PR.
 
 ## Read contract
 
