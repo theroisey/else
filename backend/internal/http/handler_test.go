@@ -15,6 +15,33 @@ import (
 	"github.com/theroisey/else/backend/internal/config"
 )
 
+func TestActivityRoutesUseDedicatedProtectedAdapter(t *testing.T) {
+	other := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(418) })
+	activity := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(401) })
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	s, err := NewWithActivity(testConfig(t), logger, nil, other, other, other, other, other, other, activity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, suffix := range []string{"", "/private"} {
+		w := httptest.NewRecorder()
+		s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/clients/11111111-1111-4111-8111-111111111111/activity"+suffix, nil))
+		if w.Code != 401 {
+			t.Fatal("activity bypassed dedicated protected adapter")
+		}
+	}
+	for _, suffix := range []string{"", "/tasks", "/plans", "/reminders"} {
+		w := httptest.NewRecorder()
+		s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/clients/11111111-1111-4111-8111-111111111111"+suffix, nil))
+		if w.Code != 418 {
+			t.Fatal("existing domain entered activity handler")
+		}
+	}
+	if _, err := NewWithActivity(testConfig(t), logger, nil, other, other, other, other, other, other, nil); err == nil {
+		t.Fatal("nil activity handler accepted")
+	}
+}
+
 func TestClientRoutesUseProtectedAdapter(t *testing.T) {
 	var paths []string
 	protected := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

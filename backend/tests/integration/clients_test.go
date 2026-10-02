@@ -373,8 +373,8 @@ func TestClientMigrationPreservesLegacyScopesAndRefusesPopulatedRollback(t *test
 	if _, err := c.Exec(f.ctx, `INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),$1::uuid,$2::uuid,'client',$3::uuid)`, viewerUserID, authorization.FinanceRoleID, clientAID); err == nil {
 		t.Fatal("legacy scope accepted a new assignment")
 	}
-	if _, err := p.Down(f.ctx); err != nil {
-		t.Fatal("empty reminder rollback failed", err)
+	if _, err := p.DownTo(f.ctx, 8); err != nil {
+		t.Fatal("later-domain rollback failed", err)
 	}
 	if _, err := p.Down(f.ctx); err != nil {
 		t.Fatal("empty planning rollback failed", err)
@@ -391,8 +391,8 @@ func TestClientMigrationPreservesLegacyScopesAndRefusesPopulatedRollback(t *test
 	if _, err := c.Exec(f.ctx, `INSERT INTO app.clients(id,name) VALUES($1::uuid,'Synthetic Imported Client')`, clientAID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := p.Down(f.ctx); err != nil {
-		t.Fatal("empty reminder rollback failed", err)
+	if _, err := p.DownTo(f.ctx, 8); err != nil {
+		t.Fatal("later-domain rollback failed", err)
 	}
 	if _, err := p.Down(f.ctx); err != nil {
 		t.Fatal("empty planning rollback failed", err)

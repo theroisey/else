@@ -235,8 +235,8 @@ func TestAuditStorageDeniesHistoryAccessAndDefendsBroadenedGrants(t *testing.T) 
 	}
 	assertCounts(t, f, admin, 1, 1)
 	p := provider(t, f)
-	if _, err := p.Down(f.ctx); err != nil {
-		t.Fatal("empty reminder rollback failed", err)
+	if _, err := p.DownTo(f.ctx, 8); err != nil {
+		t.Fatal("later-domain rollback failed", err)
 	}
 	if _, err := p.Down(f.ctx); err != nil {
 		t.Fatal("empty planning rollback failed", err)
