@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#17](https://github.com/theroisey/else/issues/17), client planning and linked milestones, beginning with its separately reviewed backend contract. Issues #1–#16 are owner-merged. Frontend PR #51 is merged at `bf435f0`; both development branches were synchronized. Main [run 36964008720](https://github.com/theroisey/else/actions/runs/36964008720) passed all five gates and tested-image publication. [The planning contract](planning.md) documents permissions, independent revisions, date windows, explicit lifecycle, historical task links and rollout. Planning UI follows owner merge of this backend slice.
+Current slice: [#17](https://github.com/theroisey/else/issues/17), the separately reviewed [client planning interface](planning-interface.md). Issues #1–#16 and planning backend PR #52 are owner-merged; #52 merged at `b7b7e95`, and both development branches were synchronized. Main [run 36976256373](https://github.com/theroisey/else/actions/runs/36976256373) passed all five gates and tested-image publication. The [planning API contract](planning.md) and frontend provide scoped plans/milestones, explicit lifecycle, date windows and retained task-link history. Owner merge of the frontend closes #17.
 
 ## Verified starting state
 
