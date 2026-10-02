@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
+
 test.describe.configure({ mode: 'serial' })
 
 function database(sql: string) {
@@ -1036,4 +1037,142 @@ test('audit viewer filters real immutable events, inspects safe differences and 
   await page.getByRole('button',{name:'Refresh audit history',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
   expect(historyHash()).toBe(before)
+})
+
+test('finance preserves exact currencies, reconciles a lost payment response and retains cancelled history', async ({ page }, testInfo) => {
+  test.setTimeout(120_000)
+  const clientID='b5555555-5555-4555-8555-555555555555', actorID='b1111111-1111-4111-8111-111111111111', roleID='b2222222-2222-4222-8222-222222222222', path=`/app/clients/${clientID}/billing`, base=`/api/v1/clients/${clientID}/billing`
+  database(`
+    INSERT INTO app.client_scopes(id) VALUES('${clientID}');
+    INSERT INTO app.clients(id,name) VALUES('${clientID}','Synthetic Finance Client');
+    INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actorID}','finance.browser.fixture@example.com','Finance-only Fixture',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444';
+    INSERT INTO app.roles(id,role_key,display_name) VALUES('${roleID}','finance_browser_fixture','Synthetic finance operator');
+    INSERT INTO app.role_permissions(id,role_id,permission_key) SELECT gen_random_uuid(),'${roleID}',permission_key FROM app.permissions WHERE permission_key IN ('billing.view','billing.create','billing.update','billing.delete');
+    INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),'${actorID}','${roleID}','client','${clientID}');
+  `)
+  const privateReads:string[]=[]
+  page.on('request',request=>{if(request.method()==='GET' && request.url().includes('/api/v1/clients')) privateReads.push(new URL(request.url()).pathname)})
+  await page.goto(path)
+  await page.getByLabel('Email',{exact:true}).fill('finance.browser.fixture@example.com')
+  await page.getByLabel('Password',{exact:true}).fill('clearly synthetic browser password')
+  await page.getByRole('button',{name:'Sign in',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Finance',exact:true})).toBeVisible()
+  await expect(page.getByText('No balances recorded yet.')).toBeVisible()
+  expect(privateReads.every(p=>p.startsWith(base))).toBe(true)
+  const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10)
+  async function create(description:string,currency:string,amount:string) {
+    await page.getByRole('link',{name:'Create collection',exact:true}).click()
+    await page.getByLabel('Collection description').fill(description)
+    await page.getByRole('combobox',{name:'Currency',exact:true}).selectOption(currency)
+    await page.getByLabel('Collection amount').fill(amount)
+    await page.getByLabel('Due date (UTC calendar)').fill(yesterday)
+    await page.getByRole('button',{name:'Create collection',exact:true}).click()
+    await expect(page.getByRole('heading',{name:'Collection details',exact:true})).toBeVisible()
+    return new URL(page.url()).pathname.split('/').at(-1)!
+  }
+  const usd=await create('Synthetic USD collection','USD','100.00')
+  await expect(page.getByText('Overdue',{exact:true})).toBeVisible()
+  await page.getByRole('link',{name:'Finance',exact:true}).click()
+  const kwd=await create('Synthetic KWD collection','KWD','1.001')
+  await page.getByRole('link',{name:'Finance',exact:true}).click()
+  await create('Synthetic JPY collection','JPY','100')
+  await page.getByRole('link',{name:'Finance',exact:true}).click()
+  const balances=page.getByRole('table',{name:'Balances by currency'})
+  await expect(balances).toContainText('USD 100.00')
+  await expect(balances).toContainText('KWD 1.001')
+  await expect(balances).toContainText('JPY 100')
+  await expect(balances.locator('tbody tr')).toHaveCount(3)
+  for(const viewport of [{width:1440,height:1000},{width:820,height:1050},{width:390,height:844}]) {
+    await page.setViewportSize(viewport)
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth===document.documentElement.clientWidth)).toBe(true)
+    await markTaskScreenshot(page)
+    await page.screenshot({path:testInfo.outputPath(`finance-${viewport.width}.png`),fullPage:true})
+  }
+  await page.setViewportSize({width:1440,height:1000})
+  await page.getByRole('link',{name:'Open Synthetic USD collection',exact:true}).click()
+  await page.getByLabel('Payment amount (USD)').fill('1.001')
+  await page.getByRole('button',{name:'Record payment',exact:true}).click()
+  await expect(page.getByText(/Use at most 2 decimal places/)).toBeVisible()
+  expect(database(`SELECT count(*)::text FROM app.payments WHERE collection_id='${usd}'`)).toBe('0')
+  await page.getByLabel('Payment amount (USD)').fill('25.00')
+  await page.getByLabel('Payment date (UTC calendar)').fill(yesterday)
+  await page.getByLabel('Payment reference').fill('Synthetic private finance reference')
+  // The real API commits; deliberately discard only its first transport response.
+  let lost=true
+  const commands:string[]=[]
+  await page.route('**/api/v1/clients/*/billing/*/payments',async route=>{
+    if(route.request().method()!=='POST') {await route.continue();return}
+    commands.push(route.request().postData()!)
+    if(lost) {lost=false;const response=await route.fetch();expect(response.status()).toBe(201);await route.abort('failed')}
+    else await route.continue()
+  })
+  await page.getByRole('button',{name:'Record payment',exact:true}).click()
+  await expect(page.getByRole('button',{name:'Retry original payment',exact:true})).toBeVisible()
+  expect(database(`SELECT count(*)::text FROM app.payments WHERE collection_id='${usd}'`)).toBe('1')
+  // Browser Back changes the route, but the command and modal survive above routes.
+  await page.goBack()
+  await expect(page.getByRole('button',{name:'Retry original payment',exact:true})).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog',{name:'Confirming payment',exact:true})).toBeVisible()
+  await page.getByRole('button',{name:'Retry original payment',exact:true}).click()
+  await expect(page.getByRole('dialog',{name:'Payment confirmed',exact:true})).toContainText('No second payment')
+  expect(commands).toHaveLength(2)
+  expect(commands[1]).toBe(commands[0])
+  expect(JSON.parse(commands[0]!).expected_revision).toBe('1')
+  await page.getByRole('button',{name:'Return to collection',exact:true}).click()
+  await expect(page.getByRole('table',{name:'Collection payments'})).toContainText('USD 25.00')
+  await expect(page.getByText('Synthetic private finance reference',{exact:true})).toHaveCount(0)
+  await page.getByRole('button',{name:/Reveal reference for payment/}).click()
+  await expect(page.getByText('Synthetic private finance reference',{exact:true})).toBeVisible()
+  await page.getByRole('button',{name:/Hide reference for payment/}).click()
+  await expect(page.getByText('Synthetic private finance reference',{exact:true})).toHaveCount(0)
+  await markTaskScreenshot(page)
+  await page.screenshot({path:testInfo.outputPath('finance-payment-history.png'),fullPage:true})
+  await page.getByRole('link',{name:'Edit collection',exact:true}).click()
+  await expect(page.getByLabel('Collection amount')).toHaveAttribute('readonly','')
+  await page.getByLabel('Internal note').fill('Synthetic updated finance note')
+  await page.getByRole('button',{name:'Save collection',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Collection details',exact:true})).toBeVisible()
+  // A second legitimate API write invalidates the revision currently displayed.
+  const csrf=(await page.context().cookies()).find(c=>c.name==='else_csrf')!.value
+  const competing=await page.request.put(`${base}/${usd}`,{headers:{Origin:'http://127.0.0.1:5173','X-CSRF-Token':csrf},data:{description:'Synthetic USD collection',internal_note:'Synthetic concurrent note',amount_minor:'10000',currency:'USD',due_date:yesterday,expected_revision:'3'}})
+  expect(competing.status()).toBe(200)
+  await page.getByLabel('Payment amount (USD)').fill('1.00')
+  await page.getByRole('button',{name:'Record payment',exact:true}).click()
+  await expect(page.getByRole('dialog',{name:'Payment not recorded',exact:true})).toBeVisible()
+  expect(database(`SELECT count(*)::text FROM app.payments WHERE collection_id='${usd}'`)).toBe('1')
+  await page.getByRole('button',{name:'Reload collection before retrying',exact:true}).click()
+  await expect(page.getByText('Synthetic concurrent note',{exact:true})).toBeVisible()
+  await page.getByRole('button',{name:'Cancel collection',exact:true}).click()
+  await expect(page.getByRole('dialog',{name:'Cancel collection?',exact:true})).toContainText('not refunded')
+  await page.getByRole('button',{name:'Keep collection',exact:true}).click()
+  expect(database(`SELECT CASE WHEN cancelled_at IS NULL THEN 'active' ELSE 'cancelled' END FROM app.collections WHERE id='${usd}'`)).toBe('active')
+  await page.getByRole('button',{name:'Cancel collection',exact:true}).click()
+  await markTaskScreenshot(page)
+  await page.screenshot({path:testInfo.outputPath('finance-cancellation.png'),fullPage:true})
+  await page.getByRole('button',{name:'Confirm cancellation',exact:true}).click()
+  await expect(page.getByText('Collection cancelled. Payment history retained.',{exact:true})).toBeVisible()
+  await expect(page.getByRole('button',{name:'Record payment',exact:true})).toHaveCount(0)
+  await expect(page.getByRole('table',{name:'Collection payments'})).toContainText('USD 25.00')
+  expect(database(`SELECT paid_minor::text FROM app.collections WHERE id='${usd}'`)).toBe('2500')
+  expect(database(`SELECT count(*)::text FROM app.payments WHERE collection_id='${usd}'`)).toBe('1')
+  expect(database(`SELECT string_agg(event_name,',' ORDER BY occurred_at,id) FROM app.audit_events WHERE resource_id='${usd}'`)).toBe('billing.created,billing.payment_recorded,billing.updated,billing.updated,billing.cancelled')
+  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE resource_id='${usd}' AND (before_state::text||after_state::text) LIKE '%Synthetic private finance reference%'`)).toBe('0')
+  expect(await page.evaluate(()=>({local:localStorage.length,session:sessionStorage.length}))).toEqual({local:0,session:0})
+  await page.getByRole('link',{name:'Finance',exact:true}).click()
+  await expect(balances).toContainText('USD 25.00')
+  await page.goto(`/app/clients/22222222-2222-4222-8222-222222222222/billing`)
+  await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
+  database(`UPDATE app.clients SET archived_at=clock_timestamp(),revision=revision+1,updated_at=clock_timestamp() WHERE id='${clientID}'`)
+  await page.goto(`${path}/${kwd}`)
+  await expect(page.getByRole('heading',{name:'Collection details',exact:true})).toBeVisible()
+  await page.getByLabel('Payment amount (KWD)').fill('0.001')
+  await page.getByRole('button',{name:'Record payment',exact:true}).click()
+  await expect(page.getByRole('dialog',{name:'Payment not recorded',exact:true})).toBeVisible()
+  expect(database(`SELECT count(*)::text FROM app.payments WHERE collection_id='${kwd}'`)).toBe('0')
+  await page.getByRole('button',{name:'Reload collection before retrying',exact:true}).click()
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${roleID}' AND permission_key='billing.view'`)
+  await page.getByRole('button',{name:'Refresh collection',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
+  await expect(page.getByRole('table',{name:'Collection payments'})).toHaveCount(0)
 })
