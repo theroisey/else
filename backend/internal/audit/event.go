@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"regexp"
+	"time"
+
+	"github.com/theroisey/else/backend/internal/timezone"
 )
 
 var ErrInvalidEvent = errors.New("invalid audit event")
@@ -35,6 +38,7 @@ const (
 	PermissionChanged Action = "permission_changed"
 	Completed         Action = "completed"
 	Cancelled         Action = "cancelled"
+	Dismissed         Action = "dismissed"
 )
 
 type Source string
@@ -48,11 +52,14 @@ const (
 // Snapshot's initial allowlist contains universal record markers only. Domain
 // slices must add reviewed typed fields; raw DTOs/maps/strings cannot be stored.
 type Snapshot struct {
-	Exists         *bool   `json:"exists,omitempty"`
-	Revision       *int64  `json:"revision,omitempty"`
-	Status         *string `json:"status,omitempty"`
-	TaskStatus     *string `json:"task_status,omitempty"`
-	PlanningStatus *string `json:"planning_status,omitempty"`
+	Exists              *bool      `json:"exists,omitempty"`
+	Revision            *int64     `json:"revision,omitempty"`
+	Status              *string    `json:"status,omitempty"`
+	TaskStatus          *string    `json:"task_status,omitempty"`
+	PlanningStatus      *string    `json:"planning_status,omitempty"`
+	ReminderStatus      *string    `json:"reminder_status,omitempty"`
+	ReminderScheduledAt *time.Time `json:"reminder_scheduled_at,omitempty"`
+	ReminderTimezone    *string    `json:"reminder_timezone,omitempty"`
 }
 
 type Metadata struct {
@@ -98,11 +105,22 @@ func (e Event) encode() (before, after, metadata []byte, err error) {
 		if e.ResourceKind != "role" {
 			return nil, nil, nil, ErrInvalidEvent
 		}
-	case Completed, Cancelled:
+	case Completed:
+		if e.ResourceKind != "task" && e.ResourceKind != "reminder" {
+			return nil, nil, nil, ErrInvalidEvent
+		}
+	case Cancelled:
 		if e.ResourceKind != "task" {
 			return nil, nil, nil, ErrInvalidEvent
 		}
+	case Dismissed:
+		if e.ResourceKind != "reminder" {
+			return nil, nil, nil, ErrInvalidEvent
+		}
 	default:
+		return nil, nil, nil, ErrInvalidEvent
+	}
+	if e.ResourceKind == "reminder" && e.Action != Created && e.Action != Updated && e.Action != Completed && e.Action != Dismissed {
 		return nil, nil, nil, ErrInvalidEvent
 	}
 	switch e.Metadata.Source {
@@ -111,6 +129,24 @@ func (e Event) encode() (before, after, metadata []byte, err error) {
 		return nil, nil, nil, ErrInvalidEvent
 	}
 	for _, snapshot := range []*Snapshot{e.Before, e.After} {
+		if snapshot != nil && (snapshot.ReminderStatus != nil || snapshot.ReminderScheduledAt != nil || snapshot.ReminderTimezone != nil) {
+			if e.ResourceKind != "reminder" {
+				return nil, nil, nil, ErrInvalidEvent
+			}
+			if snapshot.ReminderStatus != nil && *snapshot.ReminderStatus != "pending" && *snapshot.ReminderStatus != "completed" && *snapshot.ReminderStatus != "dismissed" {
+				return nil, nil, nil, ErrInvalidEvent
+			}
+			if (snapshot.ReminderScheduledAt == nil) != (snapshot.ReminderTimezone == nil) {
+				return nil, nil, nil, ErrInvalidEvent
+			}
+			if snapshot.ReminderScheduledAt != nil {
+				stamp := *snapshot.ReminderScheduledAt
+				_, offset := stamp.Zone()
+				if stamp.Year() < 1 || stamp.Year() > 9999 || offset != 0 || stamp.Nanosecond()%1000 != 0 || !timezone.ValidName(*snapshot.ReminderTimezone) {
+					return nil, nil, nil, ErrInvalidEvent
+				}
+			}
+		}
 		if snapshot != nil && snapshot.PlanningStatus != nil {
 			state := *snapshot.PlanningStatus
 			if e.ResourceKind == "plan" {
@@ -142,7 +178,7 @@ func (e Event) encode() (before, after, metadata []byte, err error) {
 			return nil, nil, nil, ErrInvalidEvent
 		}
 	}
-	// These concrete types contain no custom marshalers or arbitrary input.
+	// These reviewed, typed fields exclude arbitrary DTOs and free-form input.
 	before, err = json.Marshal(e.Before)
 	if err != nil {
 		return nil, nil, nil, ErrInvalidEvent

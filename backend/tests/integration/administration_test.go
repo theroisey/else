@@ -476,6 +476,9 @@ func TestAdministrationMigrationPreservesPopulatedIdentityAndAuthorization(t *te
 	f := newIdentityFixture(t)
 	p := provider(t, f.base)
 	if _, err := p.Down(f.base.ctx); err != nil {
+		t.Fatal("empty reminder rollback failed", err)
+	}
+	if _, err := p.Down(f.base.ctx); err != nil {
 		t.Fatal("empty planning rollback failed", err)
 	}
 	if _, err := p.Down(f.base.ctx); err != nil {
@@ -504,6 +507,9 @@ func TestAdministrationMigrationPreservesPopulatedIdentityAndAuthorization(t *te
 	}
 	if _, err := f.service.Current(f.base.ctx, login.Token); err != nil {
 		t.Fatal("upgrade invalidated an existing session")
+	}
+	if _, err := p.Down(f.base.ctx); err != nil {
+		t.Fatal("empty reminder rollback failed", err)
 	}
 	if _, err := p.Down(f.base.ctx); err != nil {
 		t.Fatal("empty planning rollback failed", err)
