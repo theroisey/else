@@ -128,13 +128,13 @@ function ClientWorkspace({ id }: { id: string }) {
           Overview
         </span>
         {hasPermission(grants, {permission:'tasks.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/tasks`}>Tasks</Link> : null}
+        {hasPermission(grants, {permission:'planning.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/plans`}>Planning</Link> : null}
         <details className="min-w-0 text-xs text-muted">
           <summary className="cursor-pointer rounded-sm px-3 py-2">
             Additional modules · Unavailable
           </summary>
           <ul className="mt-2 grid gap-2 rounded-md border border-line bg-surface p-3 sm:grid-cols-2">
             {[
-              'Planning',
               'Reminders',
               'Billing',
               'Pricing',

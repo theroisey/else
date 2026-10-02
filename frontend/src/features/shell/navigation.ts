@@ -27,5 +27,12 @@ export function safeReturnTo(value: unknown) {
   const match = /^\/app\/clients\/([^/]+)(?:\/edit)?$/.exec(value)
   if (match && isUUID(match[1])) return value
   const task = /^\/app\/clients\/([^/]+)\/tasks(?:\/(new|[^/]+)(?:\/(edit))?)?$/.exec(value)
-  return task && isUUID(task[1]) && (!task[2] || task[2] === 'new' && !task[3] || isUUID(task[2])) ? value : '/app'
+  if (task && isUUID(task[1]) && (!task[2] || task[2] === 'new' && !task[3] || isUUID(task[2]))) return value
+  const plan = /^\/app\/clients\/([^/]+)\/plans(?:\/(new|[^/]+)(?:\/(edit|milestones)(?:\/(new|[^/]+)(?:\/(edit))?)?)?)?$/.exec(value)
+  if (!plan || !isUUID(plan[1])) return '/app'
+  if (!plan[2]) return value
+  if (plan[2] === 'new') return !plan[3] ? value : '/app'
+  if (!isUUID(plan[2]) || plan[3] === 'edit' && plan[4]) return '/app'
+  if (!plan[4]) return value
+  return plan[3] === 'milestones' && (plan[4] === 'new' && !plan[5] || isUUID(plan[4])) ? value : '/app'
 }

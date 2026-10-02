@@ -28,7 +28,7 @@ it('renders the same instant in the requested timezone', () => {
   expect(() => localTimestamp('unsafe')).toThrow()
 })
 it('rejects nonexistent DST times and preserves the original overlapping-hour instant', () => {
-  const module = pathToFileURL(resolve('src/features/tasks/time.ts')).href
+  const module = pathToFileURL(resolve('src/lib/time.ts')).href
   const script = `import {localTimestamp} from ${JSON.stringify(module)};
   let rejected=false;try {localTimestamp('2026-03-08T02:30')} catch {rejected=true}
   console.log(JSON.stringify({rejected,changed:localTimestamp('2026-11-01T01:30'),unchanged:localTimestamp('2026-11-01T01:30','2026-11-01T06:30:00.123456Z')}))`

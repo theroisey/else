@@ -19,6 +19,9 @@ const ClientWorkspacePage = lazy(() => import('../features/clients/ClientWorkspa
 const TaskListPage = lazy(() => import('../features/tasks/TaskListPage').then(m => ({ default: m.TaskListPage })))
 const TaskDetailPage = lazy(() => import('../features/tasks/TaskDetailPage').then(m => ({ default: m.TaskDetailPage })))
 const TaskEditorPage = lazy(() => import('../features/tasks/TaskEditorPage').then(m => ({ default: m.TaskEditorPage })))
+const PlanningListPage = lazy(() => import('../features/planning/PlanningListPage').then(m => ({ default: m.PlanningListPage })))
+const PlanningDetailPage = lazy(() => import('../features/planning/PlanningDetailPage').then(m => ({ default: m.PlanningDetailPage })))
+const PlanningEditorPage = lazy(() => import('../features/planning/PlanningEditorPage').then(m => ({ default: m.PlanningEditorPage })))
 
 function AuthArea() {
   return <AuthProvider><Outlet /></AuthProvider>
@@ -44,6 +47,14 @@ export function App() {
             <Route path="clients/:id/tasks/new" element={<ClientRoute name="Task"><TaskEditorPage create /></ClientRoute>} />
             <Route path="clients/:id/tasks/:taskID" element={<ClientRoute name="Task"><TaskDetailPage /></ClientRoute>} />
             <Route path="clients/:id/tasks/:taskID/edit" element={<ClientRoute name="Task"><TaskEditorPage /></ClientRoute>} />
+            <Route path="clients/:id/plans" element={<ClientRoute name="Planning"><PlanningListPage /></ClientRoute>} />
+            <Route path="clients/:id/plans/new" element={<ClientRoute name="Planning"><PlanningEditorPage create /></ClientRoute>} />
+            <Route path="clients/:id/plans/:planID" element={<ClientRoute name="Planning"><PlanningDetailPage /></ClientRoute>} />
+            <Route path="clients/:id/plans/:planID/edit" element={<ClientRoute name="Planning"><PlanningEditorPage /></ClientRoute>} />
+            <Route path="clients/:id/plans/:planID/milestones" element={<ClientRoute name="Milestone"><PlanningListPage milestone /></ClientRoute>} />
+            <Route path="clients/:id/plans/:planID/milestones/new" element={<ClientRoute name="Milestone"><PlanningEditorPage milestone create /></ClientRoute>} />
+            <Route path="clients/:id/plans/:planID/milestones/:milestoneID" element={<ClientRoute name="Milestone"><PlanningDetailPage milestone /></ClientRoute>} />
+            <Route path="clients/:id/plans/:planID/milestones/:milestoneID/edit" element={<ClientRoute name="Milestone"><PlanningEditorPage milestone /></ClientRoute>} />
             <Route path="users" element={
               <PermissionGuard required={{ permission: 'users.view', scope: 'global' }}>
                 <UsersPage />
