@@ -52,3 +52,5 @@ Eight real-API Chromium flows include reminder creation with explicit later occu
 - [Nonexistent-time validation mobile](screenshots/reminder-gap-mobile.png), [dismissal confirmation mobile](screenshots/reminder-dismiss-mobile.png).
 
 No backend/API, schema, runtime grants or audit-policy change is introduced. No notification sender, recurrence, production migration, deployment or agent merge is performed.
+
+Owner-merged [PR #55](https://github.com/theroisey/else/pull/55) completed #18 at `0194e8c`; main [run 37001360296](https://github.com/theroisey/else/actions/runs/37001360296) passed all gates and tested-image publication before [activity](activity.md) began.

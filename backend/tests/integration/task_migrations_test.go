@@ -17,8 +17,8 @@ func TestTaskMigrationRefusesTaskAndPermissionHistory(t *testing.T) {
 		f := newTaskFixture(t)
 		m := f.create(t, clientAID, tasks.CreateInput{Profile: taskProfile()})
 		p := provider(t, f.base)
-		if _, err := p.Down(f.base.ctx); err != nil {
-			t.Fatal("empty reminder rollback failed", err)
+		if _, err := p.DownTo(f.base.ctx, 8); err != nil {
+			t.Fatal("later-domain rollback failed", err)
 		}
 		if _, err := p.Down(f.base.ctx); err != nil {
 			t.Fatal("empty planning rollback failed", err)
@@ -41,8 +41,8 @@ func TestTaskMigrationRefusesTaskAndPermissionHistory(t *testing.T) {
 			t.Fatal(err)
 		}
 		p := provider(t, f.base)
-		if _, err := p.Down(f.base.ctx); err != nil {
-			t.Fatal("empty reminder rollback failed", err)
+		if _, err := p.DownTo(f.base.ctx, 8); err != nil {
+			t.Fatal("later-domain rollback failed", err)
 		}
 		if _, err := p.Down(f.base.ctx); err != nil {
 			t.Fatal("empty planning rollback failed", err)
@@ -62,8 +62,8 @@ func TestTaskMigrationRefusesTaskAndPermissionHistory(t *testing.T) {
 			t.Fatal(err)
 		}
 		p := provider(t, f.base)
-		if _, err := p.Down(f.base.ctx); err != nil {
-			t.Fatal("empty reminder rollback failed", err)
+		if _, err := p.DownTo(f.base.ctx, 8); err != nil {
+			t.Fatal("later-domain rollback failed", err)
 		}
 		if _, err := p.Down(f.base.ctx); err != nil {
 			t.Fatal("empty planning rollback failed", err)
@@ -82,8 +82,8 @@ func TestTaskMigrationPreservesClientAndAuthorizationHistory(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := provider(t, f.base)
-	if _, err := p.Down(f.base.ctx); err != nil {
-		t.Fatal("empty reminder rollback failed", err)
+	if _, err := p.DownTo(f.base.ctx, 8); err != nil {
+		t.Fatal("later-domain rollback failed", err)
 	}
 	if _, err := p.Down(f.base.ctx); err != nil {
 		t.Fatal("empty planning rollback failed", err)
@@ -99,7 +99,7 @@ func TestTaskMigrationPreservesClientAndAuthorizationHistory(t *testing.T) {
 	if _, err := p.Up(f.base.ctx); err != nil {
 		t.Fatal("task upgrade failed", err)
 	}
-	if err := f.admin.QueryRow(f.base.ctx, `SELECT (SELECT count(*) FROM app.audit_events),(SELECT count(*) FROM app.permissions)`).Scan(&after, &keys); err != nil || after != before || keys != 29 {
+	if err := f.admin.QueryRow(f.base.ctx, `SELECT (SELECT count(*) FROM app.audit_events),(SELECT count(*) FROM app.permissions)`).Scan(&after, &keys); err != nil || after != before || keys != 30 {
 		t.Fatal("task migration changed existing history", err)
 	}
 	detail, err := f.records.Detail(ctx, f.actor, m.ID)
@@ -107,11 +107,11 @@ func TestTaskMigrationPreservesClientAndAuthorizationHistory(t *testing.T) {
 		t.Fatal("task upgrade changed client profile", err)
 	}
 	grants, err := f.authorizer.Grants(ctx, f.actor)
-	if err != nil || len(grants) != 29 {
+	if err != nil || len(grants) != 30 {
 		t.Fatal("task upgrade failed catalog compatibility", err)
 	}
-	if _, err := p.Down(f.base.ctx); err != nil {
-		t.Fatal("empty reminder rollback failed", err)
+	if _, err := p.DownTo(f.base.ctx, 8); err != nil {
+		t.Fatal("later-domain rollback failed", err)
 	}
 	if _, err := p.Down(f.base.ctx); err != nil {
 		t.Fatal("empty planning rollback failed", err)

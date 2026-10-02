@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/theroisey/else/backend/internal/activity"
 	"github.com/theroisey/else/backend/internal/administration"
 	"github.com/theroisey/else/backend/internal/authorization"
 	"github.com/theroisey/else/backend/internal/clients"
@@ -120,7 +121,17 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("reminders_startup_failed", "error_code", "reminders_startup_failed")
 		return 1
 	}
-	server, err := httpapi.NewWithReminders(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler)
+	activityService, err := activity.NewService(pool)
+	if err != nil {
+		logger.Error("activity_startup_failed", "error_code", "activity_startup_failed")
+		return 1
+	}
+	activityHandler, err := activity.NewHandler(activityService, authHandler, logger)
+	if err != nil {
+		logger.Error("activity_startup_failed", "error_code", "activity_startup_failed")
+		return 1
+	}
+	server, err := httpapi.NewWithActivity(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1

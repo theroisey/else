@@ -1,6 +1,6 @@
 ---
 type: decision
-status: frontend-review
+status: merged
 created: 2026-10-02
 tags:
   - reminders
@@ -27,3 +27,5 @@ Exact-client reminder-only routes never fetch other private domains without perm
 - [[Planning Interface and Reference Drafts]]
 - [[Task Interface and Timestamp Editing]]
 - [[Application Shell and Session Recovery]]
+
+Owner-merged PR #55 completed #18 at `0194e8c`. Main run 37001360296 passed all gates and tested-image publication; both branches were synchronized before [[Client Activity Projection and Read Boundaries]] (#22).

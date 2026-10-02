@@ -29,6 +29,9 @@ func TestReminderMigrationPreservesPopulatedPlanningTasksAndOldAudit(t *testing.
 		t.Fatal(err)
 	}
 	p := provider(t, f.base)
+	if _, err := p.DownTo(ctx, 9); err != nil {
+		t.Fatal("unused activity rollback failed", err)
+	}
 	for _, direction := range []string{"down", "up"} {
 		var err error
 		if direction == "down" {
@@ -39,7 +42,7 @@ func TestReminderMigrationPreservesPopulatedPlanningTasksAndOldAudit(t *testing.
 		if err != nil {
 			t.Fatal("unused reminder migration failed", err)
 		}
-		keysWant := 29
+		keysWant := 30
 		if direction == "down" {
 			keysWant = 26
 		}
@@ -96,11 +99,14 @@ func TestReminderMigrationRefusesTerminalRecordsAuditAndPermissionHistory(t *tes
 					t.Fatal(err)
 				}
 			}
+			p := provider(t, f.base)
+			if _, err := p.DownTo(ctx, 9); err != nil {
+				t.Fatal("unused activity rollback failed", err)
+			}
 			var beforeEvents, beforeKeys, beforeRecords int
 			if err := f.admin.QueryRow(ctx, `SELECT (SELECT count(*) FROM app.audit_events),(SELECT count(*) FROM app.permissions),(SELECT count(*) FROM app.reminders)`).Scan(&beforeEvents, &beforeKeys, &beforeRecords); err != nil {
 				t.Fatal(err)
 			}
-			p := provider(t, f.base)
 			if _, err := p.Down(ctx); err == nil {
 				t.Fatal("reminder rollback erased history")
 			}

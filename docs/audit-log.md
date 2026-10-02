@@ -1,6 +1,6 @@
 # Audit storage and atomic mutations
 
-Issue [#7](https://github.com/theroisey/else/issues/7) introduces internal audit infrastructure. Identity, authorization and [administration](administration.md) now use it for authenticated writes. There are no audit read endpoints or customer activity. Each domain must route significant successful mutations through this contract and enforce its own authorization/client scope before changing data.
+Issue [#7](https://github.com/theroisey/else/issues/7) introduces internal audit infrastructure. Identity, authorization and [administration](administration.md) now use it for authenticated writes. There are no raw audit read endpoints. Issue #22 adds a separately authorized [client activity projection](activity.md), using explicit event/column allowlists without expanding runtime audit SELECT privileges. Each domain must route significant successful mutations through this contract and enforce its own authorization/client scope before changing data.
 
 ## Transaction contract
 

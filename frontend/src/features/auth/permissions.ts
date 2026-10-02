@@ -11,6 +11,7 @@ const permissionScopes: Record<string, 'global' | 'client'> = {
   'tasks.create': 'client', 'tasks.update': 'client', 'tasks.delete': 'client',
   'planning.view': 'client', 'planning.create': 'client', 'planning.update': 'client', 'planning.archive': 'client',
   'reminders.view': 'client', 'reminders.create': 'client', 'reminders.update': 'client',
+  'activity.view': 'client',
 }
 
 export type PermissionRequirement = { permission: string; scope: 'global' } | { permission: string; scope: 'client'; clientID: string }

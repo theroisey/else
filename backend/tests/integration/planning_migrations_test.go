@@ -17,8 +17,8 @@ func TestPlanningMigrationPreservesExistingTasksClientsAndAuthorization(t *testi
 	m := f.create(t, clientAID, tasks.CreateInput{Profile: taskProfile()})
 	ctx := correlation.New(f.base.ctx)
 	p := provider(t, f.base)
-	if _, err := p.Down(ctx); err != nil {
-		t.Fatal("empty reminder rollback failed", err)
+	if _, err := p.DownTo(ctx, 8); err != nil {
+		t.Fatal("later-domain rollback failed", err)
 	}
 	var before int
 	if err := f.admin.QueryRow(ctx, "SELECT count(*) FROM app.audit_events").Scan(&before); err != nil {
@@ -35,7 +35,7 @@ func TestPlanningMigrationPreservesExistingTasksClientsAndAuthorization(t *testi
 			t.Fatal("unused planning migration failed", err)
 		}
 		var events, keys int
-		if err = f.admin.QueryRow(ctx, `SELECT (SELECT count(*) FROM app.audit_events),(SELECT count(*) FROM app.permissions)`).Scan(&events, &keys); err != nil || events != before || (direction == "down" && keys != 22) || (direction == "up" && keys != 29) {
+		if err = f.admin.QueryRow(ctx, `SELECT (SELECT count(*) FROM app.audit_events),(SELECT count(*) FROM app.permissions)`).Scan(&events, &keys); err != nil || events != before || (direction == "down" && keys != 22) || (direction == "up" && keys != 30) {
 			t.Fatal("planning migration changed old history", err)
 		}
 		r, err := f.tasks.Detail(ctx, f.actor, clientAID, m.ID)
@@ -89,8 +89,8 @@ func TestPlanningMigrationRefusesRecordsAuditAndPermissionHistory(t *testing.T) 
 				}
 			}
 			p := provider(t, f.base)
-			if _, err := p.Down(ctx); err != nil {
-				t.Fatal("empty reminder rollback failed", err)
+			if _, err := p.DownTo(ctx, 8); err != nil {
+				t.Fatal("later-domain rollback failed", err)
 			}
 			var beforeEvents, beforeKeys int
 			if err := f.admin.QueryRow(ctx, `SELECT (SELECT count(*) FROM app.audit_events),(SELECT count(*) FROM app.permissions)`).Scan(&beforeEvents, &beforeKeys); err != nil {

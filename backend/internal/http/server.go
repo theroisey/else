@@ -23,8 +23,21 @@ type Server struct {
 	tasks          http.Handler
 	planning       http.Handler
 	reminders      http.Handler
+	activity       http.Handler
 	draining       atomic.Bool
 	httpServer     *http.Server
+}
+
+func NewWithActivity(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks, planning, reminders, activity http.Handler) (*Server, error) {
+	if activity == nil {
+		return nil, fmt.Errorf("activity handler is required")
+	}
+	server, err := NewWithReminders(c, logger, readiness, auth, administration, clients, tasks, planning, reminders)
+	if err != nil {
+		return nil, err
+	}
+	server.activity = activity
+	return server, nil
 }
 
 func NewWithReminders(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks, planning, reminders http.Handler) (*Server, error) {
