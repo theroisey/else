@@ -42,6 +42,8 @@ GRANT EXECUTE ON FUNCTION app.reminder_read(uuid,uuid,uuid),
  app.reminder_owners(uuid,uuid,uuid,integer),app.reminder_write(uuid,uuid,uuid,bigint,text,jsonb) TO else_runtime;
 
 GRANT EXECUTE ON FUNCTION app.activity_list(uuid,uuid,timestamptz,uuid,integer) TO else_runtime;
+GRANT EXECUTE ON FUNCTION app.audit_reader_list(uuid,uuid,uuid,uuid,text,text,text,uuid,text,timestamptz,timestamptz,timestamptz,uuid,integer),
+ app.audit_reader_detail(uuid,uuid,uuid) TO else_runtime;
 
 GRANT EXECUTE ON FUNCTION app.admin_users(uuid,uuid,integer),app.admin_user(uuid,uuid),
                           app.admin_roles(uuid,uuid,integer),app.admin_role(uuid,uuid),app.admin_catalog(uuid),

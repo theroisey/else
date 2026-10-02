@@ -114,8 +114,8 @@ func connection(t *testing.T, f *fixture) *pgx.Conn {
 func TestMigrationRoundTripAndUTC(t *testing.T) {
 	f := newFixture(t)
 	p := provider(t, f)
-	expectedApplied := []int{10, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 10}
-	for step, direction := range []string{"up", "up", "down", "down", "down", "down", "down", "down", "down", "down", "down", "down", "up"} {
+	expectedApplied := []int{11, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 11}
+	for step, direction := range []string{"up", "up", "down", "down", "down", "down", "down", "down", "down", "down", "down", "down", "down", "up"} {
 		var err error
 		if direction == "up" {
 			_, err = p.Up(f.ctx)
@@ -126,7 +126,7 @@ func TestMigrationRoundTripAndUTC(t *testing.T) {
 			t.Fatal(err)
 		}
 		rows, err := p.Status(f.ctx)
-		if err != nil || len(rows) != 10 {
+		if err != nil || len(rows) != 11 {
 			t.Fatal("migration status failed")
 		}
 		for index, row := range rows {
