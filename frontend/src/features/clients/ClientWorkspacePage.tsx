@@ -129,6 +129,7 @@ function ClientWorkspace({ id }: { id: string }) {
         </span>
         {hasPermission(grants, {permission:'tasks.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/tasks`}>Tasks</Link> : null}
         {hasPermission(grants, {permission:'planning.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/plans`}>Planning</Link> : null}
+        {hasPermission(grants, {permission:'reminders.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/reminders`}>Reminders</Link> : null}
         <details className="min-w-0 text-xs text-muted">
           <summary className="cursor-pointer rounded-sm px-3 py-2">
             Additional modules · Unavailable

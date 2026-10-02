@@ -2,6 +2,9 @@ import { AuthError, csrfToken } from '../features/auth/auth-service'
 import { isRecord } from '../features/auth/session'
 
 const messages: Record<string, string> = {
+  invalid_schedule: 'Check the local date, named timezone and explicit occurrence. The server timezone rules must agree with the selected offset.',
+  invalid_owner: 'Choose an active owner with reminder access for this client, or retain the recorded owner.',
+  invalid_resource_link: 'New links require independent access to a nonarchived resource in this client. Retain or clear an existing reference.',
   invalid_transition: 'That status transition is no longer available. Reload the record before choosing a new status.',
   invalid_dates: 'Check the plan date window and its nonarchived milestone due dates.',
   invalid_task_link: 'New links require task access and nonarchived tasks belonging to this client. Retain or remove unavailable existing references.',

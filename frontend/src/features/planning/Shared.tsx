@@ -67,6 +67,7 @@ export function PlanningHeader({
         >
           Planning
         </Link>
+        {permissions.reminderView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${scope.clientID}/reminders`}>Reminders</Link> : null}
         {scope.planID ? (
           <>
             <Link
