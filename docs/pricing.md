@@ -1,6 +1,6 @@
 # Versioned pricing and immutable billing copies
 
-Related Issue: [#21](https://github.com/theroisey/else/issues/21). The [calculation, timing, permission and recovery policy](https://github.com/theroisey/else/issues/21#issuecomment-5958282276) was recorded before implementation. This backend slice follows owner-merged billing #19 and finance interface #20. Pricing forms and history screens require a separate frontend PR; Issue #21 stays open.
+Related Issue: [#21](https://github.com/theroisey/else/issues/21). The [calculation, timing, permission and recovery policy](https://github.com/theroisey/else/issues/21#issuecomment-5958282276) was recorded before implementation. Backend PR #64 is owner-merged at `2405d39`, following billing #19 and finance interface #20. The [pricing forms and history interface](pricing-interface.md) is a separate frontend review; Issue #21 stays open until owner merge.
 
 ## Exact arithmetic
 

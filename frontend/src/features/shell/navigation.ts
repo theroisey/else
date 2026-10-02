@@ -37,6 +37,8 @@ export function safeReturnTo(value: unknown) {
   if (reminder && isUUID(reminder[1]) && (!reminder[2] || reminder[2] === 'new' && !reminder[3] || isUUID(reminder[2]))) return value
   const billing = /^\/app\/clients\/([^/]+)\/billing(?:\/(new|[^/]+)(?:\/(edit))?)?$/.exec(value)
   if (billing && isUUID(billing[1]) && (!billing[2] || billing[2] === 'new' && !billing[3] || isUUID(billing[2]))) return value
+  const pricing = /^\/app\/clients\/([^/]+)\/pricing(?:\/(new|[^/]+)(?:\/(new-version)|\/versions\/([^/]+))?)?$/.exec(value)
+  if (pricing && isUUID(pricing[1]) && (!pricing[2] || pricing[2] === 'new' && !pricing[3] && !pricing[4] || isUUID(pricing[2]) && (!pricing[4] || isUUID(pricing[4])))) return value
   const plan = /^\/app\/clients\/([^/]+)\/plans(?:\/(new|[^/]+)(?:\/(edit|milestones)(?:\/(new|[^/]+)(?:\/(edit))?)?)?)?$/.exec(value)
   if (!plan || !isUUID(plan[1])) return '/app'
   if (!plan[2]) return value

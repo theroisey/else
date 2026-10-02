@@ -131,6 +131,7 @@ function ClientWorkspace({ id }: { id: string }) {
         {hasPermission(grants, {permission:'planning.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/plans`}>Planning</Link> : null}
         {hasPermission(grants, {permission:'reminders.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/reminders`}>Reminders</Link> : null}
         {hasPermission(grants, {permission:'billing.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/billing`}>Finance</Link> : null}
+        {hasPermission(grants, {permission:'pricing.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/pricing`}>Pricing</Link> : null}
         {hasPermission(grants, {permission:'activity.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/activity`}>Activity</Link> : null}
         {hasPermission(grants, {permission:'audit.view',scope:'global'}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/audit`}>Audit history</Link> : null}
         <details className="min-w-0 text-xs text-muted">
@@ -141,7 +142,6 @@ function ClientWorkspace({ id }: { id: string }) {
             {[
               'Reminders',
               'Billing',
-              'Pricing',
               'Marketing',
               'E-commerce',
               'Web analytics',

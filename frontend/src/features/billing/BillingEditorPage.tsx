@@ -13,6 +13,7 @@ import type { Collection } from './models'
 import type { Currency } from './money'
 import { toMinor, decimal } from './money'
 import * as api from './service'
+import { useBillingSnapshot } from '../pricing/useBillingSnapshot'
 interface Draft {
   description: string
   internal_note: string
@@ -57,6 +58,7 @@ function Editor({
       operation.read(() => api.detail(clientID, recordID, signal)),
     enabled: allowed && !create,
   })
+  const snapshot = useBillingSnapshot(operation, create || query.isError ? undefined : query.data)
   if (!allowed) return <AccessDenied />
   return (
     <section>
@@ -64,6 +66,8 @@ function Editor({
         title={create ? 'Create collection' : 'Edit collection'}
         operation={operation}
       />
+      {!create && query.data && snapshot.isPending ? <p role="status">Checking collection price origin…</p> : null}
+      {!create && snapshot.isError ? <BillingError error={snapshot.error} retry={() => void snapshot.refetch()} /> : null}
       {!create && query.isPending ? (
         <p role="status" aria-busy="true">
           Loading collection…
@@ -80,6 +84,7 @@ function Editor({
           operation={operation}
           record={create ? undefined : query.data}
           checking={!create && query.isFetching}
+          copied={snapshot.data !== null || snapshot.isError || snapshot.isFetching}
         />
       ) : null}
     </section>
@@ -89,10 +94,12 @@ function CollectionForm({
   operation,
   record,
   checking,
+  copied,
 }: {
   operation: Operation
   record?: Collection | undefined
   checking: boolean
+  copied: boolean
 }) {
   const navigate = useNavigate(),
     [localError, setLocalError] = useState(''),
@@ -234,11 +241,11 @@ function CollectionForm({
         </label>
         <TextField
           label="Collection amount"
-          description="Plain decimal major units. No rounding. Currency is fixed after creation; amount is fixed after the first payment."
+          description="Plain decimal major units. No rounding. Amount is fixed for copied pricing and after the first payment; origin checks keep it read only until confirmed."
           inputMode="decimal"
           maxLength={24}
           {...register('amount')}
-          readOnly={!!record && record.paid_minor !== '0'}
+          readOnly={!!record && (record.paid_minor !== '0' || copied)}
           error={errors.amount?.message ?? ''}
         />
         <TextField
