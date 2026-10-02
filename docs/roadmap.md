@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#28](https://github.com/theroisey/else/issues/28), the separately reviewed [audit-read API](audit-reader.md). Issues #1–#18 and #22 are owner-merged. Activity interface #57 merged at `1a30014`; both development branches were synchronized. Main [run 37011258324](https://github.com/theroisey/else/actions/runs/37011258324) passed all five gates and tested-image publication. Audit reads define explicit global/client visibility, bounded filters/keysets and safe before/after inspection. The frontend audit table/detail panel follows backend owner review; #28 remains open for that consumer.
+Current slice: [#28](https://github.com/theroisey/else/issues/28), the separately reviewed [audit viewer](audit-interface.md), consuming owner-merged [audit-read API](audit-reader.md) #58 at `45db4b1`. Issues #1–#18 and #22 are owner-merged. Both development branches were synchronized. Main [run 37016592527](https://github.com/theroisey/else/actions/runs/37016592527) passed all five gates and tested-image publication. Global/client audit tables use bounded exact filters/keysets and accessible safe before/after inspection. Owner frontend review/merge completes #28; later domains remain separate slices.
 
 ## Verified starting state
 
