@@ -14,8 +14,10 @@ export function ApplicationShell() {
   const toggleRef = useRef<HTMLButtonElement>(null)
   const firstLinkRef = useRef<HTMLAnchorElement>(null)
   const current = navigation.find((item) => item.path === location.pathname || (item.path === '/app/clients' && location.pathname.startsWith('/app/clients/')))
-  const clientContext = current?.path === '/app/clients' && location.pathname !== current.path
-    ? location.pathname === '/app/clients/new' ? 'Create client' : location.pathname.endsWith('/edit') ? 'Edit client' : 'Client workspace' : ''
+  const taskContext = /^\/app\/clients\/[^/]+\/tasks(?:\/|$)/.test(location.pathname)
+    ? location.pathname.endsWith('/new') ? 'Create task' : location.pathname.endsWith('/edit') ? 'Edit task' : location.pathname.endsWith('/tasks') ? 'Tasks' : 'Task details' : ''
+  const clientContext = taskContext || (current?.path === '/app/clients' && location.pathname !== current.path
+    ? location.pathname === '/app/clients/new' ? 'Create client' : location.pathname.endsWith('/edit') ? 'Edit client' : 'Client workspace' : '')
 
   function closeNavigation() {
     setMobileOpen(false)
@@ -51,7 +53,7 @@ export function ApplicationShell() {
       </aside>
       <main id="workspace-content" tabIndex={-1} className="min-w-0 px-5 py-6 sm:px-8 sm:py-8">
         <nav aria-label="Breadcrumb" className="mb-8 text-xs text-muted">
-          <ol className="flex flex-wrap items-center gap-2"><li><Link className="underline underline-offset-4" to="/app">Roisey Else</Link></li><li aria-hidden="true">/</li>{clientContext ? <><li><Link className="underline underline-offset-4" to="/app/clients">Clients</Link></li><li aria-hidden="true">/</li></> : null}<li aria-current="page">{clientContext || current?.label || 'Page not found'}</li></ol>
+          <ol className="flex flex-wrap items-center gap-2"><li><Link className="underline underline-offset-4" to="/app">Roisey Else</Link></li><li aria-hidden="true">/</li>{clientContext && navigation.some(item => item.path === '/app/clients') ? <><li><Link className="underline underline-offset-4" to="/app/clients">Clients</Link></li><li aria-hidden="true">/</li></> : null}<li aria-current="page">{clientContext || current?.label || 'Page not found'}</li></ol>
         </nav>
         <Outlet />
       </main>

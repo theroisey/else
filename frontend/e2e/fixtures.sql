@@ -27,3 +27,9 @@ INSERT INTO app.users (id, email, display_name, password_hash) VALUES
 INSERT INTO app.user_roles (id, user_id, role_id, scope_kind, client_id) VALUES
 ('88888888-8888-4888-8888-888888888888', '77777777-7777-4777-8777-777777777777',
  '00000000-0000-4000-8000-000000000003', 'client', '22222222-2222-4222-8222-222222222222');
+
+-- Independent task-only viewer; its dedicated scope is provisioned by the task
+-- flow after earlier pagination checks. Same deliberately public test password.
+INSERT INTO app.users (id, email, display_name, password_hash) VALUES
+('99999999-9999-4999-8999-999999999999', 'task.viewer.fixture@example.com', 'Task Viewer Fixture',
+ '$argon2id$v=19$m=19456,t=2,p=1$Zml4dHVyZS1vbmx5c2FsdA$q44qWGtBzhKQ/qhlHB+AxsHnTl623ugz2P+BkSW2ZxQ');

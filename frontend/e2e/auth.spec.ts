@@ -30,6 +30,19 @@ async function markSyntheticScreenshot(page: Page) {
   })
 }
 
+async function markTaskScreenshot(page: Page) {
+  await markSyntheticScreenshot(page)
+  await page.evaluate(() => {
+    const label = document.querySelector<HTMLElement>('[data-synthetic-verification]')!
+    const panel = document.querySelector('dialog[open] .ui-dialog-panel')
+    label.style.cssText = panel
+      ? 'margin-top:16px;font-size:11px;text-align:center'
+      : 'background:#171717;color:white;padding:6px;text-align:center;font-size:11px'
+    if (panel) panel.append(label)
+    else document.body.prepend(label)
+  })
+}
+
 test('real login, cookie security, responsive keyboard navigation and CSRF logout', async ({ page, context }, testInfo) => {
   await page.goto('/app/access')
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
@@ -324,5 +337,159 @@ test('client records use real pagination, forms, conflict recovery, scoped acces
   await expect(table).toContainText('Updated Client Fixture')
   await expect(table.getByRole('row')).toHaveCount(2)
   expect(database(`SELECT string_agg(event_name, ',' ORDER BY occurred_at) FROM app.audit_events WHERE resource_id='${clientID}' AND resource_kind='client'`)).toBe('client.created,client.updated,client.updated,client.archived')
+  expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
+})
+
+test('client tasks preserve drafts, confirm transitions and archive, and isolate task-only viewers', async ({ page, browser }, testInfo) => {
+  test.setTimeout(120_000)
+  const clientID = '80000000-0000-4000-8000-000000000001'
+  const viewerID = '99999999-9999-4999-8999-999999999999'
+  const path = `/app/clients/${clientID}/tasks`
+  database(`
+    INSERT INTO app.client_scopes(id) VALUES ('${clientID}');
+    INSERT INTO app.clients(id,name) VALUES ('${clientID}','Task Client Fixture');
+    INSERT INTO app.roles(id,role_key,display_name) VALUES ('80000000-0000-4000-8000-000000000002','task_fixture','Task-only Fixture');
+    INSERT INTO app.role_permissions(id,role_id,permission_key)
+      VALUES ('80000000-0000-4000-8000-000000000004','80000000-0000-4000-8000-000000000002','tasks.view');
+    INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id)
+      VALUES ('80000000-0000-4000-8000-000000000003','${viewerID}','80000000-0000-4000-8000-000000000002','client','${clientID}');
+    INSERT INTO app.tasks(id,client_id,title,created_by,status,priority,due_at)
+      SELECT ('81000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'${clientID}',
+      CASE WHEN n=1 THEN 'Overdue Task Fixture' WHEN n=2 THEN 'Due Soon Task Fixture'
+      ELSE 'Task Pagination Fixture '||lpad(n::text,2,'0') END,
+      '44444444-4444-4444-8444-444444444444','todo','medium',
+      CASE WHEN n=1 THEN clock_timestamp()-interval '1 day' ELSE clock_timestamp()+interval '1 hour' END
+      FROM generate_series(1,26) n;
+  `)
+  await page.goto(path)
+  await page.getByLabel('Email', { exact: true }).fill('admin.fixture@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  const table = page.getByRole('table', { name: 'Client tasks', exact: true })
+  await expect(table.getByRole('row')).toHaveCount(26)
+  await expect(table).toContainText('Overdue')
+  await expect(table).toContainText('Due within 24 hours')
+  await page.getByLabel('Search task titles', { exact: true }).fill('Task Fixture')
+  await page.getByRole('button', { name: 'Apply filters', exact: true }).click()
+  await expect(table.getByRole('row')).toHaveCount(3)
+  await markTaskScreenshot(page)
+  for (const viewport of [{ width: 1440, height: 1000 }, { width: 820, height: 1050 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true)
+    // Rasterize the scroll region before Chromium captures the full page.
+    await page.getByRole('region', { name: 'Client tasks', exact: true }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath(`tasks-${viewport.width}.png`), fullPage: true })
+    if (viewport.width === 390) {
+      const region = page.getByRole('region', { name: 'Client tasks', exact: true })
+      await region.focus()
+      await page.keyboard.press('ArrowRight')
+      await expect.poll(() => region.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.getByLabel('Search task titles', { exact: true }).fill('')
+  await page.getByRole('button', { name: 'Apply filters', exact: true }).click()
+  await expect(table.getByRole('row')).toHaveCount(26)
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(table).toContainText('Task Pagination Fixture 26')
+  await expect(table.getByRole('row')).toHaveCount(2)
+  await page.getByRole('link', { name: 'Create task', exact: true }).click()
+  await page.getByRole('button', { name: 'Create task', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('1–200 characters')
+  await page.getByLabel('Task title', { exact: true }).fill('Managed Task Fixture')
+  await page.getByLabel('Description', { exact: true }).fill('Clearly synthetic task description.\nSecond plain-text line.')
+  await page.getByRole('combobox', { name: 'Priority', exact: true }).selectOption('high')
+  await page.getByLabel('Assignee', { exact: true }).selectOption(viewerID)
+  await page.getByLabel('Tags', { exact: true }).fill('BROWSER\nFixture')
+  await page.getByLabel('Start time', { exact: true }).fill('2026-11-01T01:30')
+  await page.getByLabel('Due time', { exact: true }).fill('2026-11-02T01:30')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await markTaskScreenshot(page)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('task-form-mobile.png'), fullPage: true })
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.getByRole('button', { name: 'Create task', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Task created.' })).toBeVisible()
+  const taskID = page.url().split('/').at(-1)!
+  expect(taskID).toMatch(/^[0-9a-f-]{36}$/)
+  await page.getByRole('link', { name: 'Edit task', exact: true }).click()
+  // Another editor changes metadata through the real revision-checked endpoint.
+  expect(await page.evaluate(async ({ clientID, taskID }) => {
+    const url = `/api/v1/clients/${clientID}/tasks/${taskID}`
+    const current = (await (await fetch(url)).json()).data
+    const token = document.cookie.split('; ').find(c => c.startsWith('else_csrf='))?.slice('else_csrf='.length)
+    const { title, description, priority, assignee_id, start_at, due_at, tags, revision } = current
+    const response = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token ?? '' }, body: JSON.stringify({ title: title + ' Current', description, priority, assignee_id, start_at, due_at, tags, expected_revision: revision }) })
+    return response.status
+  }, { clientID, taskID })).toBe(200)
+  await page.getByLabel('Task title', { exact: true }).fill('Draft Task Fixture')
+  await page.getByRole('button', { name: 'Save task', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('record changed')
+  await expect(page.getByLabel('Task title', { exact: true })).toHaveValue('Draft Task Fixture')
+  await page.getByRole('button', { name: 'Reload current data', exact: true }).click()
+  await expect(page.getByLabel('Task title', { exact: true })).toHaveValue('Managed Task Fixture Current')
+  await expect(page.getByLabel('Assignee', { exact: true })).toHaveValue(viewerID)
+  await page.getByLabel('Task title', { exact: true }).fill('Updated Task Fixture')
+  await page.getByRole('button', { name: 'Save task', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Task updated.' })).toBeVisible()
+  const transition = async (status: string) => {
+    await page.getByLabel('Next status for Updated Task Fixture', { exact: true }).selectOption(status)
+    await page.getByRole('button', { name: 'Change status of Updated Task Fixture', exact: true }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Task status updated.' })).toBeVisible()
+    await expect.poll(() => database(`SELECT status FROM app.tasks WHERE id='${taskID}'`)).toBe(status)
+  }
+  await transition('in_progress')
+  await transition('done')
+  await expect(page.getByText('Completed', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Edit task', exact: true })).toHaveCount(0)
+  await transition('in_progress')
+  await expect(page.getByText('Completed', { exact: true })).toHaveCount(0)
+  await transition('cancelled')
+  await expect(page.getByRole('term').filter({ hasText: /^Cancelled$/ })).toBeVisible()
+  await transition('todo')
+  await expect(page.getByRole('term').filter({ hasText: /^Cancelled$/ })).toHaveCount(0)
+  await markTaskScreenshot(page)
+  for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`task-detail-${viewport.width}.png`), fullPage: true })
+  }
+  const viewerContext = await browser.newContext({ timezoneId: 'America/New_York' })
+  try {
+    const viewer = await viewerContext.newPage()
+    const reads: string[] = []
+    viewer.on('request', request => { if (request.url().includes('/api/v1/clients/')) reads.push(new URL(request.url()).pathname) })
+    await viewer.goto(`http://127.0.0.1:5173${path}/${taskID}`)
+    await viewer.getByLabel('Email', { exact: true }).fill('task.viewer.fixture@example.com')
+    await viewer.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
+    await viewer.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await expect(viewer.getByRole('heading', { name: 'Updated Task Fixture', exact: true })).toBeVisible()
+    await expect(viewer.getByText(/Times shown in America\/New_York/)).toBeVisible()
+    await expect(viewer.getByRole('link', { name: 'Edit task', exact: true })).toHaveCount(0)
+    await expect(viewer.getByRole('button', { name: 'Archive Updated Task Fixture', exact: true })).toHaveCount(0)
+    expect(reads).not.toContain(`/api/v1/clients/${clientID}`)
+    expect(reads.some(url => url.endsWith('/assignees'))).toBe(false)
+    await viewer.goto('http://127.0.0.1:5173/app/clients/22222222-2222-4222-8222-222222222222/tasks')
+    await expect(viewer.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
+    await expect(viewer.getByText('Updated Task Fixture', { exact: true })).toHaveCount(0)
+    expect(await viewer.evaluate(async () => (await fetch('/api/v1/clients/22222222-2222-4222-8222-222222222222/tasks')).status)).toBe(404)
+  } finally { await viewerContext.close() }
+  await page.getByRole('button', { name: 'Archive Updated Task Fixture', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused()
+  expect(database(`SELECT revision::text FROM app.tasks WHERE id='${taskID}'`)).toBe('8')
+  await markTaskScreenshot(page)
+  await page.screenshot({ path: testInfo.outputPath('task-archive-mobile.png'), fullPage: true })
+  await page.getByRole('button', { name: 'Confirm archive', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Task archived.' })).toBeVisible()
+  await expect(page.getByText('Clearly synthetic task description.', { exact: false })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Edit task', exact: true })).toHaveCount(0)
+  await page.goto(path)
+  await page.getByLabel('Search task titles', { exact: true }).fill('Updated Task')
+  await page.getByLabel('Tag', { exact: true }).fill('BROWSER')
+  await page.getByRole('combobox', { name: 'Records', exact: true }).selectOption('true')
+  await page.getByRole('button', { name: 'Apply filters', exact: true }).click()
+  await expect(table).toContainText('Updated Task Fixture')
+  await expect(table.getByRole('row')).toHaveCount(2)
+  expect(database(`SELECT string_agg(event_name, ',' ORDER BY occurred_at) FROM app.audit_events WHERE resource_id='${taskID}' AND resource_kind='task'`)).toBe('task.created,task.updated,task.updated,task.updated,task.completed,task.updated,task.cancelled,task.updated,task.archived')
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
 })

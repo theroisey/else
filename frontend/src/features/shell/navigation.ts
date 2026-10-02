@@ -25,5 +25,7 @@ export function safeReturnTo(value: unknown) {
   if (typeof value !== 'string') return '/app'
   if (destinations.some(destination => destination.path === value) || value === '/app/clients/new') return value
   const match = /^\/app\/clients\/([^/]+)(?:\/edit)?$/.exec(value)
-  return match && isUUID(match[1]) ? value : '/app'
+  if (match && isUUID(match[1])) return value
+  const task = /^\/app\/clients\/([^/]+)\/tasks(?:\/(new|[^/]+)(?:\/(edit))?)?$/.exec(value)
+  return task && isUUID(task[1]) && (!task[2] || task[2] === 'new' && !task[3] || isUUID(task[2])) ? value : '/app'
 }
