@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#22](https://github.com/theroisey/else/issues/22), the separately reviewed [activity timeline](activity-interface.md). Issues #1–#18 are owner-merged. Activity API #56 merged at `d507f68`; both development branches were synchronized. Main [run 37005708004](https://github.com/theroisey/else/actions/runs/37005708004) passed all five gates and tested-image publication. The interface shows only currently authorized persisted events, with exact UTC timestamps, bounded pagination, refresh and explicit failure states. #22 remains open until owner merge of this consumer.
+Current slice: [#28](https://github.com/theroisey/else/issues/28), the separately reviewed [audit-read API](audit-reader.md). Issues #1–#18 and #22 are owner-merged. Activity interface #57 merged at `1a30014`; both development branches were synchronized. Main [run 37011258324](https://github.com/theroisey/else/actions/runs/37011258324) passed all five gates and tested-image publication. Audit reads define explicit global/client visibility, bounded filters/keysets and safe before/after inspection. The frontend audit table/detail panel follows backend owner review; #28 remains open for that consumer.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#18 and activity API #56 are owner-merged. Issue #22 adds human-readable client activity through the separately reviewed timeline; owner merge of its frontend PR completes #22. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#18 and #22 are owner-merged. Issue #28 adds authorized security history through separately reviewed audit API/interface slices; the backend read policy and contract precede its consumer. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.

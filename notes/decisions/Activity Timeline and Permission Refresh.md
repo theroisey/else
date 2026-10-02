@@ -1,6 +1,6 @@
 ---
 type: decision
-status: frontend-review
+status: merged
 created: 2026-10-02
 tags:
   - activity
@@ -27,3 +27,5 @@ Opaque cursors are passed unchanged and retained only in memory. First-page refr
 - [[Application Shell and Session Recovery]]
 - [[Client Interface and Workspace]]
 - [[CI and Publication]]
+
+Owner-merged [PR #57](https://github.com/theroisey/else/pull/57) at `1a30014` completed #22. Main run 37011258324 passed all gates/publication. Both branches were synchronized before [[Audit Read Scope and Safe Inspection]] (#28).

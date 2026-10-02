@@ -28,6 +28,8 @@ Issue #22 adds client-scoped `activity.view`, bringing the current catalog to 30
 
 ## Current identity representation
 
+Issue #28 preserves global-only `audit.view` and all 30 keys/seeds. Its [audit reader](audit-reader.md) exposes global events with that capability and client-linked events only with additional current clients.view for a real client. A client-scoped role assignment cannot confer global audit access. The privileged reader permits reviewed cross-domain security markers inside visible clients; activity and business-domain grants do not substitute for audit permission.
+
 Successful login and `GET /api/v1/auth/session` include flattened effective grants under `data.user.permissions`. Global assignments are represented with `scope: "global"`; client assignments use `scope: "client"` plus `client_id`:
 
 ```json
