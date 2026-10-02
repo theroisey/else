@@ -59,6 +59,28 @@ func TestTaskRoutesUseDedicatedProtectedAdapter(t *testing.T) {
 	}
 }
 
+func TestPlanningRoutesUseDedicatedProtectedAdapter(t *testing.T) {
+	other := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(418) })
+	planning := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(401) })
+	s, err := NewWithPlanning(testConfig(t), slog.New(slog.NewJSONHandler(io.Discard, nil)), nil, other, other, other, other, planning)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := "/api/v1/clients/11111111-1111-4111-8111-111111111111/plans"
+	for _, suffix := range []string{"", "/11111111-1111-4111-8111-111111111111", "/11111111-1111-4111-8111-111111111111/status", "/11111111-1111-4111-8111-111111111111/task-candidates", "/11111111-1111-4111-8111-111111111111/milestones", "/11111111-1111-4111-8111-111111111111/milestones/22222222-2222-4222-8222-222222222222/task-links"} {
+		w := httptest.NewRecorder()
+		s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", base+suffix, nil))
+		if w.Code != 401 {
+			t.Fatal("planning route bypassed dedicated adapter")
+		}
+	}
+	w := httptest.NewRecorder()
+	s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", strings.TrimSuffix(base, "/plans")+"/tasks", nil))
+	if w.Code != 418 {
+		t.Fatal("task route entered planning handler")
+	}
+}
+
 func testConfig(t *testing.T) config.Config {
 	t.Helper()
 	c, err := config.Load(func(string) (string, bool) { return "", false })

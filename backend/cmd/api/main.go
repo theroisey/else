@@ -15,6 +15,7 @@ import (
 	"github.com/theroisey/else/backend/internal/database"
 	httpapi "github.com/theroisey/else/backend/internal/http"
 	"github.com/theroisey/else/backend/internal/identity"
+	"github.com/theroisey/else/backend/internal/planning"
 	"github.com/theroisey/else/backend/internal/tasks"
 )
 
@@ -98,7 +99,17 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("task_startup_failed", "error_code", "task_startup_failed")
 		return 1
 	}
-	server, err := httpapi.NewWithTasks(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler)
+	planningService, err := planning.NewService(pool)
+	if err != nil {
+		logger.Error("planning_startup_failed", "error_code", "planning_startup_failed")
+		return 1
+	}
+	planningHandler, err := planning.NewHandler(planningService, authHandler, logger)
+	if err != nil {
+		logger.Error("planning_startup_failed", "error_code", "planning_startup_failed")
+		return 1
+	}
+	server, err := httpapi.NewWithPlanning(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1

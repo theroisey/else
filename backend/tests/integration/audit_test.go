@@ -236,6 +236,9 @@ func TestAuditStorageDeniesHistoryAccessAndDefendsBroadenedGrants(t *testing.T) 
 	assertCounts(t, f, admin, 1, 1)
 	p := provider(t, f)
 	if _, err := p.Down(f.ctx); err != nil {
+		t.Fatal("empty planning rollback failed", err)
+	}
+	if _, err := p.Down(f.ctx); err != nil {
 		t.Fatal("empty task migration did not roll back before audit check", err)
 	}
 	if _, err := p.Down(f.ctx); err != nil {

@@ -133,6 +133,9 @@ func TestIdentityBootstrapIsOneTimeAuditedAndHistoryPreserving(t *testing.T) {
 	}
 	p := provider(t, f.base)
 	if _, err := p.Down(f.base.ctx); err != nil {
+		t.Fatal("empty planning rollback failed", err)
+	}
+	if _, err := p.Down(f.base.ctx); err != nil {
 		t.Fatal("empty task rollback failed", err)
 	}
 	if _, err := p.Down(f.base.ctx); err != nil {
@@ -154,7 +157,7 @@ func TestSessionLifecycleUsesHashedTokensAndAtomicAudit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if login.Session.User.ID != userID || login.Session.User.Email != bootstrapEmail || login.Token == "" || login.CSRF == "" || len(login.Session.User.Permissions) != 22 {
+	if login.Session.User.ID != userID || login.Session.User.Email != bootstrapEmail || login.Token == "" || login.CSRF == "" || len(login.Session.User.Permissions) != 26 {
 		t.Fatal("login result missing safe identity/session data")
 	}
 	var tokenHash, csrfHash []byte
@@ -163,7 +166,7 @@ func TestSessionLifecycleUsesHashedTokensAndAtomicAudit(t *testing.T) {
 		t.Fatal("session secrets were not stored as fixed digests")
 	}
 	current, err := f.service.Current(f.base.ctx, login.Token)
-	if err != nil || current.User.ID != userID || len(current.User.Permissions) != 22 {
+	if err != nil || current.User.ID != userID || len(current.User.Permissions) != 26 {
 		t.Fatal("current session lookup failed")
 	}
 	if !f.service.ValidCSRF(current, login.CSRF, login.CSRF) || f.service.ValidCSRF(current, login.CSRF, "wrong") {

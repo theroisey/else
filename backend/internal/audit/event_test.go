@@ -119,3 +119,18 @@ func TestTaskActionsAndStateAreResourceBound(t *testing.T) {
 		t.Fatal("untrusted task state accepted")
 	}
 }
+
+func TestPlanningStateIsBoundToPlanOrMilestone(t *testing.T) {
+	for _, kind := range []string{"plan", "milestone", "client", "task"} {
+		for _, status := range []string{"draft", "active", "planned", "in_progress", "completed", "cancelled", "secret", ""} {
+			e := validEvent()
+			e.ResourceKind = kind
+			e.After = &Snapshot{PlanningStatus: &status}
+			_, _, _, err := e.encode()
+			valid := (kind == "plan" && (status == "draft" || status == "active" || status == "completed" || status == "cancelled")) || (kind == "milestone" && (status == "planned" || status == "in_progress" || status == "completed" || status == "cancelled"))
+			if (err == nil) != valid {
+				t.Fatal("planning audit resource boundary failed", kind, status)
+			}
+		}
+	}
+}

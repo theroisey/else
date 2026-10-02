@@ -21,8 +21,21 @@ type Server struct {
 	administration http.Handler
 	clients        http.Handler
 	tasks          http.Handler
+	planning       http.Handler
 	draining       atomic.Bool
 	httpServer     *http.Server
+}
+
+func NewWithPlanning(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks, planning http.Handler) (*Server, error) {
+	if planning == nil {
+		return nil, fmt.Errorf("planning handler is required")
+	}
+	server, err := NewWithTasks(c, logger, readiness, auth, administration, clients, tasks)
+	if err != nil {
+		return nil, err
+	}
+	server.planning = planning
+	return server, nil
 }
 
 func NewWithTasks(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks http.Handler) (*Server, error) {

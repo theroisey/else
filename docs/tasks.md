@@ -1,12 +1,12 @@
 # Client task API
 
-Related Issue: [#15](https://github.com/theroisey/else/issues/15). The [pre-implementation contract](https://github.com/theroisey/else/issues/15#issuecomment-5941777252) defines authorization, transitions, assignees and archival. Task UI belongs to #16; comments, attachments and planning remain later work.
+Related Issue: [#15](https://github.com/theroisey/else/issues/15). The [pre-implementation contract](https://github.com/theroisey/else/issues/15#issuecomment-5941777252) defines authorization, transitions, assignees and archival. Task UI is delivered by [#16](task-interface.md); [#17](planning.md) adds planning and historical milestone links. Comments and attachments remain later work.
 
 ## Access and retention
 
 Tasks belong to an actual client. Reads require effective `tasks.view` for that exact client; a global assignment containing that permission qualifies. Client-profile view is an independent capability. Creation requires `tasks.create`, metadata/status changes require `tasks.update`, and archive requires `tasks.delete`. Legacy `tasks.manage` remains an aggregate for these three write operations, without granting view. Creator and assignee are historical references and never grant access.
 
-Migration 000007 adds three client-scoped permission definitions and explicit seeded links into Initial Administrator, following the existing catalog seed convention. It does not expand custom roles, grant Finance write access, or invent historical user events for schema setup. Current identity and role catalogs expose 22 keys. The frontend known-key map recognizes the three additions so the existing administration UI can manage them; no task product UI is introduced. A legacy manage holder can write tasks but still needs explicit control of a granular key to delegate that key through ordinary RBAC.
+Migration 000007 adds three client-scoped permission definitions and explicit seeded links into Initial Administrator, following the existing catalog seed convention. It does not expand custom roles, grant Finance write access, or invent historical user events for schema setup. Migration 000007 established 22 keys; planning migration 000008 raises the current catalog to 26. The frontend known-key map recognizes the three additions so the existing administration UI can manage them; task product UI follows in #16. A legacy manage holder can write tasks but still needs explicit control of a granular key to delegate that key through ordinary RBAC.
 
 Missing/inaccessible clients, unauthorized operations and tasks belonging to another client share `404 not_found`. UUID knowledge establishes no access. A client must be active for every write. Authorized historical reads remain available after client archive.
 
