@@ -81,6 +81,33 @@ func TestPlanningRoutesUseDedicatedProtectedAdapter(t *testing.T) {
 	}
 }
 
+func TestReminderRoutesUseDedicatedProtectedAdapter(t *testing.T) {
+	other := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(418) })
+	reminders := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(401) })
+	s, err := NewWithReminders(testConfig(t), slog.New(slog.NewJSONHandler(io.Discard, nil)), nil, other, other, other, other, other, reminders)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := "/api/v1/clients/11111111-1111-4111-8111-111111111111/reminders"
+	for _, suffix := range []string{"", "/owners", "/22222222-2222-4222-8222-222222222222", "/22222222-2222-4222-8222-222222222222/complete", "/22222222-2222-4222-8222-222222222222/dismiss"} {
+		w := httptest.NewRecorder()
+		s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", base+suffix, nil))
+		if w.Code != 401 {
+			t.Fatal("reminder route bypassed protected adapter")
+		}
+	}
+	for _, module := range []string{"tasks", "plans"} {
+		w := httptest.NewRecorder()
+		s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", strings.TrimSuffix(base, "/reminders")+"/"+module, nil))
+		if w.Code != 418 {
+			t.Fatal("another module entered reminders")
+		}
+	}
+	if _, err := NewWithReminders(testConfig(t), slog.New(slog.NewJSONHandler(io.Discard, nil)), nil, other, other, other, other, other, nil); err == nil {
+		t.Fatal("nil reminder handler accepted")
+	}
+}
+
 func testConfig(t *testing.T) config.Config {
 	t.Helper()
 	c, err := config.Load(func(string) (string, bool) { return "", false })

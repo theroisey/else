@@ -37,6 +37,10 @@ GRANT EXECUTE ON FUNCTION app.planning_read(uuid,uuid,uuid,uuid),
  app.planning_task_candidates(uuid,uuid,uuid,uuid,integer,text,boolean),
  app.planning_write(uuid,uuid,uuid,uuid,bigint,text,jsonb,text,jsonb) TO else_runtime;
 
+GRANT EXECUTE ON FUNCTION app.reminder_read(uuid,uuid,uuid),
+ app.reminder_list(uuid,uuid,uuid,integer,text,text,uuid,text,boolean),
+ app.reminder_owners(uuid,uuid,uuid,integer),app.reminder_write(uuid,uuid,uuid,bigint,text,jsonb) TO else_runtime;
+
 GRANT EXECUTE ON FUNCTION app.admin_users(uuid,uuid,integer),app.admin_user(uuid,uuid),
                           app.admin_roles(uuid,uuid,integer),app.admin_role(uuid,uuid),app.admin_catalog(uuid),
                           app.admin_assignments(uuid,uuid,uuid,integer),app.admin_create_user(uuid,uuid,text,text,text),

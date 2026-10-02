@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 )
 
 func validEvent() Event {
@@ -59,6 +60,45 @@ func TestTransactionRequiresCorrelationBeforeMutation(t *testing.T) {
 	err := WithTransaction(context.Background(), nil, func(context.Context, Queries) (Event, error) { called = true; return validEvent(), nil })
 	if !errors.Is(err, ErrMissingCorrelation) || called {
 		t.Fatal("uncorrelated mutation allowed")
+	}
+}
+
+func TestReminderSchedulingSnapshotsAndActionsStayResourceBound(t *testing.T) {
+	state := "pending"
+	zone := "America/New_York"
+	scheduled := time.Date(2026, 11, 1, 6, 30, 0, 123456000, time.UTC)
+	base := validEvent()
+	base.ResourceKind = "reminder"
+	base.After = &Snapshot{ReminderStatus: &state, ReminderScheduledAt: &scheduled, ReminderTimezone: &zone}
+	for _, action := range []Action{Created, Updated, Completed, Dismissed} {
+		e := base
+		e.Action = action
+		if _, _, _, err := e.encode(); err != nil {
+			t.Fatal("valid reminder audit rejected", err)
+		}
+	}
+	for _, change := range []func(*Event){
+		func(e *Event) { e.ResourceKind = "client" }, func(e *Event) { e.Action = Cancelled }, func(e *Event) { e.Action = Archived },
+		func(e *Event) { v := "delivered"; e.After.ReminderStatus = &v }, func(e *Event) { e.After.ReminderTimezone = nil }, func(e *Event) { e.After.ReminderScheduledAt = nil },
+		func(e *Event) { v := "Local"; e.After.ReminderTimezone = &v }, func(e *Event) { v := "Unknown/Zone"; e.After.ReminderTimezone = &v },
+		func(e *Event) { v := scheduled.Add(time.Nanosecond); e.After.ReminderScheduledAt = &v },
+		func(e *Event) { v := scheduled.In(time.FixedZone("unsafe", 3600)); e.After.ReminderScheduledAt = &v },
+		func(e *Event) { v := time.Time{}; v = v.AddDate(-1, 0, 0); e.After.ReminderScheduledAt = &v },
+	} {
+		e := base
+		snapshot := *base.After
+		e.After = &snapshot
+		change(&e)
+		if _, _, _, err := e.encode(); !errors.Is(err, ErrInvalidEvent) {
+			t.Fatal("invalid reminder audit accepted", err)
+		}
+	}
+	e := base
+	e.ResourceKind = "task"
+	e.After = nil
+	e.Action = Dismissed
+	if _, _, _, err := e.encode(); !errors.Is(err, ErrInvalidEvent) {
+		t.Fatal("reminder action applied to task")
 	}
 }
 

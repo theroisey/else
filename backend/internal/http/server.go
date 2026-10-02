@@ -22,8 +22,21 @@ type Server struct {
 	clients        http.Handler
 	tasks          http.Handler
 	planning       http.Handler
+	reminders      http.Handler
 	draining       atomic.Bool
 	httpServer     *http.Server
+}
+
+func NewWithReminders(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks, planning, reminders http.Handler) (*Server, error) {
+	if reminders == nil {
+		return nil, fmt.Errorf("reminder handler is required")
+	}
+	server, err := NewWithPlanning(c, logger, readiness, auth, administration, clients, tasks, planning)
+	if err != nil {
+		return nil, err
+	}
+	server.reminders = reminders
+	return server, nil
 }
 
 func NewWithPlanning(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks, planning http.Handler) (*Server, error) {

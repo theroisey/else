@@ -16,6 +16,7 @@ import (
 	httpapi "github.com/theroisey/else/backend/internal/http"
 	"github.com/theroisey/else/backend/internal/identity"
 	"github.com/theroisey/else/backend/internal/planning"
+	"github.com/theroisey/else/backend/internal/reminders"
 	"github.com/theroisey/else/backend/internal/tasks"
 )
 
@@ -109,7 +110,17 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("planning_startup_failed", "error_code", "planning_startup_failed")
 		return 1
 	}
-	server, err := httpapi.NewWithPlanning(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler)
+	reminderService, err := reminders.NewService(pool)
+	if err != nil {
+		logger.Error("reminders_startup_failed", "error_code", "reminders_startup_failed")
+		return 1
+	}
+	reminderHandler, err := reminders.NewHandler(reminderService, authHandler, logger)
+	if err != nil {
+		logger.Error("reminders_startup_failed", "error_code", "reminders_startup_failed")
+		return 1
+	}
+	server, err := httpapi.NewWithReminders(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1
