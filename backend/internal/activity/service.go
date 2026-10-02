@@ -53,11 +53,9 @@ func (s *Service) List(ctx context.Context, actor, client string, f Filter) (Pag
 		if err := rows.Scan(&item.ID, &item.ClientID, &item.OccurredAt, &item.EventType, &item.ResourceKind, &item.ResourceID); err != nil {
 			return p, err
 		}
-		item.Summary = summaries[item.EventType]
-		if !validID(item.ID) || item.ClientID != client || !validID(item.ResourceID) || !validTime(item.OccurredAt) || item.Summary == "" || !strings.HasPrefix(item.EventType, item.ResourceKind+".") {
+		if item.ClientID != client || Describe(&item) != nil {
 			return p, ErrInvalid
 		}
-		item.OccurredAt = item.OccurredAt.UTC()
 		if len(p.Data) == f.Limit {
 			next := encodeCursor(client, p.Data[len(p.Data)-1])
 			p.Page.NextCursor = &next

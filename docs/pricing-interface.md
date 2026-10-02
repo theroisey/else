@@ -1,6 +1,6 @@
 # Pricing agreements, version history and collection copies
 
-Related Issue: [#21](https://github.com/theroisey/else/issues/21). Backend PR #64 was owner-merged at `2405d39`; main run 37049174588 passed and both development branches synchronized. The [frontend policy](https://github.com/theroisey/else/issues/21#issuecomment-5959050907) preceded implementation. This interface consumes the [pricing contract](pricing.md) without API, schema, permission-catalog or audit changes. Owner review remains required before merge.
+Related Issue: [#21](https://github.com/theroisey/else/issues/21). Backend PR #64 was owner-merged at `2405d39`; main run 37049174588 passed and both development branches synchronized. The [frontend policy](https://github.com/theroisey/else/issues/21#issuecomment-5959050907) preceded implementation. This interface consumes the [pricing contract](pricing.md) without API, schema, permission-catalog or audit changes. The owner merged frontend PR #65 at `f649c5c` after all five final-head gates passed; main run 37056272195 passed and both branches synchronized before overview #23.
 
 ## Access and navigation
 

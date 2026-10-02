@@ -15,6 +15,26 @@ import (
 	"github.com/theroisey/else/backend/internal/config"
 )
 
+func TestOverviewRoutesUseDedicatedProtectedAdapter(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	other := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(418) })
+	protected := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(401) })
+	s, e := NewWithOverview(testConfig(t), logger, nil, other, other, other, other, other, other, other, other, other, other, protected)
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, suffix := range []string{"", "/extra", "?limit=100"} {
+		w := httptest.NewRecorder()
+		s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/clients/11111111-1111-4111-8111-111111111111/overview"+suffix, nil))
+		if w.Code != 401 {
+			t.Fatal("overview bypassed its protected adapter")
+		}
+	}
+	if _, e := NewWithOverview(testConfig(t), logger, nil, other, other, other, other, other, other, other, other, other, other, nil); e == nil {
+		t.Fatal("missing overview handler accepted")
+	}
+}
+
 func TestAuditRoutesUseDedicatedProtectedAdapter(t *testing.T) {
 	other := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(418) })
 	protected := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(401) })

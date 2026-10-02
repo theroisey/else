@@ -18,6 +18,7 @@ import (
 	"github.com/theroisey/else/backend/internal/database"
 	httpapi "github.com/theroisey/else/backend/internal/http"
 	"github.com/theroisey/else/backend/internal/identity"
+	"github.com/theroisey/else/backend/internal/overview"
 	"github.com/theroisey/else/backend/internal/planning"
 	"github.com/theroisey/else/backend/internal/pricing"
 	"github.com/theroisey/else/backend/internal/reminders"
@@ -164,7 +165,17 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("pricing_startup_failed", "error_code", "pricing_startup_failed")
 		return 1
 	}
-	server, err := httpapi.NewWithPricing(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler, pricingHandler)
+	overviewService, err := overview.NewService(pool)
+	if err != nil {
+		logger.Error("overview_startup_failed", "error_code", "overview_startup_failed")
+		return 1
+	}
+	overviewHandler, err := overview.NewHandler(overviewService, authHandler, logger)
+	if err != nil {
+		logger.Error("overview_startup_failed", "error_code", "overview_startup_failed")
+		return 1
+	}
+	server, err := httpapi.NewWithOverview(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler, pricingHandler, overviewHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1
