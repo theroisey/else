@@ -1,6 +1,6 @@
 # Client planning API
 
-Related Issue: [#17](https://github.com/theroisey/else/issues/17). The [recorded implementation contract](https://github.com/theroisey/else/issues/17#issuecomment-5945928902) settles access, lifecycle, link retention and rollback before implementation. This backend slice references #17; a separately reviewed frontend slice follows after owner merge and closes the Issue.
+Related Issue: [#17](https://github.com/theroisey/else/issues/17). The [recorded implementation contract](https://github.com/theroisey/else/issues/17#issuecomment-5945928902) settles access, lifecycle, link retention and rollback before implementation. Backend PR #52 is owner-merged at `b7b7e95`. The separately reviewed [frontend interface](planning-interface.md) consumes this contract and closes #17 after owner merge.
 
 ## Ownership and access
 
@@ -8,7 +8,7 @@ A plan permanently belongs to an actual client; a milestone permanently belongs 
 
 Every read requires effective `planning.view` for the exact client. Every write additionally requires its own capability: `planning.create` for plans/milestones, `planning.update` for metadata/status/task links, or `planning.archive` for confirmed archival. Global assignments containing the client-scoped capability qualify; another client's assignments do not. Client-profile and task permissions are independent. There is no legacy aggregate planning permission.
 
-Migration 000008 adds these four client-scoped definitions and explicit seed links only to Initial Administrator. It does not expand custom roles. Identity/catalog now expose 26 keys; the frontend known-key map recognizes the additions so existing sessions and administration continue to work. Planning product screens follow in the frontend slice.
+Migration 000008 adds these four client-scoped definitions and explicit seed links only to Initial Administrator. It does not expand custom roles. Identity/catalog now expose 26 keys; the frontend known-key map recognizes the additions so existing sessions and administration continue to work. The separately reviewed [planning interface](planning-interface.md) provides the product screens.
 
 Inaccessible, missing and foreign-client records return the same `404 not_found`. Reads preserve history after client, plan or milestone archival. Every write requires an active client, an unarchived target and, for milestones, an unarchived nonterminal parent plan. A plan archive retains children and links without rewriting their state/revisions. There is no hard delete, restore, automatic progress, scheduling or task-state mutation.
 

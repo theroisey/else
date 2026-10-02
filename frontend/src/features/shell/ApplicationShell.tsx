@@ -16,7 +16,10 @@ export function ApplicationShell() {
   const current = navigation.find((item) => item.path === location.pathname || (item.path === '/app/clients' && location.pathname.startsWith('/app/clients/')))
   const taskContext = /^\/app\/clients\/[^/]+\/tasks(?:\/|$)/.test(location.pathname)
     ? location.pathname.endsWith('/new') ? 'Create task' : location.pathname.endsWith('/edit') ? 'Edit task' : location.pathname.endsWith('/tasks') ? 'Tasks' : 'Task details' : ''
-  const clientContext = taskContext || (current?.path === '/app/clients' && location.pathname !== current.path
+  const planningContext = /^\/app\/clients\/[^/]+\/plans(?:\/|$)/.test(location.pathname)
+    ? location.pathname.includes('/milestones') ? location.pathname.endsWith('/new') ? 'Create milestone' : location.pathname.endsWith('/edit') ? 'Edit milestone' : location.pathname.endsWith('/milestones') ? 'Milestones' : 'Milestone details'
+      : location.pathname.endsWith('/new') ? 'Create plan' : location.pathname.endsWith('/edit') ? 'Edit plan' : location.pathname.endsWith('/plans') ? 'Planning' : 'Plan details' : ''
+  const clientContext = taskContext || planningContext || (current?.path === '/app/clients' && location.pathname !== current.path
     ? location.pathname === '/app/clients/new' ? 'Create client' : location.pathname.endsWith('/edit') ? 'Edit client' : 'Client workspace' : '')
 
   function closeNavigation() {

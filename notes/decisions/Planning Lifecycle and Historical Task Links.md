@@ -1,6 +1,6 @@
 ---
 type: decision
-status: backend-review
+status: active
 created: 2026-10-02
 tags:
   - planning
@@ -24,6 +24,8 @@ Only milestones link tasks, with a complete replacement set capped at 50. Compos
 Writes acquire authorization advisory lock `871092650209` before fresh state checks, then lock parent/target and compare the target revision. A correlated audit transaction records only existence, revision and resource-bound `planning_status`. Audit failure rolls back link removals/inserts and all record changes. Migration 000008 refuses rollback with any planning/audit/custom-or-revoked-permission history; drain writers and reapply reviewed runtime grants after owner migration.
 
 Real PostgreSQL tests cover 32 state pairs, date windows, scoped permissions, ownership, link limits/privacy/history, audit rollback, private helpers/storage, concurrent revisions and eight lock-wait races. Previous migration tests first roll back the new unused planning migration before checking older guards, retaining their original guarantees. Local regression uses PostgreSQL 17.11; CI verifies PostgreSQL 18 and container behavior.
+
+Owner merged backend PR #52 at `b7b7e95`. Main [run 36976256373](https://github.com/theroisey/else/actions/runs/36976256373) passed all five gates and tested-image publication; both permanent development branches were synchronized. The separately reviewed frontend consumes this unchanged contract; see [[Planning Interface and Reference Drafts]].
 
 - [[Task State and Assignee Scope]]
 - [[Task Interface and Timestamp Editing]]

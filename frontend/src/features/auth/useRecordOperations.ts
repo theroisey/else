@@ -1,24 +1,32 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './auth-context'
 import { APIError } from '../../services/authenticated'
 import { sessionKey } from './session'
 import type { Session } from './session'
 
-// Shared session lifecycle for client records and client task records.
-export function useRecordOperations(domain: 'clients' | 'tasks', scope?: string) {
+// Domain records share actor/grant checks and a partitioned query lifecycle.
+export function useRecordOperations(domain: 'clients' | 'tasks' | 'planning', scope?: string) {
   const auth = useAuth()
   const cache = useQueryClient()
   const actor = auth.session?.user.id
   const grants = JSON.stringify(auth.session?.user.permissions ?? [])
   const key = [domain, actor, grants, ...(scope ? [scope] : [])] as const
   const active = useRef(false)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [errorCode, setErrorCode] = useState('')
   async function read<T>(load: () => Promise<T>) {
     try {
       const result = await load()
+      if (!mounted.current) throw new APIError(0, 'context_changed')
       const current = cache.getQueryData<{ session: Session | null }>(sessionKey)?.session
       if (!current || current.user.id !== actor) throw new APIError(401, 'authentication_required')
       if (JSON.stringify(current.user.permissions) !== grants)

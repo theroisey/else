@@ -11,5 +11,6 @@ export function taskPermissions(grants: readonly Grant[], clientID: string) {
     update: view && (has('tasks.update') || manage),
     archive: view && (has('tasks.delete') || manage),
     clientView: has('clients.view'),
+    planningView: has('planning.view'),
   }
 }

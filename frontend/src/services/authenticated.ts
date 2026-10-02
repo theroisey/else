@@ -2,7 +2,9 @@ import { AuthError, csrfToken } from '../features/auth/auth-service'
 import { isRecord } from '../features/auth/session'
 
 const messages: Record<string, string> = {
-  invalid_transition: 'That status transition is no longer available. Reload the task before choosing a new status.',
+  invalid_transition: 'That status transition is no longer available. Reload the record before choosing a new status.',
+  invalid_dates: 'Check the plan date window and its nonarchived milestone due dates.',
+  invalid_task_link: 'New links require task access and nonarchived tasks belonging to this client. Retain or remove unavailable existing references.',
   invalid_assignee: 'Choose an active assignee with task access for this client, or clear the assignee.',
   conflict:
     'The record changed or conflicts with an existing record. Reload current data before trying again.',
