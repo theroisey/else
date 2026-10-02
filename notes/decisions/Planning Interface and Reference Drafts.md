@@ -1,6 +1,6 @@
 ---
 type: decision
-status: frontend-review
+status: active
 created: 2026-10-02
 tags:
   - planning
@@ -11,7 +11,7 @@ tags:
 
 # Planning Interface and Reference Drafts
 
-Issue #17's frontend follows owner-merged backend PR #52 at `b7b7e95`. Both permanent development branches were synchronized before implementation. Main [run 36976256373](https://github.com/theroisey/else/actions/runs/36976256373) passed all five gates and tested-image publication. The [frontend policy](https://github.com/theroisey/else/issues/17#issuecomment-5947085377) was recorded before source edits. The [interface contract](../../docs/planning-interface.md) documents the delivered behavior. Owner merge closes #17; the agent never merges or deploys.
+Issue #17's frontend follows owner-merged backend PR #52 at `b7b7e95`. Both permanent development branches were synchronized before implementation. Main [run 36976256373](https://github.com/theroisey/else/actions/runs/36976256373) passed all five gates and tested-image publication. The [frontend policy](https://github.com/theroisey/else/issues/17#issuecomment-5947085377) was recorded before source edits. The [interface contract](../../docs/planning-interface.md) documents the delivered behavior. Owner merge of PR #53 at `60c8c59` closed #17. Main [run 36982743970](https://github.com/theroisey/else/actions/runs/36982743970) passed all five gates and tested-image publication, and both development branches were synchronized. The next slice is [[Reminder Timezones and Historical Ownership]]. The agent never merges or deploys.
 
 Planning-only routes require exact-client view independently of clients/tasks. Optional client context never triggers an unauthorized read; parent-plan context is required for every milestone write. Plan and milestone status controls remain explicit, server-confirmed and independent of tasks. Terminal records require reopening; archive preserves child states, references and history. Lists and candidates use 25-record UUID cursor pages and in-memory filters.
 

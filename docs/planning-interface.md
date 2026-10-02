@@ -1,6 +1,6 @@
 # Client planning interface
 
-Related Issue: [#17](https://github.com/theroisey/else/issues/17). This frontend slice consumes the owner-merged [planning API](planning.md), PR #52 at `b7b7e95`. The [frontend scope](https://github.com/theroisey/else/issues/17#issuecomment-5947085377) was recorded before implementation. Owner review and merge of this slice closes #17.
+Related Issue: [#17](https://github.com/theroisey/else/issues/17). This frontend slice consumes the owner-merged [planning API](planning.md), PR #52 at `b7b7e95`. The [frontend scope](https://github.com/theroisey/else/issues/17#issuecomment-5947085377) was recorded before implementation. Owner merge of PR #53 at `60c8c59` closed #17.
 
 ## Routes and access
 
