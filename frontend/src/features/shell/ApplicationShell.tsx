@@ -25,7 +25,9 @@ export function ApplicationShell() {
   const auditContext = /^\/app\/clients\/[^/]+\/audit$/.test(location.pathname) ? 'Audit history' : ''
   const billingContext = /^\/app\/clients\/[^/]+\/billing(?:\/|$)/.test(location.pathname)
     ? location.pathname.endsWith('/new') ? 'Create collection' : location.pathname.endsWith('/edit') ? 'Edit collection' : location.pathname.endsWith('/billing') ? 'Finance' : 'Collection details' : ''
-  const clientContext = billingContext || auditContext || activityContext || reminderContext || taskContext || planningContext || (current?.path === '/app/clients' && location.pathname !== current.path
+  const pricingContext = /^\/app\/clients\/[^/]+\/pricing(?:\/|$)/.test(location.pathname)
+    ? location.pathname.endsWith('/new') ? 'Create pricing agreement' : location.pathname.endsWith('/new-version') ? 'Create new pricing version' : location.pathname.endsWith('/pricing') ? 'Pricing agreements' : 'Pricing agreement' : ''
+  const clientContext = pricingContext || billingContext || auditContext || activityContext || reminderContext || taskContext || planningContext || (current?.path === '/app/clients' && location.pathname !== current.path
     ? location.pathname === '/app/clients/new' ? 'Create client' : location.pathname.endsWith('/edit') ? 'Edit client' : 'Client workspace' : '')
 
   function closeNavigation() {

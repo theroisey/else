@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#21](https://github.com/theroisey/else/issues/21), the [versioned pricing backend and immutable billing-copy contract](pricing.md), after owner-merged PR #63 delivered the [finance workspace](billing-interface.md). Issues #1–#20, #22 and #28 are owner-merged. PR #63 merged at `347fee0`; both development branches synchronized and main [run 37043928202](https://github.com/theroisey/else/actions/runs/37043928202) passed. The recorded pricing policy covers exact rounding, append-only effective windows, internal cost privacy, scoped grants and immutable command-reconciled collection copies. Backend owner review is followed by a separate pricing forms/history UI PR; Issue #21 remains open for that interface acceptance.
+Current slice: [#21](https://github.com/theroisey/else/issues/21), the [pricing forms, effective history and collection-copy interface](pricing-interface.md), consuming the owner-merged [pricing backend](pricing.md). Issues #1–#20, #22 and #28 are owner-merged. Backend PR #64 merged at `2405d39`; both branches synchronized and main [run 37049174588](https://github.com/theroisey/else/actions/runs/37049174588) passed. The separately reviewed frontend provides exact previews, private costs, retained history, identical-command copy recovery and immutable terms in finance. Issue #21 stays open until owner review/merge; overview #23 follows.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#19, #22 and #28 are owner-merged. Issue #20 delivers the finance interface with currency-separated server summaries, exact collection forms, guarded payment confirmation/recovery, masked history and deliberate cancellation. Overall acceptance requires final-head CI and owner review; versioned pricing #21 is next after merge. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#20, #22 and #28 are owner-merged. Issue #21 backend PR #64 is merged; the pricing interface completes the separate frontend acceptance after final-head CI and owner review. Overview #23 is the next dependency-ready slice after owner merge. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.

@@ -12,7 +12,7 @@ Run the backend from `backend/` using `go run ./cmd/api` with Go 1.27.1. [The HT
 
 Run the frontend from `frontend/` using `npm ci` and `npm run dev` with Node 24.21.0/npm 11.19.0. [The frontend guide](docs/frontend-foundation.md) documents checks and same-origin development routing. `/app` requires a real account/session; `/status` displays service availability. Match the backend auth public origin to the browser origin; `/app/clients` exposes client capabilities allowed by the current grants.
 
-Issue #21 adds the [versioned pricing backend](docs/pricing.md): exact line rounding, immutable effective versions, restricted internal costs and explicit collection copies with retained billing snapshots. Pricing forms and history screens follow in a separate frontend PR after backend owner review.
+Issue #21 adds the owner-merged [versioned pricing backend](docs/pricing.md) and separately reviewed [pricing interface](docs/pricing-interface.md): exact server previews, immutable effective history, restricted internal costs and explicit collection copies with retained billing terms and lost-response recovery.
 
 ## Engineering contract
 

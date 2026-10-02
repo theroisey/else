@@ -59,6 +59,7 @@ function setup(
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: session }))
     if (init.method === 'GET') {
+      if (url.endsWith('/pricing-snapshot')) return Promise.resolve(json({ error: { code: 'not_found', message: 'No copied terms.' } }, 404))
       if (url === base + '/summary')
         return Promise.resolve(
           json({

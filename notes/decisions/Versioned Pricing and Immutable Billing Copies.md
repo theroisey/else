@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-02
 tags:
   - pricing
@@ -13,6 +13,8 @@ tags:
 # Versioned Pricing and Immutable Billing Copies
 
 Issue #21 follows owner-merged #19/#20. PR #63 merged at `347fee0`; both development branches synchronized and main run 37043928202 passed. The [financial/auth/history policy](https://github.com/theroisey/else/issues/21#issuecomment-5958282276) was recorded before code. See the [pricing API contract](../../docs/pricing.md). Backend and frontend remain separate owner reviews; Issue #21 stays open until the authorized forms/history UI is reviewed.
+
+Owner merged backend PR #64 at `2405d39`; main run 37049174588 passed and both development branches synchronized. The separately reviewed UI is documented in [[Pricing Interface and Collection Copy Recovery]].
 
 Canonical int64 strings represent minor units and fixed six-decimal quantity micros; bps strings permit 0–10000. Compute positive half-up base, discount, net, tax and total per line, then sum. Go big.Int and SQL numeric prevent intermediate overflow; reject any resulting int64 overflow. Explicit sheet currency comes from the reviewed six-code catalog. Frequency is descriptive. No float input, auto invoices, FX, proration or refunds.
 

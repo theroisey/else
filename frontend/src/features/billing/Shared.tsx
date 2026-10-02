@@ -57,6 +57,7 @@ export function BillingHeader({
       path: `/app/clients/${clientID}/reminders`,
     },
     { visible: true, label: 'Finance', path: pagePath(clientID) },
+    { visible: permissions.pricingView, label: 'Pricing', path: `/app/clients/${clientID}/pricing` },
     {
       visible: permissions.activityView,
       label: 'Activity',

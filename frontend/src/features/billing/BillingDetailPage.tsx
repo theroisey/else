@@ -10,6 +10,7 @@ import { money } from './money'
 import { PaymentForm } from './PaymentForm'
 import { PaymentHistory } from './PaymentHistory'
 import { CancelCollection } from './CancelCollection'
+import { BillingSnapshot } from '../pricing/BillingSnapshot'
 import * as api from './service'
 export function BillingDetailPage() {
   const { id = '', collectionID = '' } = useParams()
@@ -111,6 +112,7 @@ function Detail({
               </p>
             ) : null}
           </article>
+          <BillingSnapshot operation={operation} record={r} />
           {operation.permissions.cancel &&
           operation.writable &&
           !['cancelled', 'paid'].includes(r.status) ? (

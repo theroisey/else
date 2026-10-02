@@ -1,31 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
-import { useRecordOperations } from '../auth/useRecordOperations'
 import { hasPermission } from '../auth/permissions'
 import type { Grant } from '../auth/session'
+import { useRecordOperations } from '../auth/useRecordOperations'
 import * as clients from '../clients/service'
-export function billingPermissions(grants: readonly Grant[], clientID: string) {
+export function pricingPermissions(grants: readonly Grant[], clientID: string) {
   const has = (permission: string) =>
       hasPermission(grants, { permission, scope: 'client', clientID }),
-    view = has('billing.view')
+    view = has('pricing.view')
   return {
     view,
-    create: view && has('billing.create'),
-    update: view && has('billing.update'),
-    cancel: view && has('billing.delete'),
+    manage: view && has('pricing.manage'),
+    copy: view && has('billing.view') && has('billing.create'),
     clientView: has('clients.view'),
-    pricingView: has('pricing.view'),
-    taskView: has('tasks.view'),
-    planningView: has('planning.view'),
-    reminderView: has('reminders.view'),
-    activityView: has('clients.view') && has('activity.view'),
-    auditView:
-      has('clients.view') &&
-      hasPermission(grants, { permission: 'audit.view', scope: 'global' }),
+    billingView: has('billing.view'),
   }
 }
-export function useBilling(clientID: string) {
-  const operation = useRecordOperations('billing', clientID),
-    permissions = billingPermissions(
+export function usePricing(clientID: string) {
+  const operation = useRecordOperations('pricing', clientID),
+    permissions = pricingPermissions(
       operation.auth.session?.user.permissions ?? [],
       clientID,
     )

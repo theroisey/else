@@ -1,5 +1,7 @@
 # Finance workspace
 
+The [pricing interface](pricing-interface.md) adds retained, cost-free terms in finance detail and locks copied collection amounts immediately before payment. Failed origin lookup keeps amount read only until a retry confirms manual origin. Other collection/payment/cancellation behavior described below remains unchanged.
+
 Issue [#20](https://github.com/theroisey/else/issues/20) consumes the owner-merged [exact billing API](billing.md). The [interface policy](https://github.com/theroisey/else/issues/20#issuecomment-5957528481) precedes implementation. PR #62 merged at `26f2454`; both permanent development branches were synchronized and main [run 37038850280](https://github.com/theroisey/else/actions/runs/37038850280) passed. No backend, migration, dependency or deployment change belongs to this interface slice.
 
 ## Routes and authorization
