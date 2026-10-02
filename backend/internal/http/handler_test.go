@@ -38,6 +38,26 @@ func TestAuditRoutesUseDedicatedProtectedAdapter(t *testing.T) {
 	}
 }
 
+func TestBillingRoutesUseDedicatedProtectedAdapter(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	other := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(418) })
+	finance := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(401) })
+	s, e := NewWithBilling(testConfig(t), logger, nil, other, other, other, other, other, other, other, other, finance)
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, path := range []string{"/api/v1/clients/11111111-1111-4111-8111-111111111111/billing", "/api/v1/clients/11111111-1111-4111-8111-111111111111/billing/summary", "/api/v1/clients/11111111-1111-4111-8111-111111111111/billing/11111111-1111-4111-8111-111111111112/payments"} {
+		w := httptest.NewRecorder()
+		s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if w.Code != 401 {
+			t.Fatal("finance route skipped protected adapter", w.Code)
+		}
+	}
+	if _, e := NewWithBilling(testConfig(t), logger, nil, other, other, other, other, other, other, other, other, nil); e == nil {
+		t.Fatal("missing financial adapter accepted")
+	}
+}
+
 func TestActivityRoutesUseDedicatedProtectedAdapter(t *testing.T) {
 	other := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(418) })
 	activity := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(401) })

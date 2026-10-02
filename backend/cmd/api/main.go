@@ -12,6 +12,7 @@ import (
 	"github.com/theroisey/else/backend/internal/administration"
 	"github.com/theroisey/else/backend/internal/auditreader"
 	"github.com/theroisey/else/backend/internal/authorization"
+	"github.com/theroisey/else/backend/internal/billing"
 	"github.com/theroisey/else/backend/internal/clients"
 	"github.com/theroisey/else/backend/internal/config"
 	"github.com/theroisey/else/backend/internal/database"
@@ -142,7 +143,17 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("audit_reader_startup_failed", "error_code", "audit_reader_startup_failed")
 		return 1
 	}
-	server, err := httpapi.NewWithAuditReader(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler)
+	billingService, err := billing.NewService(pool)
+	if err != nil {
+		logger.Error("billing_startup_failed", "error_code", "billing_startup_failed")
+		return 1
+	}
+	billingHandler, err := billing.NewHandler(billingService, authHandler, logger)
+	if err != nil {
+		logger.Error("billing_startup_failed", "error_code", "billing_startup_failed")
+		return 1
+	}
+	server, err := httpapi.NewWithBilling(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1

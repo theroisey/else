@@ -11,6 +11,9 @@ import (
 
 func TestActivityMigrationPreservesPopulatedBusinessAndAuditHistory(t *testing.T) {
 	f := newActivityFixture(t)
+	if _, err := provider(t, f.base).DownTo(f.base.ctx, 10); err != nil {
+		t.Fatal(err)
+	}
 	f.seedBusiness(t)
 	var before string
 	if err := f.admin.QueryRow(f.base.ctx, `SELECT md5(string_agg(row_to_json(e)::text,'' ORDER BY id)) FROM app.audit_events e`).Scan(&before); err != nil {
@@ -22,7 +25,7 @@ func TestActivityMigrationPreservesPopulatedBusinessAndAuditHistory(t *testing.T
 		if direction == "down" {
 			_, err = p.DownTo(f.base.ctx, 9)
 		} else {
-			_, err = p.Up(f.base.ctx)
+			_, err = p.UpTo(f.base.ctx, 10)
 		}
 		if err != nil {
 			t.Fatal("unused activity migration failed", err)
@@ -70,6 +73,9 @@ func TestActivityRollbackRefusesCustomOrRevokedGrantHistory(t *testing.T) {
 		t.Run(scenario, func(t *testing.T) {
 			f := newActivityFixture(t)
 			ctx := correlation.New(f.base.ctx)
+			if _, err := provider(t, f.base).DownTo(ctx, 10); err != nil {
+				t.Fatal(err)
+			}
 			if scenario == "seed revoked" {
 				if _, err := f.admin.Exec(ctx, `UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE permission_key='activity.view' AND seeded`); err != nil {
 					t.Fatal(err)

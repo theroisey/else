@@ -42,6 +42,9 @@ GRANT EXECUTE ON FUNCTION app.reminder_read(uuid,uuid,uuid),
  app.reminder_owners(uuid,uuid,uuid,integer),app.reminder_write(uuid,uuid,uuid,bigint,text,jsonb) TO else_runtime;
 
 GRANT EXECUTE ON FUNCTION app.activity_list(uuid,uuid,timestamptz,uuid,integer) TO else_runtime;
+GRANT EXECUTE ON FUNCTION app.billing_read(uuid,uuid,uuid),app.billing_list(uuid,uuid,uuid,integer,text,text,text),
+ app.billing_payments(uuid,uuid,uuid,uuid,integer),app.billing_summary(uuid,uuid),app.billing_currency_list(uuid,uuid),
+ app.billing_write(uuid,uuid,uuid,bigint,text,jsonb,uuid) TO else_runtime;
 GRANT EXECUTE ON FUNCTION app.audit_reader_list(uuid,uuid,uuid,uuid,text,text,text,uuid,text,timestamptz,timestamptz,timestamptz,uuid,integer),
  app.audit_reader_detail(uuid,uuid,uuid) TO else_runtime;
 

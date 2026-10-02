@@ -99,7 +99,7 @@ func TestTaskMigrationPreservesClientAndAuthorizationHistory(t *testing.T) {
 	if _, err := p.Up(f.base.ctx); err != nil {
 		t.Fatal("task upgrade failed", err)
 	}
-	if err := f.admin.QueryRow(f.base.ctx, `SELECT (SELECT count(*) FROM app.audit_events),(SELECT count(*) FROM app.permissions)`).Scan(&after, &keys); err != nil || after != before || keys != 30 {
+	if err := f.admin.QueryRow(f.base.ctx, `SELECT (SELECT count(*) FROM app.audit_events),(SELECT count(*) FROM app.permissions)`).Scan(&after, &keys); err != nil || after != before || keys != 33 {
 		t.Fatal("task migration changed existing history", err)
 	}
 	detail, err := f.records.Detail(ctx, f.actor, m.ID)
@@ -107,7 +107,7 @@ func TestTaskMigrationPreservesClientAndAuthorizationHistory(t *testing.T) {
 		t.Fatal("task upgrade changed client profile", err)
 	}
 	grants, err := f.authorizer.Grants(ctx, f.actor)
-	if err != nil || len(grants) != 30 {
+	if err != nil || len(grants) != 33 {
 		t.Fatal("task upgrade failed catalog compatibility", err)
 	}
 	if _, err := p.DownTo(f.base.ctx, 8); err != nil {

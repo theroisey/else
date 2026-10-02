@@ -35,7 +35,7 @@ func TestPlanningMigrationPreservesExistingTasksClientsAndAuthorization(t *testi
 			t.Fatal("unused planning migration failed", err)
 		}
 		var events, keys int
-		if err = f.admin.QueryRow(ctx, `SELECT (SELECT count(*) FROM app.audit_events),(SELECT count(*) FROM app.permissions)`).Scan(&events, &keys); err != nil || events != before || (direction == "down" && keys != 22) || (direction == "up" && keys != 30) {
+		if err = f.admin.QueryRow(ctx, `SELECT (SELECT count(*) FROM app.audit_events),(SELECT count(*) FROM app.permissions)`).Scan(&events, &keys); err != nil || events != before || (direction == "down" && keys != 22) || (direction == "up" && keys != 33) {
 			t.Fatal("planning migration changed old history", err)
 		}
 		r, err := f.tasks.Detail(ctx, f.actor, clientAID, m.ID)

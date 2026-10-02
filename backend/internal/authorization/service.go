@@ -43,6 +43,9 @@ const (
 	ActivityView       Permission = "activity.view"
 	BillingView        Permission = "billing.view"
 	BillingManage      Permission = "billing.manage"
+	BillingCreate      Permission = "billing.create"
+	BillingUpdate      Permission = "billing.update"
+	BillingDelete      Permission = "billing.delete"
 	PricingView        Permission = "pricing.view"
 	PricingManage      Permission = "pricing.manage"
 	TasksView          Permission = "tasks.view"
@@ -69,6 +72,7 @@ const (
 )
 
 var permissionScopes = map[Permission]Scope{
+	BillingCreate: Client, BillingUpdate: Client, BillingDelete: Client,
 	UsersView: Global, UsersManage: Global, RolesView: Global, RolesManage: Global,
 	AuditView: Global, ReleasesView: Global, ReleasesManage: Global, ClientsCreate: Global,
 	ClientsView: Client, ClientsUpdate: Client, ClientsArchive: Client,
