@@ -54,6 +54,9 @@ runtime_query() {
     exec psql -h postgres -U else_runtime -d else -v ON_ERROR_STOP=1 -Atc "$1"
   ' sh "$1"
 }
+for task_sql in 'SELECT * FROM app.collections' 'SELECT * FROM app.payments' 'SELECT * FROM app.billing_currencies' 'UPDATE app.collections SET paid_minor=1' 'DELETE FROM app.collections' 'TRUNCATE app.payments' 'SELECT app.billing_document(gen_random_uuid())' 'SELECT app.billing_snapshot(gen_random_uuid())'; do
+  if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Finance runtime privilege boundary failed.' >&2; exit 1; fi
+done
 [ "$(runtime_query 'SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()')" = t ]
 [ "$(runtime_query "SELECT rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication FROM pg_roles WHERE rolname = current_user")" = f ]
 for task_sql in 'CREATE SCHEMA forbidden_ci' 'CREATE TABLE public.forbidden_ci (id integer)' 'SELECT * FROM public.goose_db_version' 'SELECT * FROM app.audit_events' 'UPDATE app.audit_events SET event_name=$$fixture.updated$$' 'DELETE FROM app.audit_events' 'TRUNCATE app.audit_events' 'ALTER TABLE app.audit_events DISABLE TRIGGER audit_history_append_only'; do
