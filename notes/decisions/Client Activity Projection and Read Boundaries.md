@@ -1,6 +1,6 @@
 ---
 type: decision
-status: backend-review
+status: merged
 created: 2026-10-02
 tags:
   - activity
@@ -30,6 +30,8 @@ Migration 10 adds the reader and one permission (30 total), with no history tabl
 The frontend recognizes only the new known permission key in this backend slice. Its product timeline comes after owner review. Verification covers all 18 persisted lifecycle labels, scope/redaction, equal-time pagination, revocation/disablement, transaction visibility/rollback, runtime/PUBLIC denial, definer settings, populated migration preservation/refusal and all eight existing browser regressions.
 
 ## Related
+
+Owner-merged [PR #56](https://github.com/theroisey/else/pull/56) at `d507f68` completed this API slice. Main run 37005708004 passed all gates/publication. Both branches were synchronized before [[Activity Timeline and Permission Refresh]], the separately reviewed consumer that completes #22 on owner merge.
 
 - [Activity contract](../../docs/activity.md)
 - [[Audit Infrastructure]]
