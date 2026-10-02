@@ -2,6 +2,8 @@ import { AuthError, csrfToken } from '../features/auth/auth-service'
 import { isRecord } from '../features/auth/session'
 
 const messages: Record<string, string> = {
+  invalid_transition: 'That status transition is no longer available. Reload the task before choosing a new status.',
+  invalid_assignee: 'Choose an active assignee with task access for this client, or clear the assignee.',
   conflict:
     'The record changed or conflicts with an existing record. Reload current data before trying again.',
   last_administrator: 'At least one active administrator must remain.',

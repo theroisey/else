@@ -1,6 +1,6 @@
 ---
 type: decision
-status: backend-review
+status: owner-merged
 created: 2026-10-01
 tags:
   - tasks
@@ -25,7 +25,7 @@ Every write uses the existing correlated audit transaction. Task snapshots add o
 
 Migration 000007 is additive. Down refuses task rows, task audit history and new/revoked granular permission assignment history; it removes only untouched seed links and restores the administration-era audit contract. Empty up/down/up passes, and existing populated clients remain intact during unused-task rollback. Older rollback tests explicitly step past empty migration 7 before asserting their original guards. Drain writers for the DDL/audit constraint locks; do not erase history to make rollback succeed.
 
-Verification covers all 49 state pairs, timestamps/reopening/archive, exact client isolation, granular and legacy capabilities, candidate privacy, disabled/revoked references, atomic audit failure, bounded pages/filters, runtime denial and migrations. Four lock-wait races prove fresh actor/assignee/parent checks; concurrent revisions commit exactly one event. Local full PostgreSQL 17.11 race suite, Go checks/build, 72 frontend tests and five existing browser flows pass. Final-head CI must verify pinned PostgreSQL 18 and containers before this PR becomes ready.
+Verification covers all 49 state pairs, timestamps/reopening/archive, exact client isolation, granular and legacy capabilities, candidate privacy, disabled/revoked references, atomic audit failure, bounded pages/filters, runtime denial and migrations. Four lock-wait races prove fresh actor/assignee/parent checks; concurrent revisions commit exactly one event. Local full PostgreSQL 17.11 race suite, Go checks/build, 72 frontend tests and five existing browser flows pass. Owner merged backend PR #50 at `9b42a90` after all five final-head CI gates passed, including pinned PostgreSQL 18 and containers. Main run 36959187201 passed the same gates and tested-image publication. Both development branches were synchronized before #16. No deployment was performed. See [[Task Interface and Timestamp Editing]] for the frontend slice.
 
 - [API contract and rollout](../../docs/tasks.md)
 - [[Client Records and Scope History]]

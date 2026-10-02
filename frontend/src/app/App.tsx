@@ -16,6 +16,9 @@ import { ClientRoute } from '../features/clients/ClientRoute'
 const ClientsPage = lazy(() => import('../features/clients/ClientsPage').then(m => ({ default: m.ClientsPage })))
 const ClientEditorPage = lazy(() => import('../features/clients/ClientEditorPage').then(m => ({ default: m.ClientEditorPage })))
 const ClientWorkspacePage = lazy(() => import('../features/clients/ClientWorkspacePage').then(m => ({ default: m.ClientWorkspacePage })))
+const TaskListPage = lazy(() => import('../features/tasks/TaskListPage').then(m => ({ default: m.TaskListPage })))
+const TaskDetailPage = lazy(() => import('../features/tasks/TaskDetailPage').then(m => ({ default: m.TaskDetailPage })))
+const TaskEditorPage = lazy(() => import('../features/tasks/TaskEditorPage').then(m => ({ default: m.TaskEditorPage })))
 
 function AuthArea() {
   return <AuthProvider><Outlet /></AuthProvider>
@@ -37,6 +40,10 @@ export function App() {
             <Route path="clients/new" element={<ClientRoute><ClientEditorPage create /></ClientRoute>} />
             <Route path="clients/:id" element={<ClientRoute><ClientWorkspacePage /></ClientRoute>} />
             <Route path="clients/:id/edit" element={<ClientRoute><ClientEditorPage /></ClientRoute>} />
+            <Route path="clients/:id/tasks" element={<ClientRoute name="Task"><TaskListPage /></ClientRoute>} />
+            <Route path="clients/:id/tasks/new" element={<ClientRoute name="Task"><TaskEditorPage create /></ClientRoute>} />
+            <Route path="clients/:id/tasks/:taskID" element={<ClientRoute name="Task"><TaskDetailPage /></ClientRoute>} />
+            <Route path="clients/:id/tasks/:taskID/edit" element={<ClientRoute name="Task"><TaskEditorPage /></ClientRoute>} />
             <Route path="users" element={
               <PermissionGuard required={{ permission: 'users.view', scope: 'global' }}>
                 <UsersPage />
