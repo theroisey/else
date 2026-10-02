@@ -49,6 +49,10 @@ const (
 	TasksCreate        Permission = "tasks.create"
 	TasksUpdate        Permission = "tasks.update"
 	TasksDelete        Permission = "tasks.delete"
+	PlanningView       Permission = "planning.view"
+	PlanningCreate     Permission = "planning.create"
+	PlanningUpdate     Permission = "planning.update"
+	PlanningArchive    Permission = "planning.archive"
 	AnalyticsView      Permission = "analytics.view"
 	IntegrationsManage Permission = "integrations.manage"
 )
@@ -66,6 +70,7 @@ var permissionScopes = map[Permission]Scope{
 	ClientsView: Client, ClientsUpdate: Client, ClientsArchive: Client,
 	BillingView: Client, BillingManage: Client, PricingView: Client, PricingManage: Client,
 	TasksView: Client, TasksManage: Client, TasksCreate: Client, TasksUpdate: Client, TasksDelete: Client, AnalyticsView: Client, IntegrationsManage: Client,
+	PlanningView: Client, PlanningCreate: Client, PlanningUpdate: Client, PlanningArchive: Client,
 }
 
 func KnownPermission(permission Permission) bool {

@@ -17,6 +17,9 @@ func TestTaskMigrationRefusesTaskAndPermissionHistory(t *testing.T) {
 		f := newTaskFixture(t)
 		m := f.create(t, clientAID, tasks.CreateInput{Profile: taskProfile()})
 		p := provider(t, f.base)
+		if _, err := p.Down(f.base.ctx); err != nil {
+			t.Fatal("empty planning rollback failed", err)
+		}
 		if _, err := p.Down(f.base.ctx); err == nil {
 			t.Fatal("populated task rollback was allowed")
 		}
@@ -35,6 +38,9 @@ func TestTaskMigrationRefusesTaskAndPermissionHistory(t *testing.T) {
 			t.Fatal(err)
 		}
 		p := provider(t, f.base)
+		if _, err := p.Down(f.base.ctx); err != nil {
+			t.Fatal("empty planning rollback failed", err)
+		}
 		if _, err := p.Down(f.base.ctx); err == nil {
 			t.Fatal("revoked granular permission history was erased")
 		}
@@ -50,6 +56,9 @@ func TestTaskMigrationRefusesTaskAndPermissionHistory(t *testing.T) {
 			t.Fatal(err)
 		}
 		p := provider(t, f.base)
+		if _, err := p.Down(f.base.ctx); err != nil {
+			t.Fatal("empty planning rollback failed", err)
+		}
 		if _, err := p.Down(f.base.ctx); err == nil {
 			t.Fatal("task audit-only history was erased")
 		}
@@ -65,6 +74,9 @@ func TestTaskMigrationPreservesClientAndAuthorizationHistory(t *testing.T) {
 	}
 	p := provider(t, f.base)
 	if _, err := p.Down(f.base.ctx); err != nil {
+		t.Fatal("empty planning rollback failed", err)
+	}
+	if _, err := p.Down(f.base.ctx); err != nil {
 		t.Fatal("unused task rollback failed", err)
 	}
 	var before, after int
@@ -75,7 +87,7 @@ func TestTaskMigrationPreservesClientAndAuthorizationHistory(t *testing.T) {
 	if _, err := p.Up(f.base.ctx); err != nil {
 		t.Fatal("task upgrade failed", err)
 	}
-	if err := f.admin.QueryRow(f.base.ctx, `SELECT (SELECT count(*) FROM app.audit_events),(SELECT count(*) FROM app.permissions)`).Scan(&after, &keys); err != nil || after != before || keys != 22 {
+	if err := f.admin.QueryRow(f.base.ctx, `SELECT (SELECT count(*) FROM app.audit_events),(SELECT count(*) FROM app.permissions)`).Scan(&after, &keys); err != nil || after != before || keys != 26 {
 		t.Fatal("task migration changed existing history", err)
 	}
 	detail, err := f.records.Detail(ctx, f.actor, m.ID)
@@ -83,8 +95,11 @@ func TestTaskMigrationPreservesClientAndAuthorizationHistory(t *testing.T) {
 		t.Fatal("task upgrade changed client profile", err)
 	}
 	grants, err := f.authorizer.Grants(ctx, f.actor)
-	if err != nil || len(grants) != 22 {
+	if err != nil || len(grants) != 26 {
 		t.Fatal("task upgrade failed catalog compatibility", err)
+	}
+	if _, err := p.Down(f.base.ctx); err != nil {
+		t.Fatal("empty planning rollback failed", err)
 	}
 	if _, err := p.Down(f.base.ctx); err != nil {
 		t.Fatal("unused task rollback with existing client history failed", err)

@@ -374,6 +374,9 @@ func TestClientMigrationPreservesLegacyScopesAndRefusesPopulatedRollback(t *test
 		t.Fatal("legacy scope accepted a new assignment")
 	}
 	if _, err := p.Down(f.ctx); err != nil {
+		t.Fatal("empty planning rollback failed", err)
+	}
+	if _, err := p.Down(f.ctx); err != nil {
 		t.Fatal("empty task rollback failed", err)
 	}
 	if _, err := p.Down(f.ctx); err != nil {
@@ -384,6 +387,9 @@ func TestClientMigrationPreservesLegacyScopesAndRefusesPopulatedRollback(t *test
 	}
 	if _, err := c.Exec(f.ctx, `INSERT INTO app.clients(id,name) VALUES($1::uuid,'Synthetic Imported Client')`, clientAID); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := p.Down(f.ctx); err != nil {
+		t.Fatal("empty planning rollback failed", err)
 	}
 	if _, err := p.Down(f.ctx); err != nil {
 		t.Fatal("empty task rollback failed", err)

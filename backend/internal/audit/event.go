@@ -48,10 +48,11 @@ const (
 // Snapshot's initial allowlist contains universal record markers only. Domain
 // slices must add reviewed typed fields; raw DTOs/maps/strings cannot be stored.
 type Snapshot struct {
-	Exists     *bool   `json:"exists,omitempty"`
-	Revision   *int64  `json:"revision,omitempty"`
-	Status     *string `json:"status,omitempty"`
-	TaskStatus *string `json:"task_status,omitempty"`
+	Exists         *bool   `json:"exists,omitempty"`
+	Revision       *int64  `json:"revision,omitempty"`
+	Status         *string `json:"status,omitempty"`
+	TaskStatus     *string `json:"task_status,omitempty"`
+	PlanningStatus *string `json:"planning_status,omitempty"`
 }
 
 type Metadata struct {
@@ -110,6 +111,20 @@ func (e Event) encode() (before, after, metadata []byte, err error) {
 		return nil, nil, nil, ErrInvalidEvent
 	}
 	for _, snapshot := range []*Snapshot{e.Before, e.After} {
+		if snapshot != nil && snapshot.PlanningStatus != nil {
+			state := *snapshot.PlanningStatus
+			if e.ResourceKind == "plan" {
+				if state != "draft" && state != "active" && state != "completed" && state != "cancelled" {
+					return nil, nil, nil, ErrInvalidEvent
+				}
+			} else if e.ResourceKind == "milestone" {
+				if state != "planned" && state != "in_progress" && state != "completed" && state != "cancelled" {
+					return nil, nil, nil, ErrInvalidEvent
+				}
+			} else {
+				return nil, nil, nil, ErrInvalidEvent
+			}
+		}
 		if snapshot != nil && snapshot.TaskStatus != nil {
 			if e.ResourceKind != "task" {
 				return nil, nil, nil, ErrInvalidEvent
