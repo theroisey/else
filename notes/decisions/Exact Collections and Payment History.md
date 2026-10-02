@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-02
 tags:
   - billing
@@ -12,7 +12,7 @@ tags:
 
 # Exact Collections and Payment History
 
-Issue #19's [financial policy](https://github.com/theroisey/else/issues/19#issuecomment-5956500604) preceded implementation, after owner-merged audit/permission consumer prerequisites #60/#61. Both branches were synchronized at 2693164; main run 37032475739 passed all gates/publication. The [API contract](../../docs/billing.md) is the frontend seam; finance UI belongs to #20.
+Issue #19's [financial policy](https://github.com/theroisey/else/issues/19#issuecomment-5956500604) preceded implementation, after owner-merged audit/permission consumer prerequisites #60/#61. Both branches were synchronized at 2693164; main run 37032475739 passed all gates/publication. PR #62 was owner-merged at 26f2454; both development branches synchronized and main run 37038850280 passed. The [API contract](../../docs/billing.md) is the frontend seam; #20 adds [[Finance Interface and Payment Recovery]].
 
 Use positive int64 minor units with immutable reviewed currency/exponent, JSON decimal strings, and numeric aggregates that may exceed int64. Initial currency set is USD/EUR/GBP/TRY exponent2, JPY0 and KWD3. No binary float, rounding, conversion or default currency. Only explicit unpaid collection edits may change its amount; the first payment freezes it. Summaries never combine currencies or infer revenue.
 
