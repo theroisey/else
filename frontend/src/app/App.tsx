@@ -27,6 +27,7 @@ const ReminderListPage = lazy(() => import('../features/reminders/ReminderListPa
 const ReminderDetailPage = lazy(() => import('../features/reminders/ReminderDetailPage').then(m => ({ default: m.ReminderDetailPage })))
 const ReminderEditorPage = lazy(() => import('../features/reminders/ReminderEditorPage').then(m => ({ default: m.ReminderEditorPage })))
 const ActivityPage = lazy(() => import('../features/activity/ActivityPage').then(m => ({ default: m.ActivityPage })))
+const AuditPage = lazy(() => import('../features/audit/AuditPage').then(m => ({ default: m.AuditPage })))
 
 function AuthArea() {
   return <AuthProvider><Outlet /></AuthProvider>
@@ -44,11 +45,13 @@ export function App() {
           <Route path="/app" element={<ApplicationShell />}>
             <Route index element={<WorkspacePage />} />
             <Route path="access" element={<AccessPage />} />
+            <Route path="audit" element={<ClientRoute name="Audit"><AuditPage /></ClientRoute>} />
             <Route path="clients" element={<ClientRoute><ClientsPage /></ClientRoute>} />
             <Route path="clients/new" element={<ClientRoute><ClientEditorPage create /></ClientRoute>} />
             <Route path="clients/:id" element={<ClientRoute><ClientWorkspacePage /></ClientRoute>} />
             <Route path="clients/:id/edit" element={<ClientRoute><ClientEditorPage /></ClientRoute>} />
             <Route path="clients/:id/activity" element={<ClientRoute name="Activity"><ActivityPage /></ClientRoute>} />
+            <Route path="clients/:id/audit" element={<ClientRoute name="Audit"><AuditPage client /></ClientRoute>} />
             <Route path="clients/:id/tasks" element={<ClientRoute name="Task"><TaskListPage /></ClientRoute>} />
             <Route path="clients/:id/tasks/new" element={<ClientRoute name="Task"><TaskEditorPage create /></ClientRoute>} />
             <Route path="clients/:id/tasks/:taskID" element={<ClientRoute name="Task"><TaskDetailPage /></ClientRoute>} />

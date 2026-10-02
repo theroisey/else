@@ -4,15 +4,16 @@ import { createPortal } from 'react-dom'
 
 const focusableSelector = [
   'a[href]', 'button:not([disabled])', 'input:not([disabled])',
-  'select:not([disabled])', 'textarea:not([disabled])', '[tabindex]:not([tabindex="-1"])',
+  'select:not([disabled])', 'textarea:not([disabled])', 'summary', '[tabindex]:not([tabindex="-1"])',
 ].join(',')
 
-export function Dialog({ open, title, description, children, onClose }: {
+export function Dialog({ open, title, description, children, onClose, eyebrow = 'Confirmation' }: {
   open: boolean
   title: string
   description: string
   children: ReactNode
   onClose: () => void
+  eyebrow?: string
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleID = useId()
@@ -86,7 +87,7 @@ export function Dialog({ open, title, description, children, onClose }: {
     >
       <div className="ui-dialog-panel">
         <div>
-          <p className="eyebrow">Confirmation</p>
+          <p className="eyebrow">{eyebrow}</p>
           <h2 className="mt-2 text-lg font-semibold tracking-tight" id={titleID}>{title}</h2>
           <p className="mt-2 text-sm leading-6 text-muted" id={descriptionID}>{description}</p>
         </div>

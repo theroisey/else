@@ -1,6 +1,6 @@
 ---
 type: decision
-status: backend-review
+status: frontend-review
 created: 2026-10-02
 tags:
   - audit
@@ -11,7 +11,7 @@ tags:
 
 # Audit Read Scope and Safe Inspection
 
-Issue #28 follows owner-merged activity interface #57 at `1a30014`. Both permanent branches were synchronized; main run 37011258324 passed all gates/publication. [Policy contract 5953240480](https://github.com/theroisey/else/issues/28#issuecomment-5953240480) preceded implementation. The [read API guide](../../docs/audit-reader.md) records the backend contract. Its frontend table/detail/diff consumer follows owner API review/merge; #28 remains open.
+Issue #28 follows owner-merged activity interface #57 at `1a30014`. Both permanent branches were synchronized; main run 37011258324 passed all gates/publication. [Policy contract 5953240480](https://github.com/theroisey/else/issues/28#issuecomment-5953240480) preceded implementation. The [read API guide](../../docs/audit-reader.md) records the backend contract. Owner-merged API #58 at `45db4b1` passed all main gates/publication in run 37016592527. Both development branches were synchronized; the separately reviewed [frontend consumer](../../docs/audit-interface.md) follows that merge. Owner frontend merge completes #28.
 
 Keep the established audit.view key global-only. Global audit permission exposes global security events; client-linked events additionally require a real client and current clients.view. Client-scoped role assignments cannot confer the global key. Archived clients remain inspectable. Inside visible clients the audit privilege deliberately permits cross-domain safe security markers, without requiring business-domain views; activity remains a separate narrower projection.
 
@@ -28,3 +28,11 @@ Five unit, nine integration and one HTTP adapter checks verify the read policy a
 - [[Client Activity Projection and Read Boundaries]]
 - [[Activity Timeline and Permission Refresh]]
 - [[CI and Publication]]
+
+## Frontend inspection boundary
+
+Global audit-only users can open security history; exact-client routes and linked events still require current clients.view. No business-domain grant is substituted for audit.view, and no directory/profile request expands historical IDs. Actor/grant/client changes partition the private query cache and reset cursors/detail state. Pending/failed background reads suppress cached records; closed or departed dialogs never render late results.
+
+The consumer strictly validates schema version 1 summaries, safe marker snapshots and the source enum. Decimal revision strings remain exact through int64 max; UTC strings retain microseconds in display, comparisons and filters. Safe differences enumerate only eight reviewed keys, show missing values as not recorded, and separately distinguish null versus empty snapshots. Human-readable status labels never alter timezone names or revision/time strings. Raw snapshots/source are available only within a keyboard-trapped read-only detail dialog.
+
+Twenty-four frontend audit checks and ten real-API browser flows cover access, hostile/expanded responses, filter/page consistency, stale/late records, focus restoration, exact precision, responsive overflow and history immutability. Browser events are committed through actual business APIs; read verification never seeds, rewrites or deletes audit history.
