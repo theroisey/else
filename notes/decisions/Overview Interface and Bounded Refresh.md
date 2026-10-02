@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: merged
 created: 2026-10-02
 tags:
   - overview
@@ -21,7 +21,7 @@ Refresh rechecks the session before reading the resulting actor/grant/client par
 
 Strict responses enforce binding, UTC/horizon microseconds, bounded ordered queues, static activity and unchanged exact currency arithmetic. Shared billing/activity schemas avoid duplicate financial or history policy. No write, owner expansion, cost/notes, FX or grand total enters the consumer.
 
-Verification covers 380 frontend tests and thirteen real-API browser flows, including source reconciliation above int64, all due queues, one aggregate request, no read audit writes, grant loss, archived/profile reads and desktop/tablet/mobile keyboard/overflow review. Final-head CI precedes owner review. No agent merge/deployment is authorized.
+Verification covers 380 frontend tests and thirteen real-API browser flows, including source reconciliation above int64, all due queues, one aggregate request, no read audit writes, grant loss, archived/profile reads and desktop/tablet/mobile keyboard/overflow review. Final-head [CI run 37064433230](https://github.com/theroisey/else/actions/runs/37064433230) passed all five gates. The owner merged [PR #67](https://github.com/theroisey/else/pull/67) as `15aa7012ecaf6740900f0f753cf0151908dce619`; main [run 37065393667](https://github.com/theroisey/else/actions/runs/37065393667) passed and both branches synchronized. No agent merge/deployment is authorized.
 
 - [[Client Overview and Authorized Attention]]
 - [[Authorization and Client Scope]]

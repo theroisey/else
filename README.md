@@ -14,7 +14,9 @@ Run the frontend from `frontend/` using `npm ci` and `npm run dev` with Node 24.
 
 Owner-merged Issue #21 adds the [versioned pricing backend](docs/pricing.md) and [pricing interface](docs/pricing-interface.md): exact server previews, immutable effective history, restricted internal costs and explicit collection copies with retained billing terms and lost-response recovery.
 
-Issue #23 adds the owner-merged [client overview backend](docs/client-overview.md) and separately reviewed [overview interface](docs/overview-interface.md): exact finance, bounded due tasks/reminders and safe recent activity through one read-only request with independent module grants. The editorial responsive client root links to retained profile management and real source workspaces.
+Owner-merged Issue #23 adds the [client overview backend](docs/client-overview.md) and separately reviewed [overview interface](docs/overview-interface.md): exact finance, bounded due tasks/reminders and safe recent activity through one read-only request with independent module grants. The editorial responsive client root links to retained profile management and real source workspaces.
+
+Parent #24 begins [integration security boundaries](docs/integrations.md) in separate slices. Issue #68 implements backend credential encryption/key rotation; provider connections, durable storage/routes, OAuth, revocation and synchronization remain unimplemented. No integration is reported as connected or synchronized.
 
 ## Engineering contract
 
