@@ -1,6 +1,6 @@
 # Client activity API
 
-Issue [#22](https://github.com/theroisey/else/issues/22) begins with a separately reviewed backend slice after owner-merged reminder interface [#55](https://github.com/theroisey/else/pull/55) at `0194e8c`. Both development branches were synchronized; [main run 37001360296](https://github.com/theroisey/else/actions/runs/37001360296) passed all five gates and tested-image publication. The [contract](https://github.com/theroisey/else/issues/22#issuecomment-5951504480) preceded implementation. The activity timeline follows owner review/merge of this API; #22 stays open for that consumer.
+Issue [#22](https://github.com/theroisey/else/issues/22) began with the separately reviewed API [PR #56](https://github.com/theroisey/else/pull/56), owner-merged at `d507f68` after reminder interface #55. The [contract](https://github.com/theroisey/else/issues/22#issuecomment-5951504480) preceded implementation. Both branches were synchronized after merge; [main run 37005708004](https://github.com/theroisey/else/actions/runs/37005708004) passed all five gates and tested-image publication. The separate [activity timeline](activity-interface.md) now consumes this API; #22 remains open until owner merge of its interface.
 
 ## Read contract
 
