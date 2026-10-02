@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-02
 tags:
   - billing
@@ -12,6 +12,8 @@ tags:
 # Finance Interface and Payment Recovery
 
 Issue #20 consumes owner-merged #19 at 26f2454. Both branches were synchronized; main run 37038850280 passed. [UI policy](https://github.com/theroisey/else/issues/20#issuecomment-5957528481) was recorded before implementation. See [interface guide](../../docs/billing-interface.md) and [[Exact Collections and Payment History]].
+
+Owner merged PR #63 at `347fee0`. Main run 37043928202 passed and both branches synchronized before Issue #21. Exact PR-head CI passed all five gates, including 284 frontend tests, 11 real browser flows, PostgreSQL18 and container/TLS checks.
 
 Major-unit input uses explicit reviewed currency and exact text/BigInt conversion. No Number money, rounding, default currency, FX or grand total. Summaries/statuses stay backend authoritative, independent of table filters. Guard response/client/currency/revision/page contracts. Billing-only direct routes never probe unrelated client metadata; every action needs view plus its explicit key, never billing.manage.
 

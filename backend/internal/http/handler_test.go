@@ -58,6 +58,26 @@ func TestBillingRoutesUseDedicatedProtectedAdapter(t *testing.T) {
 	}
 }
 
+func TestPricingAndCopiedSnapshotRoutesUseProtectedAdapter(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	other := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(418) })
+	protected := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(401) })
+	s, e := NewWithPricing(testConfig(t), logger, nil, other, other, other, other, other, other, other, other, other, protected)
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, path := range []string{"/api/v1/clients/11111111-1111-4111-8111-111111111111/pricing", "/api/v1/clients/11111111-1111-4111-8111-111111111111/pricing/preview", "/api/v1/clients/11111111-1111-4111-8111-111111111111/pricing/11111111-1111-4111-8111-111111111112/versions", "/api/v1/clients/11111111-1111-4111-8111-111111111111/billing/11111111-1111-4111-8111-111111111112/pricing-snapshot"} {
+		w := httptest.NewRecorder()
+		s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if w.Code != 401 {
+			t.Fatal("pricing route skipped authentication", path, w.Code)
+		}
+	}
+	if _, e := NewWithPricing(testConfig(t), logger, nil, other, other, other, other, other, other, other, other, other, nil); e == nil {
+		t.Fatal("missing pricing handler accepted")
+	}
+}
+
 func TestActivityRoutesUseDedicatedProtectedAdapter(t *testing.T) {
 	other := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(418) })
 	activity := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(401) })
