@@ -8,6 +8,7 @@ const permissionScopes: Record<string, 'global' | 'client'> = {
   'clients.view': 'client', 'clients.update': 'client', 'clients.archive': 'client',
   'billing.view': 'client', 'billing.manage': 'client', 'pricing.view': 'client', 'pricing.manage': 'client',
   'tasks.view': 'client', 'tasks.manage': 'client', 'analytics.view': 'client', 'integrations.manage': 'client',
+  'tasks.create': 'client', 'tasks.update': 'client', 'tasks.delete': 'client',
 }
 
 export type PermissionRequirement = { permission: string; scope: 'global' } | { permission: string; scope: 'client'; clientID: string }

@@ -20,8 +20,21 @@ type Server struct {
 	auth           http.Handler
 	administration http.Handler
 	clients        http.Handler
+	tasks          http.Handler
 	draining       atomic.Bool
 	httpServer     *http.Server
+}
+
+func NewWithTasks(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks http.Handler) (*Server, error) {
+	if tasks == nil {
+		return nil, fmt.Errorf("task handler is required")
+	}
+	server, err := NewWithClients(c, logger, readiness, auth, administration, clients)
+	if err != nil {
+		return nil, err
+	}
+	server.tasks = tasks
+	return server, nil
 }
 
 func NewWithClients(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients http.Handler) (*Server, error) {

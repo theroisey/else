@@ -38,6 +38,27 @@ func TestClientRoutesUseProtectedAdapter(t *testing.T) {
 	}
 }
 
+func TestTaskRoutesUseDedicatedProtectedAdapter(t *testing.T) {
+	other := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(418) })
+	tasks := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(401) })
+	s, err := NewWithTasks(testConfig(t), slog.New(slog.NewJSONHandler(io.Discard, nil)), nil, other, other, other, tasks)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, suffix := range []string{"", "/assignees", "/11111111-1111-4111-8111-111111111111", "/11111111-1111-4111-8111-111111111111/status", "/11111111-1111-4111-8111-111111111111/archive"} {
+		w := httptest.NewRecorder()
+		s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/clients/11111111-1111-4111-8111-111111111111/tasks"+suffix, nil))
+		if w.Code != 401 {
+			t.Fatal("task route bypassed dedicated adapter")
+		}
+	}
+	w := httptest.NewRecorder()
+	s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/clients/11111111-1111-4111-8111-111111111111", nil))
+	if w.Code != 418 {
+		t.Fatal("client route routed into task handler")
+	}
+}
+
 func testConfig(t *testing.T) config.Config {
 	t.Helper()
 	c, err := config.Load(func(string) (string, bool) { return "", false })

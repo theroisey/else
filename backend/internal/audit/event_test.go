@@ -94,3 +94,28 @@ func TestErrorRetainsCauseWithoutExposingIt(t *testing.T) {
 		t.Fatal("unsafe or lost error cause")
 	}
 }
+
+func TestTaskActionsAndStateAreResourceBound(t *testing.T) {
+	for _, action := range []Action{Created, Updated, Completed, Cancelled, Archived} {
+		for _, status := range []string{"backlog", "todo", "in_progress", "blocked", "review", "done", "cancelled"} {
+			e := validEvent()
+			e.ResourceKind = "task"
+			e.Action = action
+			e.After = &Snapshot{TaskStatus: &status}
+			if _, _, _, err := e.encode(); err != nil {
+				t.Fatal("task audit rejected", err)
+			}
+			e.ResourceKind = "client"
+			if _, _, _, err := e.encode(); !errors.Is(err, ErrInvalidEvent) {
+				t.Fatal("task audit escaped its resource kind")
+			}
+		}
+	}
+	status := "secret=untrusted"
+	e := validEvent()
+	e.ResourceKind = "task"
+	e.After = &Snapshot{TaskStatus: &status}
+	if _, _, _, err := e.encode(); !errors.Is(err, ErrInvalidEvent) {
+		t.Fatal("untrusted task state accepted")
+	}
+}

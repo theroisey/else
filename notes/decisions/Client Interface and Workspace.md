@@ -1,6 +1,6 @@
 ---
 type: decision
-status: frontend-review
+status: owner-merged
 created: 2026-10-01
 tags:
   - clients
@@ -12,6 +12,8 @@ tags:
 # Client Interface and Workspace
 
 Issue #14 follows owner-merged backend PR #48 at `4efc7e8`. Main run 36927463099 passed all five gates and tested-image publication; both permanent branches were synchronized. Scope was recorded before implementation in [comment 5940812195](https://github.com/theroisey/else/issues/14#issuecomment-5940812195).
+
+Frontend PR #49 is owner-merged at `97aae34`. Main [run 36933129639](https://github.com/theroisey/else/actions/runs/36933129639) passed all five gates and tested-image publication. Both branches were synchronized before [[Task State and Assignee Scope]] (#15). No production deployment was performed.
 
 Lists use authorized API summaries, fixed 25-record UUID keysets and the actual name/tag/status/sort contract. Filters remain in memory and applying them resets cursor history. No totals or name sorting are invented. Contacts/profile details load only after exact-client view checks. Creation requires global create but grants no access; create-only identities submit without collection/detail reads. Edit requires exact view+update; archive requires exact view+archive and explicit confirmation of the captured revision.
 

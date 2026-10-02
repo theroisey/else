@@ -4,13 +4,15 @@ Related Issue: [#4](https://github.com/theroisey/else/issues/4).
 
 ## Implemented contract
 
-The API owns a bounded pgx connection pool using an explicit runtime `DATABASE_URL`. The separate migration executable uses `MIGRATION_DATABASE_URL`, pgx's database/sql adapter, and embedded Goose SQL migrations. The HTTP process never performs schema changes. Issue #7 adds [protected audit storage](audit-log.md); Issue #8 adds [identity/session storage](identity.md); Issue #9 adds [protected authorization storage](authorization.md); Issue #10 adds [guarded administration contracts](administration.md). Client and financial domain tables remain unimplemented.
+The API owns a bounded pgx connection pool using an explicit runtime `DATABASE_URL`. The separate migration executable uses `MIGRATION_DATABASE_URL`, pgx's database/sql adapter, and embedded Goose SQL migrations. The HTTP process never performs schema changes. Issue #7 adds [protected audit storage](audit-log.md); Issue #8 adds [identity/session storage](identity.md); Issue #9 adds [protected authorization storage](authorization.md); Issue #10 adds [guarded administration contracts](administration.md). Issues #13 and #15 add clients and tasks; financial domain tables remain unimplemented.
 
 API startup now requires valid database configuration and a successful real connection check. This intentionally replaces Issue #2's unconfigured executable: configure PostgreSQL before starting the API. Invalid/missing settings or unavailable startup dependencies exit with a safe structured error. Once serving, `/health` remains process liveness and `/ready` calls the real pool with the existing request deadline. An outage produces readiness 503 while liveness remains 200; reconnecting restores readiness.
 
 Readiness currently verifies connection availability, not domain-table compatibility or provider health. The deployment sequence must apply migrations and reviewed runtime grants before starting a version that needs them; identity and administration APIs require their schema contracts.
 
 The [client contract](clients.md) adds migration 000006: real client/contact/tag relations, preserved legacy scope IDs and a foreign key for existing role assignment history. New scoped assignments require an active client. Scope-only rollback preserves old grants; populated rollback is refused. Apply owner migrations and reviewed runtime EXECUTE grants before serving the client API.
+
+The [task contract](tasks.md) adds migration 000007: relational tasks/tags, explicit transitions and timestamp consistency, scoped assignee enforcement, granular capability definitions and safe task audit markers/actions. Populated task/audit or changed granular assignment history blocks rollback. Existing client history survives an unused-task down/up cycle. Drain writers for migration DDL and reapply narrow runtime grants before serving the task API.
 
 ## Configuration and credentials
 
