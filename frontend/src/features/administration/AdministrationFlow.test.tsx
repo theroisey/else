@@ -270,6 +270,71 @@ it('keeps built-in role definitions read only even for a role administrator', as
   expect(fetcher.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
 })
 
+it('reads and edits an expanded billing role through the existing confirmed administration flow', async () => {
+  const permissions = [
+    'billing.view',
+    'billing.create',
+    'billing.update',
+    'billing.delete',
+  ]
+  const billingRole = {
+    ...role,
+    display_name: 'Synthetic Collections',
+    permissions,
+  }
+  const session: Session = {
+    ...identity,
+    user: {
+      ...identity.user,
+      permissions: [
+        ...identity.user.permissions,
+        ...permissions.map((permission) => ({
+          permission,
+          scope: 'global' as const,
+        })),
+      ],
+    },
+  }
+  const { fetcher } = setup('/app/roles', session, (path) => {
+    if (path.startsWith('/api/v1/roles?')) return json(page([billingRole]))
+    if (path === '/api/v1/permissions')
+      return json({
+        data: permissions.map((permission) => ({
+          permission,
+          scope: 'client',
+          description: 'Synthetic billing capability',
+        })),
+      })
+  })
+  const u = userEvent.setup()
+  await u.click(
+    await screen.findByRole('button', {
+      name: 'Edit permissions for Synthetic Collections',
+    }),
+  )
+  for (const permission of permissions) {
+    expect(
+      await screen.findByRole('checkbox', {
+        name: new RegExp(permission.replace('.', '\\.')),
+      }),
+    ).toBeChecked()
+  }
+  await u.click(screen.getByRole('checkbox', { name: /billing\.delete/ }))
+  await u.click(screen.getByRole('button', { name: 'Review changes' }))
+  expect(fetcher.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(
+    false,
+  )
+  await u.click(screen.getByRole('button', { name: 'Replace permissions' }))
+  await screen.findByText('Role permissions updated.')
+  const put = fetcher.mock.calls.find(([, init]) => init?.method === 'PUT')
+  expect(put?.[0]).toBe(`/api/v1/roles/${roleID}/permissions`)
+  expect(JSON.parse(put?.[1]?.body as string)).toEqual({
+    permissions: ['billing.view', 'billing.create', 'billing.update'],
+    expected_revision: 1,
+    confirm: true,
+  })
+})
+
 it('assigns a role at a confirmed client scope and revokes only the selected assignment', async () => {
   const assignment = '33333333-3333-4333-8333-333333333333'
   let assigned = false

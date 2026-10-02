@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#19](https://github.com/theroisey/else/issues/19), beginning with the [finance audit consumer prerequisite](audit-interface.md#finance-audit-compatibility-prerequisite). Issues #1–#18, #22 and #28 are owner-merged. Audit viewer #59 merged at `66a68b0`; both development branches were synchronized. Main [run 37021003854](https://github.com/theroisey/else/actions/runs/37021003854) passed all five gates and tested-image publication. The existing audit consumer must explicitly accept billing.payment_recorded/cancelled before separately reviewed collections/payment writes can emit them. Financial policy and the backend API remain subsequent work under #19; finance UI follows in #20.
+Current slice: [#19](https://github.com/theroisey/else/issues/19), preparing [billing permission consumers](authorization.md#current-identity-representation) before the backend expands its catalog. Issues #1–#18, #22 and #28 are owner-merged. The [finance audit consumer prerequisite](audit-interface.md#finance-audit-compatibility-prerequisite) #60 merged at `c030361`; both development branches were synchronized. Main [run 37024225863](https://github.com/theroisey/else/actions/runs/37024225863) passed all five gates and tested-image publication. The strict administration catalog/role parsers and capability checks must recognize billing.create/update/delete before backend additions reach those consumers. The runtime catalog remains at 30 keys. Financial policy and the collections/payment API remain subsequent work under #19; finance UI follows in #20.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#18, #22 and #28 are owner-merged. Issue #19 begins with a narrow audit-consumer prerequisite, followed by separately reviewed financial policy/collections/payment API work. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#18, #22 and #28 are owner-merged. Issue #19's audit-consumer prerequisite is owner-merged; the current permission-consumer prerequisite prepares strict administration parsing and scoped capability checks. Overall finance acceptance remains pending, followed by separately reviewed financial policy/collections/payment API work. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
