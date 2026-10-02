@@ -801,3 +801,121 @@ test('reminders preserve explicit timezone intent, historical references and imm
   expect(database(`SELECT status FROM app.tasks WHERE id='${taskID}'`)).toBe('todo')
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
 })
+
+test('activity reads confirmed business events, paginates, refreshes and obeys current access', async ({ page }, testInfo) => {
+  test.setTimeout(120_000)
+  const clientID = 'e5555555-5555-4555-8555-555555555555',
+    actorID = 'e1111111-1111-4111-8111-111111111111',
+    roleID = 'e2222222-2222-4222-8222-222222222222',
+    path = `/app/clients/${clientID}/activity`
+  database(`
+    INSERT INTO app.client_scopes(id) VALUES ('${clientID}');
+    INSERT INTO app.clients(id,name) VALUES ('${clientID}','Synthetic Activity Client');
+    INSERT INTO app.users(id,email,display_name,password_hash)
+      SELECT '${actorID}','activity.fixture@example.com','Activity Reader Fixture',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444';
+    INSERT INTO app.roles(id,role_key,display_name) VALUES('${roleID}','activity_fixture','Synthetic activity reader');
+    INSERT INTO app.role_permissions(id,role_id,permission_key)
+      SELECT gen_random_uuid(),'${roleID}',permission_key FROM app.permissions WHERE permission_key IN ('clients.view','clients.update','clients.archive','activity.view','tasks.view','tasks.create');
+    INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),'${actorID}','${roleID}','client','${clientID}');
+  `)
+  await page.goto(path)
+  await page.getByLabel('Email', { exact: true }).fill('activity.fixture@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'No activity on this page', exact: true })).toBeVisible()
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await markTaskScreenshot(page)
+  await page.screenshot({ path: testInfo.outputPath('activity-empty.png'), fullPage: true })
+
+  // Create committed events through authenticated business APIs. Never seed,
+  // rewrite or delete audit history to prepare this activity consumer test.
+  const written = await page.evaluate(async clientID => {
+    const token = document.cookie.split('; ').find(c => c.startsWith('else_csrf='))?.slice('else_csrf='.length) ?? ''
+    const headers = { 'Content-Type': 'application/json', 'X-CSRF-Token': token }
+    const statuses: number[] = []
+    for (let revision = 1; revision <= 26; revision++) {
+      const response = await fetch(`/api/v1/clients/${clientID}`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ name: `Synthetic private profile ${revision}`, notes: 'Synthetic private contact note', expected_revision: revision }),
+      })
+      statuses.push(response.status)
+      if (!response.ok) return statuses
+    }
+    const response = await fetch(`/api/v1/clients/${clientID}/tasks`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ title: 'Synthetic private task title', description: 'Synthetic private task description', priority: 'medium', assignee_id: null, start_at: null, due_at: null, tags: [] }),
+    })
+    statuses.push(response.status)
+    return statuses
+  }, clientID)
+  expect(written).toEqual([...Array(26).fill(200), 201])
+  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE client_id='${clientID}'`)).toBe('27')
+  const reads: string[] = []
+  page.on('request', request => {
+    if (request.method() === 'GET' && new URL(request.url()).pathname.startsWith('/api/v1/')) reads.push(new URL(request.url()).pathname)
+  })
+  const feed = page.getByRole('list', { name: 'Client activity', exact: true })
+  await page.getByRole('button', { name: 'Refresh activity', exact: true }).click()
+  await expect(feed.getByRole('listitem')).toHaveCount(25)
+  await expect(feed.getByRole('listitem').first()).toContainText('Task created.')
+  await expect(page.locator('time').first()).toHaveText(/T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z$/)
+  await expect(page.locator('body')).not.toContainText('Synthetic private')
+  await expect(page.getByRole('link', { name: 'Tasks', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Planning', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Create|Edit|Archive|Complete/ })).toHaveCount(0)
+  for (const viewport of [{ width: 1440, height: 1100 }, { width: 820, height: 1100 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport)
+    await markTaskScreenshot(page)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`activity-${viewport.width}.png`), fullPage: true })
+  }
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(feed.getByRole('listitem')).toHaveCount(2)
+  await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled()
+  await page.getByRole('button', { name: 'Previous', exact: true }).click()
+  await expect(feed.getByRole('listitem')).toHaveCount(25)
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(feed.getByRole('listitem')).toHaveCount(2)
+
+  expect(await page.evaluate(async clientID => {
+    const token = document.cookie.split('; ').find(c => c.startsWith('else_csrf='))?.slice('else_csrf='.length) ?? ''
+    const response = await fetch(`/api/v1/clients/${clientID}/archive`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token }, body: JSON.stringify({ expected_revision: 27, confirm: true }) })
+    return response.status
+  }, clientID)).toBe(200)
+  await page.getByRole('button', { name: 'Refresh activity', exact: true }).click()
+  await expect(feed.getByRole('listitem').first()).toContainText('Client archived.')
+  await expect(page.getByRole('button', { name: 'Previous', exact: true })).toBeDisabled()
+  const count = database(`SELECT count(*)::text FROM app.audit_events WHERE client_id='${clientID}'`)
+  expect(count).toBe('28')
+
+  await page.route(`**/api/v1/clients/${clientID}/activity?*`, async handler => {
+    const response = await handler.fetch()
+    const body = await response.json()
+    body.data[0].actor_name = 'Synthetic private leaked actor'
+    await handler.fulfill({ response, json: body })
+  })
+  await page.getByRole('button', { name: 'Refresh activity', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Unable to complete')
+  await expect(feed).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Synthetic private leaked actor')
+  await markTaskScreenshot(page)
+  await page.screenshot({ path: testInfo.outputPath('activity-error.png'), fullPage: true })
+  await page.unroute(`**/api/v1/clients/${clientID}/activity?*`)
+  await page.getByRole('button', { name: 'Try again', exact: true }).click()
+  await expect(feed.getByRole('listitem').first()).toContainText('Client archived.')
+  expect(reads.every(url => url === `/api/v1/clients/${clientID}/activity` || url === '/api/v1/auth/session')).toBe(true)
+
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${roleID}' AND permission_key IN ('tasks.view','tasks.create','clients.update','clients.archive')`)
+  await page.goto('/app/access')
+  await page.getByRole('button', { name: 'Refresh access', exact: true }).click()
+  await expect(page.getByRole('cell', { name: 'tasks.view', exact: true })).toHaveCount(0)
+  await page.goto(path)
+  await expect(feed.getByRole('listitem').first()).toContainText('Client archived.')
+  await expect(feed).not.toContainText('Task created.')
+  await expect(page.getByRole('link', { name: 'Tasks', exact: true })).toHaveCount(0)
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${roleID}' AND permission_key='activity.view'`)
+  await page.getByRole('button', { name: 'Refresh activity', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
+  await expect(feed).toHaveCount(0)
+  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE client_id='${clientID}'`)).toBe(count)
+})

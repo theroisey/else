@@ -9,6 +9,7 @@ export function reminderPermissions(grants: readonly Grant[], clientID: string) 
     create: view && has('reminders.create'),
     update: view && has('reminders.update'),
     clientView: has('clients.view'),
+    activityView: has('clients.view') && has('activity.view'),
     taskView: has('tasks.view'),
     planningView: has('planning.view'),
   }

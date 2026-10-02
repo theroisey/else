@@ -63,6 +63,7 @@ export function ReminderHeader({
         <Link className={buttonStyles({ size: 'compact' })} to={pagePath(clientID)}>
           Reminders
         </Link>
+        {permissions.activityView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/activity`}>Activity</Link> : null}
       </nav>
       {context?.status === 'archived' ? (
         <p role="status" className="mb-4">

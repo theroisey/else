@@ -48,6 +48,7 @@ export function TaskHeader({
         </Link>
         {operation.permissions.reminderView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/reminders`}>Reminders</Link> : null}
         {operation.permissions.planningView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/plans`}>Planning</Link> : null}
+        {operation.permissions.activityView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/activity`}>Activity</Link> : null}
       </nav>
       {parent?.status === 'archived' ? (
         <p className="mb-4 rounded-md border border-line bg-surface-subtle p-3 text-sm">
