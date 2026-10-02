@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#18](https://github.com/theroisey/else/issues/18), the separately reviewed [one-time reminder backend](reminders.md). Issues #1–#17 are owner-merged. Planning interface PR #53 merged at `60c8c59`, and both development branches were synchronized. Main [run 36982743970](https://github.com/theroisey/else/actions/runs/36982743970) passed all five gates and tested-image publication. Reminder frontend work follows owner review/merge of this API contract; #18 remains open until that interface is delivered.
+Current slice: [#18](https://github.com/theroisey/else/issues/18), the separately reviewed [client reminder interface](reminder-interface.md). Issues #1–#17 and reminder backend PR #54 are owner-merged. #54 merged at `59e0aa2`, and both development branches were synchronized. Main [run 36994556915](https://github.com/theroisey/else/actions/runs/36994556915) passed all five gates and tested-image publication. The [API](reminders.md) and interface provide one-time schedules, explicit timezone occurrences, historical owners/resource IDs and audited terminal state. Owner merge of the frontend closes #18.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#17 are merged. Issue #18 adds timezone-aware client reminders through separately reviewed backend and frontend slices. The backend references #18 and leaves it open; the frontend completes it after owner review/merge. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#17 are merged. Issue #18 adds timezone-aware client reminders through separately reviewed backend and frontend slices. The backend is owner-merged; the separately reviewed frontend closes #18 after owner review/merge. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
