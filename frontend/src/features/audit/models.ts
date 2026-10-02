@@ -26,7 +26,8 @@ export const eventType = z.string().refine((v) => {
       (action === 'disabled' && resource === 'user') ||
       (action === 'permission_changed' && resource === 'role') ||
       (action === 'completed' && ['task', 'reminder'].includes(resource!)) ||
-      (action === 'cancelled' && resource === 'task') ||
+      (action === 'cancelled' && ['task', 'billing'].includes(resource!)) ||
+      (action === 'payment_recorded' && resource === 'billing') ||
       (action === 'dismissed' && resource === 'reminder'))
   )
 })

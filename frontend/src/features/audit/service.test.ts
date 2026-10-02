@@ -31,6 +31,69 @@ beforeEach(() => {
   fetcher.mockReset()
   vi.stubGlobal('fetch', fetcher)
 })
+it.each(['billing.payment_recorded', 'billing.cancelled'])(
+  'accepts the reviewed %s action without expanding safe fields or scope',
+  async (type) => {
+    const row = event(1, { event_type: type, resource_kind: 'billing' })
+    const record = {
+      ...row,
+      before_state: { revision: '1' },
+      after_state: { revision: '2' },
+      metadata: { source: 'http' },
+    }
+    expect(parsePage(page([row])).data).toEqual([row])
+    expect(parseDetail({ data: record }).event_type).toBe(type)
+    expect(
+      validateFilters({ ...emptyFilters, event_type: type }).event_type,
+    ).toBe(type)
+    expect(
+      auditPermissions(identity.user.permissions, clientID).allows(row),
+    ).toBe(true)
+    expect(auditPermissions([identity.user.permissions[0]!]).allows(row)).toBe(
+      false,
+    )
+    fetcher.mockResolvedValueOnce(json(page([row])))
+    await service.list(
+      clientID,
+      { ...emptyFilters, event_type: type },
+      '',
+      new AbortController().signal,
+    )
+    expect(fetcher.mock.calls[0]![0]).toContain(`event_type=${type}`)
+    fetcher.mockResolvedValueOnce(json({ data: record }))
+    expect(
+      await service.inspect(clientID, row, new AbortController().signal),
+    ).toEqual(record)
+    for (const action of [
+      'task.payment_recorded',
+      'reminder.cancelled',
+      'billing.refunded',
+      type + '.private',
+    ])
+      expect(() => parsePage(page([{ ...row, event_type: action }]))).toThrow(
+        APIError,
+      )
+    expect(() =>
+      parseDetail({
+        data: {
+          ...record,
+          after_state: { amount_minor: '100', currency: 'USD' },
+        },
+      }),
+    ).toThrow(APIError)
+    expect(() =>
+      parseDetail({
+        data: {
+          ...record,
+          metadata: {
+            source: 'http',
+            payment_reference: 'Synthetic private reference',
+          },
+        },
+      }),
+    ).toThrow(APIError)
+  },
+)
 it('requires a global audit capability and independent client visibility, with no business-domain grants', () => {
   const grants = identity.user.permissions
   expect(auditPermissions(grants, clientID).allows(event())).toBe(true)

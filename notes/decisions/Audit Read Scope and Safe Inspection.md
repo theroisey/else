@@ -1,6 +1,6 @@
 ---
 type: decision
-status: frontend-review
+status: merged
 created: 2026-10-02
 tags:
   - audit
@@ -36,3 +36,9 @@ Global audit-only users can open security history; exact-client routes and linke
 The consumer strictly validates schema version 1 summaries, safe marker snapshots and the source enum. Decimal revision strings remain exact through int64 max; UTC strings retain microseconds in display, comparisons and filters. Safe differences enumerate only eight reviewed keys, show missing values as not recorded, and separately distinguish null versus empty snapshots. Human-readable status labels never alter timezone names or revision/time strings. Raw snapshots/source are available only within a keyboard-trapped read-only detail dialog.
 
 Twenty-four frontend audit checks and ten real-API browser flows cover access, hostile/expanded responses, filter/page consistency, stale/late records, focus restoration, exact precision, responsive overflow and history immutability. Browser events are committed through actual business APIs; read verification never seeds, rewrites or deletes audit history.
+
+## Owner merge and finance event compatibility
+
+Owner-merged audit viewer #59 at `66a68b0` completed #28. Main run 37021003854 passed all five gates and tested-image publication. Both permanent branches were synchronized. Issue #19 requires billing.payment_recorded/cancelled; their existing strict audit action consumer must be extended before the financial writer emits them. This prerequisite accepts only those two billing actions. It preserves the existing eight safe markers, source enum, decimal revisions, exact timestamps and global/client authorization. No monetary field or payment reference becomes readable. Four additional contract/component cases verify safe inspection and reject other domain actions and unreviewed monetary/reference expansion.
+
+Finance amount/currency/refund/reversal/overpayment/rounding/overdue policy remains to be recorded in #19 before financial implementation. No finance writes or UI are implemented in this consumer prerequisite.

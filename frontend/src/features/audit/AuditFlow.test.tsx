@@ -63,6 +63,42 @@ function setup(
     },
   }
 }
+it.each(['billing.payment_recorded', 'billing.cancelled'])(
+  'inspects the reviewed %s event with existing safe differences and no monetary expansion',
+  async (type) => {
+    const row = event(1, { event_type: type, resource_kind: 'billing' })
+    setup(identity, (url) =>
+      json(
+        url.includes('?')
+          ? page([row])
+          : {
+              data: {
+                ...row,
+                before_state: { revision: '1' },
+                after_state: { revision: '2' },
+                metadata: { source: 'http' },
+              },
+            },
+      ),
+    )
+    const u = userEvent.setup()
+    await u.click(
+      await screen.findByRole('button', {
+        name: `Inspect ${type} event ${row.id}`,
+      }),
+    )
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Audit event details',
+    })
+    await within(dialog).findByRole('row', { name: 'Revision 1 2' })
+    expect(within(dialog).getByText(type)).toBeVisible()
+    expect(
+      screen.queryByText(/amount_minor|payment_reference/),
+    ).not.toBeInTheDocument()
+    await u.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  },
+)
 it('reads global history with exact references and no directory calls, raw metadata or write controls', async () => {
   const { fetcher } = setup()
   const table = await screen.findByRole('table', { name: 'Audit events' })
@@ -163,7 +199,9 @@ it('opens keyboard accessible details with exact safe differences, traps focus a
     within(dialog).getByRole('button', { name: 'Close details' }),
   ).toHaveFocus()
   await u.tab({ shift: true })
-  expect(within(dialog).getByText('Raw safe snapshots and metadata')).toHaveFocus()
+  expect(
+    within(dialog).getByText('Raw safe snapshots and metadata'),
+  ).toHaveFocus()
   await u.tab()
   expect(
     within(dialog).getByRole('button', { name: 'Close details' }),

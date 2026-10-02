@@ -1,5 +1,7 @@
 # Authorized audit inspection interface
 
+Owner-merged [PR #59](https://github.com/theroisey/else/pull/59) at `66a68b0` completed #28. Main [run 37021003854](https://github.com/theroisey/else/actions/runs/37021003854) passed all gates/publication; both permanent development branches were synchronized before the next slice.
+
 Related Issue: [#28](https://github.com/theroisey/else/issues/28). This frontend consumes the owner-merged [audit-read API](audit-reader.md), [PR #58](https://github.com/theroisey/else/pull/58) at `45db4b1`. Both development branches were synchronized before source edits. Main [run 37016592527](https://github.com/theroisey/else/actions/runs/37016592527) passed all five gates and tested-image publication. The [frontend contract](https://github.com/theroisey/else/issues/28#issuecomment-5954097210) was recorded before implementation. Owner frontend review/merge completes #28.
 
 ## Routes, scope and navigation
@@ -45,3 +47,11 @@ Desktop (1440), tablet (768) and mobile (390) screenshots use explicitly isolate
 - [Empty state](screenshots/audit-empty.png), [safe error](screenshots/audit-error-mobile.png).
 
 Local PostgreSQL 17.11 is disposable. Final-head CI verifies PostgreSQL 18, Go regressions, containers, frontend and all ten browser flows before readiness. This slice changes no backend/schema/runtime grant, permission catalog/seed, dependency or audit-writing policy. No production migration, merge or deployment is performed.
+
+## Finance audit compatibility prerequisite
+
+Issue [#19](https://github.com/theroisey/else/issues/19) requires `billing.payment_recorded` and `billing.cancelled`. The existing generic `billing.created`/`billing.updated` actions already satisfy this consumer's reviewed action syntax. The [preimplementation contract](https://github.com/theroisey/else/issues/19#issuecomment-5954839918) records a separately reviewed prerequisite: explicitly accept those two additional billing actions before finance writes can emit them. Their filters and summary/detail inspection reuse the existing immutable reference and safe-marker contracts.
+
+This does not widen domain or client access, add monetary snapshot keys or expose payment references. Other resource/action combinations, refund actions, unreviewed money/currency fields and expanded source metadata remain rejected. Existing decimal revision strings and exact UTC times retain their representations. Four additional contract/component cases exercise both actions through list/filter/detail/inspection and retain scope/redaction negatives, bringing focused audit coverage to 28 checks. Full frontend/browser/PostgreSQL/container CI remains required before readiness. No new browser event is fabricated; the unchanged ten real-API flows verify existing behavior.
+
+This prerequisite implements no financial calculation, backend/schema/catalog/seed, finance UI or dependency change. Issue #19's financial policy and collections/payment API remain separate subsequent work; #19 stays open and its overall acceptance is pending. Owner merge of this consumer compatibility PR must precede new financial writes.
