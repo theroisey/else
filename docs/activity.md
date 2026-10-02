@@ -1,6 +1,6 @@
 # Client activity API
 
-Issue [#22](https://github.com/theroisey/else/issues/22) began with the separately reviewed API [PR #56](https://github.com/theroisey/else/pull/56), owner-merged at `d507f68` after reminder interface #55. The [contract](https://github.com/theroisey/else/issues/22#issuecomment-5951504480) preceded implementation. Both branches were synchronized after merge; [main run 37005708004](https://github.com/theroisey/else/actions/runs/37005708004) passed all five gates and tested-image publication. The separate [activity timeline](activity-interface.md) now consumes this API; #22 remains open until owner merge of its interface.
+Issue [#22](https://github.com/theroisey/else/issues/22) began with the separately reviewed API [PR #56](https://github.com/theroisey/else/pull/56), owner-merged at `d507f68` after reminder interface #55. The [contract](https://github.com/theroisey/else/issues/22#issuecomment-5951504480) preceded implementation. Both branches were synchronized after merge; [main run 37005708004](https://github.com/theroisey/else/actions/runs/37005708004) passed all five gates and tested-image publication. The [activity timeline](activity-interface.md) completed #22 through owner-merged [PR #57](https://github.com/theroisey/else/pull/57) at `1a30014`; the separate [audit reader](audit-reader.md) follows in #28.
 
 ## Read contract
 

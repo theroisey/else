@@ -24,8 +24,21 @@ type Server struct {
 	planning       http.Handler
 	reminders      http.Handler
 	activity       http.Handler
+	auditReader    http.Handler
 	draining       atomic.Bool
 	httpServer     *http.Server
+}
+
+func NewWithAuditReader(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks, planning, reminders, activity, auditReader http.Handler) (*Server, error) {
+	if auditReader == nil {
+		return nil, fmt.Errorf("audit reader handler is required")
+	}
+	server, err := NewWithActivity(c, logger, readiness, auth, administration, clients, tasks, planning, reminders, activity)
+	if err != nil {
+		return nil, err
+	}
+	server.auditReader = auditReader
+	return server, nil
 }
 
 func NewWithActivity(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks, planning, reminders, activity http.Handler) (*Server, error) {

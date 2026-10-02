@@ -40,3 +40,5 @@ Desktop (1440), tablet (820) and mobile (390) screenshots are visually checked w
 - [Permitted empty state](screenshots/activity-empty.png), [malformed-response error mobile](screenshots/activity-error-mobile.png).
 
 Complete race-enabled Go/PostgreSQL regressions preserve the owner-merged API. Local PostgreSQL 17.11 is disposable; final-head CI verifies PostgreSQL 18, containers and all nine browser flows before readiness. No backend/schema/runtime-grant/audit-policy change or production migration/deployment is introduced. Agents do not merge.
+
+Owner-merged [PR #57](https://github.com/theroisey/else/pull/57) at `1a30014` completed #22. Main [run 37011258324](https://github.com/theroisey/else/actions/runs/37011258324) passed all gates/publication; both branches were synchronized before [audit reads](audit-reader.md) (#28).

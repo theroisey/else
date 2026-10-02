@@ -27,5 +27,7 @@ PR #41 was owner-merged. Its implementation and documentation runs passed all fo
 - [[PostgreSQL Foundation]]
 - [[CI and Publication]]
 
+Issue #28 adds [[Audit Read Scope and Safe Inspection]] through two guarded readers and an explicit snapshot projection. Raw runtime audit SELECT and history mutation remain denied. The write infrastructure and read-recursion policy remain unchanged.
+
 - [PR #41](https://github.com/theroisey/else/pull/41)
 - [Verified implementation CI](https://github.com/theroisey/else/actions/runs/36858914108)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/theroisey/else/backend/internal/activity"
 	"github.com/theroisey/else/backend/internal/administration"
+	"github.com/theroisey/else/backend/internal/auditreader"
 	"github.com/theroisey/else/backend/internal/authorization"
 	"github.com/theroisey/else/backend/internal/clients"
 	"github.com/theroisey/else/backend/internal/config"
@@ -131,7 +132,17 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("activity_startup_failed", "error_code", "activity_startup_failed")
 		return 1
 	}
-	server, err := httpapi.NewWithActivity(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler)
+	auditService, err := auditreader.NewService(pool)
+	if err != nil {
+		logger.Error("audit_reader_startup_failed", "error_code", "audit_reader_startup_failed")
+		return 1
+	}
+	auditHandler, err := auditreader.NewHandler(auditService, authHandler, logger)
+	if err != nil {
+		logger.Error("audit_reader_startup_failed", "error_code", "audit_reader_startup_failed")
+		return 1
+	}
+	server, err := httpapi.NewWithAuditReader(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1

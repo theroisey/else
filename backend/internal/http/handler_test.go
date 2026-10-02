@@ -15,6 +15,29 @@ import (
 	"github.com/theroisey/else/backend/internal/config"
 )
 
+func TestAuditRoutesUseDedicatedProtectedAdapter(t *testing.T) {
+	other := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(418) })
+	protected := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(401) })
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	s, err := NewWithAuditReader(testConfig(t), logger, nil, other, other, other, other, other, other, other, protected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/api/v1/audit-logs", "/api/v1/audit-logs/11111111-1111-4111-8111-111111111111", "/api/v1/clients/11111111-1111-4111-8111-111111111111/audit-logs", "/api/v1/clients/11111111-1111-4111-8111-111111111111/audit-logs/private"} {
+		w := httptest.NewRecorder()
+		s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if w.Code != 401 {
+			t.Fatal("audit route bypassed protected adapter", path)
+		}
+	}
+	if routeLabel("/api/v1/audit-logs/private") != "/api/v1/audit-logs/*" {
+		t.Fatal("audit reference was not redacted from route logs")
+	}
+	if _, err := NewWithAuditReader(testConfig(t), logger, nil, other, other, other, other, other, other, other, nil); err == nil {
+		t.Fatal("missing audit handler accepted")
+	}
+}
+
 func TestActivityRoutesUseDedicatedProtectedAdapter(t *testing.T) {
 	other := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(418) })
 	activity := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(401) })

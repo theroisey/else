@@ -1,6 +1,6 @@
 # Audit storage and atomic mutations
 
-Issue [#7](https://github.com/theroisey/else/issues/7) introduces internal audit infrastructure. Identity, authorization and [administration](administration.md) now use it for authenticated writes. There are no raw audit read endpoints. Issue #22 adds a separately authorized [client activity projection](activity.md), using explicit event/column allowlists without expanding runtime audit SELECT privileges. Each domain must route significant successful mutations through this contract and enforce its own authorization/client scope before changing data.
+Issue [#7](https://github.com/theroisey/else/issues/7) introduces internal audit infrastructure. Identity, authorization and [administration](administration.md) now use it for authenticated writes. Issue #28 adds an [authorized audit-read API](audit-reader.md) through guarded projections; raw runtime audit SELECT remains denied. Issue #22 adds a separately authorized [client activity projection](activity.md), using explicit event/column allowlists without expanding runtime audit SELECT privileges. Each domain must route significant successful mutations through this contract and enforce its own authorization/client scope before changing data.
 
 ## Transaction contract
 
@@ -40,7 +40,7 @@ ON app.audit_events TO else_runtime;
 GRANT EXECUTE ON FUNCTION app.audit_snapshot_allowed(jsonb) TO else_runtime;
 ```
 
-The validator is immutable, runs with invoker privileges and a fixed pg_catalog search path. It grants no access to stored events. Runtime has no audit SELECT, UPDATE, DELETE or TRUNCATE, no table/schema ownership, no migrator membership and no trigger-management permission. INSERT uses no RETURNING, which would require read privileges. There are no blanket/default grants to future tables. A later audit viewer must define RBAC and narrowly scoped reads separately; no public reader role is introduced here.
+The validator is immutable, runs with invoker privileges and a fixed pg_catalog search path. It grants no access to stored events. Runtime has no audit SELECT, UPDATE, DELETE or TRUNCATE, no table/schema ownership, no migrator membership and no trigger-management permission. INSERT uses no RETURNING, which would require read privileges. There are no blanket/default grants to future tables. The separately reviewed audit reader defines global/client RBAC and narrow EXECUTE-based projections; no public reader role or raw audit SELECT is introduced.
 
 The statement-level ALWAYS trigger rejects UPDATE/DELETE/TRUNCATE even if their DML privileges are accidentally broadened. The runtime cannot disable/drop it or change session_replication_role. Migration owners/superusers can alter or drop storage and remain a protected operator trust boundary; this is not tamper-proof storage against administrators or cryptographic evidence. Keep migration credentials out of the runtime process. Database permissions cannot force every future application writer to call this helper: domain reviews/tests must verify audit coverage.
 

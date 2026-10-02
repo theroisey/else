@@ -20,7 +20,7 @@ func TestActivityMigrationPreservesPopulatedBusinessAndAuditHistory(t *testing.T
 	for _, direction := range []string{"down", "up"} {
 		var err error
 		if direction == "down" {
-			_, err = p.Down(f.base.ctx)
+			_, err = p.DownTo(f.base.ctx, 9)
 		} else {
 			_, err = p.Up(f.base.ctx)
 		}
@@ -89,7 +89,7 @@ func TestActivityRollbackRefusesCustomOrRevokedGrantHistory(t *testing.T) {
 			if err := f.admin.QueryRow(ctx, `SELECT md5(string_agg(row_to_json(p)::text,'' ORDER BY id)) FROM app.role_permissions p`).Scan(&before); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := provider(t, f.base).Down(ctx); err == nil {
+			if _, err := provider(t, f.base).DownTo(ctx, 9); err == nil {
 				t.Fatal("rollback erased activity permission history")
 			}
 			var after string
