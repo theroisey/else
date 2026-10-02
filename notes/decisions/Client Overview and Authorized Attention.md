@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-02
 tags:
   - overview
@@ -21,7 +21,7 @@ The runtime makes one aggregate statement. The shared global lifecycle lock prec
 
 Migration 14 adds one partial task deadline index and a PUBLIC-revoked volatile security definer with pg_catalog search path and UTC timezone. Runtime receives the new entrypoint's EXECUTE grant only. Populated down removes only function/index and preserves business/audit history; re-up needs a fresh grant.
 
-Nine PostgreSQL integration tests cover reconciliation, all 16 module combinations, queue/time bounds, safe fields, one measured statement, concurrent write/access changes and populated rollback. Full backend/CI verification precedes owner review. The editorial responsive overview UI remains a separate frontend slice; #23 stays open. No merge or deployment is authorized.
+Nine PostgreSQL integration tests cover reconciliation, all 16 module combinations, queue/time bounds, safe fields, one measured statement, concurrent write/access changes and populated rollback. Final-head run 37058934276 passed all five gates; the owner merged PR #66 at `378e5cf`. Main run 37060547663 passed and both branches synchronized. The overview UI consumes the contract separately; #23 stays open until that owner acceptance. No agent merge or deployment is authorized.
 
 - [[Authorization and Client Scope]]
 - [[Exact Collections and Payment History]]
@@ -29,3 +29,4 @@ Nine PostgreSQL integration tests cover reconciliation, all 16 module combinatio
 - [[Task State and Assignee Scope]]
 - [[Reminder Timezones and Historical Ownership]]
 - [[Client Activity Projection and Read Boundaries]]
+- [[Overview Interface and Bounded Refresh]]

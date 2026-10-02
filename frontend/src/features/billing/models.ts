@@ -140,7 +140,7 @@ const payment = paymentSchema.extend({
   recorded_at: timestamp,
 })
 export type Payment = z.infer<typeof payment>
-const totals = z
+export const totalsSchema = z
   .object({
     currency,
     currency_exponent: z.number().int(),
@@ -151,6 +151,7 @@ const totals = z
     cancelled_amount_minor: unsigned,
     cancelled_paid_minor: unsigned,
   })
+  .strict()
   .refine((v) => {
     try {
       return (
@@ -164,7 +165,7 @@ const totals = z
       return false
     }
   })
-export type Totals = z.infer<typeof totals>
+export type Totals = z.infer<typeof totalsSchema>
 function page<T extends z.ZodType<{ id: string }>>(item: T) {
   return z
     .object({
@@ -191,7 +192,7 @@ export const parseSummary = (body: unknown) =>
   parse(
     z.object({
       data: z
-        .array(totals)
+        .array(totalsSchema)
         .max(6)
         .refine((v) => new Set(v.map((t) => t.currency)).size === v.length),
     }),

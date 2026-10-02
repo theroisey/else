@@ -25,7 +25,7 @@ export function visibleDestinations(grants: readonly Grant[], registered = desti
 export function safeReturnTo(value: unknown) {
   if (typeof value !== 'string') return '/app'
   if (destinations.some(destination => destination.path === value) || value === '/app/clients/new') return value
-  const match = /^\/app\/clients\/([^/]+)(?:\/edit)?$/.exec(value)
+  const match = /^\/app\/clients\/([^/]+)(?:\/(edit|profile))?$/.exec(value)
   if (match && isUUID(match[1])) return value
   const activity = /^\/app\/clients\/([^/]+)\/activity$/.exec(value)
   if (activity && isUUID(activity[1])) return value

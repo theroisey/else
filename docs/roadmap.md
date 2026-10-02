@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#23](https://github.com/theroisey/else/issues/23), the [authorized client overview backend](client-overview.md), combining exact finance, bounded due work and safe activity. Issues #1–#22 and #28 are owner-merged. Pricing frontend PR #65 merged at `f649c5c`; both branches synchronized and main [run 37056272195](https://github.com/theroisey/else/actions/runs/37056272195) passed. Overview financial/access policy is recorded before implementation. Its responsive editorial interface follows backend owner merge in a separate frontend PR; #23 remains open for that acceptance.
+Current slice: [#23](https://github.com/theroisey/else/issues/23), the [client overview interface](overview-interface.md), consuming the owner-merged [aggregate backend](client-overview.md). Issues #1–#22 and #28 are owner-merged. Backend PR #66 merged at `378e5cf`; both branches synchronized and main [run 37060547663](https://github.com/theroisey/else/actions/runs/37060547663) passed. Frontend financial/access policy preceded implementation. The responsive editorial client root combines exact finance, bounded attention and safe activity through one aggregate request; #23 remains open until owner review/merge.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#22 and #28 are owner-merged, including pricing PRs #64/#65. Issue #23 backend aggregation is the current separately reviewed slice; the overview UI remains next after backend owner merge. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#22 and #28 are owner-merged, including pricing PRs #64/#65. Issue #23 backend PR #66 is merged; the overview UI is the current separate frontend slice. Integration boundaries #24 follow after owner merge, with provider policy recorded before implementation. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
