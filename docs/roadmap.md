@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#28](https://github.com/theroisey/else/issues/28), the separately reviewed [audit viewer](audit-interface.md), consuming owner-merged [audit-read API](audit-reader.md) #58 at `45db4b1`. Issues #1–#18 and #22 are owner-merged. Both development branches were synchronized. Main [run 37016592527](https://github.com/theroisey/else/actions/runs/37016592527) passed all five gates and tested-image publication. Global/client audit tables use bounded exact filters/keysets and accessible safe before/after inspection. Owner frontend review/merge completes #28; later domains remain separate slices.
+Current slice: [#19](https://github.com/theroisey/else/issues/19), beginning with the [finance audit consumer prerequisite](audit-interface.md#finance-audit-compatibility-prerequisite). Issues #1–#18, #22 and #28 are owner-merged. Audit viewer #59 merged at `66a68b0`; both development branches were synchronized. Main [run 37021003854](https://github.com/theroisey/else/actions/runs/37021003854) passed all five gates and tested-image publication. The existing audit consumer must explicitly accept billing.payment_recorded/cancelled before separately reviewed collections/payment writes can emit them. Financial policy and the backend API remain subsequent work under #19; finance UI follows in #20.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#18 and #22 are owner-merged. Issue #28 adds authorized security history through separately reviewed audit API/interface slices; the backend read policy and contract precede its consumer. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#18, #22 and #28 are owner-merged. Issue #19 begins with a narrow audit-consumer prerequisite, followed by separately reviewed financial policy/collections/payment API work. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
