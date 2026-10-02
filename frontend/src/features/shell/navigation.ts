@@ -1,4 +1,4 @@
-import { faHouse, faShieldHalved, faUsers, faUserShield, faBuilding } from '@fortawesome/free-solid-svg-icons'
+import { faHouse, faShieldHalved, faUsers, faUserShield, faBuilding, faClockRotateLeft } from '@fortawesome/free-solid-svg-icons'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { hasPermission } from '../auth/permissions'
 import type { PermissionRequirement } from '../auth/permissions'
@@ -15,6 +15,7 @@ export const destinations: readonly Destination[] = [
   { path: '/app/clients', label: 'Clients', icon: faBuilding, visible: canOpenClients },
   { path: '/app/users', label: 'Users', icon: faUsers, required: { permission: 'users.view', scope: 'global' } },
   { path: '/app/roles', label: 'Roles', icon: faUserShield, required: { permission: 'roles.view', scope: 'global' } },
+  { path: '/app/audit', label: 'Audit history', icon: faClockRotateLeft, required: { permission: 'audit.view', scope: 'global' } },
 ]
 
 export function visibleDestinations(grants: readonly Grant[], registered = destinations) {
@@ -28,6 +29,8 @@ export function safeReturnTo(value: unknown) {
   if (match && isUUID(match[1])) return value
   const activity = /^\/app\/clients\/([^/]+)\/activity$/.exec(value)
   if (activity && isUUID(activity[1])) return value
+  const audit = /^\/app\/clients\/([^/]+)\/audit$/.exec(value)
+  if (audit && isUUID(audit[1])) return value
   const task = /^\/app\/clients\/([^/]+)\/tasks(?:\/(new|[^/]+)(?:\/(edit))?)?$/.exec(value)
   if (task && isUUID(task[1]) && (!task[2] || task[2] === 'new' && !task[3] || isUUID(task[2]))) return value
   const reminder = /^\/app\/clients\/([^/]+)\/reminders(?:\/(new|[^/]+)(?:\/(edit))?)?$/.exec(value)

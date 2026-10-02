@@ -919,3 +919,121 @@ test('activity reads confirmed business events, paginates, refreshes and obeys c
   await expect(feed).toHaveCount(0)
   expect(database(`SELECT count(*)::text FROM app.audit_events WHERE client_id='${clientID}'`)).toBe(count)
 })
+
+test('audit viewer filters real immutable events, inspects safe differences and obeys revoked access', async ({ page }, testInfo) => {
+  test.setTimeout(90000)
+  const clientID = '71000000-0000-4000-8000-000000000001', actorID = '71000000-0000-4000-8000-000000000002',
+    rootRole = '71000000-0000-4000-8000-000000000003', clientRole = '71000000-0000-4000-8000-000000000004'
+  database(`
+    INSERT INTO app.client_scopes(id) VALUES('${clientID}');
+    INSERT INTO app.clients(id,name) VALUES('${clientID}','Synthetic Audit Client');
+    INSERT INTO app.users(id,email,display_name,password_hash)
+      SELECT '${actorID}','audit.fixture@example.com','Synthetic Audit Reader',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444';
+    INSERT INTO app.roles(id,role_key,display_name) VALUES('${rootRole}','audit_reader_fixture','Synthetic audit root'),('${clientRole}','audit_client_fixture','Synthetic audit client');
+    INSERT INTO app.role_permissions(id,role_id,permission_key) VALUES(gen_random_uuid(),'${rootRole}','audit.view');
+    INSERT INTO app.role_permissions(id,role_id,permission_key)
+      SELECT gen_random_uuid(),'${clientRole}',permission_key FROM app.permissions WHERE permission_key IN ('clients.view','tasks.create','tasks.update');
+    INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id)
+      VALUES(gen_random_uuid(),'${actorID}','${rootRole}','global',NULL),(gen_random_uuid(),'${actorID}','${clientRole}','client','${clientID}');
+  `)
+  await page.goto('/app/audit')
+  await page.getByLabel('Email', {exact:true}).fill('audit.fixture@example.com')
+  await page.getByLabel('Password', {exact:true}).fill('clearly synthetic browser password')
+  await page.getByRole('button', {name:'Sign in',exact:true}).click()
+  await expect(page.getByRole('heading', {name:'Audit history',exact:true})).toBeVisible()
+  await page.getByLabel('Event type',{exact:true}).fill('task.created')
+  await page.getByRole('button',{name:'Apply filters',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'No audit events on this page',exact:true})).toBeVisible()
+  await markTaskScreenshot(page)
+  await page.screenshot({path:testInfo.outputPath('audit-empty.png'),fullPage:true})
+  // Persist real audited business operations; no seeded or rewritten audit rows.
+  const written = await page.evaluate(async clientID => {
+    const csrf = document.cookie.split('; ').find(c=>c.startsWith('else_csrf='))?.slice('else_csrf='.length) ?? ''
+    const headers = {'Content-Type':'application/json','X-CSRF-Token':csrf}
+    let taskID = ''
+    const body = {title:'Synthetic private audit task title',description:'Synthetic private audit task description',priority:'medium',assignee_id:null,start_at:null,due_at:null,tags:[]}
+    for (let i=0;i<26;i++) {
+      const response=await fetch(`/api/v1/clients/${clientID}/tasks`,{method:'POST',headers,body:JSON.stringify(body)})
+      if (response.status !== 201) throw new Error('Synthetic audited write failed')
+      taskID=(await response.json()).data.id
+    }
+    const response=await fetch(`/api/v1/clients/${clientID}/tasks/${taskID}`,{method:'PUT',headers,body:JSON.stringify({...body,title:'Synthetic private updated task title',expected_revision:1})})
+    if (response.status !== 200) throw new Error('Synthetic audited update failed')
+    return {taskID,requestID:response.headers.get('X-Request-ID')!}
+  },clientID)
+  const historyHash=()=>database("SELECT md5(string_agg(row_to_json(e)::text,'' ORDER BY id)) FROM app.audit_events e")
+  const before=historyHash()
+  const reads:string[]=[]
+  page.on('request',request=>{if(request.method()==='GET' && new URL(request.url()).pathname.startsWith('/api/v1/')) reads.push(new URL(request.url()).pathname)})
+  await page.getByRole('button',{name:'Refresh audit history',exact:true}).click()
+  const table=page.getByRole('table',{name:'Audit events',exact:true})
+  await expect(table.getByRole('row')).toHaveCount(26)
+  for (const viewport of [{width:1440,height:1000},{width:768,height:1024},{width:390,height:844}]) {
+    await page.setViewportSize(viewport)
+    await markTaskScreenshot(page)
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth===document.documentElement.clientWidth)).toBe(true)
+    await page.screenshot({path:testInfo.outputPath(`audit-${viewport.width}.png`),fullPage:true})
+  }
+  await page.getByRole('button',{name:'Next',exact:true}).click()
+  await expect(table.getByRole('row')).toHaveCount(2)
+  await page.getByRole('button',{name:'Previous',exact:true}).click()
+  await expect(table.getByRole('row')).toHaveCount(26)
+  for (const [label,value] of Object.entries({'Actor ID':actorID,'Event type':'task.updated','Client ID':clientID,'Resource kind':'task','Resource ID':written.taskID,'Request ID':written.requestID,'From (UTC, inclusive)':'0001-01-01T00:00:00Z','To (UTC, exclusive)':'9999-12-31T23:59:59.999999Z'})) await page.getByLabel(label,{exact:true}).fill(value)
+  await page.getByRole('combobox',{name:'Actor kind',exact:true}).selectOption('user')
+  await page.getByRole('button',{name:'Apply filters',exact:true}).click()
+  await expect(table.getByRole('row')).toHaveCount(2)
+  const trigger=table.getByRole('button',{name:/Inspect task.updated event/})
+  await trigger.focus();await page.keyboard.press('Enter')
+  const dialog=page.getByRole('dialog',{name:'Audit event details',exact:true})
+  await expect(dialog.getByRole('table',{name:'Safe field differences',exact:true})).toBeVisible()
+  await expect(dialog.getByRole('row',{name:'Revision 1 2',exact:true})).toBeVisible()
+  await expect(dialog.getByRole('button',{name:'Close details',exact:true})).toBeFocused()
+  await page.keyboard.press('Shift+Tab');await expect(dialog.getByText('Raw safe snapshots and metadata',{exact:true})).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(dialog.locator('pre')).toBeVisible()
+  await page.keyboard.press('Tab');await expect(dialog.getByRole('button',{name:'Close details',exact:true})).toBeFocused()
+  await expect(dialog.locator('pre')).toContainText('"source": "http"')
+  expect(await dialog.innerText()).not.toMatch(/Synthetic private|password|token|email/)
+  await dialog.getByText('Raw safe snapshots and metadata',{exact:true}).click()
+  await page.setViewportSize({width:1440,height:1000})
+  await markTaskScreenshot(page)
+  await page.evaluate(()=>{
+    const panel=document.querySelector('dialog[open] .ui-dialog-panel')!
+    panel.prepend(document.querySelector('[data-synthetic-verification]')!)
+    panel.scrollTop=0
+  })
+  await page.screenshot({path:testInfo.outputPath('audit-detail-desktop.png')})
+  await page.setViewportSize({width:390,height:844})
+  await page.screenshot({path:testInfo.outputPath('audit-detail-mobile.png')})
+  await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused()
+  // Exact UTC microseconds survive filter entry and equality at the inclusive boundary.
+  const occurred=await table.locator('time').getAttribute('datetime')
+  await page.getByLabel('From (UTC, inclusive)',{exact:true}).fill(occurred!)
+  await page.getByRole('button',{name:'Apply filters',exact:true}).click();await expect(table.getByRole('row')).toHaveCount(2)
+  await page.getByLabel('To (UTC, exclusive)',{exact:true}).fill(occurred!)
+  await page.getByRole('button',{name:'Apply filters',exact:true}).click();await expect(page.getByRole('alert')).toContainText('From must be earlier than To')
+  await page.getByRole('button',{name:'Clear filters',exact:true}).click();await expect(table).toBeVisible()
+  expect(await table.innerText()).not.toMatch(/Synthetic private|password|token|email/)
+  expect(reads.every(url=>url.startsWith('/api/v1/audit-logs') || url === '/api/v1/auth/session')).toBe(true)
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${clientRole}' AND permission_key IN ('tasks.create','tasks.update')`)
+  await page.goto(`/app/clients/${clientID}/audit`)
+  await expect(page.getByRole('heading',{name:'Audit history',exact:true})).toBeVisible()
+  await expect(table).toBeVisible();expect(await table.innerText()).not.toContain('Synthetic private')
+  await page.route(`**/api/v1/clients/${clientID}/audit-logs?*`,async handler=>{
+    await handler.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:{code:'internal_error',message:'Synthetic private driver cause'}})})
+  })
+  await page.getByRole('button',{name:'Refresh audit history',exact:true}).click()
+  await expect(page.getByRole('alert')).toBeVisible();await expect(table).toHaveCount(0)
+  expect(await page.locator('body').innerText()).not.toContain('Synthetic private driver cause')
+  await markTaskScreenshot(page);await page.screenshot({path:testInfo.outputPath('audit-error.png'),fullPage:true})
+  await page.unroute(`**/api/v1/clients/${clientID}/audit-logs?*`)
+  await page.getByRole('button',{name:'Try again',exact:true}).click();await expect(table).toBeVisible()
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${clientRole}' AND permission_key='clients.view'`)
+  await page.getByRole('button',{name:'Refresh audit history',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible();await expect(table).toHaveCount(0)
+  await page.goto('/app/audit');await expect(table).toBeVisible();expect(await table.innerText()).not.toContain(clientID)
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${rootRole}' AND permission_key='audit.view'`)
+  await page.getByRole('button',{name:'Refresh audit history',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
+  expect(historyHash()).toBe(before)
+})
