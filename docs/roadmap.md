@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#20](https://github.com/theroisey/else/issues/20), the [finance workspace](billing-interface.md), after owner-merged PR #62 delivered the [exact billing API](billing.md). Issues #1–#19, #22 and #28 are owner-merged. PR #62 merged at `26f2454`; both development branches synchronized and main [run 37038850280](https://github.com/theroisey/else/actions/runs/37038850280) passed. The recorded UI policy covers exact currency input, backend balances, explicit command recovery, reference masking and permanent cancellation history. Finance owner review remains pending; versioned pricing #21 follows after this slice merges.
+Current slice: [#21](https://github.com/theroisey/else/issues/21), the [versioned pricing backend and immutable billing-copy contract](pricing.md), after owner-merged PR #63 delivered the [finance workspace](billing-interface.md). Issues #1–#20, #22 and #28 are owner-merged. PR #63 merged at `347fee0`; both development branches synchronized and main [run 37043928202](https://github.com/theroisey/else/actions/runs/37043928202) passed. The recorded pricing policy covers exact rounding, append-only effective windows, internal cost privacy, scoped grants and immutable command-reconciled collection copies. Backend owner review is followed by a separate pricing forms/history UI PR; Issue #21 remains open for that interface acceptance.
 
 ## Verified starting state
 
