@@ -11,5 +11,6 @@ export function planningPermissions(grants: readonly Grant[], clientID: string) 
     archive: view && has('planning.archive'),
     taskView: has('tasks.view'),
     clientView: has('clients.view'),
+    reminderView: has('reminders.view'),
   }
 }

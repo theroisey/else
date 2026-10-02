@@ -46,6 +46,7 @@ export function TaskHeader({
         <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/tasks`}>
           Tasks
         </Link>
+        {operation.permissions.reminderView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/reminders`}>Reminders</Link> : null}
         {operation.permissions.planningView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/plans`}>Planning</Link> : null}
       </nav>
       {parent?.status === 'archived' ? (

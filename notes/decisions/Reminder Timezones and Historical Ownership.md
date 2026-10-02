@@ -1,6 +1,6 @@
 ---
 type: decision
-status: backend-review
+status: active
 created: 2026-10-02
 tags:
   - reminders
@@ -12,7 +12,7 @@ tags:
 
 # Reminder Timezones and Historical Ownership
 
-Issue #18 follows owner-merged planning interface PR #53 at `60c8c59`. Both permanent development branches were synchronized before implementation; main [run 36982743970](https://github.com/theroisey/else/actions/runs/36982743970) passed all five gates and tested-image publication. The [reminder contract](https://github.com/theroisey/else/issues/18#issuecomment-5948078773) was recorded before source edits, and the [timezone compatibility clarification](https://github.com/theroisey/else/issues/18#issuecomment-5948636628) preceded the storage refinement. The [API guide](../../docs/reminders.md) is the consumer contract. Backend review references #18; frontend implementation follows owner merge and completes the Issue. Agents do not merge or deploy.
+Issue #18 follows owner-merged planning interface PR #53 at `60c8c59`. Both permanent development branches were synchronized before implementation; main [run 36982743970](https://github.com/theroisey/else/actions/runs/36982743970) passed all five gates and tested-image publication. The [reminder contract](https://github.com/theroisey/else/issues/18#issuecomment-5948078773) was recorded before source edits, and the [timezone compatibility clarification](https://github.com/theroisey/else/issues/18#issuecomment-5948636628) preceded the storage refinement. The [API guide](../../docs/reminders.md) is the consumer contract. Owner merge of backend PR #54 at `59e0aa2` is complete. Main [run 36994556915](https://github.com/theroisey/else/actions/runs/36994556915) passed all five gates and tested-image publication; both development branches were synchronized. [[Reminder Interface and Explicit Occurrences]] consumes this contract and completes #18 after owner review/merge. Agents do not merge or deploy.
 
 Creation and metadata replacement require original wall clock, named IANA zone and an explicit integer offset, including zero for UTC. UTC is computed and validated in Go and SQL. Both repeated-hour occurrences are available through explicit selection; nonexistent times never normalize silently. Local/UTC year bounds and microseconds are preserved. Go embeds tzdata for minimal images.
 

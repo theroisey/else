@@ -23,6 +23,10 @@ const PlanningListPage = lazy(() => import('../features/planning/PlanningListPag
 const PlanningDetailPage = lazy(() => import('../features/planning/PlanningDetailPage').then(m => ({ default: m.PlanningDetailPage })))
 const PlanningEditorPage = lazy(() => import('../features/planning/PlanningEditorPage').then(m => ({ default: m.PlanningEditorPage })))
 
+const ReminderListPage = lazy(() => import('../features/reminders/ReminderListPage').then(m => ({ default: m.ReminderListPage })))
+const ReminderDetailPage = lazy(() => import('../features/reminders/ReminderDetailPage').then(m => ({ default: m.ReminderDetailPage })))
+const ReminderEditorPage = lazy(() => import('../features/reminders/ReminderEditorPage').then(m => ({ default: m.ReminderEditorPage })))
+
 function AuthArea() {
   return <AuthProvider><Outlet /></AuthProvider>
 }
@@ -55,6 +59,10 @@ export function App() {
             <Route path="clients/:id/plans/:planID/milestones/new" element={<ClientRoute name="Milestone"><PlanningEditorPage milestone create /></ClientRoute>} />
             <Route path="clients/:id/plans/:planID/milestones/:milestoneID" element={<ClientRoute name="Milestone"><PlanningDetailPage milestone /></ClientRoute>} />
             <Route path="clients/:id/plans/:planID/milestones/:milestoneID/edit" element={<ClientRoute name="Milestone"><PlanningEditorPage milestone /></ClientRoute>} />
+            <Route path="clients/:id/reminders" element={<ClientRoute name="Reminder"><ReminderListPage /></ClientRoute>} />
+            <Route path="clients/:id/reminders/new" element={<ClientRoute name="Reminder"><ReminderEditorPage create /></ClientRoute>} />
+            <Route path="clients/:id/reminders/:reminderID" element={<ClientRoute name="Reminder"><ReminderDetailPage /></ClientRoute>} />
+            <Route path="clients/:id/reminders/:reminderID/edit" element={<ClientRoute name="Reminder"><ReminderEditorPage /></ClientRoute>} />
             <Route path="users" element={
               <PermissionGuard required={{ permission: 'users.view', scope: 'global' }}>
                 <UsersPage />
