@@ -7,6 +7,7 @@ const permissionScopes: Record<string, 'global' | 'client'> = {
   'audit.view': 'global', 'releases.view': 'global', 'releases.manage': 'global', 'clients.create': 'global',
   'clients.view': 'client', 'clients.update': 'client', 'clients.archive': 'client',
   'billing.view': 'client', 'billing.manage': 'client', 'pricing.view': 'client', 'pricing.manage': 'client',
+  'billing.create': 'client', 'billing.update': 'client', 'billing.delete': 'client',
   'tasks.view': 'client', 'tasks.manage': 'client', 'analytics.view': 'client', 'integrations.manage': 'client',
   'tasks.create': 'client', 'tasks.update': 'client', 'tasks.delete': 'client',
   'planning.view': 'client', 'planning.create': 'client', 'planning.update': 'client', 'planning.archive': 'client',
