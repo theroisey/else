@@ -27,8 +27,21 @@ type Server struct {
 	auditReader    http.Handler
 	billing        http.Handler
 	pricing        http.Handler
+	overview       http.Handler
 	draining       atomic.Bool
 	httpServer     *http.Server
+}
+
+func NewWithOverview(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks, planning, reminders, activity, auditReader, billing, pricing, overview http.Handler) (*Server, error) {
+	if overview == nil {
+		return nil, fmt.Errorf("overview handler is required")
+	}
+	s, e := NewWithPricing(c, logger, readiness, auth, administration, clients, tasks, planning, reminders, activity, auditReader, billing, pricing)
+	if e != nil {
+		return nil, e
+	}
+	s.overview = overview
+	return s, nil
 }
 
 func NewWithPricing(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks, planning, reminders, activity, auditReader, billing, pricing http.Handler) (*Server, error) {

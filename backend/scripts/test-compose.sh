@@ -62,6 +62,7 @@ for task_sql in 'SELECT * FROM app.collections' 'SELECT * FROM app.payments' 'SE
 done
 [ "$(runtime_query 'SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()')" = t ]
 [ "$(runtime_query "SELECT rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication FROM pg_roles WHERE rolname = current_user")" = f ]
+[ "$(runtime_query "SELECT has_function_privilege(current_user,'app.client_overview(uuid,uuid)','EXECUTE')")" = t ]
 for task_sql in 'CREATE SCHEMA forbidden_ci' 'CREATE TABLE public.forbidden_ci (id integer)' 'SELECT * FROM public.goose_db_version' 'SELECT * FROM app.audit_events' 'UPDATE app.audit_events SET event_name=$$fixture.updated$$' 'DELETE FROM app.audit_events' 'TRUNCATE app.audit_events' 'ALTER TABLE app.audit_events DISABLE TRIGGER audit_history_append_only'; do
   if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Runtime privilege boundary failed.' >&2; exit 1; fi
 done
@@ -84,6 +85,7 @@ curl --fail --silent --show-error "$task_url/health" >/dev/null
 curl --fail --silent --show-error "$task_url/ready" >/dev/null
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/unknown")" = 404 ]
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/auth/session")" = 401 ]
+[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/clients/00000000-0000-4000-8000-000000000001/overview")" = 401 ]
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST --header 'Origin: https://invalid.example' --header 'Content-Type: application/json' --data '{"email":"nobody@example.com","password":"not-a-real-password"}' "$task_url/api/v1/auth/login")" = 403 ]
 compose stop postgres >/dev/null
 curl --fail --silent --show-error "$task_url/health" >/dev/null
@@ -115,6 +117,7 @@ task_url="http://$task_address"
 for task_path in / /status /health /ready; do curl --fail --silent --show-error "$task_url$task_path" >/dev/null; done
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/unknown")" = 404 ]
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/auth/session")" = 401 ]
+[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/clients/00000000-0000-4000-8000-000000000001/overview")" = 401 ]
 for task_component in frontend backend; do
   task_image=$(compose_production images --quiet "$task_component")
   task_user=$(docker image inspect --format '{{.Config.User}}' "$task_image")

@@ -54,6 +54,21 @@ func validID(v string) bool {
 func validTime(v time.Time) bool {
 	return v.Year() >= 1 && v.Year() <= 9999 && v.Nanosecond()%1000 == 0
 }
+
+// Describe validates the safe projection and supplies its reviewed static label.
+// Overview and the paginated feed share this contract without expanding actors.
+func Describe(item *Item) error {
+	if item == nil {
+		return ErrInvalid
+	}
+	summary := summaries[item.EventType]
+	if !validID(item.ID) || !validID(item.ClientID) || !validID(item.ResourceID) || !validTime(item.OccurredAt) || summary == "" || !strings.HasPrefix(item.EventType, item.ResourceKind+".") {
+		return ErrInvalid
+	}
+	item.Summary = summary
+	item.OccurredAt = item.OccurredAt.UTC()
+	return nil
+}
 func encodeCursor(client string, item Item) string {
 	return base64.RawURLEncoding.EncodeToString([]byte("v1|" + client + "|" + item.OccurredAt.UTC().Format(time.RFC3339Nano) + "|" + item.ID))
 }

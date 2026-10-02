@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-02
 tags:
   - pricing
@@ -22,7 +22,7 @@ Collection copies retain original UUID, selected version, sheet revision and pay
 
 Finance locks copied amounts before payment. Snapshot failures lock conservatively; only 404 plus fresh accessible collection detail permits manual-origin editing. Later prices cannot alter copied amounts/lines. Metadata/payment/cancellation retain their contract.
 
-Verification includes 344 frontend tests and twelve browser flows with synthetic screenshots. Pricing commits before dropping the response, survives Back, sends byte-identical retry, proves one collection/audit event, appends and checks retained billing lines, then revokes manage/view independently. Final-head CI and owner review remain required; no merge/deployment is authorized.
+Verification includes 344 frontend tests and twelve browser flows with synthetic screenshots. Pricing commits before dropping the response, survives Back, sends byte-identical retry, proves one collection/audit event, appends and checks retained billing lines, then revokes manage/view independently. Final-head run 37053545283 passed all five gates; the owner merged PR #65 at `f649c5c`. Main run 37056272195 passed and both branches synchronized before overview #23. No agent merge/deployment is authorized.
 
 - [[Versioned Pricing and Immutable Billing Copies]]
 - [[Finance Interface and Payment Recovery]]
