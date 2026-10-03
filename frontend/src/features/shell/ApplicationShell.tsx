@@ -5,6 +5,7 @@ import { faBars, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../auth/auth-context'
 import { visibleDestinations } from './navigation'
 import { AccountMenu } from './AccountMenu'
+import { ReleaseIndicator } from '../releases/ReleaseIndicator'
 
 export function ApplicationShell() {
   const auth = useAuth()
@@ -49,7 +50,7 @@ export function ApplicationShell() {
         }}><FontAwesomeIcon icon={mobileOpen ? faXmark : faBars} aria-hidden="true" /></button>
         <Link to="/app" className="whitespace-nowrap font-semibold tracking-tight">ROISEY ELSE</Link>
       </div>
-      <AccountMenu />
+      <div className="flex min-w-0 items-center gap-3"><ReleaseIndicator /><AccountMenu /></div>
     </header>
     <div className="mx-auto grid max-w-[100rem] lg:min-h-[calc(100dvh-4rem)] lg:grid-cols-[14rem_minmax(0,1fr)]">
       <aside className={`${mobileOpen ? 'block' : 'hidden'} border-b border-line bg-surface lg:block lg:border-b-0 lg:border-r`} id="application-navigation" onKeyDown={(event) => {

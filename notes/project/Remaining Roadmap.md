@@ -15,7 +15,7 @@ Owner merged #90 / PR #91 at `2f797a5`. Eight original roadmap issues remain ope
 
 | Issue | Next work / dependency |
 | --- | --- |
-| #29 | Dependency-ready Release Center. #92 implements backend stamp/read contract; frontend follows with real runtime metadata and honest unavailable source states. |
+| #29 | #92 / PR #94 supplies tested backend stamp/read contract; #93 supplies the separately reviewed frontend with real runtime metadata and honest unavailable source states. Both need owner integration before parent acceptance closes. |
 | #24 | Integration lifecycle/sync remains incomplete after encryption, metadata, budgets, disconnect, startup, rotation and live inventory. Broader recovery and provider-specific writers need verified policy. |
 | #25 | First marketing provider: verify current official API/version/endpoints/minimal scopes/account ownership/reporting and OAuth/revocation fixtures before provider code. |
 | #26 | First web analytics provider (proposed GA4): record verified metric/timezone/account isolation/retention policy before implementation. |

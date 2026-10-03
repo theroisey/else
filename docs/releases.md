@@ -1,6 +1,6 @@
 # Read-only Release Center contract
 
-Parent [#29](https://github.com/theroisey/else/issues/29) identifies the running revision without introducing deployment commands. Backend [#92](https://github.com/theroisey/else/issues/92) supplies immutable build metadata and a protected read endpoint. The separately reviewed frontend follows this contract.
+Parent [#29](https://github.com/theroisey/else/issues/29) identifies the running revision without introducing deployment commands. Backend [#92](https://github.com/theroisey/else/issues/92) supplies immutable build metadata and a protected read endpoint. Separately reviewed [frontend #93](release-interface.md) adds the read-only Release Center and permission-aware revision indicator.
 
 ## Current runtime and unavailable evidence
 

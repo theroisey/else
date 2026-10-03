@@ -1,4 +1,4 @@
-import { faHouse, faShieldHalved, faUsers, faUserShield, faBuilding, faClockRotateLeft } from '@fortawesome/free-solid-svg-icons'
+import { faHouse, faShieldHalved, faUsers, faUserShield, faBuilding, faClockRotateLeft, faCodeBranch } from '@fortawesome/free-solid-svg-icons'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { hasPermission } from '../auth/permissions'
 import type { PermissionRequirement } from '../auth/permissions'
@@ -16,6 +16,7 @@ export const destinations: readonly Destination[] = [
   { path: '/app/users', label: 'Users', icon: faUsers, required: { permission: 'users.view', scope: 'global' } },
   { path: '/app/roles', label: 'Roles', icon: faUserShield, required: { permission: 'roles.view', scope: 'global' } },
   { path: '/app/audit', label: 'Audit history', icon: faClockRotateLeft, required: { permission: 'audit.view', scope: 'global' } },
+  { path: '/app/releases', label: 'Release Center', icon: faCodeBranch, required: { permission: 'releases.view', scope: 'global' } },
 ]
 
 export function visibleDestinations(grants: readonly Grant[], registered = destinations) {

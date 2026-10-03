@@ -45,7 +45,7 @@ export async function authenticatedJSON(
   } = {},
 ) {
   if (
-    !/^\/api\/v1\/(users|roles|permissions|clients|audit-logs)(?:[/?]|$)/.test(path) ||
+    !/^\/api\/v1\/(users|roles|permissions|clients|audit-logs|releases)(?:[/?]|$)/.test(path) ||
     /[\s#\\]/.test(path) ||
     path.includes('..')
   )
