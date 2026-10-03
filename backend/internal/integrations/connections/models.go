@@ -1,4 +1,4 @@
-// Package connections owns secret-free integration connection metadata reads.
+// Package connections owns secret-free integration metadata and local disablement.
 package connections
 
 import (

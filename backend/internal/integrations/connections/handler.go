@@ -30,12 +30,39 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/clients/"), "/")
+	if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) == 4 && parts[1] == "integrations" && parts[3] == "disconnect" {
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", "POST")
+			httpapi.WriteError(w, r, 405, "method_not_allowed", "Method not allowed.")
+			return
+		}
+		if !h.auth.VerifyMutation(w, r, session) {
+			return
+		}
+		if !validID(parts[0]) || !validID(parts[2]) || r.URL.RawQuery != "" || r.URL.ForceQuery {
+			h.fail(w, r, ErrInvalid)
+			return
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, 1024)
+		revision, e := decodeDisconnect(r.Body)
+		if e != nil {
+			h.fail(w, r, e)
+			return
+		}
+		result, e := h.service.Disconnect(r.Context(), session.User.ID, parts[0], parts[2], revision)
+		if e != nil {
+			h.fail(w, r, e)
+			return
+		}
+		httpapi.WriteJSON(w, r, 200, result)
+		return
+	}
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", "GET")
 		httpapi.WriteError(w, r, 405, "method_not_allowed", "Method not allowed.")
 		return
 	}
-	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/clients/"), "/")
 	if !strings.HasPrefix(r.URL.Path, "/api/v1/clients/") || (len(parts) != 2 && len(parts) != 3) || !validID(parts[0]) || parts[1] != "integrations" {
 		h.fail(w, r, ErrInvalid)
 		return
@@ -104,6 +131,8 @@ func (h *Handler) fail(w http.ResponseWriter, r *http.Request, e error) {
 		status, code, message = 400, "invalid_request", "Integration metadata request is invalid."
 	case errors.Is(e, ErrMissing):
 		status, code, message = 404, "not_found", "Integration or client not found."
+	case errors.Is(e, ErrConflict):
+		status, code, message = 409, "conflict", "The integration changed or cannot be disconnected. Reload current data before trying again."
 	}
 	if status == 500 {
 		h.logger.ErrorContext(r.Context(), "integration_metadata_error", "request_id", httpapi.RequestID(r.Context()), "error_code", code)

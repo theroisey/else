@@ -66,6 +66,7 @@ for task_sql in 'SELECT * FROM app.integration_credentials' 'UPDATE app.integrat
 done
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_credential_read(uuid,uuid,uuid)','EXECUTE') AND has_function_privilege(current_user,'app.integration_credential_write(uuid,uuid,uuid,bigint,bigint,bigint,text,bytea,bytea,boolean)','EXECUTE') AND NOT has_function_privilege(current_user,'app.integration_credential_guard()','EXECUTE') AND NOT has_function_privilege(current_user,'app.integration_credential_envelope_valid(bytea,text)','EXECUTE')")" = t ]
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_connection_list(uuid,uuid,uuid,integer)','EXECUTE') AND has_function_privilege(current_user,'app.integration_connection_read(uuid,uuid,uuid)','EXECUTE')")" = t ]
+[ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_local_disconnect(uuid,uuid,uuid,bigint)','EXECUTE')")" = t ]
 for task_sql in 'SELECT * FROM app.pricing_sheets' 'SELECT * FROM app.pricing_versions' 'SELECT * FROM app.pricing_lines' 'SELECT * FROM app.pricing_snapshots' 'SELECT * FROM app.pricing_snapshot_lines' 'UPDATE app.pricing_sheets SET revision=revision+1' 'DELETE FROM app.pricing_versions' 'TRUNCATE app.pricing_snapshots' 'SELECT app.pricing_calculate($${}$$::jsonb)' 'SELECT app.pricing_version_document(gen_random_uuid(),true)'; do
   if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Pricing runtime privilege boundary failed.' >&2; exit 1; fi
 done
@@ -99,6 +100,7 @@ curl --fail --silent --show-error "$task_url/ready" >/dev/null
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/auth/session")" = 401 ]
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/clients/00000000-0000-4000-8000-000000000001/overview")" = 401 ]
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/clients/00000000-0000-4000-8000-000000000001/integrations")" = 401 ]
+[ "$(curl --silent --request POST --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/clients/00000000-0000-4000-8000-000000000001/integrations/00000000-0000-4000-8000-000000000002/disconnect")" = 401 ]
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST --header 'Origin: https://invalid.example' --header 'Content-Type: application/json' --data '{"email":"nobody@example.com","password":"not-a-real-password"}' "$task_url/api/v1/auth/login")" = 403 ]
 compose stop postgres >/dev/null
 curl --fail --silent --show-error "$task_url/health" >/dev/null
@@ -132,6 +134,7 @@ for task_path in / /status /health /ready; do curl --fail --silent --show-error 
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/auth/session")" = 401 ]
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/clients/00000000-0000-4000-8000-000000000001/overview")" = 401 ]
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/clients/00000000-0000-4000-8000-000000000001/integrations")" = 401 ]
+[ "$(curl --silent --request POST --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/clients/00000000-0000-4000-8000-000000000001/integrations/00000000-0000-4000-8000-000000000002/disconnect")" = 401 ]
 for task_component in frontend backend; do
   task_image=$(compose_production images --quiet "$task_component")
   task_user=$(docker image inspect --format '{{.Config.User}}' "$task_image")
