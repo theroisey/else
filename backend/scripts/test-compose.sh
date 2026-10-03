@@ -38,7 +38,8 @@ git archive HEAD | tar -x -C "$task_directory"
 sh "$task_directory/docker/dev/prepare.sh"
 FRONTEND_PORT=0
 CI_REVISION=$task_revision
-export FRONTEND_PORT CI_REVISION
+CI_BUILD_TIME=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+export FRONTEND_PORT CI_REVISION CI_BUILD_TIME
 compose config --quiet
 compose_production config --quiet
 task_initialized=true
@@ -149,6 +150,13 @@ for task_component in frontend backend; do
   case "$task_user" in ''|root|0|0:*) echo 'Runtime image must use a non-root user.' >&2; exit 1 ;; esac
   docker tag "$task_image" "else-$task_component:ci"
 done
+
+# These identities/tokens exist only in the unique disposable CI volume. Verify
+# the actual stamped production API, not an image label or source-only assertion.
+python3 "$task_directory/backend/scripts/check-release-runtime.py" prepare "$task_directory/release-cookies.json" | \
+  compose exec -T postgres psql -U postgres -d else -v ON_ERROR_STOP=1 >/dev/null
+python3 "$task_directory/backend/scripts/check-release-runtime.py" verify \
+  "$task_directory/release-cookies.json" "$task_url" "$CI_REVISION" "$CI_BUILD_TIME"
 
 # The operator target is separate from the API and default Compose services.
 task_rotation_image="$task_project-rotation"

@@ -20,6 +20,8 @@ Parent #24 advances [integration security boundaries](docs/integrations.md) in s
 
 ## Engineering contract
 
+Issue #29 adds [immutable CI build metadata and protected release reads](docs/releases.md) through backend #92, with separately reviewed [read-only Release Center and revision indicator](docs/release-interface.md) through frontend #93. Running API revision is distinguished from unavailable latest-release, image-provenance and deployment evidence. [Remaining roadmap](notes/project/Remaining%20Roadmap.md) records provider, security, performance and operating dependencies.
+
 Read [AGENTS.md](AGENTS.md) before planning or changing the repository. GitHub Issues are the source of scope and acceptance criteria. Permanent branches are `main`, `frontend`, and `backend`; application changes reach `main` through reviewed Pull Requests.
 
 The owner approved a one-time empty root commit to establish the initial PR base. [The bootstrap record](docs/repository-bootstrap.md) documents that consumed exception. All subsequent changes to `main` use reviewed PRs.

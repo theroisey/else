@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-03
 tags:
   - integrations
@@ -10,6 +10,8 @@ tags:
 ---
 
 # Live Integration Key Retention Inventory
+
+Owner merged PR #91 at `2f797a5c32811880e50a2daec2d4447b3f9dde65`; exact-head run 37141374629 passed all five verification gates. Both development branches synchronized before #92. Parent #24 remains incomplete.
 
 Issue #90 records global authorization, bounded source-relative disclosure and read-only/exhausted-material policy before code. It follows owner-merged #88 / PR #89 at `1572cc3`; final-head run 37137926217 and main run 37139320933 passed all five verification gates. Both development branches synchronized before implementation. Parent #24 remains open.
 

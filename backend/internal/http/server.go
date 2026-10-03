@@ -29,8 +29,21 @@ type Server struct {
 	pricing        http.Handler
 	overview       http.Handler
 	integrations   http.Handler
+	releases       http.Handler
 	draining       atomic.Bool
 	httpServer     *http.Server
+}
+
+func NewWithReleases(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks, planning, reminders, activity, auditReader, billing, pricing, overview, integrations, releases http.Handler) (*Server, error) {
+	if releases == nil {
+		return nil, fmt.Errorf("release handler is required")
+	}
+	s, err := NewWithIntegrations(c, logger, readiness, auth, administration, clients, tasks, planning, reminders, activity, auditReader, billing, pricing, overview, integrations)
+	if err != nil {
+		return nil, err
+	}
+	s.releases = releases
+	return s, nil
 }
 
 func NewWithOverview(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks, planning, reminders, activity, auditReader, billing, pricing, overview http.Handler) (*Server, error) {

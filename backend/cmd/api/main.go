@@ -23,6 +23,7 @@ import (
 	"github.com/theroisey/else/backend/internal/overview"
 	"github.com/theroisey/else/backend/internal/planning"
 	"github.com/theroisey/else/backend/internal/pricing"
+	"github.com/theroisey/else/backend/internal/releases"
 	"github.com/theroisey/else/backend/internal/reminders"
 	"github.com/theroisey/else/backend/internal/tasks"
 )
@@ -203,7 +204,12 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("integration_metadata_startup_failed")
 		return 1
 	}
-	server, err := httpapi.NewWithIntegrations(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler, pricingHandler, overviewHandler, connectionHandler)
+	releaseHandler, err := releases.NewHandler(authHandler, authorizationService, logger)
+	if err != nil {
+		logger.Error("release_startup_failed")
+		return 1
+	}
+	server, err := httpapi.NewWithReleases(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler, pricingHandler, overviewHandler, connectionHandler, releaseHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1

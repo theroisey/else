@@ -4,6 +4,8 @@ set +x
 set -eu
 cd "$(dirname "$0")/../.."
 task_directory=$(mktemp -d)
+task_revision=$(git rev-parse HEAD)
+task_build_time=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 task_container=""
 task_api_pid=""
 task_frontend_pid=""
@@ -50,7 +52,7 @@ done
 task_port=$(docker_local port "$task_container" 5432/tcp | awk -F: '{print $NF}')
 (
   cd backend
-  go build -mod=readonly -trimpath -o "$task_directory/api" ./cmd/api
+  sh scripts/build-api.sh "$task_directory/api" "sha-$task_revision" "$task_revision" "$task_build_time"
   go build -mod=readonly -trimpath -o "$task_directory/migrate" ./cmd/migrate
 )
 unset PGSERVICE
@@ -74,4 +76,4 @@ until curl --fail --silent http://127.0.0.1:5173/ready >/dev/null; do
   sleep 1
 done
 cd frontend
-AUTH_TEST_CONTAINER=$task_container npm run test:e2e
+AUTH_TEST_CONTAINER=$task_container AUTH_TEST_REVISION=$task_revision AUTH_TEST_BUILD_TIME=$task_build_time npm run test:e2e

@@ -4,6 +4,8 @@ Related Issue: [#6](https://github.com/theroisey/else/issues/6). `.github/workfl
 
 ## Required checks
 
+Release backend #92 stamps the production API using the tested checkout revision and one UTC build timestamp, supplied through strict Docker/Compose-CI arguments. Container integration authenticates disposable synthetic sessions against the actual non-root API and verifies exact metadata plus denied/anonymous/read-only behavior. Backend integration separately verifies the compiled stamp and refusal of runtime overrides. Plain builds stay honestly unavailable; metadata does not certify release, registry provenance or deployment.
+
 Owner merged operator PR #89 at `1572cc3`; final-head run 37137926217 and main run 37139320933 passed all five verification gates. Both development branches synchronized before #90. Inventory adds private runtime EXECUTE coverage and actual non-root binary mixed-mode/protected-source checks to the existing Container integration gate; publication still includes only frontend/API images.
 
 | Check | Evidence |

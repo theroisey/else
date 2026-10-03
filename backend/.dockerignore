@@ -7,3 +7,5 @@
 !internal/**
 !migrations/
 !migrations/**
+!scripts/
+!scripts/build-api.sh

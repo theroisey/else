@@ -33,6 +33,7 @@ const ActivityPage = lazy(() => import('../features/activity/ActivityPage').then
 const IntegrationListPage = lazy(() => import('../features/integrations/IntegrationListPage').then(m => ({ default: m.IntegrationListPage })))
 const IntegrationDetailPage = lazy(() => import('../features/integrations/IntegrationDetailPage').then(m => ({ default: m.IntegrationDetailPage })))
 const AuditPage = lazy(() => import('../features/audit/AuditPage').then(m => ({ default: m.AuditPage })))
+const ReleasePage = lazy(() => import('../features/releases/ReleasePage').then(m => ({ default: m.ReleasePage })))
 const BillingListPage = lazy(() => import('../features/billing/BillingListPage').then(m => ({ default: m.BillingListPage })))
 const BillingDetailPage = lazy(() => import('../features/billing/BillingDetailPage').then(m => ({ default: m.BillingDetailPage })))
 const BillingEditorPage = lazy(() => import('../features/billing/BillingEditorPage').then(m => ({ default: m.BillingEditorPage })))
@@ -56,6 +57,7 @@ export function App() {
           <Route path="/app" element={<ApplicationShell />}>
             <Route index element={<WorkspacePage />} />
             <Route path="access" element={<AccessPage />} />
+            <Route path="releases" element={<ClientRoute name="Release Center"><ReleasePage /></ClientRoute>} />
             <Route path="audit" element={<ClientRoute name="Audit"><AuditPage /></ClientRoute>} />
             <Route path="clients" element={<ClientRoute><ClientsPage /></ClientRoute>} />
             <Route path="clients/new" element={<ClientRoute><ClientEditorPage create /></ClientRoute>} />

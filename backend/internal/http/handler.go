@@ -11,6 +11,14 @@ import (
 type ReadinessCheck func(context.Context) error
 
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/api/v1/releases" || strings.HasPrefix(r.URL.Path, "/api/v1/releases/") {
+		if s.releases == nil {
+			writeError(w, r, http.StatusNotFound, "not_found", "Resource not found.")
+			return
+		}
+		s.releases.ServeHTTP(w, r)
+		return
+	}
 	if r.URL.Path == "/api/v1/audit-logs" || strings.HasPrefix(r.URL.Path, "/api/v1/audit-logs/") {
 		if s.auditReader == nil {
 			writeError(w, r, http.StatusNotFound, "not_found", "Resource not found.")

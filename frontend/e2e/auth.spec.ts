@@ -1368,6 +1368,45 @@ test('overview reconciles real sources in one bounded request and omits revoked 
   expect(await page.evaluate(()=>localStorage.length+sessionStorage.length)).toBe(0)
 })
 
+test('Release Center identifies the actual API build and removes revoked access', async ({ page }, testInfo) => {
+  const actor='ca000000-0000-4000-8000-000000000001', role='ca000000-0000-4000-8000-000000000002'
+  database(`INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actor}','release.browser.fixture@example.com','Synthetic Release Reader',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO app.roles(id,role_key,display_name) VALUES('${role}','release_browser_fixture','Synthetic release viewer'); INSERT INTO app.role_permissions(id,role_id,permission_key) VALUES(gen_random_uuid(),'${role}','releases.view'); INSERT INTO app.user_roles(id,user_id,role_id,scope_kind) VALUES(gen_random_uuid(),'${actor}','${role}','global');`)
+  await page.goto('/app/releases')
+  await page.getByLabel('Email',{exact:true}).fill('release.browser.fixture@example.com')
+  await page.getByLabel('Password',{exact:true}).fill('clearly synthetic browser password')
+  await page.getByRole('button',{name:'Sign in',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Release Center',exact:true})).toBeVisible()
+  const response=await page.request.get('/api/v1/releases')
+  expect(response.status()).toBe(200)
+  const data=(await response.json()).data
+  expect(data.runtime.status).toBe('available')
+  expect(data.runtime.commit_sha).toMatch(/^[a-f0-9]{40}$/)
+  expect(data.runtime.commit_sha).toBe(process.env.AUTH_TEST_REVISION)
+  expect(data.runtime.built_at).toBe(process.env.AUTH_TEST_BUILD_TIME)
+  expect(data.runtime.version).toBe('sha-'+data.runtime.commit_sha)
+  await expect(page.getByText(data.runtime.version,{exact:true})).toBeVisible()
+  await expect(page.getByText('A verified deployment source is not connected.',{exact:true})).toBeVisible()
+  const before=database('SELECT count(*) FROM app.audit_events')
+  await page.getByRole('button',{name:'Refresh release information',exact:true}).click()
+  await expect(page.getByText(data.runtime.version,{exact:true})).toBeVisible()
+  expect(database('SELECT count(*) FROM app.audit_events')).toBe(before)
+  for (const width of [1440,390]) {
+    await page.setViewportSize({width,height:1000})
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth===document.documentElement.clientWidth)).toBe(true)
+    await markSyntheticScreenshot(page)
+    await page.screenshot({path:testInfo.outputPath(`releases-${width}.png`),fullPage:true})
+  }
+  await page.getByRole('button',{name:'Refresh release information',exact:true}).focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByText(data.runtime.version,{exact:true})).toBeVisible()
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='releases.view'`)
+  await page.getByRole('button',{name:'Refresh release information',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
+  await expect(page.getByText(data.runtime.version,{exact:true})).toHaveCount(0)
+  expect((await page.request.get('/api/v1/releases')).status()).toBe(403)
+  expect(await page.evaluate(()=>localStorage.length+sessionStorage.length)).toBe(0)
+})
+
 test('integration metadata, confirmed local disable, uncertain outcome recovery and fresh scope', async ({ page }, testInfo) => {
   test.setTimeout(90_000)
   database(readFileSync(new URL('./integration-fixtures.sql',import.meta.url),'utf8'))
