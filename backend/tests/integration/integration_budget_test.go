@@ -549,7 +549,7 @@ func TestIntegrationBudgetRuntimeAndHistoryBoundaries(t *testing.T) {
 	if e = f.runtime.QueryRow(f.base.ctx, `SELECT has_function_privilege(current_user,'app.integration_encryption_history_guard()','EXECUTE'),has_table_privilege(current_user,'app.integration_encryption_keys','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')`).Scan(&helper, &tableAccess); e != nil || helper || tableAccess {
 		t.Fatal("runtime private privileges", e)
 	}
-	if _, e = provider(t, f.base).Down(f.base.ctx); e == nil {
+	if _, e = provider(t, f.base).DownTo(f.base.ctx, 15); e == nil {
 		t.Fatal("budget history rollback allowed")
 	}
 	if count, _ := f.accounting(t); count != 1 {
@@ -560,7 +560,7 @@ func TestIntegrationBudgetRuntimeAndHistoryBoundaries(t *testing.T) {
 func TestIntegrationBudgetEmptyRollbackAndAuditOnlyHistory(t *testing.T) {
 	f := newBudgetFixture(t)
 	p := provider(t, f.base)
-	if _, e := p.Down(f.base.ctx); e != nil {
+	if _, e := p.DownTo(f.base.ctx, 15); e != nil {
 		t.Fatal(e)
 	}
 	if _, e := p.Up(f.base.ctx); e != nil {
@@ -579,7 +579,7 @@ func TestIntegrationBudgetEmptyRollbackAndAuditOnlyHistory(t *testing.T) {
 	if _, e := other.runtime.Exec(other.base.ctx, `INSERT INTO app.audit_events `+auditColumns+` VALUES('user',$1::uuid,'integration_encryption.created','integration_encryption',gen_random_uuid(),$2::uuid,$3,'{"exists":false}','{"exists":true}','{"source":"cli"}')`, other.actor, clientAID, correlation.ID(correlation.New(other.base.ctx))); e != nil {
 		t.Fatal(e)
 	}
-	if _, e := provider(t, other.base).Down(other.base.ctx); e == nil {
+	if _, e := provider(t, other.base).DownTo(other.base.ctx, 15); e == nil {
 		t.Fatal("reservation audit rollback erased history")
 	}
 }

@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-03
 tags:
   - integrations
@@ -19,8 +19,9 @@ The budgeted backend Seal/Rewrap wrapper commits accounting plus a typed integra
 
 Raw crypto primitives remain callable for internals/synthetic tests; every future application encryption/rewrap must use the budget wrapper. Replica services must use one primary database and independently provisioned keys per environment. Snapshot restore can rewind counters: the code cannot detect that. After every restore/clone/recovery capable of rewind, use fresh independent material and a never-used active label before sealing; retained keys are decryption-only. Do not resume old-key encryption from a backup count. Later startup/storage/restore tooling must enforce this operational gate before production use. Counter history does not authorize key retirement; old-key backups and live rows still require retention/restore proof.
 
-Tests cover concurrent exhaustion without overshoot, identity aliases, restart/rotation, audit/deferred-commit failure, wrong binding, postcommit cancellation/disconnect/revocation, lifecycle locking, exact fences, private privileges and rollback. Final-head five-job CI evidence accompanies the PR/Issue before owner review. Parent #24 remains incomplete.
+Tests cover concurrent exhaustion without overshoot, identity aliases, restart/rotation, audit/deferred-commit failure, wrong binding, postcommit cancellation/disconnect/revocation, lifecycle locking, exact fences, private privileges and rollback. PR #75 is owner-merged at `f97636efbc0fbedf552538b3c4634fb6bc3e9aaa`; final-head CI 37110370452 and merged main CI 37111204913 passed all five validation jobs. Both development branches synchronized. Issue #76 builds private credential persistence on the reserved result. Parent #24 remains incomplete.
 
+- [[Encrypted Integration Credential Persistence]]
 - [[Integration Credential Encryption and Rotation]]
 - [[Integration Connection Metadata and Read Boundaries]]
 - [[Audit Infrastructure]]

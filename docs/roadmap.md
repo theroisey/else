@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#74](https://github.com/theroisey/else/issues/74), durable per-key integration encryption budgets before credential persistence for parent [#24](https://github.com/theroisey/else/issues/24). See [integration boundaries](integrations.md). Issues #1–#23, #28, #68, #70 and #72 are owner-merged. Metadata PR #73 merged at `44c59b7`; both branches synchronized and main [run 37108435621](https://github.com/theroisey/else/actions/runs/37108435621) passed. Meta Ads remains the planned first provider. Parent #24 still needs credential persistence/rotation checkpoints, audited lifecycle writes, startup/restore gates and verified provider OAuth/revocation/synchronization.
+Current slice: [#76](https://github.com/theroisey/else/issues/76), private encrypted credential persistence and single-row key rewrap with audited revision/generation fences for parent [#24](https://github.com/theroisey/else/issues/24). See [integration boundaries](integrations.md). Issues #1–#23, #28, #68, #70, #72 and #74 are owner-merged. Budget PR #75 merged at `f97636e`; both branches synchronized and main [run 37111204913](https://github.com/theroisey/else/actions/runs/37111204913) passed. Meta Ads remains the planned first provider. Parent #24 still needs startup/restore enforcement, bulk rotation/key retirement, audited provider lifecycle writes and verified OAuth/revocation/synchronization.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#23, #28, #68, #70 and #72 are owner-merged. Parent #24 proceeds in separately reviewed slices: #74 enforces durable encryption accounting before credential persistence/rotation and audited connection writers, then the verified provider adapter with callback/revocation/synchronization. Provider Issues #25–#27 remain dependent on parent boundaries. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#23, #28, #68, #70, #72 and #74 are owner-merged. Parent #24 proceeds in separately reviewed slices: #76 supplies private credential persistence/single-row rewrap and audited revision fences, followed by startup/restore enforcement, provider lifecycle writers and verified callback/revocation/synchronization. Provider Issues #25–#27 remain dependent on parent boundaries. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
