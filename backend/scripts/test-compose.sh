@@ -32,6 +32,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 git archive HEAD | tar -x -C "$task_directory"
+. "$task_directory/backend/scripts/recover-compose-postgres.sh"
 sh "$task_directory/docker/dev/prepare.sh"
 FRONTEND_PORT=0
 CI_REVISION=$task_revision
@@ -109,7 +110,7 @@ curl --fail --silent --show-error "$task_url/ready" >/dev/null
 compose stop postgres >/dev/null
 curl --fail --silent --show-error "$task_url/health" >/dev/null
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/ready")" = 503 ]
-compose up -d --wait postgres
+recover_compose_postgres
 task_attempt=0
 until curl --fail --silent "$task_url/ready" >/dev/null; do
   task_attempt=$((task_attempt + 1))
