@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '../../lib/validation'
 import { APIError } from '../../services/authenticated'
 import { isUUID } from '../auth/session'
 import { instant } from './time'

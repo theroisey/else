@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '../../lib/validation'
 import { APIError } from '../../services/authenticated'
 import { uuid } from '../reminders/models'
 import { currencies, dateSchema, revisionSchema } from '../billing/models'
