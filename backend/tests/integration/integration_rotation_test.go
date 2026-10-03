@@ -330,7 +330,7 @@ func TestIntegrationRotationPrivatePrivilegesMalformedIdentityAndPopulatedRollba
 		}
 	}
 	p := provider(t, f.base)
-	if _, e := p.Down(f.base.ctx); e != nil {
+	if _, e := p.DownTo(f.base.ctx, 19); e != nil {
 		t.Fatal(e)
 	}
 	f.assertRow(t, 1, false, 2, 1, 2)

@@ -1,4 +1,5 @@
-// Package rotationcommand is a trusted operator transport for one rotation page.
+// Package rotationcommand is a trusted operator transport for one rotation page
+// or one read-only live inventory observation.
 // Runtime database/key access is privileged writer authority. Actor arguments
 // are checked audit attribution, not end-user authentication. Never expose this
 // entrypoint to untrusted actors or public requests.
@@ -16,17 +17,19 @@ import (
 	"github.com/theroisey/else/backend/internal/config"
 	"github.com/theroisey/else/backend/internal/correlation"
 	"github.com/theroisey/else/backend/internal/database"
+	"github.com/theroisey/else/backend/internal/integrations/inventory"
 	"github.com/theroisey/else/backend/internal/integrations/keysource"
 	"github.com/theroisey/else/backend/internal/integrations/rotation"
 )
 
-const usage = "Usage: rotate-integration-credentials --actor UUID --client UUID --limit 1..100 [--after UUID] --confirmed\nTrusted operators only; actor is audit attribution. One page; reconcile failures before resuming.\nRequires protected INTEGRATION_KEYRING_FILE and runtime DATABASE_URL; optional INTEGRATION_KEYRING_MODE=normal|restored.\n"
+const usage = "Usage: rotate-integration-credentials --actor UUID --client UUID --limit 1..100 [--after UUID] --confirmed\nInventory: rotate-integration-credentials --inventory --actor UUID\nTrusted operators only; actor is audit attribution. One page; reconcile failures before resuming. Inventory requires global view/manage grants and cannot approve key retirement.\nRequires protected INTEGRATION_KEYRING_FILE and runtime DATABASE_URL; optional INTEGRATION_KEYRING_MODE=normal|restored.\n"
 
 var uuid = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 type request struct {
 	actor, client, after string
 	limit                int
+	inventory            bool
 }
 
 func validID(id string) bool {
@@ -35,6 +38,15 @@ func validID(id string) bool {
 
 func parse(args []string) (request, bool) {
 	var r request
+	if len(args) == 3 {
+		if args[0] == "--inventory" && args[1] == "--actor" && validID(args[2]) {
+			return request{actor: args[2], inventory: true}, true
+		}
+		if args[0] == "--actor" && args[2] == "--inventory" && validID(args[1]) {
+			return request{actor: args[1], inventory: true}, true
+		}
+		return r, false
+	}
 	if len(args) < 7 || len(args) > 9 {
 		return r, false
 	}
@@ -128,8 +140,9 @@ func errorCode(err error) string {
 	}
 }
 
-// Run validates explicit confirmation before touching configuration. It performs
-// exactly one page, with no retries, persisted cursor or automatic mode changes.
+// Run validates mutating confirmation or explicit read-only inventory grammar
+// before configuration. It performs one page or observation, with no retries,
+// persisted cursor or automatic mode changes.
 // Exit 1, partial output, or output loss requires explicit reconciliation.
 func Run(ctx context.Context, args []string, lookup func(string) (string, bool), stdout, stderr io.Writer) (code int) {
 	defer func() {
@@ -182,6 +195,37 @@ func Run(ctx context.Context, args []string, lookup func(string) (string, bool),
 		return 1
 	}
 	defer pool.Close()
+	if r.inventory {
+		service, e := inventory.NewService(pool, ring)
+		if e != nil {
+			diagnostic(stderr, "integration_inventory_unavailable")
+			return 1
+		}
+		operation := correlation.New(bounded)
+		counts, e := service.Observe(operation, r.actor, settings.Restored())
+		if e != nil {
+			code := "integration_inventory_unavailable"
+			if errors.Is(e, inventory.ErrMissing) {
+				code = "integration_inventory_missing"
+			}
+			if errors.Is(e, inventory.ErrInvalid) {
+				code = "integration_inventory_invalid"
+			}
+			diagnostic(stderr, code)
+			return 1
+		}
+		report := struct {
+			Status        string            `json:"status"`
+			ActorID       string            `json:"actor_id"`
+			CorrelationID string            `json:"correlation_id"`
+			Keys          []inventory.Count `json:"keys"`
+		}{"inventory_observed", r.actor, correlation.ID(operation), counts}
+		if writeJSON(stdout, report) != nil {
+			diagnostic(stderr, "integration_rotation_output_failed")
+			return 1
+		}
+		return 0
+	}
 	if keysource.Preflight(bounded, pool, ring, settings.Restored()) != nil {
 		diagnostic(stderr, "integration_rotation_key_preflight_failed")
 		return 1

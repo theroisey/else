@@ -4,6 +4,8 @@ Related Issue: [#6](https://github.com/theroisey/else/issues/6). `.github/workfl
 
 ## Required checks
 
+Owner merged operator PR #89 at `1572cc3`; final-head run 37137926217 and main run 37139320933 passed all five verification gates. Both development branches synchronized before #90. Inventory adds private runtime EXECUTE coverage and actual non-root binary mixed-mode/protected-source checks to the existing Container integration gate; publication still includes only frontend/API images.
+
 | Check | Evidence |
 | --- | --- |
 | Frontend checks | Node 24.21.0/npm 11.19.0 locked installation, lint, typecheck, tests, production build |

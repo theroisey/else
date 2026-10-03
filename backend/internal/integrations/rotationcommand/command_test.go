@@ -67,6 +67,26 @@ func TestConfirmationOrderAndOptionalCursor(t *testing.T) {
 	}
 }
 
+func TestInventoryGrammarIsExplicitAndCannotMixMutationFlags(t *testing.T) {
+	for _, args := range [][]string{{"--inventory", "--actor", actor}, {"--actor", actor, "--inventory"}} {
+		var out, errOut bytes.Buffer
+		called := false
+		if Run(context.Background(), args, func(string) (string, bool) { called = true; return "", false }, &out, &errOut) != 1 || !called || out.Len() != 0 || !strings.Contains(errOut.String(), "key_configuration_failed") {
+			t.Fatal("valid inventory did not reach configuration")
+		}
+	}
+	cases := [][]string{{"--inventory"}, {"--inventory", "--actor", "00000000-0000-0000-0000-000000000000"}, {"--inventory", "--actor", actor, "--inventory"}, {"--inventory", "--actor", actor, "--confirmed"}, append(arguments(), "--inventory")}
+	for _, flag := range []string{"--client", "--after", "--limit", "--private"} {
+		cases = append(cases, []string{"--inventory", "--actor", actor, flag, client})
+	}
+	for _, args := range cases {
+		var out, errOut bytes.Buffer
+		if Run(context.Background(), args, func(string) (string, bool) { t.Fatal("mixed/invalid inventory read configuration"); return "", false }, &out, &errOut) != 2 || out.Len() != 0 || !strings.Contains(errOut.String(), "integration_rotation_invalid") {
+			t.Fatal("mixed/invalid inventory accepted")
+		}
+	}
+}
+
 func TestHelpAndCancellationNeverReadConfiguration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
