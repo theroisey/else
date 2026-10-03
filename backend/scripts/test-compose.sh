@@ -57,6 +57,10 @@ runtime_query() {
 for task_sql in 'SELECT * FROM app.integration_connections' 'UPDATE app.integration_connections SET state=$$connected$$' 'DELETE FROM app.integration_connections' 'TRUNCATE app.integration_connections' 'SELECT app.integration_connection_ownership_guard()'; do
   if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Integration runtime privilege boundary failed.' >&2; exit 1; fi
 done
+for task_sql in 'SELECT * FROM app.integration_encryption_keys' 'UPDATE app.integration_encryption_keys SET reservations=0' 'DELETE FROM app.integration_encryption_keys' 'TRUNCATE app.integration_encryption_keys' 'SELECT app.integration_encryption_history_guard()'; do
+  if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Encryption accounting runtime privilege boundary failed.' >&2; exit 1; fi
+done
+[ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_encryption_reserve(uuid,uuid,uuid,text,bytea)','EXECUTE') AND has_function_privilege(current_user,'app.integration_encryption_binding(uuid,uuid,uuid)','EXECUTE') AND NOT has_function_privilege(current_user,'app.integration_encryption_history_guard()','EXECUTE')")" = t ]
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_connection_list(uuid,uuid,uuid,integer)','EXECUTE') AND has_function_privilege(current_user,'app.integration_connection_read(uuid,uuid,uuid)','EXECUTE')")" = t ]
 for task_sql in 'SELECT * FROM app.pricing_sheets' 'SELECT * FROM app.pricing_versions' 'SELECT * FROM app.pricing_lines' 'SELECT * FROM app.pricing_snapshots' 'SELECT * FROM app.pricing_snapshot_lines' 'UPDATE app.pricing_sheets SET revision=revision+1' 'DELETE FROM app.pricing_versions' 'TRUNCATE app.pricing_snapshots' 'SELECT app.pricing_calculate($${}$$::jsonb)' 'SELECT app.pricing_version_document(gen_random_uuid(),true)'; do
   if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Pricing runtime privilege boundary failed.' >&2; exit 1; fi
