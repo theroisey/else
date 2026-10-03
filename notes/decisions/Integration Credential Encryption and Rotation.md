@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: merged
 created: 2026-10-03
 tags:
   - integrations
@@ -22,7 +22,9 @@ No provider call, route, permission grant, schema/migration, connection/sync suc
 
 Overview PR #67 is owner-merged at `15aa7012ecaf6740900f0f753cf0151908dce619`; both branches fast-forwarded. Main [run 37065393667](https://github.com/theroisey/else/actions/runs/37065393667) passed. The first integration slice follows this baseline.
 
-Local verification passes: ten credential unit tests plus two fuzz targets/seeds, all backend race tests, vet and static builds. Bounded fuzz sessions completed 491,423 envelope cases and 347,216 key-ring cases without failure. Final-head CI is required before this slice becomes ready for owner review; existing database/container/browser gates do not prove the still-unimplemented provider lifecycle.
+Local verification passes: ten credential unit tests plus two fuzz targets/seeds, all backend race tests, vet and static builds. Bounded fuzz sessions completed 491,423 envelope cases and 347,216 key-ring cases without failure. Final-head [CI run 37067122633](https://github.com/theroisey/else/actions/runs/37067122633) passed all five gates. The owner merged [PR #69](https://github.com/theroisey/else/pull/69) as `3768b4d276fa4c5e9651df08eb0e52001d08248c`; both branches synchronized and main [run 37103885719](https://github.com/theroisey/else/actions/runs/37103885719) passed. Existing database/container/browser gates do not prove the still-unimplemented provider lifecycle.
+
+The next metadata backend needs a new view permission, but strict frontend administration parsers reject unknown keys. [[Integration View Permission Compatibility]] (#70) must owner-merge first. Parent #24 was automatically closed by negated closing-keyword wording in PR #69; its description was corrected and the incomplete parent reopened. Future PR descriptions must reference a parent plainly and reserve closing syntax for the completed child.
 
 - [[Authorization and Client Scope]]
 - [[Audit Infrastructure]]

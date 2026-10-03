@@ -16,7 +16,7 @@ Owner-merged Issue #21 adds the [versioned pricing backend](docs/pricing.md) and
 
 Owner-merged Issue #23 adds the [client overview backend](docs/client-overview.md) and separately reviewed [overview interface](docs/overview-interface.md): exact finance, bounded due tasks/reminders and safe recent activity through one read-only request with independent module grants. The editorial responsive client root links to retained profile management and real source workspaces.
 
-Parent #24 begins [integration security boundaries](docs/integrations.md) in separate slices. Issue #68 implements backend credential encryption/key rotation; provider connections, durable storage/routes, OAuth, revocation and synchronization remain unimplemented. No integration is reported as connected or synchronized.
+Parent #24 begins [integration security boundaries](docs/integrations.md) in separate slices. Owner-merged #68 implements backend credential encryption/key rotation. Issue #70 prepares frontend integration-view permission compatibility before the next metadata backend; the existing backend catalog/grants are unchanged. Provider connections, durable storage/routes, OAuth, revocation and synchronization remain unimplemented. No integration is reported as connected or synchronized.
 
 ## Engineering contract
 

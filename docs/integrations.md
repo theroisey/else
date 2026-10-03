@@ -1,6 +1,6 @@
 # Integration security boundaries
 
-Parent [Issue #24](https://github.com/theroisey/else/issues/24) is deliberately split. [Issue #68](https://github.com/theroisey/else/issues/68) implements only backend credential encryption and in-memory key rotation. Its security policy and the parent lifecycle policy were recorded before code. Providers in #25–#27 remain proposals; no provider connection, credential, metric or synchronization success is created here.
+Parent [Issue #24](https://github.com/theroisey/else/issues/24) is deliberately split. Owner-merged [Issue #68](https://github.com/theroisey/else/issues/68), PR #69, implements only backend credential encryption and in-memory key rotation. Its security policy and the parent lifecycle policy were recorded before code. [Issue #70](https://github.com/theroisey/else/issues/70) prepares frontend permission compatibility before the next metadata backend. Providers in #25–#27 remain proposals; no provider connection, credential, metric or synchronization success is created here.
 
 ## Implemented credential foundation
 
@@ -45,6 +45,12 @@ Before enabling durable encryption, the operator must track a key's total encryp
 Rotation requires the later storage owner to provision a new key, retain old keys for reads, switch the active label, authenticate/re-encrypt rows in bounded batches and atomically replace ciphertext using row revision/generation checks. Count each re-encryption toward the new key's budget. Resume from verified checkpoints; do not retire an old key until all live records and every retained backup needing it have expired or been re-encrypted/restored and verified. Restore tests must include both old and new envelopes. Key loss makes affected ciphertext unrecoverable. Re-encryption does not undo compromise of old keys/backups; credential compromise requires provider revocation/reconnection and incident handling.
 
 Callers should clear their input keys and returned plaintext promptly. The reader clears raw document/decoded key buffers, and rewrap clears its plaintext. Go's JSON strings, cipher key schedules and runtime copies cannot be guaranteed erased; this is encryption at rest, not process-memory isolation. Tests use conspicuously synthetic fixed material, never production credentials.
+
+## Frontend permission compatibility
+
+The strict administration catalog/role parsers reject unknown keys. Issue #70 adds future client-defined `integrations.view` to the frontend scope map before a later backend migration introduces it; the existing runtime catalog and grants are unchanged. Identity parsing already preserves structurally valid future keys, while capability checks deny unknown keys. This follows the earlier finance permission-consumer ordering.
+
+View does not imply integrations.manage, analytics.view or clients.view, and none of those imply view. Exact-client/global-context and complete-authority delegation rules are unchanged. Existing administration renders only definitions the real backend returns; there is no new destination or connection action. The future metadata backend must require both current clients.view and integrations.view on the same client. Connection reads, writes, credentials and synchronization remain separate backend work.
 
 ## Remaining parent work: design only
 

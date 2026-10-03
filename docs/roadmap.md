@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#68](https://github.com/theroisey/else/issues/68), the credential encryption/key-rotation foundation of parent [#24](https://github.com/theroisey/else/issues/24). See [integration boundaries](integrations.md) for implemented behavior and remaining lifecycle work. Issues #1–#23 and #28 are owner-merged. Overview PR #67 merged at `15aa701`; both branches synchronized and main [run 37065393667](https://github.com/theroisey/else/actions/runs/37065393667) passed. Integration authorization/key policies preceded code; parent #24 remains incomplete until durable connections, callback/revocation, sync and migration proof exist.
+Current slice: [#70](https://github.com/theroisey/else/issues/70), frontend integration-view permission compatibility before the next metadata backend of parent [#24](https://github.com/theroisey/else/issues/24). See [integration boundaries](integrations.md) for implemented behavior and remaining lifecycle work. Issues #1–#23, #28 and #68 are owner-merged. Credential PR #69 merged at `3768b4d`; both branches synchronized and main [run 37103885719](https://github.com/theroisey/else/actions/runs/37103885719) passed. Integration authorization/key policies preceded code; parent #24 remains incomplete until durable connections, callback/revocation, sync and migration proof exist.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#23 and #28 are owner-merged, including overview PRs #66/#67. Parent #24 proceeds in separately reviewed slices: #68 credential encryption/key rotation first; durable metadata/authorization/audit, concrete provider authorization and callback/revocation/synchronization follow. Provider Issues #25–#27 remain dependent on verified parent boundaries; encryption alone does not complete #24. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#23, #28 and #68 are owner-merged, including credential PR #69. Parent #24 proceeds in separately reviewed slices: #70 prepares the frontend integration-view consumer before durable metadata/authorization/audit; concrete provider authorization and callback/revocation/synchronization follow. Provider Issues #25–#27 remain dependent on verified parent boundaries; encryption and permission parsing alone do not complete #24. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
