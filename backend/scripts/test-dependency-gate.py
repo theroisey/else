@@ -39,19 +39,21 @@ sys.exit(status)
         calls = [json.loads(line) for line in self.trace.read_text().splitlines()]
         return result, calls
 
-    def test_clean_result_requires_both_source_configurations_and_module_inventory(self):
-        result, calls = self.execute([0, 0, 0])
+    def test_clean_result_requires_symbols_and_packages_in_both_configurations(self):
+        result, calls = self.execute([0, 0, 0, 0])
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len(calls), 3)
+        self.assertEqual(len(calls), 4)
         for call in calls:
             self.assertEqual(Path(call["cwd"]), SCRIPT.resolve().parents[1])
+            self.assertIn("-test", call["args"])
             self.assertIn("./...", call["args"])
             self.assertEqual(call["args"][call["args"].index("-format") + 1], "text")
         self.assertNotIn("-tags", calls[0]["args"])
-        self.assertIn("-test", calls[0]["args"])
-        self.assertIn("-test", calls[1]["args"])
         self.assertEqual(calls[1]["args"][calls[1]["args"].index("-tags") + 1], "integration")
-        self.assertEqual(calls[2]["args"][calls[2]["args"].index("-scan") + 1], "module")
+        for call in calls[2:]:
+            self.assertEqual(call["args"][call["args"].index("-scan") + 1], "package")
+        self.assertNotIn("-tags", calls[2]["args"])
+        self.assertEqual(calls[3]["args"][calls[3]["args"].index("-tags") + 1], "integration")
 
     def test_first_scan_finding_or_fetch_failure_stops_gate(self):
         for status in (1, 2, 3):
@@ -69,13 +71,14 @@ sys.exit(status)
                 self.assertEqual(result.returncode, status)
                 self.assertEqual(len(calls), 2)
 
-    def test_module_advisory_or_fetch_failure_cannot_be_hidden_by_clean_symbols(self):
-        for status in (1, 2, 3):
-            with self.subTest(status=status):
-                self.trace.unlink(missing_ok=True)
-                result, calls = self.execute([0, 0, status])
-                self.assertEqual(result.returncode, status)
-                self.assertEqual(len(calls), 3)
+    def test_imported_package_advisory_or_fetch_failure_cannot_be_hidden_by_clean_symbols(self):
+        for position in (2, 3):
+            for status in (1, 2, 3):
+                with self.subTest(position=position, status=status):
+                    self.trace.unlink(missing_ok=True)
+                    result, calls = self.execute([0] * position + [status])
+                    self.assertEqual(result.returncode, status)
+                    self.assertEqual(len(calls), position + 1)
 
 
 if __name__ == "__main__":
