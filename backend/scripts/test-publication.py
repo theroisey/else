@@ -2,15 +2,26 @@
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import unittest
 
 SCRIPT = Path(__file__).with_name("publish-images.sh")
 REVISION = "a" * 40
+WORKFLOW = SCRIPT.resolve().parents[2] / ".github/workflows/ci.yml"
 
 
 class PublicationTests(unittest.TestCase):
+    def test_publication_requires_every_verification_job_including_dependencies(self):
+        # This guards our deliberately inline needs contract. actionlint checks
+        # full YAML/expression syntax; changing this layout requires review.
+        publication = WORKFLOW.read_text().split("\n  publish:\n", 1)[1]
+        needs = re.search(r"^    needs: \[([^\]\n]+)\]$", publication, re.MULTILINE)
+        self.assertIsNotNone(needs, "publication prerequisite contract changed")
+        self.assertEqual({part.strip() for part in needs.group(1).split(",")},
+                         {"frontend", "browser-auth", "backend", "dependencies", "migrations", "containers"})
+
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
