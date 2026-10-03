@@ -93,7 +93,7 @@ jobs:
           if [ -n "$files" ]; then printf '%s\n' "$files"; exit 1; fi
       - run: go vet ./...
       - run: go test -race -count=1 ./...
-      - run: CGO_ENABLED=0 go build -mod=readonly -trimpath ./cmd/api ./cmd/migrate ./cmd/healthcheck ./cmd/bootstrap-admin
+      - run: CGO_ENABLED=0 go build -mod=readonly -trimpath ./cmd/api ./cmd/migrate ./cmd/healthcheck ./cmd/bootstrap-admin ./cmd/rotate-integration-credentials
       - name: Publication permission and tag boundaries
         run: python3 scripts/test-publication.py
       - name: Stopped PostgreSQL recovery boundaries

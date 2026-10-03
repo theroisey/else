@@ -1,6 +1,6 @@
 # Integration key startup and declared restores
 
-[Issue #82](https://github.com/theroisey/else/issues/82) adds protected key-file loading and a read-only database preflight before the API listens. It supplies no credential acceptance, provider connection, OAuth, synchronization or key-retirement operation. #84 separately adds private [bounded eligible rewrap batches](integration-rotation.md). Parent #24 remains incomplete.
+[Issue #82](https://github.com/theroisey/else/issues/82) adds protected key-file loading and a read-only database preflight before the API listens. It supplies no credential acceptance, provider connection, OAuth, synchronization or key-retirement operation. #84 separately adds private [bounded eligible rewrap batches](integration-rotation.md); #88 adds a [trusted one-page operator command](integration-rotation-command.md) using the same loader/preflight. API startup still exposes no rotation route. Parent #24 remains incomplete.
 
 ## Configuration
 
