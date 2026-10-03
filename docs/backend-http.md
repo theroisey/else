@@ -48,8 +48,12 @@ gofmt -l cmd/api internal
 | `HTTP_MAX_HEADER_BYTES` | `16384` | Integer 1024–65536 |
 | `AUTH_PUBLIC_ORIGIN` | required | Exact HTTP(S) origin; HTTPS required for secure cookies |
 | `AUTH_COOKIE_SECURE` | `true` | `false` only with an HTTP loopback origin |
+| `INTEGRATION_KEYRING_FILE` | absent: key-dependent runtime disabled | Protected absolute regular file; explicit invalid configuration fails privately before listening |
+| `INTEGRATION_KEYRING_MODE` | `normal` | Exactly `normal` or `restored`; requires a configured file |
 
 Present but empty configuration values fail validation. Validation errors name the setting and constraint, never its raw supplied value. Defaults bind locally; container binding and production TLS termination are documented by their future deployment Issues.
+
+Integration key settings use a single fixed startup failure event, without setting paths, key identities or raw diagnostics. See [protected loading and declared restore operations](integration-key-startup.md) for Linux permissions, read-only preflight, disabled defaults and limits. These checks add no provider/credential producer and do not change ongoing readiness.
 
 ## Endpoint contract
 

@@ -19,6 +19,7 @@ import (
 	httpapi "github.com/theroisey/else/backend/internal/http"
 	"github.com/theroisey/else/backend/internal/identity"
 	"github.com/theroisey/else/backend/internal/integrations/connections"
+	"github.com/theroisey/else/backend/internal/integrations/keysource"
 	"github.com/theroisey/else/backend/internal/overview"
 	"github.com/theroisey/else/backend/internal/planning"
 	"github.com/theroisey/else/backend/internal/pricing"
@@ -45,6 +46,16 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 	if ctx.Err() != nil {
 		return 0
 	}
+	keySettings, err := keysource.LoadSettings(lookup)
+	if err != nil {
+		logger.Error("integration_key_startup_failed")
+		return 1
+	}
+	ring, err := keysource.Read(ctx, keySettings)
+	if err != nil {
+		logger.Error("integration_key_startup_failed")
+		return 1
+	}
 	dbConfig, err := config.LoadDatabase(lookup, "DATABASE_URL")
 	if err != nil {
 		logger.Error("invalid_configuration", "detail", err.Error())
@@ -56,6 +67,12 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		return 1
 	}
 	defer pool.Close()
+	if keySettings.Enabled() {
+		if err := keysource.Preflight(ctx, pool, ring, keySettings.Restored()); err != nil {
+			logger.Error("integration_key_startup_failed")
+			return 1
+		}
+	}
 	authConfig, err := config.LoadAuth(lookup)
 	if err != nil {
 		logger.Error("invalid_configuration", "detail", err.Error())

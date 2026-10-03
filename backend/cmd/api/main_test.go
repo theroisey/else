@@ -46,3 +46,17 @@ func TestMissingDatabaseConfigurationFailsSafely(t *testing.T) {
 		t.Fatal("missing safe setting diagnostic")
 	}
 }
+
+func TestConfiguredIntegrationKeyFailurePrecedesDatabaseAndRedactsSource(t *testing.T) {
+	for _, values := range []map[string]string{
+		{"INTEGRATION_KEYRING_MODE": "restored"},
+		{"INTEGRATION_KEYRING_FILE": "/nonexistent/synthetic-private-key-path"},
+		{"INTEGRATION_KEYRING_FILE": "/dev/null"},
+	} {
+		var output bytes.Buffer
+		code := run(context.Background(), func(name string) (string, bool) { v, ok := values[name]; return v, ok }, &output)
+		if code != 1 || !strings.Contains(output.String(), "integration_key_startup_failed") || strings.Contains(output.String(), "synthetic-private") || strings.Contains(output.String(), "/dev/null") || strings.Contains(output.String(), "DATABASE_URL") {
+			t.Fatal("key startup failed unsafely")
+		}
+	}
+}

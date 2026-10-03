@@ -28,7 +28,7 @@ Contract/interaction coverage exercises malformed and expanded responses, large 
 
 Local lint/typecheck/build and all 439 unit/interaction tests (34 files, including 48 focused integration cases) pass. Real Chromium with disposable PostgreSQL 17 passed all 14 cookie-session browser flows. Required final-head CI evidence for PostgreSQL 18, containers and the complete gate set is recorded in PR/Issue metadata before review; no Docker availability or provider lifecycle coverage is inferred from the local run.
 
-The broader lifecycle remains unfinished in #24: approved provider policy/fixtures, OAuth/SSRF, actual remote revocation and synchronization, startup/restore gates and bulk rotation/key retirement. This interface grants none of those capabilities.
+The broader lifecycle remains unfinished in #24: approved provider policy/fixtures, OAuth/SSRF, actual remote revocation and synchronization, recovery safety and bulk rotation/key retirement. #82 adds separate backend [protected startup and declared restore checks](integration-key-startup.md), with documented detection limits. This interface grants none of those capabilities.
 
 ## Synthetic visual review
 
