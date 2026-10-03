@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-03
 tags:
   - integrations
@@ -25,3 +25,5 @@ The domain remains frontend-owned with existing shared transport, components and
 - [[Local Integration Disconnect Fence]]
 - [[Integration Connection Metadata and Read Boundaries]]
 - [[Integration View Permission Compatibility]]
+
+Owner merged [PR #81](https://github.com/theroisey/else/pull/81) at `306204bac90a1926e7487854377728ce095d5ee7`. Final-head [CI 37118573736](https://github.com/theroisey/else/actions/runs/37118573736) and main [CI 37124787974](https://github.com/theroisey/else/actions/runs/37124787974) passed all five gates. Both permanent branches synchronized before #82, documented in [[Protected Integration Key Startup and Declared Restores]].

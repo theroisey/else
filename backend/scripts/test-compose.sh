@@ -7,6 +7,7 @@ task_revision=$(git rev-parse HEAD)
 task_directory=$(mktemp -d)
 task_project="else-ci-$(openssl rand -hex 6)"
 task_initialized=false
+task_key_container=''
 compose() {
   docker compose --project-name "$task_project" --project-directory "$task_directory" \
     --file "$task_directory/docker-compose.yml" --file "$task_directory/docker-compose.ci.yml" "$@"
@@ -17,6 +18,7 @@ compose_production() {
 cleanup() {
   task_result=$?
   trap - EXIT INT TERM
+  if [ -n "$task_key_container" ]; then docker rm --force "$task_key_container" >/dev/null 2>&1 || task_result=1; fi
   if [ "$task_initialized" = true ]; then
     if [ "$task_result" -ne 0 ]; then
       compose logs --no-color --tail 100 2>&1 | python3 "$task_directory/backend/scripts/redact-compose-logs.py" "$task_directory/.env" || true
@@ -67,6 +69,7 @@ done
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_credential_read(uuid,uuid,uuid)','EXECUTE') AND has_function_privilege(current_user,'app.integration_credential_write(uuid,uuid,uuid,bigint,bigint,bigint,text,bytea,bytea,boolean)','EXECUTE') AND NOT has_function_privilege(current_user,'app.integration_credential_guard()','EXECUTE') AND NOT has_function_privilege(current_user,'app.integration_credential_envelope_valid(bytea,text)','EXECUTE')")" = t ]
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_connection_list(uuid,uuid,uuid,integer)','EXECUTE') AND has_function_privilege(current_user,'app.integration_connection_read(uuid,uuid,uuid)','EXECUTE')")" = t ]
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_local_disconnect(uuid,uuid,uuid,bigint)','EXECUTE')")" = t ]
+[ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_key_preflight(text[],bytea[],text,boolean)','EXECUTE')")" = t ]
 for task_sql in 'SELECT * FROM app.pricing_sheets' 'SELECT * FROM app.pricing_versions' 'SELECT * FROM app.pricing_lines' 'SELECT * FROM app.pricing_snapshots' 'SELECT * FROM app.pricing_snapshot_lines' 'UPDATE app.pricing_sheets SET revision=revision+1' 'DELETE FROM app.pricing_versions' 'TRUNCATE app.pricing_snapshots' 'SELECT app.pricing_calculate($${}$$::jsonb)' 'SELECT app.pricing_version_document(gen_random_uuid(),true)'; do
   if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Pricing runtime privilege boundary failed.' >&2; exit 1; fi
 done
@@ -141,6 +144,61 @@ for task_component in frontend backend; do
   case "$task_user" in ''|root|0|0:*) echo 'Runtime image must use a non-root user.' >&2; exit 1 ;; esac
   docker tag "$task_image" "else-$task_component:ci"
 done
+
+# Verify actual non-root runtime startup against protected transient synthetic
+# mounts. Helpers use the already-tested PostgreSQL image with no networking.
+python3 "$task_directory/backend/scripts/key-startup-fixtures.py" "$task_directory/key-fixtures"
+task_postgres_image=$(compose images --quiet postgres)
+docker run --rm --network none --volume "$task_directory/key-fixtures:/fixtures" --entrypoint sh "$task_postgres_image" -eu -c '
+  chown 65532:65532 /fixtures/protected.json /fixtures/public.json /fixtures/malformed.json /fixtures/fresh.json
+  chmod 0400 /fixtures/protected.json /fixtures/malformed.json /fixtures/fresh.json
+  chmod 0444 /fixtures/public.json
+' >/dev/null
+task_key_container="$task_project-key-startup"
+compose_production run --detach --no-deps --name "$task_key_container" \
+  --volume "$task_directory/key-fixtures:/run/integration-keys:ro" \
+  --env INTEGRATION_KEYRING_FILE=/run/integration-keys/protected.json backend >/dev/null
+task_attempt=0
+until docker exec "$task_key_container" /healthcheck >/dev/null 2>&1; do
+  task_attempt=$((task_attempt + 1))
+  [ "$task_attempt" -lt 30 ] || { echo 'Protected integration key startup did not become ready.' >&2; exit 1; }
+  sleep 1
+done
+docker rm --force "$task_key_container" >/dev/null
+task_key_container=''
+[ "$(runtime_query 'SELECT count(*) FROM app.integration_encryption_keys')" = 0 ]
+for task_key_file in public.json malformed.json symlink.json missing.json; do
+  if compose_production run --rm --no-deps \
+    --volume "$task_directory/key-fixtures:/run/integration-keys:ro" \
+    --env "INTEGRATION_KEYRING_FILE=/run/integration-keys/$task_key_file" backend \
+    > "$task_directory/key-startup.log" 2>&1; then
+    echo 'Insecure integration key source started successfully.' >&2; exit 1
+  fi
+  python3 "$task_directory/backend/scripts/check-key-startup-output.py" "$task_directory/key-startup.log"
+done
+compose exec -T postgres psql -U postgres -d else -v ON_ERROR_STOP=1 < "$task_directory/key-fixtures/register.sql" >/dev/null
+if compose_production run --rm --no-deps \
+  --volume "$task_directory/key-fixtures:/run/integration-keys:ro" \
+  --env INTEGRATION_KEYRING_FILE=/run/integration-keys/protected.json \
+  --env INTEGRATION_KEYRING_MODE=restored backend > "$task_directory/key-startup.log" 2>&1; then
+  echo 'Declared restore reused a registered active key.' >&2; exit 1
+fi
+python3 "$task_directory/backend/scripts/check-key-startup-output.py" "$task_directory/key-startup.log"
+task_key_container="$task_project-key-startup"
+compose_production run --detach --no-deps --name "$task_key_container" \
+  --volume "$task_directory/key-fixtures:/run/integration-keys:ro" \
+  --env INTEGRATION_KEYRING_FILE=/run/integration-keys/fresh.json \
+  --env INTEGRATION_KEYRING_MODE=restored backend >/dev/null
+task_attempt=0
+until docker exec "$task_key_container" /healthcheck >/dev/null 2>&1; do
+  task_attempt=$((task_attempt + 1))
+  [ "$task_attempt" -lt 30 ] || { echo 'Fresh declared-restore integration key startup did not become ready.' >&2; exit 1; }
+  sleep 1
+done
+docker rm --force "$task_key_container" >/dev/null
+task_key_container=''
+[ "$(runtime_query 'SELECT count(*) FROM app.integration_encryption_keys')" = 1 ]
+printf '%s\n' 'Protected integration key startup, fixed failures, and declared restore freshness verified.'
 if [ -n "${IMAGE_ARCHIVE_PATH:-}" ]; then
   docker save --output "$IMAGE_ARCHIVE_PATH" else-frontend:ci else-backend:ci
 fi

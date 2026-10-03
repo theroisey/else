@@ -392,7 +392,7 @@ func TestIntegrationDisconnectPrivilegedEntryPointAndPopulatedRollback(t *testin
 		t.Fatal("unsafe disconnect definer", e)
 	}
 	p := provider(t, f.base)
-	if _, e := p.Down(ctx); e != nil {
+	if _, e := p.DownTo(ctx, 17); e != nil {
 		t.Fatal(e)
 	}
 	if state, revision, generation := f.connectionMarkers(t); state != "revocation_failed" || revision != 3 || generation != 3 {

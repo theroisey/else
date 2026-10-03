@@ -12,6 +12,7 @@ import (
 	"io"
 	"log/slog"
 	"regexp"
+	"sort"
 )
 
 const (
@@ -103,6 +104,25 @@ func (r *Keyring) ActiveKeyIdentity() (string, [32]byte, error) {
 		return "", [32]byte{}, ErrKeyring
 	}
 	return r.state.active, r.state.fingerprints[r.state.active], nil
+}
+
+// KeyIdentities is a private startup/persistence boundary. Returned labels and
+// copied material fingerprints must never be logged or sent through an API.
+func (r *Keyring) KeyIdentities() ([]string, [][]byte, error) {
+	if _, _, err := r.ActiveKeyIdentity(); err != nil {
+		return nil, nil, ErrKeyring
+	}
+	labels := make([]string, 0, len(r.state.fingerprints))
+	for label := range r.state.fingerprints {
+		labels = append(labels, label)
+	}
+	sort.Strings(labels)
+	digests := make([][]byte, len(labels))
+	for i, label := range labels {
+		digest := r.state.fingerprints[label]
+		digests[i] = append([]byte(nil), digest[:]...)
+	}
+	return labels, digests, nil
 }
 
 // Envelope is opaque. Default formatting and JSON redact its bytes. Binary is
