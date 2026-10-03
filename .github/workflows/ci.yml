@@ -138,7 +138,8 @@ jobs:
         run: go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
       - name: Scan source and integration-tagged tests
         run: |
-          export PATH="$(go env GOPATH)/bin:$PATH"
+          PATH="$(go env GOPATH)/bin:$PATH"
+          export PATH
           sh backend/scripts/check-go-vulnerabilities.sh
 
   migrations:
