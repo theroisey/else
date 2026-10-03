@@ -96,6 +96,8 @@ jobs:
       - run: CGO_ENABLED=0 go build -mod=readonly -trimpath ./cmd/api ./cmd/migrate ./cmd/healthcheck ./cmd/bootstrap-admin
       - name: Publication permission and tag boundaries
         run: python3 scripts/test-publication.py
+      - name: Stopped PostgreSQL recovery boundaries
+        run: python3 scripts/test-compose-recovery.py
       - name: Workflow syntax and expressions
         run: |
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7

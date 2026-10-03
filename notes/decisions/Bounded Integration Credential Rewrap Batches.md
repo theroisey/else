@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-03
 tags:
   - integrations
@@ -20,6 +20,8 @@ The trusted source owner enforces protected loading and declared restore startup
 The first failure stops the page without automatic retry. Results contain only known commits, last confirmed cursor, first failed/pending UUID and page/lookahead flags. They never advance past an uncertain row. Earlier commits remain; reconcile explicitly before a new request. Restarted scans exclude material already active. Cursors are caller-owned, not durable snapshot certificates; reset on client/key changes or concurrency behind them. No scheduler/CLI/public route/credential acceptance/provider request is added.
 
 Eligible completion cannot authorize retirement: disabled/obsolete/other-client and backup-only ciphertext remain, concurrency can change candidates, and stale writers require external exclusion. Broader inventory/backup expiry and verified restore proof remain future work. Automatic restore detection and provider lifecycle remain incomplete. See [batch operating contract](../../docs/integration-rotation.md). Full backend/real PostgreSQL and final-head five-gate CI accompany owner review; no agent merge or deployment.
+
+Owner merged PR #85 at `49cbe21bc381dbc6054847c8be999bc09fef978d`. Final-head run 37129297629 passed all five gates, including PostgreSQL 18.3, 439 frontend tests, 14 browser tests and containers. Both development branches synchronized. Main run 37131312850 passed four gates but failed the Compose fixture's deliberately stopped PostgreSQL restart; publication was skipped. Corrective Issue #86 requires explicit service start, bounded database readiness, preserved HTTP recovery checks and fresh five-gate proof. Parent #24 stays open; an owner merge does not establish successful merge-run verification.
 
 - [[Protected Integration Key Startup and Declared Restores]]
 - [[Encrypted Integration Credential Persistence]]
