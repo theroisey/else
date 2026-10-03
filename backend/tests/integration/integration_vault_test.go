@@ -696,7 +696,7 @@ func TestIntegrationVaultRuntimeSchemaAndRetainedRollback(t *testing.T) {
 			t.Fatal("PUBLIC credential helper exposed", e)
 		}
 	}
-	if _, e = provider(t, f.base).Down(ctx); e == nil {
+	if _, e = provider(t, f.base).DownTo(ctx, 16); e == nil {
 		t.Fatal("populated credential rollback allowed")
 	}
 	if f.stored(t, f.ring) != "synthetic" {
@@ -711,7 +711,7 @@ func TestIntegrationVaultEmptyRollbackRegrantAndAuditOnlyHistory(t *testing.T) {
 	c := f.checkpoint(t)
 	// Existing budget history must survive migration 17's empty rollback.
 	f.seedCount(t, f.ring, 1)
-	if _, e := p.Down(ctx); e != nil {
+	if _, e := p.DownTo(ctx, 16); e != nil {
 		t.Fatal(e)
 	}
 	if n, events := f.accounting(t); n != 1 || events != 0 {
@@ -731,7 +731,7 @@ func TestIntegrationVaultEmptyRollbackRegrantAndAuditOnlyHistory(t *testing.T) {
 	if _, e := other.runtime.Exec(other.base.ctx, `INSERT INTO app.audit_events `+auditColumns+` VALUES('user',$1::uuid,'integration_credential.created','integration_credential',$2::uuid,$3::uuid,$4,'{"exists":false}','{"exists":true,"revision":1}','{"source":"cli"}')`, other.actor, connectionID(1), clientAID, correlation.ID(correlation.New(other.base.ctx))); e != nil {
 		t.Fatal(e)
 	}
-	if _, e := provider(t, other.base).Down(other.base.ctx); e == nil {
+	if _, e := provider(t, other.base).DownTo(other.base.ctx, 16); e == nil {
 		t.Fatal("audit-only credential history rollback allowed")
 	}
 }

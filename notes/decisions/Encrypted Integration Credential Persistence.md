@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-03
 tags:
   - integrations
@@ -21,8 +21,9 @@ integration_credential.created/updated and integration_connection.updated commit
 
 Empty rollback/regrant preserves connection/budget history; any credential row or credential audit refuses down. Old decryption keys must survive live-row and backup retention until separately verified restore/retirement proof allows removal. After restore/clone/recovery that can rewind reservation counts, provision fresh independent active material with a never-used label before encryption; old keys become decryption-only. This library cannot detect rewind or supply that operator gate. Startup/restore tooling, bulk rotation, key retirement, provider policy/OAuth/revocation and synchronization remain future work; parent #24 stays incomplete.
 
-Tests cover authenticated persisted envelopes, restart/retained-key rotation, exact fences, concurrent winners, post-encryption revocation/disablement/archive/disconnect/cancel/generation changes, audit/deferred-commit rollback without refunds, tampering, single-connection pools, safe projections, permissions, private grants and retained rollback. Final-head CI evidence accompanies the PR/Issue before owner review.
+Tests cover authenticated persisted envelopes, restart/retained-key rotation, exact fences, concurrent winners, post-encryption revocation/disablement/archive/disconnect/cancel/generation changes, audit/deferred-commit rollback without refunds, tampering, single-connection pools, safe projections, permissions, private grants and retained rollback. PR #77 is owner-merged at `03af58daaf4752aaf552224cd609ea509b511d87`; final-head CI 37112599312 and merged main CI 37112997259 passed. Both branches synchronized. Issue #78 adds confirmed local disconnect with explicit unavailable remote revocation.
 
+- [[Local Integration Disconnect Fence]]
 - [[Durable Integration Encryption Budgets]]
 - [[Integration Credential Encryption and Rotation]]
 - [[Integration Connection Metadata and Read Boundaries]]
