@@ -1,6 +1,6 @@
 # Integration key startup and declared restores
 
-[Issue #82](https://github.com/theroisey/else/issues/82) adds protected key-file loading and a read-only database preflight before the API listens. It supplies no credential producer, provider connection, OAuth, synchronization, bulk rotation or key-retirement operation. Parent #24 remains incomplete.
+[Issue #82](https://github.com/theroisey/else/issues/82) adds protected key-file loading and a read-only database preflight before the API listens. It supplies no credential acceptance, provider connection, OAuth, synchronization or key-retirement operation. #84 separately adds private [bounded eligible rewrap batches](integration-rotation.md). Parent #24 remains incomplete.
 
 ## Configuration
 
@@ -42,4 +42,4 @@ Normal mode permits an existing nonexhausted active identity and supports ordina
 
 ## Verification
 
-Unit/race tests cover configuration redaction, protected file modes/ownership, symlink/hard-link/FIFO/special-file refusal, parser limits, cancellation and copied identity buffers. Real PostgreSQL tests cover exact identity/retained-key matching, obsolete generations, exhausted keys, declared freshness, no mutation/audit, private grants, queued lock visibility, cancellation/reuse and populated down/up/regrant. Full migration roundtrip includes nineteen versions. Container CI checks actual UID 65532 API startup with protected files, fixed private failures, rejection of a registered restored active key and acceptance of fresh active material without registry writes. No tests claim automatic restore detection or provider readiness.
+Unit/race tests cover configuration redaction, protected file modes/ownership, symlink/hard-link/FIFO/special-file refusal, parser limits, cancellation and copied identity buffers. Real PostgreSQL tests cover exact identity/retained-key matching, obsolete generations, exhausted keys, declared freshness, no mutation/audit, private grants, queued lock visibility, cancellation/reuse and populated down/up/regrant. The startup slice verified nineteen migration versions; current full roundtrip includes twenty with #84. Container CI checks actual UID 65532 API startup with protected files, fixed private failures, rejection of a registered restored active key and acceptance of fresh active material without registry writes. No tests claim automatic restore detection or provider readiness.

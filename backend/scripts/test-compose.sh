@@ -70,6 +70,7 @@ done
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_connection_list(uuid,uuid,uuid,integer)','EXECUTE') AND has_function_privilege(current_user,'app.integration_connection_read(uuid,uuid,uuid)','EXECUTE')")" = t ]
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_local_disconnect(uuid,uuid,uuid,bigint)','EXECUTE')")" = t ]
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_key_preflight(text[],bytea[],text,boolean)','EXECUTE')")" = t ]
+[ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_rotation_candidates(uuid,uuid,text,bytea,uuid,integer)','EXECUTE')")" = t ]
 for task_sql in 'SELECT * FROM app.pricing_sheets' 'SELECT * FROM app.pricing_versions' 'SELECT * FROM app.pricing_lines' 'SELECT * FROM app.pricing_snapshots' 'SELECT * FROM app.pricing_snapshot_lines' 'UPDATE app.pricing_sheets SET revision=revision+1' 'DELETE FROM app.pricing_versions' 'TRUNCATE app.pricing_snapshots' 'SELECT app.pricing_calculate($${}$$::jsonb)' 'SELECT app.pricing_version_document(gen_random_uuid(),true)'; do
   if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Pricing runtime privilege boundary failed.' >&2; exit 1; fi
 done
