@@ -55,8 +55,9 @@ type Keyring struct{ state *ringState }
 // Indirection also prevents fmt's unsupported-verb diagnostics from expanding
 // sensitive fields: those diagnostics can bypass an outer Formatter method.
 type ringState struct {
-	active string
-	keys   map[string]cipher.AEAD
+	active       string
+	keys         map[string]cipher.AEAD
+	fingerprints map[string][32]byte
 }
 
 // New accepts independently provisioned random 32-byte keys. It retains no input
@@ -65,7 +66,7 @@ func New(active string, keys map[string][]byte) (*Keyring, error) {
 	if !label.MatchString(active) || len(keys) == 0 || len(keys) > MaxKeys {
 		return nil, ErrKeyring
 	}
-	ring := &Keyring{state: &ringState{active: active, keys: make(map[string]cipher.AEAD, len(keys))}}
+	ring := &Keyring{state: &ringState{active: active, keys: make(map[string]cipher.AEAD, len(keys)), fingerprints: make(map[string][32]byte, len(keys))}}
 	seen := make(map[[32]byte]bool, len(keys))
 	for id, key := range keys {
 		if !label.MatchString(id) || len(key) != 32 {
@@ -77,6 +78,7 @@ func New(active string, keys map[string][]byte) (*Keyring, error) {
 			return nil, ErrKeyring
 		}
 		seen[digest] = true
+		ring.state.fingerprints[id] = digest
 		block, err := aes.NewCipher(key)
 		if err != nil {
 			return nil, ErrKeyring
@@ -91,6 +93,16 @@ func New(active string, keys map[string][]byte) (*Keyring, error) {
 		return nil, ErrKeyring
 	}
 	return ring, nil
+}
+
+// ActiveKeyIdentity is an explicit private persistence boundary for durable
+// encryption accounting. Never expose the label/fingerprint through APIs, logs
+// or audits. Independently random key material is mandatory.
+func (r *Keyring) ActiveKeyIdentity() (string, [32]byte, error) {
+	if r == nil || r.state == nil || r.state.keys[r.state.active] == nil {
+		return "", [32]byte{}, ErrKeyring
+	}
+	return r.state.active, r.state.fingerprints[r.state.active], nil
 }
 
 // Envelope is opaque. Default formatting and JSON redact its bytes. Binary is

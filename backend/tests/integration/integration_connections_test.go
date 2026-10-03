@@ -351,7 +351,7 @@ func TestIntegrationMetadataStoragePrivilegesConstraintsAndRollback(t *testing.T
 		}
 	}
 	migration := provider(t, f.base)
-	if _, e = migration.Down(f.base.ctx); e == nil {
+	if _, e = migration.DownTo(f.base.ctx, 14); e == nil {
 		t.Fatal("populated metadata rollback allowed")
 	}
 	if c, e := f.connections.Detail(f.base.ctx, f.actor, clientAID, connectionID(1)); e != nil || c.ID == "" {
@@ -367,7 +367,7 @@ func TestIntegrationMetadataEmptyDownUpPreservesHistoryAndRequiresRegrant(t *tes
 		t.Fatal(e)
 	}
 	p := provider(t, f.base)
-	if _, e := p.Down(f.base.ctx); e != nil {
+	if _, e := p.DownTo(f.base.ctx, 14); e != nil {
 		t.Fatal(e)
 	}
 	if _, e := p.Up(f.base.ctx); e != nil {
@@ -398,7 +398,7 @@ func TestIntegrationMetadataRollbackRetainsPermissionHistory(t *testing.T) {
 			} else if _, e := f.admin.Exec(f.base.ctx, `UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE permission_key='integrations.view'`); e != nil {
 				t.Fatal(e)
 			}
-			if _, e := provider(t, f.base).Down(f.base.ctx); e == nil {
+			if _, e := provider(t, f.base).DownTo(f.base.ctx, 14); e == nil {
 				t.Fatal("permission history rollback allowed")
 			}
 			var n int

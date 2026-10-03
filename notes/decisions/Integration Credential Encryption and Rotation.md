@@ -30,3 +30,5 @@ The next metadata backend needs a new view permission, but strict frontend admin
 - [[Audit Infrastructure]]
 - [[Identity and Sessions]]
 - [[Overview Interface and Bounded Refresh]]
+
+Follow-up #74 supplies [[Durable Integration Encryption Budgets]] after owner-merged metadata #72 / PR #73. Application encryption/rewrap must use the private audited budget wrapper; the raw crypto primitive remains uncounted. The cap covers one authoritative database and does not detect snapshot rewind. Restore/clone requires fresh independent active keys before sealing, with old keys retained for decryption only; later startup/storage tooling must enforce that gate. Durable credential replacement/rotation checkpoints remain incomplete.

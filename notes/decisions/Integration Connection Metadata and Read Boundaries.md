@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-03
 tags:
   - integrations
@@ -23,3 +23,7 @@ No credential persistence, startup keys, connection lifecycle writer, provider r
 - [[Integration View Permission Compatibility]]
 - [[Integration Credential Encryption and Rotation]]
 - [[Authorization and Client Scope]]
+
+Owner merged [PR #73](https://github.com/theroisey/else/pull/73) at `44c59b7f50e01f33a6e0b80a836666dd76ff91bd`. Final-head [run 37107183017](https://github.com/theroisey/else/actions/runs/37107183017) and main [run 37108435621](https://github.com/theroisey/else/actions/runs/37108435621) passed all five gates. Both permanent branches synchronized before #74. No agent merge/deployment occurred.
+
+- [[Durable Integration Encryption Budgets]]
