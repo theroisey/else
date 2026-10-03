@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '../../lib/validation'
 import { APIError, authenticatedJSON } from '../../services/authenticated'
 
 const revision = z.string().regex(/^[0-9a-f]{40}$/).refine(v => v !== '0'.repeat(40))

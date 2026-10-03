@@ -64,16 +64,21 @@ DATABASE_URL="postgres://else_runtime:$task_password@127.0.0.1:$task_port/else?s
   AUTH_PUBLIC_ORIGIN=http://127.0.0.1:5173 AUTH_COOKIE_SECURE=false HTTP_ADDRESS=127.0.0.1:8080 \
   "$task_directory/api" > "$task_directory/api.log" 2>&1 &
 task_api_pid=$!
+# Built artifact compatibility uses exactly the declared nginx header policy.
+# Public/failed-login probes do not add successful-session audit fixture rows.
+(cd frontend && npm run build)
 (
   cd frontend
-  exec node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173 --strictPort
-) > "$task_directory/frontend.log" 2>&1 &
+  exec node node_modules/vite/bin/vite.js preview --config vite.security.config.ts --host 127.0.0.1 --port 5173 --strictPort
+) > "$task_directory/preview.log" 2>&1 &
 task_frontend_pid=$!
 task_attempt=0
 until curl --fail --silent http://127.0.0.1:5173/ready >/dev/null; do
   task_attempt=$((task_attempt + 1))
-  [ "$task_attempt" -lt 30 ] || { echo 'Browser-test application did not become ready.' >&2; exit 1; }
+  [ "$task_attempt" -lt 30 ] || { echo 'Security artifact preview did not become ready.' >&2; exit 1; }
   sleep 1
 done
+node frontend/scripts/check-runtime-security.mjs http://127.0.0.1:5173
+# Retain all original cookie/audit flows against the same secured artifact.
 cd frontend
 AUTH_TEST_CONTAINER=$task_container AUTH_TEST_REVISION=$task_revision AUTH_TEST_BUILD_TIME=$task_build_time npm run test:e2e

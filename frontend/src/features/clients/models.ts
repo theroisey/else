@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '../../lib/validation'
 import { isUUID } from '../auth/session'
 export { canListClients, canOpenClients } from '../auth/permissions'
 

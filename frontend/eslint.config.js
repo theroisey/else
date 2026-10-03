@@ -18,4 +18,12 @@ export default tseslint.config(
     },
   },
   { files: ['eslint.config.js'], languageOptions: { globals: globals.node } },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/lib/validation.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [{ group: ['zod', 'zod/*'], message: 'Use lib/validation so every schema follows the runtime CSP configuration.' }] }],
+    },
+  },
+  { files: ['scripts/**/*.mjs'], languageOptions: { globals: { ...globals.node, ...globals.browser } } },
 )

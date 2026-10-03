@@ -139,6 +139,7 @@ compose_production up -d --wait
 task_address=$(compose_production port frontend 8080)
 task_url="http://$task_address"
 for task_path in / /status /health /ready; do curl --fail --silent --show-error "$task_url$task_path" >/dev/null; done
+python3 "$task_directory/frontend/scripts/check-security-headers.py" "$task_url"
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/unknown")" = 404 ]
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/auth/session")" = 401 ]
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' "$task_url/api/v1/clients/00000000-0000-4000-8000-000000000001/overview")" = 401 ]
