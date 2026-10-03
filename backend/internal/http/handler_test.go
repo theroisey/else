@@ -35,6 +35,21 @@ func TestIntegrationRoutesUseDedicatedProtectedAdapter(t *testing.T) {
 	}
 }
 
+func TestReleaseRoutesUseDedicatedProtectedAdapter(t *testing.T) {
+	s, err := New(testConfig(t), slog.New(slog.NewJSONHandler(io.Discard, nil)), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.releases = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(401) })
+	for _, path := range []string{"/api/v1/releases", "/api/v1/releases/extra", "/api/v1/releases?client=synthetic"} {
+		w := httptest.NewRecorder()
+		s.httpServer.Handler.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if w.Code != 401 {
+			t.Fatal("release route bypassed protected adapter")
+		}
+	}
+}
+
 func TestOverviewRoutesUseDedicatedProtectedAdapter(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	other := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(418) })

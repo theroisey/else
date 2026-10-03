@@ -30,6 +30,8 @@ Owner-merged Issue #88 adds the [trusted confirmed one-page command](../docs/int
 
 Implement backend changes on `backend`. Root-level repository documentation and shared infrastructure may use a coordinated backend PR without unrelated frontend implementation. See [bootstrap instructions](../docs/repository-bootstrap.md).
 
+Issue #92 under #29 adds protected `GET /api/v1/releases`: fresh global releases.view gates immutable CI-stamped API version/revision/build time. Plain or invalid stamps and latest release/image provenance/deployment evidence remain explicitly unavailable. No runtime override, outbound call, schema or read audit is added. See [release contract and stamping](../docs/releases.md); frontend follows separately.
+
 Issue #2 adds the Go HTTP executable, configuration, structured logging, health/readiness, bounded shutdown, and focused unit/lifecycle tests. See [the HTTP foundation guide](../docs/backend-http.md) for configuration, response contracts, and run/check commands. Issue #4 adds PostgreSQL pools and reversible migrations; readiness checks real connectivity. Client, task, administration, planning, reminder and activity business routes now use their dedicated protected adapters.
 
 PostgreSQL uses pgxpool; schema changes use a separate embedded Goose migration executable. Export a securely provisioned runtime DATABASE_URL before API startup, and a distinct MIGRATION_DATABASE_URL for migration commands. See the [database guide](../docs/database.md) for role privileges, TLS, migration safety, and disposable integration tests.

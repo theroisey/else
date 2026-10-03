@@ -7,7 +7,10 @@ RUN --mount=type=secret,id=proxy_ca \
     if [ -f /run/secrets/proxy_ca ]; then export SSL_CERT_FILE=/run/secrets/proxy_ca; fi; \
     go mod download
 COPY . .
-RUN go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/api ./cmd/api \
+ARG BUILD_VERSION=""
+ARG BUILD_REVISION=""
+ARG BUILD_TIME=""
+RUN sh scripts/build-api.sh /out/api "$BUILD_VERSION" "$BUILD_REVISION" "$BUILD_TIME" \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/migrate ./cmd/migrate \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/bootstrap-admin ./cmd/bootstrap-admin \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/rotate-integration-credentials ./cmd/rotate-integration-credentials \
