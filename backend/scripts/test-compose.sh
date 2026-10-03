@@ -166,7 +166,7 @@ until docker exec "$task_key_container" /healthcheck >/dev/null 2>&1; do
 done
 docker rm --force "$task_key_container" >/dev/null
 task_key_container=''
-[ "$(runtime_query 'SELECT count(*) FROM app.integration_encryption_keys')" = 0 ]
+[ "$(compose exec -T postgres psql -U postgres -d else -Atc 'SELECT count(*) FROM app.integration_encryption_keys')" = 0 ]
 for task_key_file in public.json malformed.json symlink.json missing.json; do
   if compose_production run --rm --no-deps \
     --volume "$task_directory/key-fixtures:/run/integration-keys:ro" \
@@ -197,7 +197,7 @@ until docker exec "$task_key_container" /healthcheck >/dev/null 2>&1; do
 done
 docker rm --force "$task_key_container" >/dev/null
 task_key_container=''
-[ "$(runtime_query 'SELECT count(*) FROM app.integration_encryption_keys')" = 1 ]
+[ "$(compose exec -T postgres psql -U postgres -d else -Atc 'SELECT count(*) FROM app.integration_encryption_keys')" = 1 ]
 printf '%s\n' 'Protected integration key startup, fixed failures, and declared restore freshness verified.'
 if [ -n "${IMAGE_ARCHIVE_PATH:-}" ]; then
   docker save --output "$IMAGE_ARCHIVE_PATH" else-frontend:ci else-backend:ci
