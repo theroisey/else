@@ -62,6 +62,7 @@ const (
 	RemindersUpdate    Permission = "reminders.update"
 	AnalyticsView      Permission = "analytics.view"
 	IntegrationsManage Permission = "integrations.manage"
+	IntegrationsView   Permission = "integrations.view"
 )
 
 type Scope string
@@ -72,7 +73,8 @@ const (
 )
 
 var permissionScopes = map[Permission]Scope{
-	BillingCreate: Client, BillingUpdate: Client, BillingDelete: Client,
+	IntegrationsView: Client,
+	BillingCreate:    Client, BillingUpdate: Client, BillingDelete: Client,
 	UsersView: Global, UsersManage: Global, RolesView: Global, RolesManage: Global,
 	AuditView: Global, ReleasesView: Global, ReleasesManage: Global, ClientsCreate: Global,
 	ClientsView: Client, ClientsUpdate: Client, ClientsArchive: Client,

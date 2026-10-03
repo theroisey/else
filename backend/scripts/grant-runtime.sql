@@ -43,6 +43,8 @@ GRANT EXECUTE ON FUNCTION app.reminder_read(uuid,uuid,uuid),
 
 GRANT EXECUTE ON FUNCTION app.activity_list(uuid,uuid,timestamptz,uuid,integer) TO else_runtime;
 GRANT EXECUTE ON FUNCTION app.client_overview(uuid,uuid) TO else_runtime;
+GRANT EXECUTE ON FUNCTION app.integration_connection_list(uuid,uuid,uuid,integer),
+ app.integration_connection_read(uuid,uuid,uuid) TO else_runtime;
 GRANT EXECUTE ON FUNCTION app.pricing_read(uuid,uuid,uuid,uuid),app.pricing_list(uuid,uuid,uuid,uuid,integer),
  app.pricing_preview(uuid,uuid,jsonb),app.pricing_write(uuid,uuid,uuid,uuid,bigint,jsonb),
  app.pricing_copy(uuid,uuid,uuid,uuid,bigint,jsonb,uuid),app.pricing_snapshot_read(uuid,uuid,uuid) TO else_runtime;
