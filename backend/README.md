@@ -12,7 +12,9 @@ The [client API](../docs/clients.md) provides bounded list/detail reads, full pr
 
 Issue #19 adds the owner-merged [exact collections/payment API](../docs/billing.md), with explicit currencies, exact string amounts/revisions, guarded append-only payment commands and retained cancellation history. Owner-merged #20 delivers the finance workspace. Owner-merged #21 adds the [versioned pricing API](../docs/pricing.md) and [pricing interface](../docs/pricing-interface.md): exact line calculations, immutable effective versions, restricted internal costs and command-reconciled billing copies.
 
-Issue #23 begins the [authorized overview API](../docs/client-overview.md): one read-only client aggregate with exact finance, bounded due tasks/reminders and safe recent activity. Independent current grants omit inaccessible modules. Migration 14 adds one entrypoint/index; the frontend overview follows owner review separately.
+Owner-merged Issue #23 delivers the [authorized overview API](../docs/client-overview.md) and its separately reviewed frontend: one read-only client aggregate with exact finance, bounded due tasks/reminders and safe recent activity. Independent current grants omit inaccessible modules. Migration 14 adds one entrypoint/index.
+
+Issue #68 is the first slice of parent #24's [integration security boundaries](../docs/integrations.md): bounded AES-256-GCM credentials with client/connection/provider/purpose binding, retained-key reads, authenticated rewrap and safe formatting/logging. It is an in-memory backend primitive; connection persistence/routes, permission grants, startup key loading, provider callbacks/revocation and synchronization remain later parent slices.
 
 Implement backend changes on `backend`. Root-level repository documentation and shared infrastructure may use a coordinated backend PR without unrelated frontend implementation. See [bootstrap instructions](../docs/repository-bootstrap.md).
 

@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#23](https://github.com/theroisey/else/issues/23), the [client overview interface](overview-interface.md), consuming the owner-merged [aggregate backend](client-overview.md). Issues #1–#22 and #28 are owner-merged. Backend PR #66 merged at `378e5cf`; both branches synchronized and main [run 37060547663](https://github.com/theroisey/else/actions/runs/37060547663) passed. Frontend financial/access policy preceded implementation. The responsive editorial client root combines exact finance, bounded attention and safe activity through one aggregate request; #23 remains open until owner review/merge.
+Current slice: [#68](https://github.com/theroisey/else/issues/68), the credential encryption/key-rotation foundation of parent [#24](https://github.com/theroisey/else/issues/24). See [integration boundaries](integrations.md) for implemented behavior and remaining lifecycle work. Issues #1–#23 and #28 are owner-merged. Overview PR #67 merged at `15aa701`; both branches synchronized and main [run 37065393667](https://github.com/theroisey/else/actions/runs/37065393667) passed. Integration authorization/key policies preceded code; parent #24 remains incomplete until durable connections, callback/revocation, sync and migration proof exist.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#22 and #28 are owner-merged, including pricing PRs #64/#65. Issue #23 backend PR #66 is merged; the overview UI is the current separate frontend slice. Integration boundaries #24 follow after owner merge, with provider policy recorded before implementation. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#23 and #28 are owner-merged, including overview PRs #66/#67. Parent #24 proceeds in separately reviewed slices: #68 credential encryption/key rotation first; durable metadata/authorization/audit, concrete provider authorization and callback/revocation/synchronization follow. Provider Issues #25–#27 remain dependent on verified parent boundaries; encryption alone does not complete #24. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
