@@ -74,6 +74,7 @@ done
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_local_disconnect(uuid,uuid,uuid,bigint)','EXECUTE')")" = t ]
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_key_preflight(text[],bytea[],text,boolean)','EXECUTE')")" = t ]
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_rotation_candidates(uuid,uuid,text,bytea,uuid,integer)','EXECUTE')")" = t ]
+[ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_key_inventory(uuid,text[],bytea[],text,boolean)','EXECUTE')")" = t ]
 for task_sql in 'SELECT * FROM app.pricing_sheets' 'SELECT * FROM app.pricing_versions' 'SELECT * FROM app.pricing_lines' 'SELECT * FROM app.pricing_snapshots' 'SELECT * FROM app.pricing_snapshot_lines' 'UPDATE app.pricing_sheets SET revision=revision+1' 'DELETE FROM app.pricing_versions' 'TRUNCATE app.pricing_snapshots' 'SELECT app.pricing_calculate($${}$$::jsonb)' 'SELECT app.pricing_version_document(gen_random_uuid(),true)'; do
   if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Pricing runtime privilege boundary failed.' >&2; exit 1; fi
 done
@@ -164,6 +165,12 @@ if docker run --rm --network none "$task_rotation_image" > "$task_directory/rota
 fi
 python3 "$task_directory/backend/scripts/check-rotation-command-output.py" \
   "$task_directory/rotation-command.log" integration_rotation_invalid
+if docker run --rm --network none "$task_rotation_image" \
+  --inventory --actor 11111111-1111-4111-8111-111111111111 --confirmed > "$task_directory/rotation-command.log" 2>&1; then
+  echo 'Operator inventory accepted mixed mutation flags.' >&2; exit 1
+fi
+python3 "$task_directory/backend/scripts/check-rotation-command-output.py" \
+  "$task_directory/rotation-command.log" integration_rotation_invalid
 
 # Verify actual non-root runtime startup against protected transient synthetic
 # mounts. Helpers use the already-tested PostgreSQL image with no networking.
@@ -185,8 +192,15 @@ for task_key_file in protected.json public.json malformed.json symlink.json miss
     echo 'Unconfigured/insecure operator command started successfully.' >&2; exit 1
   fi
   python3 "$task_directory/backend/scripts/check-rotation-command-output.py" "$task_directory/rotation-command.log" "$task_expected"
+  if docker run --rm --network none \
+    --volume "$task_directory/key-fixtures:/run/integration-keys:ro" \
+    --env "INTEGRATION_KEYRING_FILE=/run/integration-keys/$task_key_file" "$task_rotation_image" \
+    --inventory --actor 11111111-1111-4111-8111-111111111111 > "$task_directory/rotation-command.log" 2>&1; then
+    echo 'Unconfigured/insecure inventory command started successfully.' >&2; exit 1
+  fi
+  python3 "$task_directory/backend/scripts/check-rotation-command-output.py" "$task_directory/rotation-command.log" "$task_expected"
 done
-printf '%s\n' 'Separate non-root rotation command, explicit confirmation, and protected-source diagnostics verified.'
+printf '%s\n' 'Separate non-root rotation/inventory command, explicit grammar, and protected-source diagnostics verified.'
 task_key_container="$task_project-key-startup"
 compose_production run --detach --no-deps --name "$task_key_container" \
   --volume "$task_directory/key-fixtures:/run/integration-keys:ro" \

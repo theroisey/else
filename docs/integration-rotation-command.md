@@ -6,13 +6,15 @@
 
 Only externally authorized operators provisioned with protected keys and runtime database access may execute this command. Those deployment credentials are privileged application-writer authority. `--actor` supplies **trusted audit attribution**, not end-user authentication: the database checks that actor's active/current `clients.view` and `integrations.manage` grants on the exact active client, including empty pages. Never expose execution to a public request, untrusted user-selected actor or job payload.
 
-Use the authoritative database with migrations through 20 and existing reviewed [runtime grants](../backend/scripts/grant-runtime.sql). The command uses only `DATABASE_URL`; it never bootstraps, migrates or grants permissions. Provision its URL through protected deployment configuration using the existing verified TLS rules. Never pass it or key material as a CLI argument or print configuration.
+Use the authoritative database with migrations through 20 for mutation, through 21 for inventory, and existing reviewed [runtime grants](../backend/scripts/grant-runtime.sql). The command uses only `DATABASE_URL`; it never bootstraps, migrates or grants permissions. Provision its URL through protected deployment configuration using the existing verified TLS rules. Never pass it or key material as a CLI argument or print configuration.
 
 `INTEGRATION_KEYRING_FILE` is mandatory and uses the [protected Linux source contract](integration-key-startup.md): an absolute clean path to a readable single-link regular file owned by the effective user or root, mode 0400/0600, bounded size, strict immutable ring and no final-component symlink. Unsupported platforms fail configured loading. Provision fresh independent active material plus all required retained keys through external secret management; never use committed test fixtures. Exclude stale old-key writers externally.
 
 `INTEGRATION_KEYRING_MODE` defaults to `normal`; explicitly declared recovery uses `restored`. Startup applies the configured mode before rotation; the library repeats normal read-only preflight per page. Keys register only through existing audited reservations. These checks cannot detect undeclared rewinds or material absent from restored accounting history.
 
 ## Invocation and packaging
+
+Issue #90 adds a separate [read-only live retention inventory](integration-key-inventory.md): `--inventory --actor UUID` requires both global view/manage grants and rejects all mutation flags. It observes stored, eligible and excluded counts without encryption, writes or audits; normal mode permits exhausted active material. All mutation prerequisites and confirmation rules below remain in effect.
 
 From `backend`, build with the repository's pinned Go toolchain:
 
@@ -63,7 +65,7 @@ After reconciliation, another explicit confirmed invocation may use `--after` wi
 
 The first audited reservation in restored mode can register fresh active material **even when the first credential write fails**. Subsequent restored invocations reject that now-registered active material. Verify durable reservation, storage and audits, establish the declared recovery transition, then explicitly configure `normal` for further pages while excluding stale writers. The command never auto-switches, rewinds accounting or selects old active material to make a retry pass. An empty restored page registers nothing and does not establish that transition.
 
-`page_complete: true` describes this page; with `more: false` it reaches only the observed end of the eligible client scan. Disabled/obsolete/other-client credentials, concurrent writes and backups still require retained keys. No report permits retirement, proves provider health or revokes compromised provider credentials. Inventory, backup expiry and verified restore/retirement proof remain separate work.
+`page_complete: true` describes this page; with `more: false` it reaches only the observed end of the eligible client scan. Disabled/obsolete/other-client credentials, concurrent writes and backups still require retained keys. No report permits retirement, proves provider health or revokes compromised provider credentials. [Live inventory](integration-key-inventory.md) supplies counts only; backup expiry and verified restore/retirement proof remain separate work.
 
 ## Verification
 

@@ -38,7 +38,9 @@ The UUID cursor is caller-owned and confers no permission, snapshot consistency 
 
 Only a successful `PageComplete && !More` result reaches the observed end of this **eligible** scan. That does not establish that disabled/obsolete/other-client rows are rotated, all concurrent writes are drained, backups are readable without retained keys, or any key can be retired. Keep required keys for live ciphertext and all retained backups until separately reviewed inventory, expiry and restore proof permits removal. Normal preflight cannot detect undeclared restore. Rewrap does not revoke compromised provider credentials or prove remote health.
 
-Apply migration 20 and its reviewed grant before using the library. Down removes only the candidate entrypoint under the exclusive lifecycle lock, preserving populated credentials, accounting and audits. Up requires regrant. Existing history-preserving lower migration guards still apply. No new permission seed, frontend contract or default production wiring is introduced.
+Apply migration 20 and its reviewed grant before using the library. Down removes only the candidate entrypoint under the exclusive lifecycle lock, preserving populated credentials, accounting and audits. With migration 21 applied, first remove its separate inventory entrypoint; reaching version 19 removes the migration 20 candidate reader. Up requires regrant. Existing history-preserving lower migration guards still apply. No new permission seed, frontend contract or default production wiring is introduced.
+
+Issue #90 adds separate [live retention counts](integration-key-inventory.md) across all clients under global authority. Counts include excluded rows but never authorize retirement or replace backup/restore proof.
 
 ## Verification
 
