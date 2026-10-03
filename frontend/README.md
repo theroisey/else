@@ -1,5 +1,7 @@
 # Frontend
 
+Issue #70 prepares the client-scoped `integrations.view` permission consumer before the metadata backend adds its definition. Old and future administration catalogs/roles parse safely; view/manage/analytics/client permissions and complete-authority delegation remain independent. No integration route or action is exposed. See [integration boundaries](../docs/integrations.md).
+
 The React/TypeScript application uses Vite, Tailwind CSS, Font Awesome, React Router, and TanStack Query. It provides real cookie-session login/logout, a responsive guarded shell, the signed-in account's current access, permission-guarded user/role administration, authorized client records and workspaces, public service checks and a bounded component review route. React Hook Form and Zod handle the full client profile/contact/tag form. Task and planning interfaces provide audited operational workflows; the [reminder interface](../docs/reminder-interface.md) adds explicit timezone occurrences, bounded due/terminal views, historical owners/references and revision-safe drafts. It consumes the owner-merged reminder API without backend/schema changes.
 
 Use Node 24.21.0 and npm 11.19.0:
