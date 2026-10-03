@@ -11,10 +11,13 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/theroisey/else/backend/internal/authorization"
 	"github.com/theroisey/else/backend/internal/correlation"
@@ -266,5 +269,40 @@ func TestIntegrationRotationCommandOutputLossDoesNotRetryCommittedPage(t *testin
 	var out, diagnostic bytes.Buffer
 	if rotationcommand.Run(ctx, f.args(f.actor, clientAID, "", 1), func(string) (string, bool) { t.Fatal("canceled command read configuration"); return "", false }, &out, &diagnostic) != 1 {
 		t.Fatal("canceled command succeeded")
+	}
+}
+
+func TestIntegrationRotationCommandBinaryClosedStdoutPreservesCommittedPage(t *testing.T) {
+	// Build before starting the fixture's bounded database context. Use the same
+	// toolchain as the test process, with no reliance on an ambient Go selector.
+	binary := filepath.Join(t.TempDir(), "rotate-integration-credentials")
+	buildCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	build := exec.CommandContext(buildCtx, filepath.Join(runtime.GOROOT(), "bin", "go"), "build", "-mod=readonly", "-trimpath", "-o", binary, "./cmd/rotate-integration-credentials")
+	build.Dir = "../.."
+	build.Env = append(os.Environ(), "CGO_ENABLED=0")
+	if e := build.Run(); e != nil {
+		t.Fatal("synthetic operator binary build failed")
+	}
+	f := newRotationCommandFixture(t, 2)
+	reader, writer, e := os.Pipe()
+	if e != nil {
+		t.Fatal("synthetic closed output pipe")
+	}
+	_ = reader.Close()
+	defer writer.Close()
+	var diagnostic bytes.Buffer
+	command := exec.CommandContext(f.base.ctx, binary, f.args(f.actor, clientAID, "", 1)...)
+	command.Env = []string{"DATABASE_URL=" + f.environment["DATABASE_URL"], "INTEGRATION_KEYRING_FILE=" + f.environment["INTEGRATION_KEYRING_FILE"]}
+	command.Stdout, command.Stderr = writer, &diagnostic
+	e = command.Run()
+	var status *exec.ExitError
+	if !errors.As(e, &status) || status.ExitCode() != 1 || diagnostic.String() != "{\"status\":\"attention_required\",\"error_code\":\"integration_rotation_output_failed\"}\n" {
+		t.Fatal("binary closed pipe bypassed safe output failure")
+	}
+	f.assertRow(t, 1, true, 3, 2, 2)
+	f.assertRow(t, 2, false, 2, 1, 2)
+	if n, events := f.accounting(t); n != 3 || events != 3 {
+		t.Fatal("binary output loss retried committed page")
 	}
 }
