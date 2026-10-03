@@ -10,6 +10,7 @@ COPY . .
 RUN go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/api ./cmd/api \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/migrate ./cmd/migrate \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/bootstrap-admin ./cmd/bootstrap-admin \
+    && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/rotate-integration-credentials ./cmd/rotate-integration-credentials \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/healthcheck ./cmd/healthcheck
 
 FROM scratch AS common
@@ -24,6 +25,10 @@ CMD ["status"]
 FROM common AS bootstrap
 COPY --from=build /out/bootstrap-admin /bootstrap-admin
 ENTRYPOINT ["/bootstrap-admin"]
+
+FROM common AS rotation
+COPY --from=build /out/rotate-integration-credentials /rotate-integration-credentials
+ENTRYPOINT ["/rotate-integration-credentials"]
 
 FROM common AS production
 COPY --from=build /out/api /api

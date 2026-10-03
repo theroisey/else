@@ -8,6 +8,7 @@ task_directory=$(mktemp -d)
 task_project="else-ci-$(openssl rand -hex 6)"
 task_initialized=false
 task_key_container=''
+task_rotation_image=''
 compose() {
   docker compose --project-name "$task_project" --project-directory "$task_directory" \
     --file "$task_directory/docker-compose.yml" --file "$task_directory/docker-compose.ci.yml" "$@"
@@ -19,6 +20,7 @@ cleanup() {
   task_result=$?
   trap - EXIT INT TERM
   if [ -n "$task_key_container" ]; then docker rm --force "$task_key_container" >/dev/null 2>&1 || task_result=1; fi
+  if [ -n "$task_rotation_image" ]; then docker image rm "$task_rotation_image" >/dev/null 2>&1 || task_result=1; fi
   if [ "$task_initialized" = true ]; then
     if [ "$task_result" -ne 0 ]; then
       compose logs --no-color --tail 100 2>&1 | python3 "$task_directory/backend/scripts/redact-compose-logs.py" "$task_directory/.env" || true
@@ -147,6 +149,22 @@ for task_component in frontend backend; do
   docker tag "$task_image" "else-$task_component:ci"
 done
 
+# The operator target is separate from the API and default Compose services.
+task_rotation_image="$task_project-rotation"
+if [ -n "${CODEX_PROXY_CERT:-}" ]; then
+  docker build --target rotation --tag "$task_rotation_image" \
+    --secret "id=proxy_ca,src=$CODEX_PROXY_CERT" "$task_directory/backend"
+else
+  docker build --target rotation --tag "$task_rotation_image" "$task_directory/backend"
+fi
+[ "$(docker image inspect --format '{{.Config.User}}' "$task_rotation_image")" = '65532:65532' ]
+docker run --rm --network none "$task_rotation_image" --help > "$task_directory/rotation-help.log"
+if docker run --rm --network none "$task_rotation_image" > "$task_directory/rotation-command.log" 2>&1; then
+  echo 'Operator command accepted missing confirmation.' >&2; exit 1
+fi
+python3 "$task_directory/backend/scripts/check-rotation-command-output.py" \
+  "$task_directory/rotation-command.log" integration_rotation_invalid
+
 # Verify actual non-root runtime startup against protected transient synthetic
 # mounts. Helpers use the already-tested PostgreSQL image with no networking.
 python3 "$task_directory/backend/scripts/key-startup-fixtures.py" "$task_directory/key-fixtures"
@@ -156,6 +174,19 @@ docker run --rm --network none --volume "$task_directory/key-fixtures:/fixtures"
   chmod 0400 /fixtures/protected.json /fixtures/malformed.json /fixtures/fresh.json
   chmod 0444 /fixtures/public.json
 ' >/dev/null
+for task_key_file in protected.json public.json malformed.json symlink.json missing.json; do
+  task_expected=integration_rotation_key_source_failed
+  if [ "$task_key_file" = protected.json ]; then task_expected=integration_rotation_database_configuration_failed; fi
+  if docker run --rm --network none \
+    --volume "$task_directory/key-fixtures:/run/integration-keys:ro" \
+    --env "INTEGRATION_KEYRING_FILE=/run/integration-keys/$task_key_file" "$task_rotation_image" \
+    --actor 11111111-1111-4111-8111-111111111111 --client 22222222-2222-4222-8222-222222222222 \
+    --limit 1 --confirmed > "$task_directory/rotation-command.log" 2>&1; then
+    echo 'Unconfigured/insecure operator command started successfully.' >&2; exit 1
+  fi
+  python3 "$task_directory/backend/scripts/check-rotation-command-output.py" "$task_directory/rotation-command.log" "$task_expected"
+done
+printf '%s\n' 'Separate non-root rotation command, explicit confirmation, and protected-source diagnostics verified.'
 task_key_container="$task_project-key-startup"
 compose_production run --detach --no-deps --name "$task_key_container" \
   --volume "$task_directory/key-fixtures:/run/integration-keys:ro" \

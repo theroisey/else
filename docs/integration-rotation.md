@@ -1,6 +1,6 @@
 # Bounded integration credential rewrap batches
 
-[Issue #84](https://github.com/theroisey/else/issues/84) adds `internal/integrations/rotation`, a private backend consumer of the existing audited budget and fenced vault. It adds no HTTP route, operator CLI, scheduler, real credential acceptance or provider call. Parent #24 remains incomplete.
+[Owner-merged Issue #84](https://github.com/theroisey/else/issues/84) adds `internal/integrations/rotation`, a private backend consumer of the existing audited budget and fenced vault. The separate [trusted operator command](integration-rotation-command.md) in #88 supplies protected loading and explicit one-page invocation. No HTTP route, scheduler, real credential acceptance or provider call is added. Parent #24 remains incomplete.
 
 ## Source and authorization prerequisites
 
