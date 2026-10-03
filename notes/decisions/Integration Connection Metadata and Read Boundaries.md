@@ -18,7 +18,7 @@ Migration 15 introduces integrations.view with an explicit Initial Administrator
 
 One connection permanently belongs to one client/provider/ad account. Numeric account IDs and generation stay private; uniqueness prevents moving the same account across clients. The API exposes seven fields, exact revision strings and UTC timestamps, using bounded client-bound UUID keyset cursors. State reflects stored facts, not a health probe or timestamp inference. Empty and archived-client history are honest; no connection is seeded. Reads produce no audit write. Disconnected metadata remains retained; no deletion endpoint exists. Down refuses any connection or custom/revoked integration-view permission history.
 
-No credential persistence, startup keys, connection lifecycle writer, provider request, metrics or sync is implemented. Future writers require manage, immutable ownership, revision/generation fences and typed transactional audits. Parent #24 remains incomplete. Full backend/real PostgreSQL and final-head five-job CI are required before owner review; no agent merge/deployment is authorized.
+This metadata slice implements no credential persistence, startup keys, connection lifecycle writer, provider request, metrics or sync. Follow-up #76 adds private credential persistence/single-row rewrap and audited revision fences; startup/restore gates and provider lifecycle remain separate work. Future writers require manage, immutable ownership, revision/generation fences and typed transactional audits. Parent #24 remains incomplete. Full backend/real PostgreSQL and final-head five-job CI are required before owner review; no agent merge/deployment is authorized.
 
 - [[Integration View Permission Compatibility]]
 - [[Integration Credential Encryption and Rotation]]
@@ -27,3 +27,4 @@ No credential persistence, startup keys, connection lifecycle writer, provider r
 Owner merged [PR #73](https://github.com/theroisey/else/pull/73) at `44c59b7f50e01f33a6e0b80a836666dd76ff91bd`. Final-head [run 37107183017](https://github.com/theroisey/else/actions/runs/37107183017) and main [run 37108435621](https://github.com/theroisey/else/actions/runs/37108435621) passed all five gates. Both permanent branches synchronized before #74. No agent merge/deployment occurred.
 
 - [[Durable Integration Encryption Budgets]]
+- [[Encrypted Integration Credential Persistence]]

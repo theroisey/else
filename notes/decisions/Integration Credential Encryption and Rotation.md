@@ -16,7 +16,7 @@ The backend credential package binds AES-256-GCM ciphertext to immutable client/
 
 An unsupported `%p` formatting diagnostic can bypass an outer formatter and expand value fields. Private state indirection prevents this; regression tests include pointers, values and containing structs, both log handlers and explicit persistence-buffer copies. Redaction is not protection against deliberately extracted buffers or process-memory inspection.
 
-Keys are independently provisioned outside the database and unique per environment. The future storage owner must enforce an encryption budget below 2^32 messages/key across processes/restarts, atomic revision-checked rewrap batches and retention/restore proof before retiring old keys. This primitive has no global counter, durable rotation or startup wiring. Go JSON/cipher/runtime copies cannot be guaranteed erased.
+Keys are independently provisioned outside the database and unique per environment. Owner-merged #74 supplies the durable 2^24 reservation budget. Follow-up #76 adds private ciphertext storage and single-row revision-checked rewrap. Bulk rotation and retention/restore proof before retiring old keys remain future work. This primitive has no global counter, durable rotation or startup wiring. Go JSON/cipher/runtime copies cannot be guaranteed erased.
 
 No provider call, route, permission grant, schema/migration, connection/sync success or durable audit event is introduced. Encryption is not authorization; persisted metadata must be resolved under current exact-client grants first. Remaining boundaries and verification requirements are explicit in [the integration guide](../../docs/integrations.md). No merge/deployment is authorized.
 
