@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#78](https://github.com/theroisey/else/issues/78), confirmed local integration disconnect with immediate generation fencing and explicit unavailable remote revocation for parent [#24](https://github.com/theroisey/else/issues/24). See [integration boundaries](integrations.md). Issues #1–#23, #28, #68, #70, #72, #74 and #76 are owner-merged. Credential PR #77 merged at `03af58d`; both branches synchronized and main [run 37112997259](https://github.com/theroisey/else/actions/runs/37112997259) passed. Meta Ads remains the planned first provider. Parent #24 still needs startup/restore enforcement, bulk rotation/key retirement and verified provider/OAuth/revocation/synchronization.
+Current slice: [#80](https://github.com/theroisey/else/issues/80), the [client integration interface](integration-interface.md) with exact-client metadata and confirmed local disable/manual revocation recovery for parent [#24](https://github.com/theroisey/else/issues/24). Issues #1–#23, #28, #68, #70, #72, #74, #76 and #78 are owner-merged. Disconnect PR #79 merged at `debac21`; both branches synchronized and main [run 37116529670](https://github.com/theroisey/else/actions/runs/37116529670) passed all five verification gates. Meta Ads remains the planned first provider. Parent #24 still needs startup/restore enforcement, bulk rotation/key retirement and verified provider/OAuth/revocation/synchronization.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#23, #28, #68, #70, #72, #74 and #76 are owner-merged. Parent #24 proceeds in separately reviewed slices: #78 supplies confirmed local disconnect and an honest unavailable remote outcome, followed by startup/restore enforcement and verified provider/callback/revocation/synchronization. Provider Issues #25–#27 remain dependent on parent boundaries. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#23, #28, #68, #70, #72, #74, #76 and #78 are owner-merged. Parent #24 proceeds in separately reviewed slices: #80 consumes the metadata/local-disconnect API in a guarded interface, followed by startup/restore enforcement and verified provider/callback/revocation/synchronization. Provider Issues #25–#27 remain dependent on parent boundaries. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.

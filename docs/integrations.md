@@ -1,5 +1,7 @@
 # Integration security boundaries
 
+Issue #80 adds the separate [client integration workspace](integration-interface.md) consuming the owner-merged metadata and local-disconnect contracts. It exposes stored connection facts and confirmed local disable with explicit manual remote-revocation attention; provider setup and synchronization remain unavailable.
+
 Parent [Issue #24](https://github.com/theroisey/else/issues/24) is deliberately split. Owner-merged #68 / PR #69 supplies credential encryption, #70 / PR #71 frontend permission compatibility, and #72 / PR #73 durable secret-free metadata reads. [Issue #74](https://github.com/theroisey/else/issues/74) adds private durable encryption budgets. Meta Ads is the planned first provider, recorded in [#25 before code](https://github.com/theroisey/else/issues/25#issuecomment-5966713552). No connection, credential, metric or synchronization success is seeded or created by this API.
 
 ## Implemented credential foundation

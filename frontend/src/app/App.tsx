@@ -30,6 +30,8 @@ const ReminderListPage = lazy(() => import('../features/reminders/ReminderListPa
 const ReminderDetailPage = lazy(() => import('../features/reminders/ReminderDetailPage').then(m => ({ default: m.ReminderDetailPage })))
 const ReminderEditorPage = lazy(() => import('../features/reminders/ReminderEditorPage').then(m => ({ default: m.ReminderEditorPage })))
 const ActivityPage = lazy(() => import('../features/activity/ActivityPage').then(m => ({ default: m.ActivityPage })))
+const IntegrationListPage = lazy(() => import('../features/integrations/IntegrationListPage').then(m => ({ default: m.IntegrationListPage })))
+const IntegrationDetailPage = lazy(() => import('../features/integrations/IntegrationDetailPage').then(m => ({ default: m.IntegrationDetailPage })))
 const AuditPage = lazy(() => import('../features/audit/AuditPage').then(m => ({ default: m.AuditPage })))
 const BillingListPage = lazy(() => import('../features/billing/BillingListPage').then(m => ({ default: m.BillingListPage })))
 const BillingDetailPage = lazy(() => import('../features/billing/BillingDetailPage').then(m => ({ default: m.BillingDetailPage })))
@@ -61,6 +63,8 @@ export function App() {
             <Route path="clients/:id/profile" element={<ClientRoute><ClientProfilePage /></ClientRoute>} />
             <Route path="clients/:id/edit" element={<ClientRoute><ClientEditorPage /></ClientRoute>} />
             <Route path="clients/:id/activity" element={<ClientRoute name="Activity"><ActivityPage /></ClientRoute>} />
+            <Route path="clients/:id/integrations" element={<ClientRoute name="Integrations"><IntegrationListPage /></ClientRoute>} />
+            <Route path="clients/:id/integrations/:connectionID" element={<ClientRoute name="Integration"><IntegrationDetailPage /></ClientRoute>} />
             <Route path="clients/:id/audit" element={<ClientRoute name="Audit"><AuditPage client /></ClientRoute>} />
             <Route path="clients/:id/billing" element={<ClientRoute name="Finance"><BillingListPage /></ClientRoute>} />
             <Route path="clients/:id/billing/new" element={<ClientRoute name="Finance"><BillingEditorPage create /></ClientRoute>} />

@@ -22,6 +22,8 @@ export function ApplicationShell() {
     ? location.pathname.includes('/milestones') ? location.pathname.endsWith('/new') ? 'Create milestone' : location.pathname.endsWith('/edit') ? 'Edit milestone' : location.pathname.endsWith('/milestones') ? 'Milestones' : 'Milestone details'
       : location.pathname.endsWith('/new') ? 'Create plan' : location.pathname.endsWith('/edit') ? 'Edit plan' : location.pathname.endsWith('/plans') ? 'Planning' : 'Plan details' : ''
   const activityContext = /^\/app\/clients\/[^/]+\/activity$/.test(location.pathname) ? 'Activity' : ''
+  const integrationContext = /^\/app\/clients\/[^/]+\/integrations(?:\/|$)/.test(location.pathname)
+    ? location.pathname.endsWith('/integrations') ? 'Integrations' : 'Integration connection' : ''
   const auditContext = /^\/app\/clients\/[^/]+\/audit$/.test(location.pathname) ? 'Audit history' : ''
   const billingContext = /^\/app\/clients\/[^/]+\/billing(?:\/|$)/.test(location.pathname)
     ? location.pathname.endsWith('/new') ? 'Create collection' : location.pathname.endsWith('/edit') ? 'Edit collection' : location.pathname.endsWith('/billing') ? 'Finance' : 'Collection details' : ''
@@ -29,7 +31,7 @@ export function ApplicationShell() {
     ? location.pathname.endsWith('/new') ? 'Create pricing agreement' : location.pathname.endsWith('/new-version') ? 'Create new pricing version' : location.pathname.endsWith('/pricing') ? 'Pricing agreements' : 'Pricing agreement' : ''
   const profileContext = /^\/app\/clients\/[^/]+\/profile$/.test(location.pathname) ? 'Client profile' : ''
   const overviewContext = /^\/app\/clients\/[0-9a-f-]{36}$/.test(location.pathname) ? 'Overview' : ''
-  const clientContext = profileContext || overviewContext || pricingContext || billingContext || auditContext || activityContext || reminderContext || taskContext || planningContext || (current?.path === '/app/clients' && location.pathname !== current.path
+  const clientContext = profileContext || overviewContext || integrationContext || pricingContext || billingContext || auditContext || activityContext || reminderContext || taskContext || planningContext || (current?.path === '/app/clients' && location.pathname !== current.path
     ? location.pathname === '/app/clients/new' ? 'Create client' : location.pathname.endsWith('/edit') ? 'Edit client' : 'Client workspace' : '')
 
   function closeNavigation() {

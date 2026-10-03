@@ -16,6 +16,8 @@ Related Issue: [#12](https://github.com/theroisey/else/issues/12). This frontend
 | `/app/clients/new` | Requires global `clients.create`; full profile/contact/tag form |
 | `/app/clients/:id` | Requires exact-client `clients.view`; compact client workspace |
 | `/app/clients/:id/edit` | Requires exact-client view and update; archived records cannot be edited |
+| `/app/clients/:id/integrations` | Independent exact-client clients.view and integrations.view; bounded stored metadata |
+| `/app/clients/:id/integrations/:connectionID` | Same view grants; active-client integrations.manage additionally allows confirmed local disable with manual remote-revocation warning |
 | `/status` | Public real liveness/readiness checks |
 | `/interface` | Existing public local-state component review surface |
 

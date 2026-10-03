@@ -122,6 +122,7 @@ function Workspace({
     { label: 'Reminders', path: 'reminders', shown: !!data.reminders },
     { label: 'Finance', path: 'billing', shown: !!data.finance },
     { label: 'Pricing', path: 'pricing', shown: has('pricing.view') },
+    { label: 'Integrations', path: 'integrations', shown: has('integrations.view') },
     { label: 'Activity', path: 'activity', shown: !!data.activity },
     {
       label: 'Audit history',
