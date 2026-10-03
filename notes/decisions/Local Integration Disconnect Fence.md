@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-03
 tags:
   - integrations
@@ -12,6 +12,8 @@ tags:
 # Local Integration Disconnect Fence
 
 Issue #78 records policy before code for parent #24. Credential persistence PR #77 is owner-merged at `03af58daaf4752aaf552224cd609ea509b511d87`; final CI 37112599312 and merged main CI 37112997259 passed all five gates. Both development branches synchronized. No agent merge/deployment is authorized.
+
+PR #79 is now owner-merged at `debac21bd2aa665a380be071cd85fca6819a7c6c`. Final-head CI 37114191531 and merge-head CI 37116529670 passed all five verification gates; both permanent branches synchronized. Issue #80 adds the separate frontend consumer in [[Client Integration Workspace and Manual Revocation]].
 
 The confirmed POST disconnect operation immediately fences local credential use under fresh clients.view, integrations.view and integrations.manage on the real active client. Public view is independently required for the returned metadata and GET-based recovery. Exclusive lifecycle locking precedes ownership/revision checks. Eligible states become revocation_failed; revision and generation increment atomically. Ciphertext/accounting/history remain retained, and already encrypted work cannot persist after the committed fence.
 

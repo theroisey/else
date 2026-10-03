@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
@@ -1364,5 +1365,101 @@ test('overview reconciles real sources in one bounded request and omits revoked 
   await page.getByRole('button',{name:'Refresh overview',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
   await expect(page.getByRole('heading',{name:'Due reminders',exact:true})).toHaveCount(0)
+  expect(await page.evaluate(()=>localStorage.length+sessionStorage.length)).toBe(0)
+})
+
+test('integration metadata, confirmed local disable, uncertain outcome recovery and fresh scope', async ({ page }, testInfo) => {
+  test.setTimeout(90_000)
+  database(readFileSync(new URL('./integration-fixtures.sql',import.meta.url),'utf8'))
+  const client='f8555555-5555-4555-8555-555555555555',role='f8222222-2222-4222-8222-222222222222'
+  const first='f8900000-0000-4000-8000-000000000001',second='f8900000-0000-4000-8000-000000000002'
+  const path=`/app/clients/${client}/integrations`,base=`/api/v1/clients/${client}/integrations`
+  await page.goto(path)
+  await page.getByLabel('Email',{exact:true}).fill('integration.fixture@example.com')
+  await page.getByLabel('Password',{exact:true}).fill('clearly synthetic browser password')
+  await page.getByRole('button',{name:'Sign in',exact:true}).click()
+  await expect(page).toHaveURL(new RegExp(path+'$'))
+  const table=page.getByRole('table',{name:'Integration connections',exact:true})
+  await expect(table.locator('tbody tr')).toHaveCount(25)
+  await expect(table).toContainText('Local use disabled · Manual action required')
+  expect(await page.locator('main').innerText()).not.toContain('8000001')
+  for(const viewport of [{width:1440,height:1000},{width:390,height:844}]) {
+    await page.setViewportSize(viewport);await markTaskScreenshot(page)
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth===document.documentElement.clientWidth)).toBe(true)
+    await page.screenshot({path:testInfo.outputPath(`integrations-${viewport.width}.png`),fullPage:true})
+  }
+  await page.getByRole('button',{name:'Next',exact:true}).click()
+  await expect(table.locator('tbody tr')).toHaveCount(1)
+  await expect(table).toContainText('f8900000-0000-4000-8000-000000000026')
+  await page.getByRole('button',{name:'Refresh integrations',exact:true}).click()
+  await expect(table.locator('tbody tr')).toHaveCount(25)
+  await expect(page.getByRole('button',{name:'Previous',exact:true})).toBeDisabled()
+  await page.getByRole('link',{name:new RegExp(first)}).click()
+  const disable=page.getByRole('button',{name:'Disable local use',exact:true})
+  await expect(disable).toBeVisible()
+  await disable.focus();await page.keyboard.press('Enter')
+  await expect(page.getByRole('dialog')).toContainText('Remote revocation is unavailable')
+  await page.keyboard.press('Escape');await expect(disable).toBeFocused()
+  await disable.click()
+  await markTaskScreenshot(page)
+  await page.screenshot({path:testInfo.outputPath('integration-confirm-mobile.png'),fullPage:true})
+  // Change metadata after opening confirmation: the server must reject the old revision.
+  database(`UPDATE app.integration_connections SET revision=revision+1,updated_at=clock_timestamp() WHERE id='${first}'`)
+  const posts:string[]=[]
+  page.on('request',request=>{if(request.method()==='POST'&&request.url().endsWith('/disconnect'))posts.push(request.postData()??'')})
+  await page.getByRole('button',{name:'Confirm local disable',exact:true}).click()
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Reload current data')
+  await expect(page.getByRole('button',{name:'Confirm local disable',exact:true})).toBeDisabled()
+  expect(JSON.parse(posts[0]!)).toEqual({revision:'9007199254740993',confirmed:true})
+  expect(posts).toHaveLength(1)
+  await page.getByRole('button',{name:'Close and reload',exact:true}).click()
+  await expect(disable).toBeEnabled()
+  const before=database(`SELECT count(*)::text FROM app.audit_events WHERE resource_id='${first}' AND event_name='integration_connection.updated'`)
+  // Let the real API commit, then lose the response. The UI must read, never resubmit.
+  await page.route(`**${base}/${first}/disconnect`,async route=>{
+    const response=await route.fetch();expect(response.status()).toBe(200)
+    await route.abort('failed')
+  })
+  await disable.click()
+  await page.getByRole('button',{name:'Confirm local disable',exact:true}).click()
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('outcome may be uncertain')
+  expect(posts).toHaveLength(2)
+  expect(JSON.parse(posts[1]!)).toEqual({revision:'9007199254740994',confirmed:true})
+  await page.unroute(`**${base}/${first}/disconnect`)
+  await page.getByRole('button',{name:'Close and reload',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Remote revocation requires manual action',exact:true})).toBeVisible()
+  await expect(disable).toHaveCount(0)
+  expect(posts).toHaveLength(2)
+  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE resource_id='${first}' AND event_name='integration_connection.updated'`)).toBe(String(Number(before)+1))
+  expect(database(`SELECT state || ':' || revision::text || ':' || generation::text FROM app.integration_connections WHERE id='${first}'`)).toBe('revocation_failed:9007199254740995:2')
+  await markTaskScreenshot(page);await page.screenshot({path:testInfo.outputPath('integration-manual-mobile.png'),fullPage:true})
+
+  await page.getByRole('link',{name:'Integrations',exact:true}).click()
+  await page.getByRole('link',{name:new RegExp(second)}).click()
+  await disable.click();await page.getByRole('button',{name:'Confirm local disable',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Remote revocation requires manual action',exact:true})).toBeVisible()
+  await expect(page.getByRole('status').filter({hasText:'Local use disabled. Remote revocation remains unverified.'})).toBeVisible()
+  const noOp=await page.evaluate(async({base,second})=>{
+    const csrf=document.cookie.split('; ').find(v=>v.startsWith('else_csrf='))?.slice('else_csrf='.length)??''
+    const response=await fetch(`${base}/${second}/disconnect`,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify({revision:'2',confirmed:true})})
+    return {status:response.status,body:await response.json()}
+  },{base,second})
+  expect(noOp).toMatchObject({status:200,body:{data:{state:'revocation_failed',revision:'2'},revocation:{status:'unavailable',manual_action_required:true}}})
+  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE resource_id='${second}' AND event_name='integration_connection.updated'`)).toBe('1')
+  await page.setViewportSize({width:1440,height:1000});await markTaskScreenshot(page)
+  await page.screenshot({path:testInfo.outputPath('integration-manual-desktop.png'),fullPage:true})
+  // Revoke manage while preserving view, then archive the client: history is retained.
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='integrations.manage'`)
+  await page.goto(path+'/f8900000-0000-4000-8000-000000000003')
+  await expect(page.getByRole('heading',{name:'Meta Ads',exact:true})).toBeVisible()
+  await expect(disable).toHaveCount(0)
+  database(`UPDATE app.clients SET archived_at=clock_timestamp(),revision=revision+1,updated_at=clock_timestamp() WHERE id='${client}'`)
+  await page.getByRole('button',{name:'Reload connection',exact:true}).click()
+  await expect(page.getByText('This client is archived. Connection history remains readable; changes are unavailable.',{exact:true})).toBeVisible()
+  await expect(disable).toHaveCount(0)
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='integrations.view'`)
+  await page.getByRole('button',{name:'Reload connection',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Meta Ads',exact:true})).toHaveCount(0)
   expect(await page.evaluate(()=>localStorage.length+sessionStorage.length)).toBe(0)
 })
