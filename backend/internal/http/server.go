@@ -28,6 +28,7 @@ type Server struct {
 	billing        http.Handler
 	pricing        http.Handler
 	overview       http.Handler
+	integrations   http.Handler
 	draining       atomic.Bool
 	httpServer     *http.Server
 }
@@ -41,6 +42,18 @@ func NewWithOverview(c config.Config, logger *slog.Logger, readiness ReadinessCh
 		return nil, e
 	}
 	s.overview = overview
+	return s, nil
+}
+
+func NewWithIntegrations(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth, administration, clients, tasks, planning, reminders, activity, auditReader, billing, pricing, overview, integrations http.Handler) (*Server, error) {
+	if integrations == nil {
+		return nil, fmt.Errorf("integration metadata handler is required")
+	}
+	s, e := NewWithOverview(c, logger, readiness, auth, administration, clients, tasks, planning, reminders, activity, auditReader, billing, pricing, overview)
+	if e != nil {
+		return nil, e
+	}
+	s.integrations = integrations
 	return s, nil
 }
 

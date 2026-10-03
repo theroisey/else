@@ -42,7 +42,7 @@ func TestReminderMigrationPreservesPopulatedPlanningTasksAndOldAudit(t *testing.
 		if err != nil {
 			t.Fatal("unused reminder migration failed", err)
 		}
-		keysWant := 33
+		keysWant := 34
 		if direction == "down" {
 			keysWant = 26
 		}

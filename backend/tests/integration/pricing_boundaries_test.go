@@ -202,7 +202,11 @@ func TestPricingMigrationEmptyDownUpPreservesFinanceAndRefusesHistory(t *testing
 				t.Fatal("pricing migration changed original collection")
 			}
 			var permissions int
-			if e = f.admin.QueryRow(ctx, `SELECT count(*) FROM app.permissions`).Scan(&permissions); e != nil || permissions != 33 {
+			wantPermissions := 34
+			if history != "empty" {
+				wantPermissions = 33
+			} // Later metadata down succeeded before pricing history refused down.
+			if e = f.admin.QueryRow(ctx, `SELECT count(*) FROM app.permissions`).Scan(&permissions); e != nil || permissions != wantPermissions {
 				t.Fatal("pricing expanded grants", e)
 			}
 		})

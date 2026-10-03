@@ -18,6 +18,7 @@ import (
 	"github.com/theroisey/else/backend/internal/database"
 	httpapi "github.com/theroisey/else/backend/internal/http"
 	"github.com/theroisey/else/backend/internal/identity"
+	"github.com/theroisey/else/backend/internal/integrations/connections"
 	"github.com/theroisey/else/backend/internal/overview"
 	"github.com/theroisey/else/backend/internal/planning"
 	"github.com/theroisey/else/backend/internal/pricing"
@@ -175,7 +176,17 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("overview_startup_failed", "error_code", "overview_startup_failed")
 		return 1
 	}
-	server, err := httpapi.NewWithOverview(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler, pricingHandler, overviewHandler)
+	connectionService, err := connections.NewService(pool)
+	if err != nil {
+		logger.Error("integration_metadata_startup_failed")
+		return 1
+	}
+	connectionHandler, err := connections.NewHandler(connectionService, authHandler, logger)
+	if err != nil {
+		logger.Error("integration_metadata_startup_failed")
+		return 1
+	}
+	server, err := httpapi.NewWithIntegrations(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler, pricingHandler, overviewHandler, connectionHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1

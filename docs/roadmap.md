@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#70](https://github.com/theroisey/else/issues/70), frontend integration-view permission compatibility before the next metadata backend of parent [#24](https://github.com/theroisey/else/issues/24). See [integration boundaries](integrations.md) for implemented behavior and remaining lifecycle work. Issues #1–#23, #28 and #68 are owner-merged. Credential PR #69 merged at `3768b4d`; both branches synchronized and main [run 37103885719](https://github.com/theroisey/else/actions/runs/37103885719) passed. Integration authorization/key policies preceded code; parent #24 remains incomplete until durable connections, callback/revocation, sync and migration proof exist.
+Current slice: [#72](https://github.com/theroisey/else/issues/72), authorized durable integration connection metadata reads for parent [#24](https://github.com/theroisey/else/issues/24). See [integration boundaries](integrations.md). Issues #1–#23, #28, #68 and #70 are owner-merged. Permission compatibility PR #71 merged at `c812882`; both branches synchronized and main [run 37105863163](https://github.com/theroisey/else/actions/runs/37105863163) passed. Meta Ads is the planned first provider, recorded in #25 before metadata code; no live provider connection is made. Parent #24 remains incomplete until credential persistence, audited writers, callback/revocation and synchronization are verified.
 
 ## Verified starting state
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#23, #28 and #68 are owner-merged, including credential PR #69. Parent #24 proceeds in separately reviewed slices: #70 prepares the frontend integration-view consumer before durable metadata/authorization/audit; concrete provider authorization and callback/revocation/synchronization follow. Provider Issues #25–#27 remain dependent on verified parent boundaries; encryption and permission parsing alone do not complete #24. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+Issues #1–#23, #28, #68 and #70 are owner-merged. Parent #24 proceeds in separately reviewed slices: #72 supplies bounded authorized metadata reads; durable credential storage/rotation and audited connection writers follow, then the approved provider adapter with callback/revocation/synchronization. Provider Issues #25–#27 remain dependent on verified parent boundaries. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.

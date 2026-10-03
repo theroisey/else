@@ -158,7 +158,7 @@ func TestOverviewRuntimeAndPopulatedMigrationRoundTripPreserveHistory(t *testing
 		t.Fatal("overview up changed history", e)
 	}
 	var keys int
-	if e = f.admin.QueryRow(ctx, `SELECT count(*) FROM app.permissions`).Scan(&keys); e != nil || keys != 33 {
+	if e = f.admin.QueryRow(ctx, `SELECT count(*) FROM app.permissions`).Scan(&keys); e != nil || keys != 34 {
 		t.Fatal("overview expanded permission catalog", e)
 	}
 	tx, e := f.admin.Begin(ctx)

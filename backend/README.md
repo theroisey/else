@@ -14,7 +14,9 @@ Issue #19 adds the owner-merged [exact collections/payment API](../docs/billing.
 
 Owner-merged Issue #23 delivers the [authorized overview API](../docs/client-overview.md) and its separately reviewed frontend: one read-only client aggregate with exact finance, bounded due tasks/reminders and safe recent activity. Independent current grants omit inaccessible modules. Migration 14 adds one entrypoint/index.
 
-Issue #68 is the first slice of parent #24's [integration security boundaries](../docs/integrations.md): bounded AES-256-GCM credentials with client/connection/provider/purpose binding, retained-key reads, authenticated rewrap and safe formatting/logging. It is an in-memory backend primitive; connection persistence/routes, permission grants, startup key loading, provider callbacks/revocation and synchronization remain later parent slices.
+Issue #68 is the first slice of parent #24's [integration security boundaries](../docs/integrations.md): bounded AES-256-GCM credentials with client/connection/provider/purpose binding, retained-key reads, authenticated rewrap and safe formatting/logging. It is an in-memory backend primitive; credential persistence, startup key loading, provider callbacks/revocation and synchronization remain later parent slices.
+
+Issue #72 adds migration 15 and read-only `/api/v1/clients/:id/integrations` plus `/:connection_id`. Both require current clients.view and integrations.view on that real client. Only seven safe metadata fields are exposed; account IDs and generation stay private. See the [connection contract](../docs/integrations.md) for pagination, permissions, retention and rollout. No write route or provider request is implemented.
 
 Implement backend changes on `backend`. Root-level repository documentation and shared infrastructure may use a coordinated backend PR without unrelated frontend implementation. See [bootstrap instructions](../docs/repository-bootstrap.md).
 

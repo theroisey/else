@@ -29,7 +29,7 @@ func TestBillingEmptyDownUpPreservesOldHistoryAndRequiresNewRuntimeGrants(t *tes
 		}
 		var after string
 		var keys int
-		if e = f.admin.QueryRow(ctx, `SELECT (SELECT md5(string_agg(row_to_json(e)::text,'' ORDER BY id)) FROM app.audit_events e),(SELECT count(*) FROM app.permissions)`).Scan(&after, &keys); e != nil || before != after || direction == "down" && keys != 30 || direction == "up" && keys != 33 {
+		if e = f.admin.QueryRow(ctx, `SELECT (SELECT md5(string_agg(row_to_json(e)::text,'' ORDER BY id)) FROM app.audit_events e),(SELECT count(*) FROM app.permissions)`).Scan(&after, &keys); e != nil || before != after || direction == "down" && keys != 30 || direction == "up" && keys != 34 {
 			t.Fatal("billing migration changed old history", e, keys)
 		}
 	}
