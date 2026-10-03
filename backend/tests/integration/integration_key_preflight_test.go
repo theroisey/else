@@ -209,7 +209,7 @@ func TestIntegrationKeyPreflightPopulatedDownUpPreservesHistoryAndRegrant(t *tes
 	grantPreflight(t, f.budgetFixture)
 	f.replace(t, f.checkpoint(t), "synthetic-retained")
 	p := provider(t, f.base)
-	if _, e := p.Down(f.base.ctx); e != nil {
+	if _, e := p.DownTo(f.base.ctx, 18); e != nil {
 		t.Fatal(e)
 	}
 	if f.stored(t, f.ring) != "synthetic-retained" {

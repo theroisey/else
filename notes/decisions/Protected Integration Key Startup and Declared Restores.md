@@ -1,6 +1,6 @@
 ---
 type: decision
-status: implemented-pending-owner-review
+status: owner-merged
 created: 2026-10-03
 tags:
   - integrations
@@ -24,3 +24,5 @@ Focused and full backend/real PostgreSQL verification and final-head five-gate C
 - [[Client Integration Workspace and Manual Revocation]]
 - [[Encrypted Integration Credential Persistence]]
 - [[Durable Integration Encryption Budgets]]
+
+Owner merged [PR #83](https://github.com/theroisey/else/pull/83) at `26b312ad0ca3d4e7de96b7b3ceaee5e0f5ebe79c`. Final-head [CI 37126956605](https://github.com/theroisey/else/actions/runs/37126956605) and main [CI 37127583727](https://github.com/theroisey/else/actions/runs/37127583727) passed all five gates. Both permanent branches synchronized before #84, documented in [[Bounded Integration Credential Rewrap Batches]].
