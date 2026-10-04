@@ -1,86 +1,23 @@
 name: roisey-else
 services:
-  postgres:
-    image: postgres:18.3@sha256:7e32e9833a6fb1c92c32552794cb6ed569d51b445a54907d35fc112ef39684db
-    environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run sh docker/dev/prepare.sh first}
-      MIGRATOR_PASSWORD: ${MIGRATOR_PASSWORD:?Missing migration password}
-      RUNTIME_PASSWORD: ${RUNTIME_PASSWORD:?Missing runtime password}
-      POSTGRES_DB: else
-      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
-    entrypoint: [sh, /opt/else/start-postgres.sh]
-    volumes:
-      - postgres-data:/var/lib/postgresql
-      - ./docker/postgres/start.sh:/opt/else/start-postgres.sh:ro
-      - ./docker/postgres/init.sh:/docker-entrypoint-initdb.d/10-else.sh:ro
-      - ./docker/dev/tls:/opt/else/tls-input:ro
-    healthcheck:
-      test: [CMD-SHELL, 'PGPASSWORD="$$RUNTIME_PASSWORD" PGSSLMODE=verify-full PGSSLROOTCERT=/opt/else/tls-input/ca.crt psql -h postgres -U else_runtime -d else -tAc "SELECT 1" >/dev/null']
-      interval: 5s
-      timeout: 3s
-      retries: 12
-      start_period: 15s
-    networks: [database]
-
-  backend:
-    image: roisey-else:local
-    build:
-      context: .
-      target: production
+  else:
+    image: ${ELSE_IMAGE:-ghcr.io/theroisey/else:latest}
+    restart: unless-stopped
+    env_file: [.env]
     ports:
-      - '127.0.0.1:${FRONTEND_PORT:-5173}:8080'
-    read_only: true
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
-    environment:
-      DATABASE_URL: postgres://else_runtime:${RUNTIME_PASSWORD:?Missing runtime password}@postgres:5432/else?sslmode=verify-full&sslrootcert=/etc/else/ca.crt
-      AUTH_PUBLIC_ORIGIN: http://localhost:${FRONTEND_PORT:-5173}
-      AUTH_COOKIE_SECURE: "false"
+      - '127.0.0.1:${APP_PORT:-8080}:8080'
     volumes:
-      - ./docker/dev/tls/ca.crt:/etc/else/ca.crt:ro
-    depends_on:
-      postgres: {condition: service_healthy}
-    stop_grace_period: 15s
-    networks: [database, application]
-
-  migrate:
-    profiles: [tools]
-    image: roisey-else:local
-    entrypoint: [/migrate]
-    command: [status]
+      - else_data:/var/lib/roisey-else
     read_only: true
+    tmpfs:
+      - /run:rw,nosuid,noexec,size=32m
+      - /tmp:rw,nosuid,noexec,size=32m
     cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID, KILL]
     security_opt: [no-new-privileges:true]
-    environment:
-      MIGRATION_DATABASE_URL: postgres://else_migrator:${MIGRATOR_PASSWORD:?Missing migration password}@postgres:5432/else?sslmode=verify-full&sslrootcert=/etc/else/ca.crt
-    volumes:
-      - ./docker/dev/tls/ca.crt:/etc/else/ca.crt:ro
-    depends_on:
-      postgres: {condition: service_healthy}
-    networks: [database]
-
-  bootstrap-admin:
-    profiles: [tools]
-    image: roisey-else:local
-    entrypoint: [/bootstrap-admin]
-    read_only: true
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
-    environment:
-      BOOTSTRAP_DATABASE_URL: postgres://else_migrator:${MIGRATOR_PASSWORD:?Missing migration password}@postgres:5432/else?sslmode=verify-full&sslrootcert=/etc/else/ca.crt
-      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
-      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-}
-    volumes:
-      - ./docker/dev/tls/ca.crt:/etc/else/ca.crt:ro
-    depends_on:
-      postgres: {condition: service_healthy}
-    stdin_open: true
-    tty: true
-    networks: [database]
+    stop_grace_period: 60s
 
 volumes:
-  postgres-data:
-networks:
-  database:
-    internal: true
-  application:
+  else_data:
+    # Retain the former Compose volume name and PostgreSQL 18 directory layout.
+    name: ${ELSE_DATA_VOLUME:-roisey-else_postgres-data}

@@ -1,3 +1,5 @@
+> Superseded for standard deployment by [[Single Container Distribution]] on 2026-10-05. Earlier external-database/multi-process-container evidence below is historical.
+
 # Single Application Image
 
 Issue: [#32](https://github.com/theroisey/else/issues/32).

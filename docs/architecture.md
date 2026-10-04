@@ -1,10 +1,14 @@
 # Application architecture
 
-Current implemented architecture, finalized under [#32](https://github.com/theroisey/else/issues/32). Historical bootstrap decisions remain in their original records. [Production operating procedures](production-readiness.md) define target configuration and separate traffic approval.
+Current implemented architecture under [#32](https://github.com/theroisey/else/issues/32). Historical bootstrap decisions remain in their original records. [Production operating procedures](production-readiness.md) define target configuration and separate traffic approval.
 
 ## Application shape
 
-Roisey Else is a modular monolith: the built React frontend, Go API and operator/background executables share **one application image**; PostgreSQL is separate infrastructure. The Go process serves assets and `/api/v1` at one origin. Separate worker processes use that same image and database-backed jobs. Add infrastructure only when a concrete existing issue and measured need establish it.
+The user's 2026-10-05 direction supersedes the earlier external-database distribution under existing #32: the standard distribution packages **React, Go, and PostgreSQL in one image and one supervised container**. One Compose service (`else`), one application port, and one named volume are the installation boundary. Source architecture remains a modular monolith. Go serves assets and `/api/v1` at one origin; a supervised worker consumes durable PostgreSQL jobs inside that container.
+
+The implementation must initialize only an empty PostgreSQL 18 directory, preserve the existing volume and cluster layout, apply pending embedded migrations and reviewed grants before launching API/worker, and stop the complete container on required-process failure. PID 1 reaps children; shutdown drains application processes before PostgreSQL fast shutdown. Database and application processes use distinct unprivileged identities. Only the restricted startup/operator supervisor may provision roles or access owner credentials; HTTP handlers never run DDL. Generated database credentials and the durable encryption keyring remain private on the persistent volume. Loopback PostgreSQL is not published.
+
+Normal patch/application upgrades reuse that volume. PostgreSQL major-version changes, logical restores, encryption-key recovery, and production traffic release remain explicit operating procedures. Never initialize a nonempty unrecognized directory, run multiple PostgreSQL instances on one volume, reuse rewound encryption budgets, or generate replacement keys over unreadable existing encrypted data. The existing interactive-only administrator bootstrap is retained; there is no default account/password. This packaging change introduces no business schema, permission, audit-event, frontend route, or financial-rule change.
 
 The frontend owns presentation, interaction, accessible forms, query state, and client-side validation for usability. It does not own authorization or financial calculations. The backend owns authenticated identity, permissions, client isolation, validation, domain invariants, exact calculations, persistence, and audit writing.
 

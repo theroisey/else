@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Authorized Docker operators only. Business HTTP routes never invoke this tool.
+set +x
+set -Eeuo pipefail
+source /opt/else/common
+require_root
+trap 'log operator operation_failed; exit 1' ERR
+task_command=${1:-}
+[[ $# == 0 ]] || shift
+clean_database_environment
+case $task_command in
+  psql)
+    owner_psql "$@"
+    ;;
+  backup)
+    [[ $# == 0 ]] || fail invalid_operator_argument
+    PGHOST=$SOCKET gosu postgres pg_dump --username postgres --dbname else --format custom --no-owner
+    ;;
+  migrate)
+    [[ $# == 1 && ( $1 == status || $1 == up || $1 == down ) ]] || fail invalid_operator_argument
+    load_credentials
+    export MIGRATION_DATABASE_URL="postgres://else_migrator:$MIGRATOR_SECRET@127.0.0.1:5432/else?sslmode=disable"
+    unset MIGRATOR_SECRET RUNTIME_SECRET
+    exec gosu 65533:65533 /migrate "$@"
+    ;;
+  bootstrap-admin)
+    [[ $# == 2 ]] || fail bootstrap_identity_required
+    load_credentials
+    export BOOTSTRAP_DATABASE_URL="postgres://else_migrator:$MIGRATOR_SECRET@127.0.0.1:5432/else?sslmode=disable"
+    export BOOTSTRAP_ADMIN_EMAIL=$1 BOOTSTRAP_ADMIN_NAME=$2
+    unset MIGRATOR_SECRET RUNTIME_SECRET
+    exec gosu 65533:65533 /bootstrap-admin
+    ;;
+  runtime-psql)
+    load_credentials
+    export PGPASSWORD=$RUNTIME_SECRET
+    unset MIGRATOR_SECRET RUNTIME_SECRET
+    exec gosu 65532:65532 psql -X --host 127.0.0.1 --port 5432 --username else_runtime --dbname else --set ON_ERROR_STOP=1 "$@"
+    ;;
+  worker-once|rotate-integration-credentials)
+    if [[ $task_command == worker-once ]]; then
+      [[ $# == 0 ]] || fail invalid_operator_argument
+      set -- --once
+      task_executable=/analytics-worker
+    else
+      task_executable=/rotate-integration-credentials
+    fi
+    load_credentials
+    export DATABASE_URL="postgres://else_runtime:$RUNTIME_SECRET@127.0.0.1:5432/else?sslmode=disable"
+    export INTEGRATION_KEYRING_FILE=${INTEGRATION_KEYRING_FILE-/run/roisey-else/keys/keyring.json}
+    unset MIGRATOR_SECRET RUNTIME_SECRET
+    exec gosu 65532:65532 "$task_executable" "$@"
+    ;;
+  install-keyring)
+    [[ $# == 0 && ! -L $DATA && ! -L $CONTROL ]] || fail invalid_operator_argument
+    umask 077
+    install -d -m 0755 "$DATA"
+    install -d -m 0700 -o root -g root "$CONTROL"
+    task_file=$(mktemp "$CONTROL/.keyring.XXXXXX")
+    trap 'rm -f "$task_file"' EXIT
+    head -c 8193 > "$task_file"
+    task_size=$(stat -c %s "$task_file")
+    (( task_size > 0 && task_size <= 8192 )) || fail invalid_keyring_size
+    chmod 0600 "$task_file"
+    mv "$task_file" "$CONTROL/integration-keyring.json"
+    sync -f "$CONTROL"
+    log operator keyring_installed_restart_required
+    ;;
+  *) fail unsupported_operator_command ;;
+esac

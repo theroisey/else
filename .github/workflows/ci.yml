@@ -93,14 +93,14 @@ jobs:
           if [ -n "$files" ]; then printf '%s\n' "$files"; exit 1; fi
       - run: go vet ./...
       - run: go test -race -count=1 ./...
-      - run: CGO_ENABLED=0 go build -mod=readonly -trimpath ./cmd/api ./cmd/migrate ./cmd/healthcheck ./cmd/bootstrap-admin ./cmd/rotate-integration-credentials
+      - run: CGO_ENABLED=0 go build -mod=readonly -trimpath ./cmd/api ./cmd/migrate ./cmd/healthcheck ./cmd/bootstrap-admin ./cmd/rotate-integration-credentials ./cmd/analytics-worker ./cmd/container-preflight
       - name: Publication permission and tag boundaries
         run: python3 scripts/test-publication.py
       - name: Dependency scan failure boundaries
         run: python3 scripts/test-dependency-gate.py
       - name: Immutable build metadata input boundaries
         run: python3 scripts/test-build-metadata.py
-      - name: Stopped PostgreSQL recovery boundaries
+      - name: Stopped application recovery boundaries
         run: python3 scripts/test-compose-recovery.py
       - name: Workflow syntax and expressions
         run: |
@@ -169,7 +169,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-      - name: Single application image verification
+      - name: Single-container image verification
         env:
           IMAGE_ARCHIVE_PATH: ${{ runner.temp }}/runtime-images.tar
         run: sh backend/scripts/test-compose.sh
@@ -218,3 +218,7 @@ jobs:
           IMAGE_VERSION: ${{ inputs.version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash backend/scripts/publish-images.sh
+      - name: Published image pull and persistent upgrade rehearsal
+        env:
+          ELSE_TEST_DISTRIBUTION_IMAGE: ghcr.io/theroisey/else:sha-${{ github.sha }}
+        run: sh backend/scripts/test-distribution-upgrade.sh

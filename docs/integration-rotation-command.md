@@ -1,5 +1,7 @@
 # Trusted credential rotation command
 
+Current standard distribution: one `else` container includes PostgreSQL, Go-served React/API, and the supervised analytics worker. Startup automatically applies migrations/grants and provisions a durable protected integration keyring. API/worker run as UID 65532; restricted root supervision and separate PostgreSQL/migrator identities handle initialization. See [Docker operations](docker.md) for current installation commands. Standalone source/operator examples and older CI evidence below retain their original scope.
+
 [Issue #88](https://github.com/theroisey/else/issues/88) adds `cmd/rotate-integration-credentials`, a trusted operator transport for the [bounded rotation library](integration-rotation.md). Each confirmed invocation performs exactly one page. Parent #24 remains incomplete.
 
 ## Authority and prerequisites
@@ -31,14 +33,14 @@ After external operator authorization and protected configuration are establishe
 
 Accept only unique known space-separated flags. Actor/client and optional `--after` require canonical lowercase nonzero UUIDs; `--limit` is canonical decimal 1–100. Missing confirmation, duplicate/unknown/extra/missing flags, `--flag=value`, leading-zero limits and malformed values fail before configuration lookup, file reads or database access. Sole `--help` prints fixed usage without configuration access. Each page gets a fresh server-generated audit correlation ID.
 
-The single root application image contains the static command and standard CA roots, running as `65532:65532`. Invoke the same pinned image with `--entrypoint /rotate-integration-credentials`:
+The single root application image contains the static command and standard CA roots, whose API/worker run as `65532:65532`. For a standalone invocation explicitly use `--user 65532:65532`; the distribution entrypoint otherwise starts the restricted root supervisor. Invoke the same pinned image with `--entrypoint /rotate-integration-credentials`:
 
 ```sh
 docker build --target production --tag roisey-else:reviewed .
 docker run --rm --network none --entrypoint /rotate-integration-credentials roisey-else:reviewed --help
 ```
 
-Supply any managed-build CA using existing BuildKit secret guidance in [Docker documentation](docker.md). The application image contains this command; default Compose startup executes only the API. There is no separate published operator image. Authorized operator execution must provision verified network access, protected database configuration, CA trust and a read-only key mount readable by its effective UID. This document does not authorize production execution.
+Supply any managed-build CA using existing BuildKit secret guidance in [Docker documentation](docker.md). The application image contains this command; default Compose startup supervises PostgreSQL, API, and analytics worker. There is no separate published operator image. Authorized operator execution must provision verified network access, protected database configuration, CA trust and a read-only key mount readable by its effective UID. This document does not authorize production execution.
 
 The operation context is 45 seconds and honors SIGINT/SIGTERM; the library retains its thirty-second page context and separate transaction cleanup bounds. Exactly one `Run` occurs, with no automatic retry, loop, durable cursor, actor substitution or key-mode change.
 

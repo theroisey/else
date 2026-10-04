@@ -2,6 +2,54 @@
 
 [#113](https://github.com/theroisey/else/issues/113) supplies a rehearsed logical recovery procedure under [#32](https://github.com/theroisey/else/issues/32). Execute production operations only with the environment owner, approved recovery checkpoint, reviewed role/image/schema mapping and explicit rollout authority. The repository integration runner always uses its own disposable PostgreSQL server; never supply a customer database to it.
 
+## Standard single-container backup and offline restore
+
+The current distribution performs database/key initialization and supervision inside one `else` container. The standalone database examples below document the earlier domain recovery rehearsal; use this section for standard Compose operations.
+
+Create a new protected checkpoint path with `umask 077`, then run:
+
+```sh
+docker compose exec -T else /opt/else/operator backup > /protected/checkpoint.dump.partial
+# Inspect with the matching image; promote only a successfully created archive.
+docker compose exec -T else gosu postgres pg_restore --list < /protected/checkpoint.dump.partial > /protected/checkpoint.contents
+mv /protected/checkpoint.dump.partial /protected/checkpoint.dump
+sha256sum /protected/checkpoint.dump > /protected/checkpoint.sha256
+```
+
+Check the dump command's exit status before inspection/promotion (use `set -eu` in automated jobs). Never overwrite an accepted checkpoint. The archive includes private identity/session/business/audit facts and encrypted credentials; keys are separate. Escrow the durable master keyring using an authorized Docker/host operator:
+
+```sh
+docker compose cp else:/var/lib/roisey-else/.control/integration-keyring.json /protected/checkpoint-keyring.json
+chmod 0600 /protected/checkpoint-keyring.json
+```
+
+Keep that private directory restricted and encrypt both backups off-host. Do not print the keyring or include it in CI artifacts. A live filesystem copy of PostgreSQL data is unsafe. A cleanly stopped whole-volume snapshot preserves database and control files, but restoring it still requires the fresh-active-key recovery procedure before writers resume.
+
+Stop every writer and preserve the original volume. Verify archive provenance and checksum; restore executes stored schema/function definitions. Select a **distinct, empty** recovery volume using `ELSE_DATA_VOLUME` in a separate protected Compose configuration/project. Do not run ordinary `up` on that empty target before import, because normal startup initializes application tables. The following commands assume the isolated recovery configuration has already selected the target volume and approved image:
+
+```sh
+# Custodian supplies retained decryptors plus a never-used active key/label.
+docker compose run --rm --no-deps --entrypoint /opt/else/operator else install-keyring < /protected/fresh-retained-keyring.json
+docker compose run --rm --no-deps -e ELSE_RESTORE_CONFIRMED=true else restore < /protected/checkpoint.dump
+```
+
+Offline `restore` provisions PostgreSQL/roles, requires an empty application database, records a durable pending marker, imports in one transaction with reviewed owner mapping and ACLs, runs pending migrations/grants, and checks retained keys and fresh active identity. It then shuts PostgreSQL down cleanly. API and worker never start during import or verification. A failure leaves normal startup blocked. Database initialization and role setup remain automatic.
+
+If import succeeded but key verification failed, correct the keyring and retry the read-only key gate through:
+
+```sh
+docker compose run --rm --no-deps --entrypoint /opt/else/operator else install-keyring < /protected/corrected-fresh-retained-keyring.json
+docker compose run --rm --no-deps -e ELSE_RESTORE_CONFIRMED=true else verify-restore
+```
+
+`verify-restore` requires the durable completed-import marker; it cannot accept an interrupted archive as complete. For failed imports, preserve the target as incident evidence and use another empty volume. Neither mode erases an existing application database. Only successful verification removes the pending marker. Missing retained keys cannot be recreated, and the check cannot independently prove globally unused material or detect an undeclared restore.
+
+For a restored whole-volume snapshot, install the fresh retained ring while stopped, set `INTEGRATION_KEYRING_MODE=restored`, and start only after incident approval and all writers are excluded. After the first confirmed new-key audited reservation, change mode to `normal` before restart. The normal logical-import path above verifies offline and starts with the newly selected active key in normal mode; the custodian must guarantee freshness and exclude all old writers in both cases.
+
+Before opening traffic, privately compare domain/history counts or checkpoint fingerprints, Goose history, sequences, role grants, finance/audit records, retained credential bindings, and post-checkpoint revocations/side effects. Use the reviewed target artifact, verify permitted/denied routes, and obtain rollout authority. `docker compose up -d --wait` starts normal operation only after acceptance; keep the original volume/checkpoint and keys under retention policy.
+
+The container runner performs a real fresh-cluster archive import, rejects registered active key reuse, confirms failed verification blocks normal startup, then accepts a fresh active key with retained material and verifies the original client/session/revision plus encryption history. Domain integration separately covers truncated archives, all-table checkpoints, restored ciphertext and prior-artifact compatibility. Neither establishes production RPO/RTO.
+
 ## What the rehearsal establishes
 
 The integration suite uses PostgreSQL 18.3 and its matching `pg_dump`/`pg_restore` binaries from the pinned server container. It seeds real sessions/grants and guarded task, plan, reminder, pricing, copied collection/payment and budgeted encrypted credential writes alongside two synthetic clients. It stops the compiled API, captures a custom archive in a mode-0600 temporary file, restores into a different empty database and privately compares every `app` table, Goose history and sequence state. A later source write is excluded from the recovered checkpoint. A truncated archive must fail without leaving application objects in another empty target.

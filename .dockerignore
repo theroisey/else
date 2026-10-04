@@ -19,3 +19,7 @@
 !backend/migrations/**
 !backend/scripts/
 !backend/scripts/build-api.sh
+!backend/scripts/grant-runtime.sql
+!docker/
+!docker/runtime/
+!docker/runtime/**

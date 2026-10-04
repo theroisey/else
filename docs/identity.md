@@ -38,15 +38,11 @@ Wrong email/password and disabled users receive `401 invalid_credentials` with â
 
 ## Configuration and database grants
 
-`AUTH_PUBLIC_ORIGIN` is required and must be an exact HTTP(S) origin without credentials, path, query or fragment. `AUTH_COOKIE_SECURE` defaults to true and requires HTTPS. Setting it to false is accepted only for an HTTP loopback origin. The local Compose environment sets `http://localhost:${FRONTEND_PORT}` and explicitly disables Secure; a real deployment must provide its external HTTPS origin and keep the default.
+`AUTH_PUBLIC_ORIGIN` is required and must be an exact HTTP(S) origin without credentials, path, query or fragment. `AUTH_COOKIE_SECURE` defaults to true and requires HTTPS. Setting it to false is accepted only for an HTTP loopback origin. The local Compose environment sets `http://localhost:8080` and explicitly disables Secure; a real deployment must provide its external HTTPS origin and keep the default.
 
 Migration `000003_create_identity.sql` adds users, sessions, uniqueness/expiry constraints and indexes. Runtime has no bulk identity-table access. Security-definer functions with fixed `pg_catalog` search paths expose one login lookup, one transaction-lock lookup and one current-session lookup; PUBLIC cannot execute them. Runtime can update only last-login timestamps and session revocation, insert the explicit session columns, and invoke these functions. It cannot select emails/hashes/tokens directly, alter bootstrap state, insert users, delete/truncate identity history or own schema objects.
 
-For local Compose, run the reviewed grants after migrations:
-
-```sh
-docker compose exec -T postgres psql -U postgres -d else < backend/scripts/grant-runtime.sql
-```
+The container supervisor applies the reviewed `backend/scripts/grant-runtime.sql` after pending migrations, before starting API/worker. Manual database setup is unnecessary. For an authorized standalone development database, apply those reviewed statements through its owner identity.
 
 Production operators should apply the equivalent statements from that file with their actual runtime role after migration review. Avoid blanket/default grants. Migration down takes an exclusive lock and refuses any user or session row; an empty migration is reversible. Reapply grants after an empty down/up.
 
@@ -54,12 +50,10 @@ Production operators should apply the equivalent statements from that file with 
 
 Bootstrap uses the migration owner through a separate `BOOTSTRAP_DATABASE_URL`; the API process never receives it. It acquires a transaction advisory lock, requires zero existing users, reads the password from an interactive terminal without echo, creates exactly one active identity with `bootstrap_admin=true`, assigns the ordinary Initial Administrator role, and writes both audit events in the same transaction. A repeat attempt fails. The marker grants no application permission and is never returned or checked as authorization; [Issue #9](authorization.md) consumes it into the initial RBAC assignment.
 
-For local Compose after migration and runtime grants:
+For the standard container after health becomes ready:
 
 ```sh
-BOOTSTRAP_ADMIN_EMAIL=owner@example.com \
-BOOTSTRAP_ADMIN_NAME='Initial Administrator' \
-docker compose run --rm bootstrap-admin
+docker compose exec -it else /opt/else/operator bootstrap-admin owner@example.com 'Initial Administrator'
 ```
 
 Enter the password only at the prompt. Do not pass it in an argument, environment variable, shell history or `.env`. For a non-Compose environment, set the two non-secret identity fields and `BOOTSTRAP_DATABASE_URL` privately, then run `go run ./cmd/bootstrap-admin` from `backend/` in a terminal. Protect and remove bootstrap/migration credentials after initialization. The resulting identity receives the Initial Administrator permission set through a normal global role assignment.

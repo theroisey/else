@@ -1,0 +1,237 @@
+#!/usr/bin/env bash
+# Tini reaps descendants; this supervisor owns and watches every required child.
+set +x
+set -Eeuo pipefail
+source /opt/else/common
+require_root
+task_mode=normal
+if [[ $# == 1 && ( $1 == restore || $1 == verify-restore ) && ${ELSE_RESTORE_CONFIRMED:-} == true ]]; then
+  task_mode=$1
+elif [[ $# != 0 ]]; then
+  fail unsupported_startup_argument
+fi
+pg_pid='' app_pid='' worker_pid='' active_pid=''
+
+stop_children() {
+  local result=$? pid deadline pending
+  trap - EXIT ERR TERM INT
+  log init stopping_application
+  for pid in "$active_pid" "$app_pid" "$worker_pid"; do
+    [[ -z $pid ]] || kill -TERM "$pid" 2>/dev/null || true
+  done
+  deadline=$((SECONDS + 20))
+  while :; do
+    pending=false
+    for pid in "$active_pid" "$app_pid" "$worker_pid"; do
+      if [[ -n $pid ]] && kill -0 "$pid" 2>/dev/null; then pending=true; fi
+    done
+    [[ $pending == true ]] || break
+    if (( SECONDS >= deadline )); then
+      log init application_shutdown_timeout
+      result=1
+      for pid in "$active_pid" "$app_pid" "$worker_pid"; do
+        [[ -z $pid ]] || kill -KILL "$pid" 2>/dev/null || true
+      done
+      break
+    fi
+    sleep 0.2
+  done
+  for pid in "$active_pid" "$app_pid" "$worker_pid"; do
+    [[ -z $pid ]] || wait "$pid" 2>/dev/null || true
+  done
+  if [[ -n $pg_pid ]] && kill -0 "$pg_pid" 2>/dev/null; then
+    log postgres stopping_database
+    kill -INT "$pg_pid" 2>/dev/null || true
+    deadline=$((SECONDS + 20))
+    while kill -0 "$pg_pid" 2>/dev/null; do
+      if (( SECONDS >= deadline )); then
+        log postgres database_shutdown_timeout
+        kill -KILL "$pg_pid" 2>/dev/null || true
+        result=1
+        break
+      fi
+      sleep 0.2
+    done
+  fi
+  [[ -z $pg_pid ]] || wait "$pg_pid" 2>/dev/null || true
+  log init stopped
+  exit "$result"
+}
+trap stop_children EXIT
+trap 'exit 0' TERM INT
+trap 'log init startup_failed; exit 1' ERR
+run_private() {
+  "$@" <&0 9>&- >/dev/null 2>&1 &
+  active_pid=$!
+  if ! wait "$active_pid"; then active_pid=''; fail mandatory_initialization_failed; fi
+  active_pid=''
+}
+
+log init preparing_runtime
+[[ ! -L $DATA && ! -L $CONTROL && ! -L $DATA/18 && ! -L $PGDATA ]] || fail unsafe_data_path
+install -d -m 0755 -o root -g root "$DATA"
+umask 077
+# Cross-container filesystem lock; never hand its descriptor to unprivileged children.
+[[ ! -L $DATA/.distribution.lock ]] || fail unsafe_data_lock
+exec 9>"$DATA/.distribution.lock"
+flock --nonblock 9 || fail data_volume_in_use
+install -d -m 0700 -o root -g root "$CONTROL"
+if [[ $task_mode == normal && -e $CONTROL/restore-pending ]]; then fail incomplete_restore_requires_verification; fi
+install -d -m 0755 /run/roisey-else
+install -d -m 0700 -o postgres -g postgres "$SOCKET"
+umask 077
+if [[ ! -e $CONTROL/database.credentials ]]; then
+  task_credentials=$(mktemp "$CONTROL/.database.XXXXXX")
+  openssl rand -hex 32 > "$task_credentials"
+  openssl rand -hex 32 >> "$task_credentials"
+  chmod 0600 "$task_credentials"
+  mv "$task_credentials" "$CONTROL/database.credentials"
+  sync -f "$CONTROL"
+fi
+load_credentials
+clean_database_environment
+# Refuse a volume with a different-major or unknown cluster layout instead of
+# silently creating an unrelated empty cluster beside existing customer data.
+while IFS= read -r task_version_file; do
+  [[ $task_version_file == "$PGDATA/PG_VERSION" ]] || fail incompatible_postgresql_cluster
+done < <(find "$DATA" -maxdepth 3 -name PG_VERSION -print)
+while IFS= read -r task_root_entry; do
+  case ${task_root_entry##*/} in
+    18|.control|.distribution.lock|lost+found) ;;
+    *) fail unrecognized_persistent_data_layout ;;
+  esac
+done < <(find "$DATA" -mindepth 1 -maxdepth 1 -print)
+if [[ -e $PGDATA/PG_VERSION ]]; then
+  [[ -f $PGDATA/PG_VERSION && ! -L $PGDATA/PG_VERSION && $(cat "$PGDATA/PG_VERSION") == 18 ]] || fail incompatible_postgresql_cluster
+  log postgres using_existing_database
+else
+  if [[ -d $PGDATA ]] && [[ -n $(find "$PGDATA" -mindepth 1 -maxdepth 1 -print -quit) ]]; then
+    fail nonempty_uninitialized_database
+  fi
+  install -d -m 0755 -o postgres -g postgres "$DATA/18"
+  install -d -m 0700 -o postgres -g postgres "$PGDATA"
+  log postgres initializing_database
+  run_private gosu postgres initdb --pgdata "$PGDATA" --username postgres --auth-local=peer --auth-host=scram-sha-256 --encoding UTF8 --locale en_US.utf8
+fi
+
+# After a container crash, a stale postmaster PID can be reused by a new
+# namespace's short-lived startup process. Only our recorded managed volume may
+# discard this transient lock, and only while holding the exclusive volume flock
+# with no live PostgreSQL process. An unclean legacy adoption requires review.
+if [[ -e $PGDATA/postmaster.pid ]]; then
+  [[ -f $CONTROL/runtime-managed && ! -L $CONTROL/runtime-managed ]] || fail unclean_legacy_cluster_requires_recovery
+  [[ -f $PGDATA/postmaster.pid && ! -L $PGDATA/postmaster.pid ]] || fail unsafe_postgresql_pid_file
+  if pgrep -x postgres >/dev/null; then fail postgresql_already_running; fi
+  rm "$PGDATA/postmaster.pid"
+  log postgres recovering_previous_container_crash
+fi
+[[ ! -L $CONTROL/runtime-managed ]] || fail unsafe_runtime_marker
+printf 'managed\n' > "$CONTROL/runtime-managed"
+sync -f "$CONTROL"
+log postgres starting_database
+gosu postgres postgres -D "$PGDATA" \
+  -c listen_addresses=127.0.0.1 -c port=5432 -c unix_socket_directories="$SOCKET" \
+  -c hba_file=/opt/else/pg_hba.conf -c ssl=off -c timezone=UTC \
+  -c logging_collector=off -c log_statement=none -c log_min_error_statement=panic \
+  -c log_parameter_max_length_on_error=0 9>&- &
+pg_pid=$!
+task_ready=false
+for ((task_attempt=0; task_attempt<120; task_attempt++)); do
+  kill -0 "$pg_pid" 2>/dev/null || fail postgresql_start_failed
+  if PGHOST=$SOCKET PGCONNECT_TIMEOUT=1 gosu postgres psql -X -U postgres -d postgres -Atc 'SELECT 1' >/dev/null 2>&1; then
+    task_ready=true; break
+  fi
+  sleep 1
+done
+[[ $task_ready == true ]] || fail postgresql_readiness_timeout
+log postgres database_ready
+
+# SQL imports bounded generated values through getenv, never shell interpolation.
+export ELSE_MIGRATOR_SECRET=$MIGRATOR_SECRET ELSE_RUNTIME_SECRET=$RUNTIME_SECRET
+run_private gosu postgres psql -X --host "$SOCKET" --username postgres --dbname postgres --set ON_ERROR_STOP=1 <<'SQL'
+SELECT 'CREATE ROLE else_migrator LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname='else_migrator') \gexec
+SELECT 'CREATE ROLE else_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname='else_runtime') \gexec
+\getenv migrator_secret ELSE_MIGRATOR_SECRET
+\getenv runtime_secret ELSE_RUNTIME_SECRET
+ALTER ROLE else_migrator LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD :'migrator_secret';
+ALTER ROLE else_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD :'runtime_secret';
+SELECT 'CREATE DATABASE "else" OWNER else_migrator' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname='else') \gexec
+ALTER DATABASE "else" OWNER TO else_migrator;
+REVOKE ALL ON DATABASE "else" FROM PUBLIC;
+GRANT CONNECT ON DATABASE "else" TO else_migrator,else_runtime;
+SQL
+unset ELSE_MIGRATOR_SECRET ELSE_RUNTIME_SECRET
+run_private owner_psql <<'SQL'
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+GRANT USAGE,CREATE ON SCHEMA public TO else_migrator;
+SQL
+if [[ $task_mode == restore ]]; then
+  [[ -f $CONTROL/integration-keyring.json ]] || fail retained_restore_keyring_required
+  task_empty=$(owner_psql -Atc "SELECT NOT EXISTS (SELECT FROM pg_namespace WHERE nspname='app') AND NOT EXISTS (SELECT FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public') AND NOT EXISTS (SELECT FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")
+  [[ $task_empty == t ]] || fail restore_requires_empty_database
+  printf 'pending\n' > "$CONTROL/restore-pending"
+  sync -f "$CONTROL"
+  log restore importing_archive
+  PGHOST=$SOCKET run_private gosu postgres pg_restore --username postgres --dbname else --role else_migrator --no-owner --exit-on-error --single-transaction
+  printf 'imported\n' > "$CONTROL/restore-pending"
+  sync -f "$CONTROL"
+elif [[ $task_mode == verify-restore ]]; then
+  [[ -f $CONTROL/restore-pending && $(cat "$CONTROL/restore-pending") == imported ]] || fail no_completed_archive_to_verify
+fi
+log migrate applying_migrations
+MIGRATION_DATABASE_URL="postgres://else_migrator:$MIGRATOR_SECRET@127.0.0.1:5432/else?sslmode=disable" \
+  run_private gosu 65533:65533 /migrate up
+run_private owner_psql --single-transaction --file /opt/else/grant-runtime.sql
+log migrate schema_up_to_date
+if [[ $task_mode != normal ]]; then
+  log restore checking_retained_and_fresh_keys
+  INTEGRATION_KEYRING_FILE="$CONTROL/integration-keyring.json" INTEGRATION_KEYRING_MODE=restored \
+    DATABASE_URL="postgres://else_runtime:$RUNTIME_SECRET@127.0.0.1:5432/else?sslmode=disable" \
+    run_private /container-preflight
+  sync -f "$CONTROL"
+  rm "$CONTROL/restore-pending"
+  sync -f "$CONTROL"
+  log restore verified_offline_restore_complete
+  exit 0
+fi
+
+# Keep the durable master root-private; expose a protected ephemeral runtime copy.
+if [[ -z ${INTEGRATION_KEYRING_FILE+x} ]]; then
+  if [[ ! -e $CONTROL/integration-keyring.json ]]; then
+    task_ciphertext=$(owner_psql -Atc 'SELECT count(*) FROM app.integration_credentials')
+    [[ $task_ciphertext == 0 ]] || fail retained_integration_keyring_required
+    task_key=$(openssl rand -base64 32)
+    task_label="local-$(openssl rand -hex 16)"
+    task_key_file=$(mktemp "$CONTROL/.keyring.XXXXXX")
+    printf '{"active_key_id":"%s","keys":[{"id":"%s","key_base64":"%s"}]}\n' "$task_label" "$task_label" "$task_key" > "$task_key_file"
+    chmod 0600 "$task_key_file"
+    mv "$task_key_file" "$CONTROL/integration-keyring.json"
+    sync -f "$CONTROL"
+    unset task_key task_label
+  fi
+  [[ -f $CONTROL/integration-keyring.json && ! -L $CONTROL/integration-keyring.json && $(stat -c '%u:%a:%h' "$CONTROL/integration-keyring.json") == 0:600:1 ]] || fail private_integration_keyring_unavailable
+  install -d -m 0711 -o root -g root /run/roisey-else/keys
+  install -m 0400 -o 65532 -g 65532 "$CONTROL/integration-keyring.json" /run/roisey-else/keys/keyring.json
+  INTEGRATION_KEYRING_FILE=/run/roisey-else/keys/keyring.json
+fi
+export INTEGRATION_KEYRING_FILE
+export DATABASE_URL="postgres://else_runtime:$RUNTIME_SECRET@127.0.0.1:5432/else?sslmode=disable"
+export AUTH_PUBLIC_ORIGIN=${AUTH_PUBLIC_ORIGIN-http://localhost:${APP_PORT:-8080}}
+export AUTH_COOKIE_SECURE=${AUTH_COOKIE_SECURE-false}
+export HTTP_ADDRESS=0.0.0.0:8080 FRONTEND_DIRECTORY=/frontend
+unset MIGRATOR_SECRET RUNTIME_SECRET
+
+log app starting_roisey_else
+gosu 65532:65532 /api 9>&- &
+app_pid=$!
+gosu 65532:65532 /analytics-worker 9>&- &
+worker_pid=$!
+log worker starting_synchronization_worker
+# Check every child, including one that exited before monitoring started. Bash's
+# wait -n alone can miss an already-reaped early startup failure.
+while :; do
+  for task_pid in "$pg_pid" "$app_pid" "$worker_pid"; do
+    kill -0 "$task_pid" 2>/dev/null || fail supervised_process_exited
+  done
+  sleep 0.5
+done

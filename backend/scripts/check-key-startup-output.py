@@ -12,7 +12,8 @@ for line in raw.splitlines():
         events.append(json.loads(line))
     except (ValueError, TypeError):
         continue
-if not any(isinstance(event, dict) and event.get("msg") == "integration_key_startup_failed" for event in events):
+expected = sys.argv[2] if len(sys.argv) == 3 else "integration_key_startup_failed"
+if not any(isinstance(event, dict) and event.get("msg") == expected for event in events):
     raise SystemExit("Expected fixed key startup failure was absent.")
 private_values = ["synthetic-container", "synthetic-fresh", "synthetic-private-parser-value", "/run/integration-keys", "key_base64", "active_key_id"]
 for material in (b"\x6b" * 32, b"\x73" * 32):  # Public synthetic fixture only.

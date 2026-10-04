@@ -1,5 +1,7 @@
 # Integration key startup and declared restores
 
+Current standard distribution: one `else` container includes PostgreSQL, Go-served React/API, and the supervised analytics worker. Startup automatically applies migrations/grants and provisions a durable protected integration keyring. API/worker run as UID 65532; restricted root supervision and separate PostgreSQL/migrator identities handle initialization. See [Docker operations](docker.md) for current installation commands. Standalone source/operator examples and older CI evidence below retain their original scope.
+
 [Issue #82](https://github.com/theroisey/else/issues/82) adds protected key-file loading and a read-only database preflight before the API listens. It supplies no credential acceptance, provider connection, OAuth, synchronization or key-retirement operation. #84 separately adds private [bounded eligible rewrap batches](integration-rotation.md); #88 adds a [trusted one-page operator command](integration-rotation-command.md) using the same loader/preflight. API startup still exposes no rotation route. Parent #24 remains incomplete.
 
 ## Configuration
@@ -15,7 +17,7 @@ Configured loading is supported on Linux. The final file must be regular, have e
 
 The loader opens one no-follow/nonblocking descriptor, validates its identity and metadata before and after bounded parsing, then closes it. This avoids waiting on FIFOs and rejects observed file changes. Parent mount directories must be trusted: this policy rejects the final symlink, rather than resolving every parent without symlinks. Provision a stable local secret mount; cancellation is checked around file access, but regular-file filesystem I/O has no independent wall-clock timeout. No hot reload exists; changing the file requires an orderly process restart.
 
-The production backend runs as UID/GID `65532:65532`. Provision its mounted file for that owner with mode `0400`, and mount it read-only. Ensure the mounted directory allows traversal by that UID. Secret mounts exposing group/world readability or a symlink as the final configured file are incompatible: provision a protected regular file through the deployment's trusted secret mechanism. This PR does not add a default mount or production secret.
+The production backend runs as UID/GID `65532:65532`. Provision its mounted file for that owner with mode `0400`, and mount it read-only. Ensure the mounted directory allows traversal by that UID. Secret mounts exposing group/world readability or a symlink as the final configured file are incompatible: provision a protected regular file through the deployment's trusted secret mechanism. The standard container creates a root-private durable master and a UID-65532-owned mode-0400 runtime copy; custom file mounts still obey these rules.
 
 ## Read-only database preflight
 

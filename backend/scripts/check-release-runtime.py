@@ -41,8 +41,9 @@ def verify(path, origin, revision, built_at):
     assert read(token=tokens[1])[0] == 403
     status, raw = read(token=tokens[0])
     assert status == 200
+    runtime = {"status": "available", "version": "sha-" + revision, "commit_sha": revision, "built_at": built_at} if revision else {"status": "unavailable", "version": None, "commit_sha": None, "built_at": None}
     assert json.loads(raw) == {"data": {
-        "runtime": {"status": "available", "version": "sha-" + revision, "commit_sha": revision, "built_at": built_at},
+        "runtime": runtime,
         "latest_release": {"status": "unavailable"}, "image_provenance": {"status": "unavailable"}, "deployment": {"status": "unavailable"},
     }}
     assert read("?source=synthetic", tokens[0])[0] == 400

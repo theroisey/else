@@ -1,4 +1,4 @@
 # Local verification of runtime images, not a production deployment recipe.
 services:
-  backend:
+  else:
     read_only: true

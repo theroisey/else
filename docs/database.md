@@ -1,5 +1,8 @@
 # PostgreSQL and migrations
 
+
+Current distribution: one container includes PostgreSQL and runs migration/role initialization automatically. API/worker retain the restricted runtime identity; the API never performs DDL. Private intra-container loopback uses SCRAM and is not published. The standalone URL/TLS setup below applies to separate development/test databases. See [Docker operations](docker.md).
+
 Related Issue: [#4](https://github.com/theroisey/else/issues/4).
 
 ## Implemented contract
@@ -65,10 +68,10 @@ REVOKE ALL ON SCHEMA public FROM PUBLIC;
 GRANT USAGE, CREATE ON SCHEMA public TO else_migrator;
 ```
 
-Set the migrator password interactively with psql `\password else_migrator` and the runtime password with `\password else_runtime`, or use approved secret provisioning. Export the corresponding URLs privately. Run migrations with the migration identity. After migrations, apply the reviewed audit, identity and authorization grants in [the audit guide](audit-log.md), [identity guide](identity.md) and [authorization guide](authorization.md). Local Compose uses:
+Set the migrator password interactively with psql `\password else_migrator` and the runtime password with `\password else_runtime`, or use approved secret provisioning. Export the corresponding URLs privately. Run migrations with the migration identity. After migrations, apply the reviewed audit, identity and authorization grants in [the audit guide](audit-log.md), [identity guide](identity.md) and [authorization guide](authorization.md). The standard container applies grants automatically before API/worker startup. An authorized operator can inspect/reapply a reviewed grant file through:
 
 ```sh
-docker compose exec -T postgres psql -U postgres -d else < backend/scripts/grant-runtime.sql
+docker compose exec -T else /opt/else/operator psql < backend/scripts/grant-runtime.sql
 ```
 
 The migrator owns the database, `app` schema, and Goose metadata; runtime must not be a database owner, superuser, schema creator, or member of the migration role. Application code does not elevate the supplied role. Operators must enforce these grants. Tests prove a correctly provisioned runtime role can connect but cannot create schemas/tables or read/update migration history.
@@ -119,7 +122,7 @@ This administrator must be able to create/drop the uniquely named test databases
 
 Coverage includes up/no-op/down/up, migration states, UTC sessions, transaction failure and retry, preserved data after refused rollback, cross-session lock contention/cancellation/recovery, negative runtime privileges, bounded startup failure, and real HTTP readiness through a database outage/recovery. Binary smoke checks also verify separate migration/runtime identities, safe process logs, and graceful SIGTERM shutdown.
 
-Three-service development orchestration and local runtime-image verification are proposed in #5; [the Docker guide](docker.md) preserves verified TLS and documents explicit migration/role steps and current verification blockers. GitHub Actions gates remain #6. Running a PostgreSQL test container does not constitute a passing application Docker build or production deployment.
+The standard one-container distribution is described in [Docker operations](docker.md). Its supervisor automatically initializes an empty PostgreSQL 18 cluster, provisions distinct roles/passwords, runs pending migrations and reapplies reviewed grants. The following standalone database setup remains relevant to source development and disposable tests. Non-loopback connections retain verified TLS. Running a PostgreSQL test container does not constitute a passing application Docker build or production deployment.
 
 ## References
 

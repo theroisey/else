@@ -6,7 +6,7 @@
 ![React](https://img.shields.io/badge/React-19-202020?logo=react&logoColor=white)
 ![Go](https://img.shields.io/badge/Go-1.27.1-202020?logo=go&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18.3-202020?logo=postgresql&logoColor=white)
-[![GHCR](https://img.shields.io/badge/GHCR-one_application_image-202020?logo=docker&logoColor=white)](https://github.com/theroisey/else/pkgs/container/else)
+[![GHCR](https://img.shields.io/badge/GHCR-one_container-202020?logo=docker&logoColor=white)](https://github.com/theroisey/else/pkgs/container/else)
 
 Roisey Else is a centralized operations platform for teams managing multiple client accounts. It brings client records, tasks, plans, reminders, collections, pricing, and provider reports into dedicated client workspaces, with permissions and traceable history throughout.
 
@@ -16,7 +16,7 @@ Roisey Else is a centralized operations platform for teams managing multiple cli
 
 Each client has an operational home: what needs attention, what is due next, the financial position by currency, and recent authorized activity. Dedicated modules hold the detailed work and reports. Users see the modules their current permissions allow; the backend enforces access to every client and record.
 
-The application is a modular Go service with a React interface and PostgreSQL storage. Production uses **one application image** for the web service, background worker, and operator commands. Development uses **one branch: `main`**.
+The application is a modular Go service with a React interface and PostgreSQL storage. Production uses **one Docker image and one container** for PostgreSQL, the web service, background worker, and operator commands. Development uses **one branch: `main`**.
 
 ## Features
 
@@ -75,22 +75,26 @@ Existing browser-verification captures use **clearly labelled synthetic data**, 
 ```mermaid
 flowchart LR
     Browser[Browser] --> Web
-    subgraph Image[One application image]
+    subgraph Container[One image / one container]
+        Supervisor[Tini + startup supervisor]
         Web[Go API + built React assets]
         Worker[Analytics worker]
-        Tools[Migration and operator commands]
+        DB[(PostgreSQL 18)]
+        Supervisor --> Web
+        Supervisor --> Worker
+        Supervisor --> DB
+        Web --> DB
+        Worker --> DB
     end
-    Web --> DB[(PostgreSQL)]
-    Worker --> DB
-    Tools --> DB
+    DB --> Volume[One persistent volume]
     Worker --> Providers[GA4 / WooCommerce / Meta Ads]
 ```
 
-The web service serves React assets and `/api/v1` from one origin. Domain services separate transport, authorization, business rules, database access, and audit writing. PostgreSQL holds shared sessions, permissions, business records, encrypted credentials, synchronization jobs, and report snapshots.
+Go serves React assets and `/api/v1` from one origin on port 8080. PostgreSQL runs privately on container loopback; its port is never published. The startup supervisor initializes an empty cluster, applies pending embedded migrations, restores reviewed runtime grants, and starts the API and worker only after those steps succeed. Restarting preserves existing records and migration history.
 
-Provider requests run in an independent `/analytics-worker` process from the **same image**. Web requests enqueue work and return without waiting for vendors. Workers use durable leases, bounded collection, and generation checks; GA4, WooCommerce, and Meta share a limit of two live synchronization jobs across replicas.
+Provider requests run in the supervised `/analytics-worker` process. Web requests enqueue durable jobs and return without waiting for vendors. Domain services preserve authorization, financial precision, transaction boundaries, and audit writing.
 
-The root multi-stage Dockerfile builds the frontend and Go executables into a nonroot `scratch` runtime. Node and npm are build tools. PostgreSQL is separate infrastructure. Web replicas share database state and do not require sticky sessions.
+The multi-stage build uses Node/npm and Go only during compilation. The final image includes PostgreSQL, compiled React assets, Go executables, and Tini; it has no Node, npm, or Nginx. PostgreSQL runs as UID 999, API/worker as UID 65532, and migration/bootstrap commands as UID 65533. The root supervisor has only the capabilities needed for initialization, identity changes, and shutdown. The API receives only its restricted runtime database identity.
 
 ### Technology stack
 
@@ -119,12 +123,12 @@ The root multi-stage Dockerfile builds the frontend and Go executables into a no
 │   ├── internal/            Domain services and infrastructure
 │   ├── migrations/          Embedded, versioned SQL
 │   └── scripts/             Build, database, container, publication checks
-├── docker/                  Local TLS preparation and PostgreSQL setup
+├── docker/                  Container initialization, supervision, and operator tools
 ├── .github/workflows/       CI and tested-image publication
 ├── docs/                    Domain contracts and operating guides
 ├── notes/                   Obsidian project knowledge and decisions
-├── Dockerfile               The single application image
-├── docker-compose.yml       Local application and database
+├── Dockerfile               The single complete application image
+├── docker-compose.yml       One service, one port, one persistent volume
 ├── .env.example             Local Compose variable reference
 └── AGENTS.md                Engineering and contribution contract
 ```
@@ -133,112 +137,75 @@ The root multi-stage Dockerfile builds the frontend and Go executables into a no
 
 ### Requirements
 
-For Docker startup, install Git, Docker Engine with BuildKit, **Docker Compose 2.24.4 or newer**, and OpenSSL. Use a POSIX shell and an interactive terminal for initial administrator creation. Docker builds the pinned Node and Go toolchains; host installations are needed only for source development and tests.
+Install Git, Docker Engine, and Docker Compose 2.24.4 or newer. Host Node, Go, PostgreSQL, and OpenSSL are unnecessary for the published installation. Initial administrator creation needs an interactive terminal.
 
-### Start a fresh local installation
+### Start a fresh installation
 
 ```sh
 git clone git@github.com:theroisey/else.git
 cd else
-
-sh docker/dev/prepare.sh
-docker compose build backend
-docker compose up -d --wait postgres
-docker compose run --rm migrate up
-docker compose exec -T postgres psql -U postgres -d else < backend/scripts/grant-runtime.sql
-docker compose up -d --wait
+cp .env.example .env
+docker compose up -d
 ```
 
-The preparation script generates three distinct random database passwords in ignored `.env`, plus local CA-signed PostgreSQL TLS material. It refuses to overwrite existing `.env` or TLS files. `.env.example` documents the settings; its password markers are not usable credentials.
-
-Migrations and grants are explicit setup steps. The API does not migrate on startup. The Compose service named `backend` serves the **entire application**, including the frontend.
+Open **[http://localhost:8080](http://localhost:8080)** once `docker compose ps` reports healthy. The single `else` service pulls `ghcr.io/theroisey/else:latest` (the package must be Public for login-free pulls); PostgreSQL initialization, migrations, runtime grants, private credential/key provisioning, and worker startup happen automatically. There are no manual database setup commands.
 
 ### Create the first administrator
 
-Run once, after migrations and grants:
-
 ```sh
-BOOTSTRAP_ADMIN_EMAIL=owner@example.com \
-BOOTSTRAP_ADMIN_NAME='Initial Administrator' \
-docker compose run --rm bootstrap-admin
+docker compose exec -it else /opt/else/operator bootstrap-admin owner@example.com 'Initial Administrator'
 ```
 
-Use your own email and display name. Enter a password of 12–128 UTF-8 bytes at the interactive prompt; it is not echoed. Bootstrap requires an empty user table and assigns the ordinary **Initial Administrator** role. There is no default login or seeded demo password.
+Use your own email and name. Enter a 12–128-byte password at the hidden prompt. Bootstrap requires an empty user table and assigns the ordinary **Initial Administrator** role. There is no default password.
 
 | Destination | Local URL |
 | --- | --- |
-| Application and login | [http://localhost:5173](http://localhost:5173) |
-| API base | `http://localhost:5173/api/v1` |
-| JSON service status | `http://localhost:5173/status` |
-| Liveness / readiness | `http://localhost:5173/health` / `http://localhost:5173/ready` |
-
-Local Compose publishes only the application's loopback port. PostgreSQL stays on its private container network. This startup supports core workspaces; provider setup also needs a protected keyring and a supervised worker, as described under [analytics and integrations](#analytics-and-integrations).
+| Application and login | [http://localhost:8080](http://localhost:8080) |
+| API base | `http://localhost:8080/api/v1` |
+| JSON status | `http://localhost:8080/status` |
+| Liveness / readiness | `http://localhost:8080/health` / `http://localhost:8080/ready` |
 
 ## Environment configuration
 
-Keep local generated credentials with their database volume. Production settings belong in the hosting platform's secret/configuration management. Database URLs must contain explicit credentials, host, port, and database; non-loopback connections require `sslmode=verify-full` with a trusted CA.
+The minimal `.env` contains:
 
-| Variable | Used by | Requirement / default |
-| --- | --- | --- |
-| `POSTGRES_PASSWORD` | Local Compose database | Generated local administrative password. |
-| `MIGRATOR_PASSWORD` | Local Compose tools | Generated migration-owner password. |
-| `RUNTIME_PASSWORD` | Local Compose web service | Generated least-privileged runtime password. |
-| `FRONTEND_PORT` | Local Compose | Optional; `5173`, bound to `127.0.0.1`. |
-| `DATABASE_URL` | API and worker | Required private runtime connection URL; Compose supplies it. |
-| `MIGRATION_DATABASE_URL` | Migration command | Required private migration-owner URL. |
-| `BOOTSTRAP_DATABASE_URL` | Bootstrap command | Required private owner URL; never supplied to the API. |
-| `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_NAME` | Bootstrap command | Required initial identity fields. Password is prompted separately. |
-| `AUTH_PUBLIC_ORIGIN` | API | Required exact browser origin, without a path; Compose uses `http://localhost:5173` by default. |
-| `AUTH_COOKIE_SECURE` | API | Defaults to `true`; `false` is accepted only for loopback HTTP development. |
-| `HTTP_ADDRESS` | API | Defaults to `127.0.0.1:8080`; image sets `0.0.0.0:8080`. |
-| `FRONTEND_DIRECTORY` | API | Optional absolute static-build path; image sets `/frontend`. |
-| `LOG_LEVEL` | API | Optional `debug`, `info`, `warn`, or `error`; defaults to `info`. |
-| `INTEGRATION_KEYRING_FILE` | API, worker, rotation command | Protected absolute Linux key-file path; required for credential setup and workers. |
-| `INTEGRATION_KEYRING_MODE` | Key-dependent processes | Defaults to `normal`; `restored` is reserved for the documented recovery procedure. |
-
-HTTP duration settings accept Go duration strings:
-
-| Setting | Default |
+| Variable | Default / purpose |
 | --- | --- |
-| `HTTP_READ_HEADER_TIMEOUT` | `5s` |
-| `HTTP_READ_TIMEOUT`, `HTTP_WRITE_TIMEOUT` | `15s` |
-| `HTTP_REQUEST_TIMEOUT` | `5s` |
-| `HTTP_IDLE_TIMEOUT` | `60s` |
-| `HTTP_SHUTDOWN_TIMEOUT` | `10s` |
-| `HTTP_READINESS_TIMEOUT` | `2s` |
-| `HTTP_MAX_HEADER_BYTES` | `16384` bytes |
+| `APP_PORT` | `8080`; host loopback application port. |
+| `AUTH_PUBLIC_ORIGIN` | `http://localhost:8080`; exact browser origin. Match any port change. |
+| `AUTH_COOKIE_SECURE` | `false` for loopback HTTP; set `true` with an HTTPS production origin. |
+| `ELSE_IMAGE` | Optional image reference; defaults to `ghcr.io/theroisey/else:latest`. Pin a verified digest for production. |
+| `ELSE_DATA_VOLUME` | Optional existing volume selector; defaults to `roisey-else_postgres-data`. |
 
-Startup validates settings and timeout relationships. See [HTTP configuration](docs/backend-http.md), [database configuration](docs/database.md), [runtime budgets](docs/runtime-budgets.md), and [protected key provisioning](docs/integration-key-startup.md). Build stamps are compiled into the binary; runtime environment values cannot replace them.
+Database passwords and integration encryption keys are generated privately and retained in the same persistent volume as PostgreSQL. They are not required in `.env`. Never publish this volume, private key files, backups, or process environments. Advanced standalone API settings are documented in [HTTP configuration](docs/backend-http.md), [database configuration](docs/database.md), and [runtime budgets](docs/runtime-budgets.md).
 
 ## Docker operation and database migrations
 
-The Compose services are `postgres`, `backend`, and the tool-profile services `migrate` and `bootstrap-admin`. Both tools reuse `roisey-else:local`, the same application image as the web service.
-
-| Action | Command from repository root |
+| Action | Command |
 | --- | --- |
-| Start initialized stack | `docker compose up -d --wait` |
-| Check containers | `docker compose ps` |
-| Check configuration without exposing values | `docker compose config --quiet` |
-| Follow application logs | `docker compose logs -f backend` |
-| Check migration state | `docker compose run --rm migrate status` |
-| Apply pending migrations | `docker compose run --rm migrate up` |
-| Apply reviewed runtime grants after migrations | `docker compose exec -T postgres psql -U postgres -d else < backend/scripts/grant-runtime.sql` |
-| Rebuild application | `docker compose build backend` |
-| Recreate application after a build | `docker compose up -d --wait backend` |
-| Stop services | `docker compose stop` |
-| Remove containers, retain database volume | `docker compose down` |
+| Start / wait for readiness | `docker compose up -d --wait` |
+| Inspect status | `docker compose ps` |
+| Validate configuration | `docker compose config --quiet` |
+| Follow logs | `docker compose logs -f else` |
+| Restart | `docker compose restart else` |
+| Inspect migration state | `docker compose exec -T else /opt/else/operator migrate status` |
+| Upgrade published image | `docker compose pull && docker compose up -d --wait` |
+| Stop gracefully | `docker compose stop` |
+| Remove container, retain data | `docker compose down` |
 
-PostgreSQL data persists in the `postgres-data` named volume. Removing that volume deletes local data. Keep existing passwords when restarting or recreating containers. Rendered Compose configuration and container environments contain secrets and must not be shared.
+The `else_data` volume mounts at `/var/lib/roisey-else`; the PostgreSQL cluster uses `18/docker`, and `.control` holds private durable credentials and encryption keys. Restarts, recreation, image upgrades, and ordinary `down` preserve it. **`docker compose down --volumes` permanently deletes application data and keys.** Use it only for a deliberately disposable reset.
 
-Migrations live in `backend/migrations/`, with six-digit filenames and Goose `Up`/`Down` sections embedded into `/migrate`. Apply new migrations through the owner identity, then review and reapply the narrow runtime grants. Applied migration files are immutable. `down` reverts one migration; populated-history guards can refuse destructive rollback. Use the [database guide](docs/database.md) for lifecycle rules and the [recovery guide](docs/recovery.md) for recovery decisions.
+Pending Goose migrations run automatically before the API starts; applied migrations remain immutable. The API itself never performs DDL or receives owner credentials. A failed migration or required process failure stops the entire container. Tini reaps children; graceful stop drains API/worker before stopping PostgreSQL. A filesystem lock prevents two containers from sharing the same cluster.
 
-The `docker-compose.production.yml` overlay supports local artifact verification; production rollout requires environment-specific infrastructure. If a managed build environment provides `CODEX_PROXY_CERT`, the [Docker guide](docs/docker.md#managed-build-ca) explains the build-only CA overlay.
+For an existing installation, back up the database and retained keys, stop the old stack, and select its actual PostgreSQL 18 volume before starting this distribution. The default physical volume name preserves the former root Compose default. Custom project names need `ELSE_DATA_VOLUME` set explicitly. Follow [upgrade and adoption](docs/docker.md#existing-installation-adoption); never point this image at a different-major cluster.
+
+Local source builds use `docker build -t roisey-else:local .`, then `ELSE_IMAGE=roisey-else:local docker compose up -d --wait`. See [Docker operations](docs/docker.md), including managed-build CA support.
 
 ## Local development
 
 Use **Node 24.21.0**, **npm 11.19.0**, and **Go 1.27.1**, matching the repository and CI pins. Source development runs Vite and the API separately.
 
-Provision a development PostgreSQL database and separate migration/runtime roles using the [database guide](docs/database.md). Supply private `MIGRATION_DATABASE_URL` and `DATABASE_URL` through your local environment, apply migrations and runtime grants, and bootstrap an administrator if needed. The default Compose database is private and is not directly reachable by a host Go process.
+Provision a development PostgreSQL database and separate migration/runtime roles using the [database guide](docs/database.md). Supply private `MIGRATION_DATABASE_URL` and `DATABASE_URL` through your local environment, apply migrations and runtime grants, and bootstrap an administrator if needed. The bundled PostgreSQL is private; standalone development uses a separate disposable development database.
 
 In a backend terminal, with those URLs already supplied:
 
@@ -260,7 +227,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173**. Vite proxies `/api/v1/`, `/health`, and `/ready` to `127.0.0.1:8080`. Match the browser host exactly to `AUTH_PUBLIC_ORIGIN`: `localhost` and `127.0.0.1` are different origins. Stop the Compose web service before using Vite on the same port. Plain developer builds correctly show unavailable release metadata.
+Open **http://127.0.0.1:5173**. Vite proxies `/api/v1/`, `/health`, and `/ready` to `127.0.0.1:8080`. Match the browser host exactly to `AUTH_PUBLIC_ORIGIN`: `localhost` and `127.0.0.1` are different origins. The default Compose port is 8080; stop it before starting a standalone API on that port. Plain developer builds correctly show unavailable release metadata.
 
 ## Authentication, permissions, and history
 
@@ -282,7 +249,7 @@ Tasks support assignments, priorities, start/due dates, tags, and guarded status
 
 ## Analytics and integrations
 
-Integration managers manually provision provider credentials through a client connection. Credentials are encrypted before storage and excluded from metadata responses, logs, and audit snapshots. Setup requires protected server key material; synchronization requires a separately supervised `/analytics-worker` using the same application image and runtime database identity. Default local Compose does not launch a worker or provision integration keys.
+Integration managers manually provision provider credentials through a client connection. Credentials are encrypted before storage and excluded from metadata responses, logs, and audit snapshots. The container provisions a protected persistent server keyring and starts the supervised `/analytics-worker` automatically. Provider credentials and account access still require an authorized integration manager. For custom keys and rotation, follow the operator guides; retain decryption keys for all live ciphertext and backups.
 
 | Provider | Setup | Stored reports |
 | --- | --- | --- |
@@ -308,8 +275,8 @@ Business endpoints use **`/api/v1`**, cookie-session authentication, permission 
 | `GET /api/v1/releases` | Running build metadata; requires global `releases.view`. |
 
 ```sh
-curl --fail http://localhost:5173/health
-curl --fail http://localhost:5173/ready
+curl --fail http://localhost:8080/health
+curl --fail http://localhost:8080/ready
 ```
 
 Readiness is a connectivity check, not proof of schema compatibility, provider access, or recoverability. See [HTTP behavior](docs/backend-http.md) and [browser security](docs/browser-security.md).
@@ -361,7 +328,7 @@ Database/container verification requires Git, Docker with Compose/BuildKit, Open
 | Backend checks | Formatting, vet, race tests, static builds, workflow and operator-script boundaries. |
 | Dependency security | Complete npm dependency audit and Go vulnerability checks, including integration-tagged source. |
 | PostgreSQL integration | Migrations, permissions, domain transactions, provider lifecycles, capacity, and recovery rehearsals. |
-| Container integration | Single-image startup, TLS, role isolation, migrations, persistence, outage recovery, headers, release stamps, and key/operator boundaries. |
+| Container integration | One-container automatic startup, process/role isolation, migrations, persistence, graceful shutdown, failure recovery, offline restore, headers, release stamps, and key/operator boundaries. |
 
 Successful `main` push or manual workflow runs publish **`ghcr.io/theroisey/else`** by promoting the exact image archive tested by container CI. Publication checks revision evidence and does not rebuild the application. CI also supports PR validation against `main`; PR events do not publish.
 
@@ -371,41 +338,40 @@ The Release Center shows the running API stamp when available. Latest release, r
 
 ## Production deployment
 
-The reference deployment uses a **managed OCI container host and managed PostgreSQL**, with React and the API behind one HTTPS origin. Hosting account, region, domain, secrets, and rollout are operator-specific. A standard static/Node-only Vercel deployment cannot run the long-lived Go service and worker unchanged.
+Use a Docker host with durable local or block storage, sufficient memory, backups, and HTTPS ingress. This distribution runs a long-lived PostgreSQL process inside the application container; static hosting, ordinary Vercel/Node functions, ephemeral disks, and multiple replicas sharing one cluster volume are unsuitable.
 
-Follow the [production operating runbook](docs/production-readiness.md) before releasing traffic:
+Configure the exact HTTPS `AUTH_PUBLIC_ORIGIN`, set `AUTH_COOKIE_SECURE=true`, and route an external TLS ingress to the one loopback app port. Pin a verified image digest, retain the volume, and schedule a maintenance window for image replacement and automatic migrations. No production infrastructure or traffic rollout is performed by publishing an image.
 
-- Select a verified `main` revision and immutable application digest. Use that same digest for web, worker, and temporary operator processes.
-- Provision separate database owner/runtime identities, verified private TLS, reviewed migrations, and narrow grants. Keep owner credentials out of web and worker processes.
-- Configure the exact HTTPS `AUTH_PUBLIC_ORIGIN`, secure cookies, protected key mounts, and supervised workers. Run nonroot with a read-only filesystem and dropped capabilities.
-- Budget connection pools across replicas and rolling replacements: web pools allow 10 connections per process, workers 2, migrations 1. Add headroom for backup and operations.
-- Configure readiness routing, graceful shutdown, edge login throttling, safe log collection, actionable monitoring, and named operational ownership.
-- Verify target-specific CRUD, access denials, provider egress, backup restore, and artifact/schema compatibility before an explicitly approved rollout.
-
-Capacity checks use synthetic data representing 500 clients and 100 concurrent sessions with common-route P95 screening under two seconds, including multiple API/worker instances. These are local/CI rehearsals; deployed latency, sustained vendor traffic, and recovery objectives require measurements on the chosen host. See [capacity readiness](docs/capacity-readiness.md).
+The design targets dashboard-heavy usage for 50–100 initial clients, growth toward 500+, and 20–50 initial / 100+ concurrent users. API pools are bounded at 10 connections and the worker at 2; provider work stays off request paths. Existing synthetic capacity tests cover business queries at 500 clients and 100 sessions; measure the complete container on your selected host before claiming a deployed latency target. See [production operations](docs/production-readiness.md) and [capacity](docs/capacity-readiness.md).
 
 ### Backup and recovery
 
-Back up PostgreSQL to protected durable storage, select retention/PITR with the database operator, and rehearse restoration into an isolated database. Preserve migration history, grants, financial/audit records, and keys required by both live ciphertext and retained backups.
+Create a protected database archive and preserve the private keyring separately:
 
-A restore can rewind encryption accounting. Stop all writers, provision a never-used active key while retaining required decryption keys, and follow the declared-restore procedure. Artifact rollback must be compatible with the restored schema and all three provider contracts. See [recovery](docs/recovery.md) and [key startup and restores](docs/integration-key-startup.md).
+```sh
+umask 077
+docker compose exec -T else /opt/else/operator backup > else-backup.dump
+```
+
+Use encrypted off-host storage and rehearse restoration. A running volume must never be copied as an ordinary filesystem backup. For a whole-volume snapshot, stop the container cleanly first. After restoring database history, keep writers offline, retain required decryption keys, and provide a never-used active encryption key. The [recovery procedure](docs/recovery.md) imports and verifies an archive without starting API/worker processes and blocks normal startup until verification succeeds.
 
 ### Security
 
-Keep `.env`, database passwords, key files, provider tokens, and backup archives outside Git and frontend assets. Use production secret management and approved read-only mounts. Server authorization, strict browser security headers, bounded requests/queries, encrypted provider credentials, and atomic audits protect the application boundary; edge protection and host/database operations remain deployment responsibilities. See the [security review](docs/security-review.md).
+Keep `.env`, durable credentials, key files, tokens, and backup archives outside Git and frontend assets. PostgreSQL is reachable only over container loopback or its private peer-authenticated operator socket. The API cannot read PGDATA or root-private credential files and cannot bypass database grants. Authorization, CSRF, exact financial arithmetic, encrypted provider credentials, and append-only audits remain unchanged. Host/volume access, TLS ingress, edge throttling, safe logs, backup custody, and patching remain operator responsibilities.
 
 ## Troubleshooting
 
 | Symptom | Check / action |
 | --- | --- |
-| Preparation refuses existing files | Preserve `.env` and TLS material with their existing database volume. Follow certificate renewal guidance in [Docker operations](docs/docker.md). |
-| Application port is occupied | Choose another `FRONTEND_PORT` in local `.env` and recreate `backend`; use the matching `localhost` URL. Vite/browser tests separately require `5173` to be free. |
-| `/ready` returns 503 | Check `docker compose ps`, database health, verified TLS, and private connection settings. Liveness can remain healthy during an outage. |
-| A business route fails after startup | Check migration status and apply the reviewed runtime grants; readiness alone does not validate schema or privileges. |
-| Login or a write is rejected | Use the exact configured browser origin and current session. For source development, verify Vite's API proxy and CSRF transport. |
-| No initial login exists | Run interactive bootstrap after migration/grants; existing installations require an authorized administrator. |
-| Provider setup refuses or jobs remain queued | Check protected key configuration, worker startup, current management grants, provider access, and permitted HTTPS egress. Refresh connection state before retrying an uncertain write. |
-| UI still reflects an earlier build | Rebuild `backend` and recreate its container. Docker serves compiled assets; source hot reload is provided by Vite. |
+| Application port occupied | Change `APP_PORT` and the matching `AUTH_PUBLIC_ORIGIN`; recreate `else`. |
+| Container exits or restarts | Inspect `docker compose logs else`; failed initialization/migrations or required-child death fail closed. Fix the cause before restart. |
+| Existing installation appears empty | Stop immediately and select the actual retained volume with `ELSE_DATA_VOLUME`; do not initialize or delete another volume. |
+| Incompatible / partial cluster refused | Preserve it and follow the PostgreSQL upgrade/recovery procedure; startup never erases it. |
+| `/ready` returns 503 | Check container health and database logs; a dead required process stops the container. |
+| Login/write rejected | Use the exact configured browser origin, current grants, and CSRF transport. |
+| No initial login | Run the interactive bootstrap command; existing installations require an authorized administrator. |
+| Provider jobs fail | Check credential validity, provider access/egress, and safe worker logs. |
+| Restore remains blocked | Complete offline verification with retained decryptors and a fresh active key before starting writers. |
 
 ## Contributing
 

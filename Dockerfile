@@ -24,15 +24,29 @@ RUN sh scripts/build-api.sh /out/api "$BUILD_VERSION" "$BUILD_REVISION" "$BUILD_
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/bootstrap-admin ./cmd/bootstrap-admin \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/rotate-integration-credentials ./cmd/rotate-integration-credentials \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/analytics-worker ./cmd/analytics-worker \
+    && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/container-preflight ./cmd/container-preflight \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/healthcheck ./cmd/healthcheck
 
-# The only application runtime image. Tools use an explicit entrypoint override.
+# PostgreSQL runtime plus a small PID-1 reaper from signed Debian packages.
+FROM postgres:18.3@sha256:7e32e9833a6fb1c92c32552794cb6ed569d51b445a54907d35fc112ef39684db AS postgres-runtime
+RUN rm -f /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y --no-install-recommends tini util-linux \
+    && rm -rf /var/lib/apt/lists/* \
+    && printf 'else:x:65532:65532:Roisey Else:/nonexistent:/usr/sbin/nologin\nelse_operator:x:65533:65533:Roisey Else operator:/nonexistent:/usr/sbin/nologin\n' >> /etc/passwd \
+    && printf 'else:x:65532:\nelse_operator:x:65533:\n' >> /etc/group
+
+# Copy the runtime filesystem rather than inheriting PostgreSQL's anonymous
+# /var/lib/postgresql VOLUME. The distribution has exactly one persistent volume.
 FROM scratch AS production
+COPY --from=postgres-runtime / /
 COPY --from=backend-build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=backend-build /out/ /
 COPY --from=frontend-build /app/dist /frontend
-USER 65532:65532
-ENV HTTP_ADDRESS=0.0.0.0:8080 FRONTEND_DIRECTORY=/frontend
+COPY --chmod=0755 docker/runtime/ /opt/else/
+COPY --chmod=0644 backend/scripts/grant-runtime.sql /opt/else/grant-runtime.sql
+USER 0:0
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/18/bin \
+    LANG=en_US.utf8 HTTP_ADDRESS=0.0.0.0:8080 FRONTEND_DIRECTORY=/frontend
 EXPOSE 8080
-HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=6 CMD ["/healthcheck"]
-ENTRYPOINT ["/api"]
+HEALTHCHECK --interval=10s --timeout=3s --start-period=120s --retries=6 CMD ["/healthcheck"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/opt/else/start"]

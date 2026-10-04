@@ -1098,18 +1098,20 @@ Release actions themselves must be audited.
 
 The entire development environment should be runnable through Docker.
 
-The user requires one application image. The expected services are:
+The user's 2026-10-05 instruction requires one complete Docker image,
+one container, one `else` Compose service, one app port, and one persistent
+volume. PostgreSQL, Go-served React/API, and the analytics worker run inside
+that container. The supervised startup initializes empty databases, applies
+pending migrations and narrow grants, then launches unprivileged processes.
+The API itself performs no DDL and never receives owner credentials.
 
-```text
-application (Go API, built React assets and bundled operator/worker binaries)
-postgres
-```
-
-Example:
-
-```text
-docker-compose.yml
-```
+Preserve the retained PostgreSQL 18 volume and integration keys during upgrades.
+Tini and the supervisor must handle signals, reap children, and fail the whole
+container on required-process death. Do not reintroduce separate frontend,
+backend, PostgreSQL, or migration services into the standard distribution.
+Standalone development and disposable test infrastructure are distinct.
+The current decision is recorded in `notes/decisions/Single Container Distribution.md`
+under existing #32; the user prohibits new issues and branches.
 
 Production Docker images should:
 

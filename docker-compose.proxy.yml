@@ -1,6 +1,6 @@
 # Optional managed-cloud build CA. Use alongside the base Compose file.
 services:
-  backend:
+  else:
     build:
       secrets: [proxy_ca]
 secrets:

@@ -1,5 +1,7 @@
 # Backend
 
+Current standard distribution: one `else` container includes PostgreSQL, Go-served React/API, and the supervised analytics worker. Startup automatically applies migrations/grants and provisions a durable protected integration keyring. API/worker run as UID 65532; restricted root supervision and separate PostgreSQL/migrator identities handle initialization. See [Docker operations](../docs/docker.md) for current installation commands. Standalone source/operator examples and older CI evidence below retain their original scope.
+
 This directory owns the Go API and PostgreSQL persistence. HTTP/configuration/health infrastructure starts in [Issue #2](https://github.com/theroisey/else/issues/2). PostgreSQL connection and reversible migration tooling start in [Issue #4](https://github.com/theroisey/else/issues/4).
 
 Use an idiomatic modular application. Separate HTTP transport, application services, domain rules, authorization, database access, audit writing, and provider adapters. Prefer the standard library and small dependencies with a demonstrated purpose; chi, pgx, and sqlc are options rather than an excuse to add every tool immediately.

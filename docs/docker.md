@@ -1,62 +1,76 @@
-# One application Docker image
+# One image, one container
 
-Related: [#32](https://github.com/theroisey/else/issues/32). The root Dockerfile builds React with pinned Node/npm and Go with its pinned toolchain, then produces one scratch runtime image. One Go process serves the built UI and versioned API on port 8080. Node, npm and Nginx are absent from the runtime. Static API, healthcheck, migration, admin bootstrap and credential rotation binaries share the same image, public CA roots and nonroot UID/GID 65532. PostgreSQL remains an external database or a separate vendor infrastructure container.
+The standard distribution has one Compose service, `else`, one exposed port, and one named persistent volume. PostgreSQL 18.3, the Go API, built React assets, and the analytics worker ship in `ghcr.io/theroisey/else`. The root multi-stage Dockerfile builds pinned Node/npm and Go toolchains; neither Node nor npm is present at runtime. No Nginx or separate database/migration service is required.
 
-Docker Engine with BuildKit, Compose 2.24.4+, and host openssl are required. Dockerfile syntax, Node 24.21.0, Go 1.27.1 and PostgreSQL 18.3 bases retain reviewed digest pins.
-
-## Clean local startup
-
-From the repository root:
+## Installation
 
 ```sh
-sh docker/dev/prepare.sh
-docker compose build backend
-docker compose up -d --wait postgres
-docker compose run --rm migrate up
-docker compose exec -T postgres psql -U postgres -d else < backend/scripts/grant-runtime.sql
-docker compose up -d --wait
+git clone git@github.com:theroisey/else.git
+cd else
+cp .env.example .env
+docker compose up -d
 ```
 
-Open http://localhost:5173. The historical service name `backend` now serves the whole application. Only its loopback port is published. Migrations run explicitly, never during API startup. Bootstrap uses `docker compose run --rm bootstrap-admin` with an interactive terminal and the documented [initial administrator policy](identity.md). Tool services use exactly the application image with an entrypoint override; only these operator processes receive the migrator URL.
+Docker Engine and Compose 2.24.4+ are sufficient. The existing GHCR package must allow public reads for login-free installation; package visibility is an owner setting, separate from publication. Private packages require an authorized Docker registry login. Open http://localhost:8080 after health becomes ready. `docker compose exec -it else /opt/else/operator bootstrap-admin owner@example.com 'Owner'` creates the first administrator through a hidden password prompt; there is no default login.
 
-Preparation generates three independent passwords in ignored mode-600 .env and local CA-signed PostgreSQL TLS material, refusing to overwrite existing files. The CA signing key is discarded; the server key stays mode 600. Certificates expire after 365 days: renew certificates privately and recreate PostgreSQL/application mounts without changing established database passwords. Runtime and migrator roles are separate nonsuperusers. Only reviewed functions/columns are granted. Database URLs use verify-full and read-only CA mounts; the database network is internal.
+Startup initializes only an empty `18/docker` cluster, loads durable generated credentials, provisions distinct migration/runtime identities, applies pending migrations and reviewed grants, provisions protected keys, then starts API and worker. Existing clusters and records are preserved. Incompatible or partially initialized clusters are refused without deletion. Failed migrations prevent application startup. Managed volumes recover crash-stale PID files only under the exclusive lock with no live PostgreSQL process; an unclean legacy adoption is refused for operator review.
 
-Application and tool containers use read-only root filesystems, drop capabilities and prohibit privilege escalation. No frontend source or dependencies are mounted into the runtime. For hot reload, use the documented host npm development workflow with a separately started API; Docker always exercises the built artifact.
+## Processes and security
 
-## Health, persistence and isolated verification
+Tini runs as PID 1 and reaps descendants. The Bash supervisor tracks PostgreSQL, API, and worker, including early startup exits. Any required-child exit terminates the whole container with a failure status. TERM/INT drains application children, then sends PostgreSQL a fast clean shutdown; bounded fallback handles stuck children. Compose gives 60 seconds for shutdown.
+
+The supervisor/operator runs as root with limited capabilities for initialization and identity changes. PostgreSQL is UID 999, API/worker UID 65532, and migration/bootstrap UID 65533. The root filesystem is read-only, `/run` and `/tmp` are bounded tmpfs mounts, and privilege escalation is disabled. API/worker cannot read PGDATA or root-private credential files. Database owner credentials never reach them.
+
+PostgreSQL listens only on 127.0.0.1 inside the container. Local administrator access uses a private peer-authenticated socket; other local users are rejected. SCRAM protects loopback application connections. No PostgreSQL port is published. The prior separate-container TLS requirement remains applicable to standalone non-loopback development databases; this distribution uses private intra-container loopback transport.
+
+## Persistence and upgrades
+
+The single `else_data` volume mounts at `/var/lib/roisey-else`. It contains `18/docker` (database) and `.control` (private generated credentials and integration keyring). Its default physical name is `roisey-else_postgres-data`, preserving the former root Compose volume. A cross-container flock refuses simultaneous ownership.
 
 ```sh
-docker compose run --rm migrate status
-curl --fail http://localhost:5173/status
-curl --fail http://localhost:5173/health
-curl --fail http://localhost:5173/ready
 docker compose ps
-docker compose stop
+docker compose logs -f else
+docker compose exec -T else /opt/else/operator migrate status
+docker compose restart else
+docker compose pull
 docker compose up -d --wait
+docker compose stop
+docker compose down
 ```
 
-Status/health report process liveness; readiness checks the actual database and turns 503 during outage/drain. Stop/restart/down preserve the named database volume. A later database outage does not automatically stop its consumers. Do not share rendered Compose config or container environments: they contain private database URLs. Validate with `config --quiet`.
+These retain the volume. Set `ELSE_IMAGE` to a verified digest for production and back up before upgrading. Image replacement has a maintenance interruption; do not horizontally replicate this embedded database distribution. PostgreSQL major-version upgrades require an explicit tested migration procedure, not an image swap.
 
-`sh backend/scripts/test-compose.sh` tests a committed checkout in a unique project, temporary private credentials/TLS and disposable volume. It checks migrations, runtime role denials, TLS hostname rejection, static/API routing and security headers, database outage/recovery, persistence, immutable release metadata, protected key-source startup and same-image rotation/inventory diagnostics. After success it archives exactly `else-application:ci`. The production Compose override is retained for existing local verification commands; base Compose already uses the production artifact.
+**Destructive reset:** `docker compose down --volumes` deletes all data and keys. Use only for disposable environments.
 
-## Managed build CA
+## Existing installation adoption
 
-When CODEX_PROXY_CERT is provided, add `-f docker-compose.proxy.yml` to the build command. The session CA is mounted as a BuildKit secret for dependency installation only. Keep platform proxy configuration and TLS verification. No session CA is copied into the final image.
+Before changing the old deployment, save an off-host database backup and every retained integration key. Stop all old API/worker/database containers. Inspect the actual old named volume privately (`docker volume ls`) and set `ELSE_DATA_VOLUME` to that physical name; custom Compose projects do not use the default name. PostgreSQL must be major version 18 with the existing `18/docker` layout. Never mount two owners concurrently.
 
-## Deployment and tools
+The supervisor preserves the cluster and app data while provisioning private credentials and updating role passwords/grants. Old `.env` database password settings are unnecessary. Existing `.env` origin settings must be updated to port 8080 or your chosen port; use the new example as a reference without losing retained configuration. Stop the old stack with `down` **without** `--volumes` before replacing its Compose file.
 
-Publication promotes one tested repository, `ghcr.io/theroisey/else`, with immutable revision/version policy and a guarded latest alias; see [CI](ci.md). Pin a verified content digest for deployment. Existing split frontend/backend tags are historical artifacts and are not published by this workflow.
+If encrypted integration credentials exist, install the retained keyring before normal startup; startup refuses to generate replacement keys over existing ciphertext. With the service stopped:
 
-Operator commands use that same pinned image with `--entrypoint /migrate`, `--entrypoint /bootstrap-admin` or `--entrypoint /rotate-integration-credentials`, the appropriate private database/CA/key mounts and explicit authorization. See [rotation](integration-rotation-command.md) and [recovery](recovery.md). Bundling commands confers no privileges on the API: its database identity stays least privileged.
+```sh
+docker compose run --rm --no-deps --entrypoint /opt/else/operator else install-keyring < /protected/retained-keyring.json
+```
 
-Deploy on a managed platform supporting a persistent Go container, HTTPS ingress and private PostgreSQL connectivity. Vercel's ordinary static/Node deployment does not run this image; choose a compatible managed container host before rollout. Set AUTH_PUBLIC_ORIGIN to the exact HTTPS origin, AUTH_COOKIE_SECURE=true, verified database TLS, per-replica connection budgets and protected mounted key material. Do not trust arbitrary forwarded identity headers. Edge throttling, secret ownership, monitoring and explicit rollout authority remain deployment requirements.
+This is an administrative file installation, not a database restore; retain original registered identities/material. Restart after installing. For restored database history, follow [offline recovery](recovery.md) and use a fresh active key.
 
-FRONTEND_DIRECTORY is an optional absolute startup path for standalone API development; the image sets /frontend. Startup snapshots only bounded index/JS/CSS/font build files, rejects symlinks, source maps, secrets and unknown files, and caps total assets at 64 MiB per replica. SPA navigation is limited to implemented public/app routes; API/health paths never fall back to HTML. Static responses revalidate content ETags with no-cache; private API/errors retain no-store. Strict [browser security headers](browser-security.md) apply across responses.
+## Local build and managed build CA
 
-For a deliberately disposable reset, `docker compose down --volumes` destroys the local database. Never use that command against a volume containing needed data. Follow the recovery runbook for durable environments.
+```sh
+docker build -t roisey-else:local .
+ELSE_IMAGE=roisey-else:local docker compose up -d --wait
+```
 
-## Local verification for #32
+When `CODEX_PROXY_CERT` exists, supply `--secret id=proxy_ca,src="$CODEX_PROXY_CERT"` to `docker build`, or use `docker compose -f docker-compose.yml -f docker-compose.ci.yml -f docker-compose.proxy.yml build else` with CI build settings. The CA is a BuildKit dependency-download secret and is never copied into the runtime. Public CA roots support provider HTTPS.
 
-The initial one-image Compose rehearsal passed actual TLS/permissions/migrations/routing/outage/persistence/header/release/key-source/operator checks. Its Docker export contained one application image, 53,109,105 bytes, UID/GID 65532. Those source checks included all Go race tests, vet/static builds, 454 frontend tests, lint/typecheck/build, compiled-Go CSP attack checks, 15 real browser flows and PostgreSQL 18.3 recovery/race integration (557.028s). Later GA4 frontend verification passed 474 frontend tests and 16 real browser flows. Local browser proof used an isolated generated copy with test port 5177 and system Chromium to preserve an existing user listener.
+The production overlay is retained as a compatibility overlay; base Compose already uses the production runtime. Static assets are immutable build output, served by Go with the existing route allowlist, ETags, and browser security headers.
 
-The earlier GitHub runner blocker is resolved. GA4 frontend commit `4106032123f68b635d5819d024da8bc47636dcb4` passed all six gates in [run 37207651047](https://github.com/theroisey/else/actions/runs/37207651047), and merged main `5526b7f0aa34eeefe40e79a8c7e384d1a7e5294d` passed [run 37208544499](https://github.com/theroisey/else/actions/runs/37208544499). Tested-image publication remains a single application artifact. The WooCommerce extension continues using its bundled `/analytics-worker`; Compose additionally checks its safe unconfigured startup and private report-table/function privileges. Fresh final-source container/CI proof is required for that extension. No production deployment has occurred.
+## Verification and publication
+
+`sh backend/scripts/test-compose.sh` builds committed HEAD in a unique project and disposable volume. It verifies one service/port/volume, all automatic migrations/grants, restricted process identities, API/SPA routing, real client persistence, clean shutdown, replacement, required-child and migration failures, volume locking, actual backup/restore, release stamps, and key/operator safeguards. Canonical CI archives exactly the tested image; local worktree/prebuilt shortcuts cannot produce publication artifacts.
+
+After publication, `ELSE_TEST_DISTRIBUTION_IMAGE=ghcr.io/theroisey/else:sha-<full-checked-out-commit> sh backend/scripts/test-distribution-upgrade.sh` rehearses the literal published `pull`, fresh automatic startup, authenticated client creation, `down`, `pull`, and `up` with retained records in its own disposable volume. It checks actual compiled release metadata against the checked-out revision. Never point it at an operator/customer volume.
+
+All six CI gates remain required. Publication promotes one image repository with immutable full-revision tags and guarded `latest`, without rebuilding. See [CI](ci.md). Publishing is not production traffic approval.
