@@ -10,6 +10,7 @@ import (
 
 	"github.com/theroisey/else/backend/internal/activity"
 	"github.com/theroisey/else/backend/internal/administration"
+	"github.com/theroisey/else/backend/internal/analytics"
 	"github.com/theroisey/else/backend/internal/auditreader"
 	"github.com/theroisey/else/backend/internal/authorization"
 	"github.com/theroisey/else/backend/internal/billing"
@@ -214,7 +215,17 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("release_startup_failed")
 		return 1
 	}
-	server, err := httpapi.NewWithReleases(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler, pricingHandler, overviewHandler, connectionHandler, releaseHandler)
+	analyticsService, err := analytics.NewService(pool, ring)
+	if err != nil {
+		logger.Error("analytics_startup_failed")
+		return 1
+	}
+	analyticsHandler, err := analytics.NewHandler(analyticsService, authHandler, logger)
+	if err != nil {
+		logger.Error("analytics_startup_failed")
+		return 1
+	}
+	server, err := httpapi.NewWithReleases(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler, pricingHandler, overviewHandler, analyticsHandler.WithMetadata(connectionHandler), releaseHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1

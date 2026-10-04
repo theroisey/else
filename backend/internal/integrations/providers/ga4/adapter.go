@@ -116,6 +116,34 @@ func (a *Adapter) Fetch(ctx context.Context, credential *ServiceAccount, request
 	return result, nil
 }
 
+type fencedTransport struct {
+	transport tokenTransport
+	fence     func(context.Context) error
+}
+
+func (f fencedTransport) Do(ctx context.Context, method, path string, query url.Values, body []byte, authorization, contentType string) ([]byte, error) {
+	if ctx == nil || ctx.Err() != nil || f.fence(ctx) != nil || ctx.Err() != nil {
+		return nil, ErrUnavailable
+	}
+	return f.transport.Do(ctx, method, path, query, body, authorization, contentType)
+}
+
+// FetchFenced rechecks the caller's durable lease, current client permissions
+// and connection/credential checkpoint before each provider request. No DB lock
+// spans network work; revocation cannot retract an already issued request. A
+// fresh transactional fence is still mandatory before publishing any results.
+func (a *Adapter) FetchFenced(ctx context.Context, credential *ServiceAccount, request Request, fence func(context.Context) error) (Workspace, error) {
+	if a == nil || a.token == nil || a.admin == nil || a.metadata == nil || a.data == nil || a.now == nil || fence == nil {
+		return Workspace{}, ErrUnavailable
+	}
+	copy := *a
+	copy.token = fencedTransport{a.token, fence}
+	copy.admin = fencedTransport{a.admin, fence}
+	copy.metadata = fencedTransport{a.metadata, fence}
+	copy.data = fencedTransport{a.data, fence}
+	return copy.Fetch(ctx, credential, request)
+}
+
 func validRequest(r Request) bool {
 	e := Expectation{ClientID: r.ClientID, ConnectionID: r.ConnectionID, PropertyID: r.PropertyID, Since: r.Since, Until: r.Until, Timezone: "UTC", Limit: reportLimit, Metrics: []Metric{{Name: "activeUsers", Type: "TYPE_INTEGER", Compatibility: "COMPATIBLE"}}}
 	return validExpectationTypes(e, true)

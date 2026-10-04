@@ -23,6 +23,7 @@ RUN sh scripts/build-api.sh /out/api "$BUILD_VERSION" "$BUILD_REVISION" "$BUILD_
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/migrate ./cmd/migrate \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/bootstrap-admin ./cmd/bootstrap-admin \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/rotate-integration-credentials ./cmd/rotate-integration-credentials \
+    && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/analytics-worker ./cmd/analytics-worker \
     && go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/healthcheck ./cmd/healthcheck
 
 # The only application runtime image. Tools use an explicit entrypoint override.

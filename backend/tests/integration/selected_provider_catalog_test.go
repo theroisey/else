@@ -234,6 +234,12 @@ func TestSelectedProviderMigrationRetainedHistoryAndMetaCompatibility(t *testing
 	for _, providerName := range []string{"meta_ads", "ga4", "woocommerce"} {
 		t.Run(providerName, func(t *testing.T) {
 			f, id := selectedCatalogFixture(t, providerName)
+			// Test the catalog's own rollback boundary. Later empty migrations are
+			// independently reversible and must not change this history comparison.
+			p := provider(t, f.base)
+			if _, err := p.DownTo(f.base.ctx, 22); err != nil {
+				t.Fatal(err)
+			}
 			checkpoint, err := f.vault.Inspect(correlation.New(f.base.ctx), f.actor, clientAID, id)
 			if err != nil {
 				t.Fatal(err)
@@ -242,7 +248,6 @@ func TestSelectedProviderMigrationRetainedHistoryAndMetaCompatibility(t *testing
 				t.Fatal(err)
 			}
 			before := recoveryFingerprints(t, f.base.ctx, f.admin)
-			p := provider(t, f.base)
 			var functionPolicy string
 			if f.admin.QueryRow(f.base.ctx, `SELECT md5(string_agg(p.oid::regprocedure::text||p.proowner::text||p.prosecdef::text||coalesce(p.proconfig::text,'')||coalesce(p.proacl::text,'')||p.prosrc,'' ORDER BY p.oid::regprocedure::text)) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='app' AND p.proname LIKE 'integration_%'`).Scan(&functionPolicy) != nil {
 				t.Fatal("private function policy unavailable")
@@ -312,6 +317,9 @@ func TestSelectedProviderPendingAndOrphanedHistoryRefuseDowngrade(t *testing.T) 
 	for _, providerName := range []string{"ga4", "woocommerce"} {
 		t.Run(providerName, func(t *testing.T) {
 			f, _ := selectedCatalogFixture(t, providerName)
+			if _, err := provider(t, f.base).DownTo(f.base.ctx, 22); err != nil {
+				t.Fatal(err)
+			}
 			before := recoveryFingerprints(t, f.base.ctx, f.admin)
 			if _, err := provider(t, f.base).DownTo(f.base.ctx, 21); err == nil || !reflect.DeepEqual(before, recoveryFingerprints(t, f.base.ctx, f.admin)) {
 				t.Fatal("pending selected history downgraded")
@@ -320,6 +328,9 @@ func TestSelectedProviderPendingAndOrphanedHistoryRefuseDowngrade(t *testing.T) 
 	}
 	t.Run("unresolved_audit", func(t *testing.T) {
 		f := newVaultFixture(t)
+		if _, err := provider(t, f.base).DownTo(f.base.ctx, 22); err != nil {
+			t.Fatal(err)
+		}
 		// Synthetic orphaned owner-imported audit exercises conservative refusal;
 		// it carries no provider identity that could justify a legacy downgrade.
 		if _, err := f.admin.Exec(f.base.ctx, `INSERT INTO app.audit_events(actor_kind,actor_user_id,event_name,resource_kind,resource_id,client_id,request_id,before_state,after_state,metadata) VALUES('user',$1,'integration_connection.updated','integration_connection',$2,$3,$4,'{"exists":true,"revision":1}','{"exists":true,"revision":2}','{"source":"cli"}')`, f.actor, connectionID(999), clientAID, correlation.ID(correlation.New(f.base.ctx))); err != nil {

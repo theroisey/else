@@ -82,7 +82,7 @@ func safeError(e error) error {
 
 // reserve commits independently before encryption. Audit/commit failure must
 // never lead to encryption; uncertain outcomes may consume capacity, never retry.
-func (s *Service) reserve(ctx context.Context, actor, client, connection string) error {
+func (s *Service) reserve(ctx context.Context, actor, client, connection string, source audit.Source) error {
 	label, digest, e := s.ring.ActiveKeyIdentity()
 	if e != nil {
 		return ErrUnavailable
@@ -96,7 +96,7 @@ func (s *Service) reserve(ctx context.Context, actor, client, connection string)
 			return audit.Event{}, ErrUnavailable
 		}
 		before, after := false, true
-		return audit.Event{Actor: audit.Actor{Kind: audit.User, UserID: actor}, Action: audit.Created, ResourceKind: "integration_encryption", ResourceID: reservation, ClientID: client, Before: &audit.Snapshot{Exists: &before}, After: &audit.Snapshot{Exists: &after}, Metadata: audit.Metadata{Source: audit.CLI}}, nil
+		return audit.Event{Actor: audit.Actor{Kind: audit.User, UserID: actor}, Action: audit.Created, ResourceKind: "integration_encryption", ResourceID: reservation, ClientID: client, Before: &audit.Snapshot{Exists: &before}, After: &audit.Snapshot{Exists: &after}, Metadata: audit.Metadata{Source: source}}, nil
 	})
 	if e != nil {
 		return safeError(e)
@@ -104,8 +104,8 @@ func (s *Service) reserve(ctx context.Context, actor, client, connection string)
 	return nil
 }
 
-func (s *Service) encrypt(ctx context.Context, actor, client, connection string, operation func(credentials.Binding) (credentials.Envelope, error)) (Result, error) {
-	if e := s.reserve(ctx, actor, client, connection); e != nil {
+func (s *Service) encrypt(ctx context.Context, actor, client, connection string, source audit.Source, operation func(credentials.Binding) (credentials.Envelope, error)) (Result, error) {
+	if e := s.reserve(ctx, actor, client, connection, source); e != nil {
 		return Result{}, e
 	}
 	tx, e := s.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
@@ -150,7 +150,17 @@ func (s *Service) Seal(ctx context.Context, actor, client, connection string, pl
 	if !requestValid(ctx, actor, client, connection) || len(plaintext) == 0 || len(plaintext) > credentials.MaxPlaintextBytes {
 		return Result{}, ErrInvalid
 	}
-	return s.encrypt(ctx, actor, client, connection, func(b credentials.Binding) (credentials.Envelope, error) { return s.ring.Seal(b, plaintext) })
+	return s.encrypt(ctx, actor, client, connection, audit.CLI, func(b credentials.Binding) (credentials.Envelope, error) { return s.ring.Seal(b, plaintext) })
+}
+
+// SealForSetup is the HTTP setup counterpart, preserving fresh authorization,
+// independent irreversible accounting and the same lifecycle-held crypto. Source
+// is a compiled value, never decoded from a public body.
+func (s *Service) SealForSetup(ctx context.Context, actor, client, connection string, plaintext []byte) (Result, error) {
+	if !requestValid(ctx, actor, client, connection) || len(plaintext) == 0 || len(plaintext) > credentials.MaxPlaintextBytes {
+		return Result{}, ErrInvalid
+	}
+	return s.encrypt(ctx, actor, client, connection, audit.HTTP, func(b credentials.Binding) (credentials.Envelope, error) { return s.ring.Seal(b, plaintext) })
 }
 
 // Rewrap burns one unit of the active key before authenticating and sealing.
@@ -165,5 +175,5 @@ func (s *Service) Rewrap(ctx context.Context, actor, client, connection string, 
 	if e != nil {
 		return Result{}, credentials.ErrOpen
 	}
-	return s.encrypt(ctx, actor, client, connection, func(b credentials.Binding) (credentials.Envelope, error) { return s.ring.Rewrap(b, envelope) })
+	return s.encrypt(ctx, actor, client, connection, audit.CLI, func(b credentials.Binding) (credentials.Envelope, error) { return s.ring.Rewrap(b, envelope) })
 }

@@ -29,7 +29,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") {
 		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/clients/"), "/")
-		if len(parts) >= 2 && parts[1] == "integrations" {
+		if len(parts) >= 2 && (parts[1] == "integrations" || parts[1] == "analytics") {
 			if s.integrations == nil {
 				writeError(w, r, http.StatusNotFound, "not_found", "Resource not found.")
 				return
