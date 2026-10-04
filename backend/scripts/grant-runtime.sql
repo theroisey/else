@@ -53,6 +53,11 @@ GRANT EXECUTE ON FUNCTION app.integration_local_disconnect(uuid,uuid,uuid,bigint
 GRANT EXECUTE ON FUNCTION app.integration_key_preflight(text[],bytea[],text,boolean) TO else_runtime;
 GRANT EXECUTE ON FUNCTION app.integration_rotation_candidates(uuid,uuid,text,bytea,uuid,integer) TO else_runtime;
 GRANT EXECUTE ON FUNCTION app.integration_key_inventory(uuid,text[],bytea[],text,boolean) TO else_runtime;
+GRANT EXECUTE ON FUNCTION app.ga4_connection_create(uuid,uuid,uuid,text),app.analytics_writer_lock(),
+ app.analytics_sync_enqueue(uuid,uuid,uuid,bigint,bigint,bigint,date,date,uuid,boolean),
+ app.analytics_sync_cancel(uuid,uuid,uuid),app.analytics_job_allowed(uuid,uuid),app.analytics_sync_claim(),
+ app.analytics_sync_finish(uuid,uuid,jsonb),app.analytics_workspace_read(uuid,uuid,uuid,date,date),
+ app.analytics_snapshots_prune(integer),app.analytics_connection_list(uuid,uuid,uuid,integer) TO else_runtime;
 GRANT EXECUTE ON FUNCTION app.pricing_read(uuid,uuid,uuid,uuid),app.pricing_list(uuid,uuid,uuid,uuid,integer),
  app.pricing_preview(uuid,uuid,jsonb),app.pricing_write(uuid,uuid,uuid,uuid,bigint,jsonb),
  app.pricing_copy(uuid,uuid,uuid,uuid,bigint,jsonb,uuid),app.pricing_snapshot_read(uuid,uuid,uuid) TO else_runtime;

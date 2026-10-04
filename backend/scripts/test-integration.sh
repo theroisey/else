@@ -43,4 +43,4 @@ TEST_POSTGRES_CONTAINER=$task_container
 export TEST_POSTGRES_CONTAINER
 unset PGSERVICE
 # Verbose output retains fixed synthetic capacity metrics on successful runs.
-go test -race -tags integration -count=1 -v ./tests/integration
+go test -race -tags integration -count=1 -v ./tests/integration "$@"
