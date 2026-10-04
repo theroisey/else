@@ -49,6 +49,19 @@ if [ -n "${CODEX_PROXY_CERT:-}" ]; then
 else
   compose build backend
 fi
+# The provider worker is another binary in the same built application artifact.
+# Missing protected key configuration must fail safely before any DB/network use.
+if docker run --rm --network none --entrypoint /analytics-worker "else-application:$CI_IMAGE_TAG" --once > "$task_directory/worker-startup.json"; then
+  echo 'Unconfigured analytics worker unexpectedly started.' >&2; exit 1
+fi
+python3 - "$task_directory/worker-startup.json" <<'PY'
+import json
+import sys
+with open(sys.argv[1], encoding='utf-8') as source:
+    entry = json.load(source)
+assert set(entry) == {'time', 'level', 'msg'}
+assert entry['level'] == 'ERROR' and entry['msg'] == 'analytics_worker_key_startup_failed'
+PY
 compose up -d --wait postgres
 compose run --rm migrate up
 compose run --rm migrate down
@@ -77,6 +90,10 @@ done
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_key_preflight(text[],bytea[],text,boolean)','EXECUTE')")" = t ]
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_rotation_candidates(uuid,uuid,text,bytea,uuid,integer)','EXECUTE')")" = t ]
 [ "$(runtime_query "SELECT has_function_privilege(current_user,'app.integration_key_inventory(uuid,text[],bytea[],text,boolean)','EXECUTE')")" = t ]
+for task_sql in 'SELECT * FROM app.analytics_sync_jobs' 'SELECT * FROM app.analytics_snapshots' 'UPDATE app.analytics_sync_jobs SET state=$$failed$$' 'DELETE FROM app.analytics_snapshots' 'TRUNCATE app.analytics_sync_jobs'; do
+  if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Report storage runtime privilege boundary failed.' >&2; exit 1; fi
+done
+[ "$(runtime_query "SELECT has_function_privilege(current_user,'app.provider_sync_claim(text)','EXECUTE') AND has_function_privilege(current_user,'app.commerce_sync_finish(uuid,uuid,jsonb)','EXECUTE') AND has_function_privilege(current_user,'app.commerce_workspace_read(uuid,uuid,uuid,timestamptz,timestamptz,text)','EXECUTE') AND NOT has_function_privilege(current_user,'app.provider_sync_finish(text,uuid,uuid,jsonb)','EXECUTE') AND NOT has_function_privilege(current_user,'app.commerce_workspace_valid(jsonb,uuid,uuid,timestamptz,timestamptz,text)','EXECUTE')")" = t ]
 for task_sql in 'SELECT * FROM app.pricing_sheets' 'SELECT * FROM app.pricing_versions' 'SELECT * FROM app.pricing_lines' 'SELECT * FROM app.pricing_snapshots' 'SELECT * FROM app.pricing_snapshot_lines' 'UPDATE app.pricing_sheets SET revision=revision+1' 'DELETE FROM app.pricing_versions' 'TRUNCATE app.pricing_snapshots' 'SELECT app.pricing_calculate($${}$$::jsonb)' 'SELECT app.pricing_version_document(gen_random_uuid(),true)'; do
   if runtime_query "$task_sql" >/dev/null 2>&1; then echo 'Pricing runtime privilege boundary failed.' >&2; exit 1; fi
 done

@@ -1,5 +1,6 @@
-// Package woocommerce interprets minimal verified wc/v3 order/refund projections.
-// It performs no authorization, credential access, network or persistence.
+// Package woocommerce collects and interprets minimal verified wc/v3 projections.
+// Pure normalization remains separate from private credential/transport handling;
+// authorization, durable jobs and persistence belong to the application domain.
 package woocommerce
 
 import (

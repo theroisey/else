@@ -1,4 +1,4 @@
-// Package analytics owns authorized GA4 setup, durable jobs and measured reads.
+// Package analytics owns authorized provider setup, durable jobs and measured reads.
 package analytics
 
 import (
@@ -11,6 +11,7 @@ import (
 
 	"github.com/theroisey/else/backend/internal/integrations/connections"
 	"github.com/theroisey/else/backend/internal/integrations/providers/ga4"
+	"github.com/theroisey/else/backend/internal/integrations/providers/woocommerce"
 )
 
 var ErrInvalid = errors.New("invalid analytics request")
@@ -64,6 +65,11 @@ type Status struct {
 type View struct {
 	Status Status         `json:"status"`
 	Data   *ga4.Workspace `json:"data"`
+}
+
+type CommerceView struct {
+	Status Status                 `json:"status"`
+	Data   *woocommerce.Workspace `json:"data"`
 }
 
 type ConnectionPage struct {

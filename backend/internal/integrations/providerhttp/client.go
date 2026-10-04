@@ -83,6 +83,13 @@ func NewWithResponseLimit(origin string, admission *Admission, limit int) (*Clie
 	return c, nil
 }
 
+// ValidOrigin checks canonical syntax without DNS lookup or network work. Every
+// actual request still independently verifies public addresses and TLS identity.
+func ValidOrigin(raw string) bool {
+	_, err := parseOrigin(raw)
+	return err == nil
+}
+
 func parseOrigin(raw string) (*url.URL, error) {
 	u, err := url.Parse(raw)
 	if err != nil || len(raw) > 520 || u.Scheme != "https" || u.User != nil || u.Opaque != "" || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.RawPath != "" || u.Host != u.Hostname() || u.String() != raw || len(u.Host) > 253 || len(u.Path) > 256 || !basePath.MatchString(u.Path) {
@@ -181,6 +188,40 @@ var queryKeys = map[string]bool{
 // Success returns only a bounded JSON body. All private HTTP errors/statuses,
 // redirects, headers and partial data are discarded. No business retry occurs.
 func (c *Client) Do(ctx context.Context, method, path string, query url.Values, body []byte, authorization, contentType string) ([]byte, error) {
+	return c.do(ctx, method, path, query, body, authorization, contentType, nil)
+}
+
+// PageResult carries only the compiled WooCommerce pagination headers and body.
+// The caller clears the private body after complete schema interpretation.
+type PageResult struct {
+	Body              []byte
+	Total, TotalPages string
+}
+
+func (p PageResult) String() string               { return "<provider collection page>" }
+func (p PageResult) Format(s fmt.State, _ rune)   { _, _ = io.WriteString(s, p.String()) }
+func (p PageResult) MarshalJSON() ([]byte, error) { return nil, ErrUnavailable }
+
+type pageCounts struct{ total, pages string }
+
+var pageTotal = regexp.MustCompile(`^(0|[1-9][0-9]{0,2})$`)
+
+// DoPage is GET-only, retains the ordinary 64 KiB body cap and accepts exactly
+// one canonical bounded X-WP-Total and X-WP-TotalPages value. It exposes no raw
+// headers, redirects or navigation URLs. Adapters still verify page completion.
+func (c *Client) DoPage(ctx context.Context, path string, query url.Values, authorization string) (PageResult, error) {
+	if c == nil || c.state == nil || c.state.responseLimit != MaxResponseBytes {
+		return PageResult{}, ErrUnavailable
+	}
+	var counts pageCounts
+	body, err := c.do(ctx, http.MethodGet, path, query, nil, authorization, "", &counts)
+	if err != nil {
+		return PageResult{}, err
+	}
+	return PageResult{Body: body, Total: counts.total, TotalPages: counts.pages}, nil
+}
+
+func (c *Client) do(ctx context.Context, method, path string, query url.Values, body []byte, authorization, contentType string, counts *pageCounts) ([]byte, error) {
 	if c == nil || c.state == nil || ctx == nil || ctx.Err() != nil || (method != "GET" && method != "POST") || len(body) > MaxRequestBytes || (method == "GET" && len(body) > 0) || len(authorization) > 4096 || strings.ContainsAny(authorization, "\r\n") || (authorization != "" && !strings.HasPrefix(authorization, "Bearer ") && !strings.HasPrefix(authorization, "Basic ")) {
 		return nil, ErrUnavailable
 	}
@@ -290,6 +331,13 @@ func (c *Client) Do(ctx context.Context, method, path string, query url.Values, 
 	media, _, err := mime.ParseMediaType(response.Header.Get("Content-Type"))
 	if err != nil || media != "application/json" {
 		return nil, ErrUnavailable
+	}
+	if counts != nil {
+		total, pages := response.Header.Values("X-WP-Total"), response.Header.Values("X-WP-TotalPages")
+		if len(total) != 1 || len(pages) != 1 || !pageTotal.MatchString(total[0]) || !pageTotal.MatchString(pages[0]) || len(pages[0]) != 1 || pages[0] > "5" || (len(total[0]) == 3 && total[0] > "500") {
+			return nil, ErrUnavailable
+		}
+		counts.total, counts.pages = total[0], pages[0]
 	}
 	data, err := io.ReadAll(io.LimitReader(response.Body, int64(c.state.responseLimit)+1))
 	if err != nil || len(data) < 1 || len(data) > c.state.responseLimit || bounded.Err() != nil || !utf8.Valid(data) || !json.Valid(data) {

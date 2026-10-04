@@ -33,7 +33,7 @@ import (
 
 const analyticsFunctions = `app.ga4_connection_create(uuid,uuid,uuid,text),app.analytics_writer_lock(),
 app.analytics_sync_enqueue(uuid,uuid,uuid,bigint,bigint,bigint,date,date,uuid,boolean),
-app.analytics_sync_cancel(uuid,uuid,uuid),app.analytics_job_allowed(uuid,uuid),app.analytics_sync_claim(),
+app.analytics_sync_cancel(uuid,uuid,uuid),app.analytics_job_allowed(uuid,uuid),app.analytics_sync_claim(),app.provider_sync_claim(text),
 app.analytics_sync_finish(uuid,uuid,jsonb),app.analytics_workspace_read(uuid,uuid,uuid,date,date),app.analytics_snapshots_prune(integer),app.analytics_connection_list(uuid,uuid,uuid,integer)`
 
 type analyticsFixture struct {
@@ -155,11 +155,20 @@ func (f *analyticsFixture) finish(t *testing.T, claim analyticsClaim, workspace 
 		raw, _ = json.Marshal(workspace)
 	}
 	defer clear(raw)
+	return f.finishRaw(t, claim, "ga4", raw)
+}
+
+func (f *analyticsFixture) finishRaw(t *testing.T, claim analyticsClaim, provider string, raw []byte) error {
+	t.Helper()
 	err := audit.WithTransactionEvents(correlation.New(f.base.ctx), f.runtime, func(ctx context.Context, q audit.Queries) ([]audit.Event, error) {
 		var id, client, connection, state string
 		var snapshot *string
 		var bj, aj, bc, ac, bs, as int64
-		if err := q.QueryRow(ctx, `SELECT job_id::text,client_id::text,connection_id::text,state,before_job_revision,job_revision,before_connection_revision,connection_revision,snapshot_id::text,before_snapshot_revision,snapshot_revision FROM app.analytics_sync_finish($1::uuid,$2::uuid,$3::jsonb)`, claim.id, *claim.lease, raw).Scan(&id, &client, &connection, &state, &bj, &aj, &bc, &ac, &snapshot, &bs, &as); err != nil {
+		query := `SELECT job_id::text,client_id::text,connection_id::text,state,before_job_revision,job_revision,before_connection_revision,connection_revision,snapshot_id::text,before_snapshot_revision,snapshot_revision FROM app.analytics_sync_finish($1::uuid,$2::uuid,$3::jsonb)`
+		if provider == "woocommerce" {
+			query = `SELECT job_id::text,client_id::text,connection_id::text,state,before_job_revision,job_revision,before_connection_revision,connection_revision,snapshot_id::text,before_snapshot_revision,snapshot_revision FROM app.commerce_sync_finish($1::uuid,$2::uuid,$3::jsonb)`
+		}
+		if err := q.QueryRow(ctx, query, claim.id, *claim.lease, raw).Scan(&id, &client, &connection, &state, &bj, &aj, &bc, &ac, &snapshot, &bs, &as); err != nil {
 			return nil, err
 		}
 		yes, no := true, false

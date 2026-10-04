@@ -118,7 +118,7 @@ func connection(t *testing.T, f *fixture) *pgx.Conn {
 func TestMigrationRoundTripAndUTC(t *testing.T) {
 	f := newFixture(t)
 	p := provider(t, f)
-	const latest = 23
+	const latest = 24
 	expectedApplied := []int{latest, latest}
 	directions := []string{"up", "up"}
 	for applied := latest - 1; applied >= 0; applied-- {
