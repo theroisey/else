@@ -6,7 +6,7 @@ import { sessionKey } from './session'
 import type { Session } from './session'
 
 // Domain records share actor/grant checks and a partitioned query lifecycle.
-export function useRecordOperations(domain: 'clients' | 'tasks' | 'planning' | 'reminders' | 'activity' | 'audit' | 'billing' | 'pricing' | 'overview' | 'integrations' | 'releases', scope?: string) {
+export function useRecordOperations(domain: 'clients' | 'tasks' | 'planning' | 'reminders' | 'activity' | 'audit' | 'billing' | 'pricing' | 'overview' | 'integrations' | 'analytics' | 'releases', scope?: string) {
   const auth = useAuth()
   const cache = useQueryClient()
   const actor = auth.session?.user.id

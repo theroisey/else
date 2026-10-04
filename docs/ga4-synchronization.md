@@ -1,5 +1,7 @@
 # GA4 setup, durable synchronization and stored reports
 
+The React [workspace guide](ga4-workspace.md) documents pending-property creation, key installation, explicit synchronization and measured reporting screens.
+
 Continues existing [#26](https://github.com/theroisey/else/issues/26). The [collector](ga4-adapter.md) now has an application path: locally validated and encrypted service-account setup queues PostgreSQL work; a separate Go worker collects complete aggregate tables and publishes a stored snapshot. HTTP dashboard/setup requests never call Google. No connection, credential, job or measured success is seeded.
 
 ## API and permissions

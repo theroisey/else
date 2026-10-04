@@ -141,7 +141,7 @@ it('denies foreign scope and malformed routes before private reads', async () =>
   await screen.findByRole('heading', { name: 'Access denied' })
   expect(fetcher.mock.calls.some(([url]) => url.startsWith(base))).toBe(false)
 })
-it('shows loading then honest empty data with no producer actions', async () => {
+it('shows loading then honest empty data and an explicit pending GA4 setup action', async () => {
   let resolve!: (r: Response) => void
   setup({
     read: () =>
@@ -155,6 +155,7 @@ it('shows loading then honest empty data with no producer actions', async () => 
   expect(
     screen.queryByRole('button', { name: /Connect|Sync|Create/ }),
   ).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Add pending property' })).toBeDisabled()
   expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
 })
 it('pages forward/backward and refreshes first page with only safe metadata', async () => {
