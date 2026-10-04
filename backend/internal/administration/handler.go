@@ -263,6 +263,9 @@ func (h *Handler) data(w http.ResponseWriter, r *http.Request, status int, value
 func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	status, code, message := http.StatusInternalServerError, "internal_error", "An internal error occurred."
 	switch {
+	case errors.Is(err, identity.ErrPasswordWorkUnavailable):
+		status, code, message = http.StatusServiceUnavailable, "service_busy", "This operation is temporarily unavailable. Try again."
+		w.Header().Set("Retry-After", "1")
 	case errors.Is(err, ErrInvalid), errors.Is(err, authorization.ErrInvalidInput):
 		status, code, message = http.StatusBadRequest, "invalid_request", "Request body or pagination is invalid."
 	case errors.Is(err, ErrDenied), errors.Is(err, authorization.ErrDenied):
