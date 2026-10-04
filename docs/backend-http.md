@@ -42,9 +42,10 @@ gofmt -l cmd/api internal
 | `HTTP_READ_HEADER_TIMEOUT` | `5s` | Positive Go duration, at most `5m`; no greater than read timeout |
 | `HTTP_READ_TIMEOUT` | `15s` | Positive Go duration, at most `5m` |
 | `HTTP_WRITE_TIMEOUT` | `15s` | Positive Go duration, at most `5m` |
+| `HTTP_REQUEST_TIMEOUT` | `5s` | Positive Go duration, greater than readiness timeout and less than write timeout, at most `5m` |
 | `HTTP_IDLE_TIMEOUT` | `60s` | Positive Go duration, at most `5m` |
 | `HTTP_SHUTDOWN_TIMEOUT` | `10s` | Positive Go duration, at most `5m` |
-| `HTTP_READINESS_TIMEOUT` | `2s` | Positive Go duration, less than write timeout, at most `5m` |
+| `HTTP_READINESS_TIMEOUT` | `2s` | Positive Go duration, less than request/write timeout, at most `5m` |
 | `HTTP_MAX_HEADER_BYTES` | `16384` | Integer 1024–65536 |
 | `AUTH_PUBLIC_ORIGIN` | required | Exact HTTP(S) origin; HTTPS required for secure cookies |
 | `AUTH_COOKIE_SECURE` | `true` | `false` only with an HTTP loopback origin |
@@ -52,6 +53,8 @@ gofmt -l cmd/api internal
 | `INTEGRATION_KEYRING_MODE` | `normal` | Exactly `normal` or `restored`; requires a configured file |
 
 Present but empty configuration values fail validation. Validation errors name the setting and constraint, never its raw supplied value. Defaults bind locally; container binding and production TLS termination are documented by their future deployment Issues.
+
+[#109](https://github.com/theroisey/else/issues/109) adds a synchronous request-context deadline; see [runtime resource budgets](runtime-budgets.md). Earlier caller deadlines remain earlier. Context-aware SQL/acquisition must honor cancellation; no timeout goroutine competes to write a response. An error rendered after the request deadline uses 503 `request_timeout`, fixed text `The request timed out. Refresh before retrying.`, and the normal JSON/no-store/correlation guards. Actual successful responses retain their status; client cancellation stays distinct. CPU work or body readers that ignore context are not forcibly preempted. Socket read/write limits and independent SQL budgets remain necessary.
 
 Integration key settings use a single fixed startup failure event, without setting paths, key identities or raw diagnostics. See [protected loading and declared restore operations](integration-key-startup.md) for Linux permissions, read-only preflight, disabled defaults and limits. These checks add no provider/credential producer and do not change ongoing readiness.
 

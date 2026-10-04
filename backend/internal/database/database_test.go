@@ -40,3 +40,14 @@ func TestAmbientServiceFailsClosed(t *testing.T) {
 		t.Fatal("ambient service override accepted")
 	}
 }
+
+func TestRuntimePoolBudgets(t *testing.T) {
+	t.Setenv("PGSERVICE", "")
+	t.Setenv("PGOPTIONS", "-c statement_timeout=0 -c lock_timeout=0")
+	c, err := runtimePoolConfig(config.Database{URL: "postgres://tester:fake-password@127.0.0.1:5432/demo?sslmode=disable", MaxConnections: 10, ConnectTimeout: time.Second})
+	if err != nil || c.MaxConns != 10 || c.MinConns != 0 || c.MaxConnLifetime != 30*time.Minute || c.MaxConnIdleTime != 5*time.Minute ||
+		c.ConnConfig.RuntimeParams["statement_timeout"] != "5000" || c.ConnConfig.RuntimeParams["lock_timeout"] != "2000" ||
+		c.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] != "10000" || c.ConnConfig.RuntimeParams["options"] != "" {
+		t.Fatal("runtime resource budgets or ambient-option isolation differ")
+	}
+}

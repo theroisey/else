@@ -44,7 +44,7 @@ func connectionConfig(c config.Database) (*pgx.ConnConfig, error) {
 	return cpg, nil
 }
 
-func Open(ctx context.Context, c config.Database) (*pgxpool.Pool, error) {
+func runtimePoolConfig(c config.Database) (*pgxpool.Config, error) {
 	conn, err := connectionConfig(c)
 	if err != nil {
 		return nil, err
@@ -58,6 +58,18 @@ func Open(ctx context.Context, c config.Database) (*pgxpool.Pool, error) {
 	pc.MinConns = 0
 	pc.MaxConnLifetime = 30 * time.Minute
 	pc.MaxConnIdleTime = 5 * time.Minute
+	// Runtime budgets are independent of migration/operator transaction lifetimes.
+	pc.ConnConfig.RuntimeParams["statement_timeout"] = "5000"
+	pc.ConnConfig.RuntimeParams["lock_timeout"] = "2000"
+	pc.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] = "10000"
+	return pc, nil
+}
+
+func Open(ctx context.Context, c config.Database) (*pgxpool.Pool, error) {
+	pc, err := runtimePoolConfig(c)
+	if err != nil {
+		return nil, err
+	}
 	pool, err := pgxpool.NewWithConfig(ctx, pc)
 	if err != nil {
 		return nil, fmt.Errorf("PostgreSQL pool creation failed: %w", err)

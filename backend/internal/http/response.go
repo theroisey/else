@@ -25,6 +25,9 @@ func writeError(w http.ResponseWriter, r *http.Request, status int, code, messag
 }
 
 func WriteError(w http.ResponseWriter, r *http.Request, status int, code, message string) {
+	if r.Context().Err() == context.DeadlineExceeded {
+		status, code, message = http.StatusServiceUnavailable, "request_timeout", "The request timed out. Refresh before retrying."
+	}
 	var response errorResponse
 	response.Error.Code = code
 	response.Error.Message = message
