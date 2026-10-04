@@ -149,7 +149,7 @@ recover_compose_else
 verify_client
 compose stop else >/dev/null
 [ "$(docker inspect --format '{{.State.ExitCode}}' "$task_container")" = 0 ]
-compose logs --no-color | rg -q 'database system is shut down'
+compose logs --no-color | grep -Eq 'database system is shut down'
 compose down >/dev/null
 compose up -d --wait --wait-timeout 180
 [ "$(compose ps --quiet else)" != "$task_container" ]
@@ -172,8 +172,8 @@ verify_client
 # A usable real custom archive is created with the protected local administrator.
 compose exec -T else /opt/else/operator backup > "$task_directory/backup.dump"
 compose exec -T else gosu postgres pg_restore --list < "$task_directory/backup.dump" > "$task_directory/backup.list"
-rg -q 'TABLE DATA app clients' "$task_directory/backup.list"
-rg -q 'TABLE DATA app audit_events' "$task_directory/backup.list"
+grep -Eq 'TABLE DATA app clients' "$task_directory/backup.list"
+grep -Eq 'TABLE DATA app audit_events' "$task_directory/backup.list"
 # Required-child death must fail the complete container, then recover existing data.
 task_container=$(compose ps --quiet else)
 compose exec -T else sh -c 'kill -KILL "$(head -n 1 /var/lib/roisey-else/18/docker/postmaster.pid)"'
@@ -191,8 +191,8 @@ chmod 755 "$task_directory/failing-migrate"
 if compose run --rm --no-deps --volume "$task_directory/failing-migrate:/migrate:ro" else > "$task_directory/migration-failure.log" 2>&1; then
   echo 'Failed migration incorrectly allowed startup.' >&2; exit 1
 fi
-rg -q mandatory_initialization_failed "$task_directory/migration-failure.log"
-if rg -q 'starting_roisey_else|synthetic-private-migration-error' "$task_directory/migration-failure.log"; then
+grep -Eq mandatory_initialization_failed "$task_directory/migration-failure.log"
+if grep -Eq 'starting_roisey_else|synthetic-private-migration-error' "$task_directory/migration-failure.log"; then
   echo 'Unsafe migration failure or private diagnostic leakage.' >&2; exit 1
 fi
 recover_compose_else
@@ -201,15 +201,15 @@ verify_client
 if compose run --rm --no-deps else > "$task_directory/volume-lock.log" 2>&1; then
   echo 'Concurrent use of the database volume was accepted.' >&2; exit 1
 fi
-rg -q data_volume_in_use "$task_directory/volume-lock.log"
+grep -Eq data_volume_in_use "$task_directory/volume-lock.log"
 verify_client
 # An API that fails immediately must bring down PG and the complete container.
 compose stop else >/dev/null
 if compose run --rm --no-deps --volume "$task_directory/failing-migrate:/api:ro" else > "$task_directory/api-failure.log" 2>&1; then
   echo 'Early API death was ignored.' >&2; exit 1
 fi
-rg -q supervised_process_exited "$task_directory/api-failure.log"
-rg -q 'database system is shut down' "$task_directory/api-failure.log"
+grep -Eq supervised_process_exited "$task_directory/api-failure.log"
+grep -Eq 'database system is shut down' "$task_directory/api-failure.log"
 recover_compose_else
 verify_client
 # Protected-source and restore preflight use the actual bundled worker/database.
@@ -235,14 +235,14 @@ restore_compose run --rm --no-deps --entrypoint sh else -c 'mkdir -p /var/lib/ro
 if restore_compose run --rm --no-deps else > "$task_directory/incompatible.log" 2>&1; then
   echo 'Different-major cluster was silently replaced.' >&2; exit 1
 fi
-rg -q incompatible_postgresql_cluster "$task_directory/incompatible.log"
+grep -Eq incompatible_postgresql_cluster "$task_directory/incompatible.log"
 [ "$(restore_compose run --rm --no-deps --entrypoint cat else /var/lib/roisey-else/17/docker/PG_VERSION)" = 17 ]
 restore_compose down --volumes >/dev/null
 restore_compose run --rm --no-deps --entrypoint sh else -c 'mkdir -p /var/lib/roisey-else/18/docker; printf "retain-me\n" > /var/lib/roisey-else/18/docker/partial-fixture' >/dev/null
 if restore_compose run --rm --no-deps else > "$task_directory/incomplete.log" 2>&1; then
   echo 'Incomplete cluster was silently replaced.' >&2; exit 1
 fi
-rg -q nonempty_uninitialized_database "$task_directory/incomplete.log"
+grep -Eq nonempty_uninitialized_database "$task_directory/incomplete.log"
 [ "$(restore_compose run --rm --no-deps --entrypoint cat else /var/lib/roisey-else/18/docker/partial-fixture)" = retain-me ]
 restore_compose down --volumes >/dev/null
 # Real offline logical restore: reject reused active key, block normal startup,
@@ -252,16 +252,16 @@ restore_compose run --rm --no-deps --entrypoint /opt/else/operator else install-
 if restore_compose run --rm --no-deps -e ELSE_RESTORE_CONFIRMED=true else restore < "$task_directory/restore.dump" > "$task_directory/restore-failure.log" 2>&1; then
   echo 'Restore reused registered active encryption material.' >&2; exit 1
 fi
-rg -q checking_retained_and_fresh_keys "$task_directory/restore-failure.log"
-if rg -q starting_roisey_else "$task_directory/restore-failure.log"; then exit 1; fi
+grep -Eq checking_retained_and_fresh_keys "$task_directory/restore-failure.log"
+if grep -Eq starting_roisey_else "$task_directory/restore-failure.log"; then exit 1; fi
 if restore_compose run --rm --no-deps else > "$task_directory/restore-blocked.log" 2>&1; then
   echo 'Unverified restored data was allowed to start writers.' >&2; exit 1
 fi
-rg -q incomplete_restore_requires_verification "$task_directory/restore-blocked.log"
+grep -Eq incomplete_restore_requires_verification "$task_directory/restore-blocked.log"
 restore_compose run --rm --no-deps --entrypoint /opt/else/operator else install-keyring < "$task_directory/key-fixtures/fresh.json" >/dev/null
 restore_compose run --rm --no-deps -e ELSE_RESTORE_CONFIRMED=true else verify-restore > "$task_directory/restore-verified.log" 2>&1
-rg -q verified_offline_restore_complete "$task_directory/restore-verified.log"
-if rg -q starting_roisey_else "$task_directory/restore-verified.log"; then exit 1; fi
+grep -Eq verified_offline_restore_complete "$task_directory/restore-verified.log"
+if grep -Eq starting_roisey_else "$task_directory/restore-verified.log"; then exit 1; fi
 restore_compose up -d --wait --wait-timeout 180
 python3 "$task_directory/backend/scripts/check-container-client.py" verify "$task_directory/client.json" "$task_directory/release-cookies.json" "http://$(restore_compose port else 8080)"
 [ "$(restore_compose exec -T else /opt/else/operator psql -Atc "SELECT count(*) FROM app.integration_encryption_keys WHERE key_label='synthetic-container'")" = 1 ]
