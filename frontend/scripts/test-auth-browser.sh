@@ -51,10 +51,14 @@ task_port=$(docker_local port "$task_container" 5432/tcp | awk -F: '{print $NF}'
 (
   cd backend
   sh scripts/build-api.sh "$task_directory/api" "sha-$task_revision" "$task_revision" "$task_build_time"
-  go build -mod=readonly -trimpath -o "$task_directory/migrate" ./cmd/migrate
+  go build -mod=readonly -trimpath -buildvcs=false -o "$task_directory/migrate" ./cmd/migrate
 )
 unset PGSERVICE
-MIGRATION_# Serve the built artifact through the actual Go HTTP server, one process/origin.
+MIGRATION_DATABASE_URL="postgres://postgres:$task_password@127.0.0.1:$task_port/else?sslmode=disable" "$task_directory/migrate" up
+printf "CREATE ROLE else_runtime LOGIN PASSWORD '%s';\n" "$task_password" | docker_local exec -i "$task_container" psql -U postgres -d else -v ON_ERROR_STOP=1 >/dev/null
+docker_local exec -i "$task_container" psql -U postgres -d else < backend/scripts/grant-runtime.sql >/dev/null
+docker_local exec -i "$task_container" psql -U postgres -d else -v ON_ERROR_STOP=1 < frontend/e2e/fixtures.sql >/dev/null
+# Serve the built artifact through the actual Go HTTP server, one process/origin.
 (cd frontend && npm run build)
 cp -R frontend/dist "$task_directory/frontend-dist"
 # This public synthetic probe exists only in the disposable test artifact.
