@@ -1424,7 +1424,7 @@ test('integration metadata, confirmed local disable, uncertain outcome recovery 
   expect(await page.locator('main').innerText()).not.toContain('8000001')
   for(const viewport of [{width:1440,height:1000},{width:390,height:844}]) {
     await page.setViewportSize(viewport);await markTaskScreenshot(page)
-    expect(await page.evaluate(()=>document.documentElement.scrollWidth===document.documentElement.clientWidth)).toBe(true)
+    await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth===document.documentElement.clientWidth)).toBe(true)
     await page.screenshot({path:testInfo.outputPath(`integrations-${viewport.width}.png`),fullPage:true})
   }
   await page.getByRole('button',{name:'Next',exact:true}).click()
@@ -1513,7 +1513,7 @@ test('integration metadata, confirmed local disable, uncertain outcome recovery 
           const banner=document.querySelector('[data-synthetic-verification]')
           if(banner) banner.textContent='Synthetic provider DTO projection · no backend/provider activation'
         })
-        expect(await page.evaluate(()=>document.documentElement.scrollWidth===document.documentElement.clientWidth)).toBe(true)
+        await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth===document.documentElement.clientWidth)).toBe(true)
         await page.screenshot({path:testInfo.outputPath(`integration-${provider}-${viewport.width}.png`),fullPage:true})
       }
       expect(mutations).toBe(0)
