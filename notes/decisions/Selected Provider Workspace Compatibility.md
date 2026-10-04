@@ -1,6 +1,6 @@
 ---
 type: decision
-status: in-review
+status: integrated
 created: 2026-10-04
 tags:
   - integrations
@@ -18,3 +18,5 @@ Owner integrated #111/#113/#115. Main 12b84cdfb598faf89b6c585ec62bf922a7fef5d5 h
 
 - [[Client Integration Workspace]]
 - [[Remaining Roadmap]]
+
+Owner integrated PR #118 after all six exact-head gates (37191177190), then #119/PR #120 after all six (37192905613). Migration 22 now supplies the selected private catalog. Public setup/sync/reporting remains unfinished. Post-merge main CI/publication availability is separately blocked; [[Bounded Provider HTTPS]] records observed runner admission failures and pending owner annotation, not a source test failure.
