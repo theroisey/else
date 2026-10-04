@@ -46,6 +46,11 @@ func buildCompiledAPI(t *testing.T) string {
 // Uses real production wiring and the checked-in runtime grants.
 func startCompiledAPI(t *testing.T, f *administrationFixture, binary string) *compiledAPI {
 	t.Helper()
+	return startCompiledAPIWithRequestBudget(t, f, binary, 0)
+}
+
+func startCompiledAPIWithRequestBudget(t *testing.T, f *administrationFixture, binary string, budget time.Duration) *compiledAPI {
+	t.Helper()
 	grants, err := os.ReadFile("../../scripts/grant-runtime.sql")
 	if err != nil {
 		t.Fatal("runtime grant source unavailable")
@@ -70,6 +75,9 @@ func startCompiledAPI(t *testing.T, f *administrationFixture, binary string) *co
 	a := &compiledAPI{Origin: "http://" + address, Client: &http.Client{Timeout: 2 * time.Second}, Context: ctx}
 	command := exec.CommandContext(ctx, binary)
 	command.Env = []string{"DATABASE_URL=" + source.String(), "AUTH_PUBLIC_ORIGIN=" + a.Origin, "AUTH_COOKIE_SECURE=false", "HTTP_ADDRESS=" + address}
+	if budget > 0 {
+		command.Env = append(command.Env, "HTTP_REQUEST_TIMEOUT="+budget.String(), "HTTP_READINESS_TIMEOUT="+(budget/3).String())
+	}
 	command.Stdout, command.Stderr = &a.Logs, &a.Logs
 	if command.Start() != nil {
 		cancel()

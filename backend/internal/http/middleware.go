@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -8,6 +9,16 @@ import (
 
 	"github.com/theroisey/else/backend/internal/correlation"
 )
+
+// RequestDeadline bounds context-aware work synchronously. It neither starts a
+// competing writer nor preempts CPU work or body readers that ignore context.
+func RequestDeadline(timeout time.Duration, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
+		defer cancel()
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
 
 type responseRecorder struct {
 	http.ResponseWriter

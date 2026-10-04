@@ -15,6 +15,7 @@ type Config struct {
 	ReadHeaderTimeout time.Duration
 	ReadTimeout       time.Duration
 	WriteTimeout      time.Duration
+	RequestTimeout    time.Duration
 	IdleTimeout       time.Duration
 	ShutdownTimeout   time.Duration
 	ReadinessTimeout  time.Duration
@@ -26,6 +27,7 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		Address: "127.0.0.1:8080", LogLevel: slog.LevelInfo,
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second,
 		WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second,
+		RequestTimeout:  5 * time.Second,
 		ShutdownTimeout: 10 * time.Second, ReadinessTimeout: 2 * time.Second,
 		MaxHeaderBytes: 16 * 1024,
 	}
@@ -53,6 +55,7 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		{"HTTP_READ_HEADER_TIMEOUT", &c.ReadHeaderTimeout},
 		{"HTTP_READ_TIMEOUT", &c.ReadTimeout},
 		{"HTTP_WRITE_TIMEOUT", &c.WriteTimeout},
+		{"HTTP_REQUEST_TIMEOUT", &c.RequestTimeout},
 		{"HTTP_IDLE_TIMEOUT", &c.IdleTimeout},
 		{"HTTP_SHUTDOWN_TIMEOUT", &c.ShutdownTimeout},
 		{"HTTP_READINESS_TIMEOUT", &c.ReadinessTimeout},
@@ -105,6 +108,7 @@ func (c Config) Validate() error {
 		{"HTTP_READ_HEADER_TIMEOUT", c.ReadHeaderTimeout},
 		{"HTTP_READ_TIMEOUT", c.ReadTimeout},
 		{"HTTP_WRITE_TIMEOUT", c.WriteTimeout},
+		{"HTTP_REQUEST_TIMEOUT", c.RequestTimeout},
 		{"HTTP_IDLE_TIMEOUT", c.IdleTimeout},
 		{"HTTP_SHUTDOWN_TIMEOUT", c.ShutdownTimeout},
 		{"HTTP_READINESS_TIMEOUT", c.ReadinessTimeout},
@@ -118,6 +122,12 @@ func (c Config) Validate() error {
 	}
 	if c.ReadinessTimeout >= c.WriteTimeout {
 		return fmt.Errorf("HTTP_READINESS_TIMEOUT must be less than HTTP_WRITE_TIMEOUT")
+	}
+	if c.RequestTimeout >= c.WriteTimeout {
+		return fmt.Errorf("HTTP_REQUEST_TIMEOUT must be less than HTTP_WRITE_TIMEOUT")
+	}
+	if c.ReadinessTimeout >= c.RequestTimeout {
+		return fmt.Errorf("HTTP_READINESS_TIMEOUT must be less than HTTP_REQUEST_TIMEOUT")
 	}
 	if c.MaxHeaderBytes < 1024 || c.MaxHeaderBytes > 65536 {
 		return fmt.Errorf("HTTP_MAX_HEADER_BYTES must be between 1024 and 65536")
