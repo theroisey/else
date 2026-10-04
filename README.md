@@ -4,7 +4,9 @@ Roisey Else is a client operations platform for financial tracking, pricing, tas
 
 ## Current state
 
-Parent #29's read-only Release Center is owner-integrated and verified on main. Marketing #25 advances with #96's [verified Meta daily Insights normalization](docs/meta-insights.md): exact bounded account reporting interpretation, with live provider authorization/transport/ingestion/UI still pending. [The remaining roadmap](notes/project/Remaining%20Roadmap.md) records dependencies and concrete prerequisites.
+The application includes client operations, exact finance/pricing, current permission-based identity, audit/activity and read-only release metadata. GA4, WooCommerce and Meta have measured client workspaces and encrypted manual setup with bounded independent synchronization. Provider tokens/account access are operator-provisioned; synthetic verification does not establish live vendor ownership or production activation. [The verification roadmap](notes/project/Remaining%20Roadmap.md) records final acceptance for existing #25/#31/#32.
+
+The user requires **only `main`** and **one application Docker image**. Built React, the Go API, worker and operator executables share that artifact; PostgreSQL is separate infrastructure. [The production operating runbook](docs/production-readiness.md) defines a compatible managed container/PostgreSQL target, configuration, connection budgets, monitoring, incident ownership and backup/restore/rollback. Production traffic release requires explicit owner authority.
 
 The initial audit on 2026-10-01 found an empty GitHub repository and a local checkout containing only `AGENTS.md` and Obsidian settings. [Issue #1](https://github.com/theroisey/else/issues/1) establishes the repository baseline; [Issue #2](https://github.com/theroisey/else/issues/2) adds the Go HTTP foundation.
 
@@ -24,9 +26,9 @@ Parent #24 advances [integration security boundaries](docs/integrations.md) in s
 
 Issue #29 adds [immutable CI build metadata and protected release reads](docs/releases.md) through backend #92, with separately reviewed [read-only Release Center and revision indicator](docs/release-interface.md) through frontend #93. Running API revision is distinguished from unavailable latest-release, image-provenance and deployment evidence. Issue #98 adds the [implemented-system security review and compiled denial matrix](docs/security-review.md), with remaining scan/provider/deployment limits explicit. [Remaining roadmap](notes/project/Remaining%20Roadmap.md) records provider, security, performance and operating dependencies.
 
-Read [AGENTS.md](AGENTS.md) before planning or changing the repository. GitHub Issues are the source of scope and acceptance criteria. Permanent branches are `main`, `frontend`, and `backend`; application changes reach `main` through reviewed Pull Requests.
+Read [AGENTS.md](AGENTS.md) before planning or changing the repository. Existing GitHub issues define scope and acceptance. **Main is the sole branch**; verify coherent incremental commits before push and retain all six CI gates. Frontend/backend ownership refers to directories, not additional branches.
 
-The owner approved a one-time empty root commit to establish the initial PR base. [The bootstrap record](docs/repository-bootstrap.md) documents that consumed exception. All subsequent changes to `main` use reviewed PRs.
+The owner approved a one-time empty root commit to establish the initial PR base. [The bootstrap record](docs/repository-bootstrap.md) retains that historical decision. The user's current main-only workflow supersedes the former branch/PR policy; verified incremental commits still require all six CI gates before publication.
 
 ## Repository ownership
 
@@ -42,7 +44,7 @@ Folders acquire production code only through their own scoped Issues. No specula
 
 [The dependency roadmap](docs/roadmap.md) links the 32 implementation Issues across seven milestones. Start with repository conventions, then application foundations, PostgreSQL/migrations, Docker, CI, audit infrastructure, authentication, and authorization. Later slices add client operations, exact finance, measured integrations, and production readiness.
 
-Each implementation must define its domain, permissions, audit behavior, and verification before coding. Cross-cutting slices use coordinated backend and frontend PRs with explicit API contracts.
+Each implementation defines its domain, permissions, audit behavior and verification before coding. Cross-cutting changes preserve explicit API contracts and coherent commit boundaries on main, referencing the existing issues.
 
 ## Product direction
 

@@ -1,10 +1,10 @@
-# Architecture baseline
+# Application architecture
 
-Status: proposed engineering direction for [Issue #1](https://github.com/theroisey/else/issues/1). The baseline documents boundaries; it does not claim these services exist.
+Current implemented architecture, finalized under [#32](https://github.com/theroisey/else/issues/32). Historical bootstrap decisions remain in their original records. [Production operating procedures](production-readiness.md) define target configuration and separate traffic approval.
 
 ## Application shape
 
-Roisey Else starts as a modular monolith: one Go backend, one React frontend, and PostgreSQL. Add infrastructure only when a concrete Issue establishes a product need. Docker development uses frontend, backend, and postgres services after [Issue #5](https://github.com/theroisey/else/issues/5).
+Roisey Else is a modular monolith: the built React frontend, Go API and operator/background executables share **one application image**; PostgreSQL is separate infrastructure. The Go process serves assets and `/api/v1` at one origin. Separate worker processes use that same image and database-backed jobs. Add infrastructure only when a concrete existing issue and measured need establish it.
 
 The frontend owns presentation, interaction, accessible forms, query state, and client-side validation for usability. It does not own authorization or financial calculations. The backend owns authenticated identity, permissions, client isolation, validation, domain invariants, exact calculations, persistence, and audit writing.
 
@@ -18,7 +18,7 @@ Avoid generic repositories, provider interfaces, or service layers without consu
 
 Business APIs use `/api/v1`. Every implemented endpoint has a documented request/response/error contract shared with its frontend Issue. Collections have bounded pagination; filtering and sorting are explicit. Input validation rejects unsupported values, malformed identifiers, and inappropriate sizes without exposing internal errors.
 
-The [HTTP foundation](backend-http.md) defines the error envelope, request ID, and health/readiness semantics. The [identity contract](identity.md) defines login, logout and current-session endpoints without adding business APIs. The [authorization contract](authorization.md) defines the permission/scope boundary consumed by later handlers. Pagination belongs to the first collection API.
+The [HTTP contract](backend-http.md) defines the error envelope, request ID and health/readiness semantics. [Identity](identity.md) and [authorization](authorization.md) define current-session, CSRF and permission/scope boundaries. Implemented modules include clients, tasks, planning, reminders, collections/payments, immutable pricing, activity/audit, users/roles and the read-only Release Center. GA4 analytics, WooCommerce commerce and Meta marketing have independently authorized report workspaces and audited encrypted manual setup/background synchronization. Provider-specific limitations remain explicit in their synchronization/workspace contracts; reports contain measured observations rather than sample production data.
 
 ## Security and client scope
 
@@ -50,8 +50,8 @@ Do not add decorative analytics or pretend integrations exist. Loading, empty, e
 
 ## Branches and deployment
 
-`main` remains the production branch. Frontend implementation belongs on `frontend`; backend implementation belongs on `backend`. Cross-cutting slices define contract order and use coordinated PRs. After a merge, synchronize both development branches from `main` without force pushes before substantial work continues.
+The user's current workflow requires **only `main`**. Frontend/backend directories retain domain ownership; coherent incremental commits reference existing issues and run relevant checks before push. Do not create additional issues, development branches or application images for the remaining work. Obsolete branch references were removed after confirming their committed work was in main. Never force-push.
 
 CI gates precede registry publication. Only tested `main` revisions produce production GHCR images. Containers are immutable; the application does not overwrite its own executable. A future deployment target or automatic rollout requires a separately recorded decision and explicit authority.
 
-The repository was initialized through the approved empty commit described in [repository bootstrap](repository-bootstrap.md). The one-time exception is consumed; subsequent changes to main use PRs.
+The repository was initialized through the approved empty commit described in [repository bootstrap](repository-bootstrap.md). Its historical branch policy is superseded by the user's main-only instruction. Managed OCI hosting with PostgreSQL is the reference operating target; an actual account/region/domain and production traffic release require explicit owner authority.

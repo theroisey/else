@@ -2,7 +2,7 @@
 
 GitHub Issues are the source of implementation scope. This index records the dependency-aware roadmap created after the initial repository audit on 2026-10-01. It is a plan, not a list of shipped capabilities.
 
-Current slice: [#107](https://github.com/theroisey/else/issues/107), [bounded GA4 integer report interpretation](ga4-integer-reports.md) under #26; its separate final-head gates remain required. Owner merged [#105](https://github.com/theroisey/else/issues/105) / [PR #106](https://github.com/theroisey/else/pull/106), supplying [compiled API read capacity](capacity-readiness.md) for the user's 500-client/100-user target. All six exact-head gates passed in run 37160421159; both development branches synchronized with main `9dc9ed9`. Its main run 37184712171 is separately observed and still pending. Owner-integrated dependency security/browser defenses previously passed all six gates and publication in [run 37158080918](https://github.com/theroisey/else/actions/runs/37158080918). #30 is closed after implemented-scope risk reconciliation. Five original parents remain open: #25–#27 and #31–#32. The user selected GA4 and WooCommerce for #26/#27 and a Vercel-like managed web deployment with PostgreSQL; the required Go API needs a compatible runtime. Owner closed #24; provider setup/OAuth/transport/sync/remote revocation remain disabled under #25–#27. Declared startup cannot detect undeclared restore; operator attribution is not end-user authentication. Provider activation, complete critical flows and deployed operating proof remain tracked in the [remaining roadmap](../notes/project/Remaining%20Roadmap.md).
+Only three original issues remain: #25 Meta marketing, #31 final mixed-workload/critical-flow proof and #32 operating readiness. GA4 #26 and WooCommerce #27 are complete after integrated backend/frontend and verified main gates. Main `289dfc13ac46202f2f4d262f1538af20f67cdf4b` passed all six gates and tested single-image publication in [run 37220166845](https://github.com/theroisey/else/actions/runs/37220166845); the earlier runner-admission blocker is resolved. Meta manual read-token collection and measured workspace are implemented locally pending final verification/main CI. [Production operating procedures](production-readiness.md) specify managed OCI hosting with PostgreSQL for the required Go runtime, one HTTPS origin and one application artifact. The user requires only main and no new issues; the [remaining roadmap](../notes/project/Remaining%20Roadmap.md) records current verification rather than historical branch plans.
 
 ## Verified starting state
 
@@ -99,12 +99,12 @@ This is one valid order that honors prerequisites and milestone grouping. Indepe
 
 ## Coordination rules
 
-- Backend Issues develop on backend; frontend Issues develop on frontend. Root documentation and shared infrastructure use the owning coordinated PR. Keep unrelated implementation out of each branch.
-- Cross-cutting Issues first settle their API and security decisions, then use separately reviewable backend/frontend PRs. A dependency must deliver the required contract before its consumer starts.
+- Implement incremental, coherent changes only on main; retain frontend/backend directory ownership and reference existing issues. Do not create new issues, branches or application images for remaining work.
+- Cross-cutting issues first settle API/security policy and preserve reviewable commit boundaries. A dependency delivers its required contract before its consumer starts.
 - Audit infrastructure precedes authenticated administrative and client mutations. Backend authorization and client scope precede exposing client records.
 - Financial policy, integration credential handling, and rollout decisions are explicitly recorded in their Issues before implementation. Proposed providers are not approved connections.
 - Audit viewer #28 and activity #22 belong to the operations milestone even though later Issue numbers were assigned. They do not depend on analytics integrations.
-- Synchronize both development branches after a merge to main. Never force-push or implicitly deploy.
+- Run relevant local verification and all six main CI gates. Never force-push or implicitly deploy.
 
 ## Scope limits
 
@@ -112,4 +112,4 @@ Docker starts in #5; CI/GHCR starts in #6. The first baseline does not install d
 
 ## Current status
 
-Issues #1–#23, #28, #68, #70, #72, #74, #76, #78, #80, #82, #84 and #86 are owner-merged. Parent #24 proceeds in separately reviewed slices: #84 supplies bounded authorized rewrap pages, #86 corrected container recovery, and #88 supplies trusted explicit one-page operator invocation. External recovery safety, durable jobs, broader retention/rotation and verified provider/callback/revocation/synchronization remain incomplete. Provider Issues #25–#27 remain dependent on parent boundaries. Reminder delivery/recurrence, task comments/attachments, password recovery and other business domains remain separately scoped work. No production deployment is authorized or performed.
+The original foundations and operational/financial modules, #24 secure integration boundaries, #26 GA4, #27 WooCommerce and #29–#30 release/security work are integrated. Meta #25 now has locally implemented encrypted manual setup, fixed Graph v26.0 bounded collection, shared durable work and exact measured UI. #31 adds representative mixed-write/report/two-replica/background evidence to existing actual browser and read-capacity checks. #32 finalizes current architecture and clean setup/monitoring/incident/backup/restore/rollback procedures. Their final acceptance awaits required verification and main CI; no production deployment or live provider account access is claimed.

@@ -27,7 +27,7 @@ const capacityBudget = 2 * time.Second
 
 var capacityRoutes = []string{"directory", "directory_max", "overview", "tasks", "reminders", "billing", "pricing"}
 
-// API-only closed-loop read readiness, not a browser SLA or provider workload.
+// API-only closed-loop read and mixed readiness, not a deployed/browser SLA.
 func TestCapacityCompiledAPIRepresentativeReads(t *testing.T) {
 	binary := buildCompiledAPI(t)
 	f := administrationFixtureFromIdentity(t, identityFixtureFromBase(t, newFixtureWithTimeout(t, 3*time.Minute)))
@@ -146,6 +146,9 @@ func TestCapacityCompiledAPIRepresentativeReads(t *testing.T) {
 	if !reflect.DeepEqual(before, capacityState(t, f)) {
 		t.Error("capacity reads changed domain/audit/session state")
 	}
+	t.Run("mixed_two_api_two_worker_replicas", func(t *testing.T) {
+		capacityMixed(t, f, binary, api, client, sessions, ids)
+	})
 }
 
 func capacityRead(api *compiledAPI, client *http.Client, session identity.LoginResult, id, route string) (time.Duration, bool) {
