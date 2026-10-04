@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Button, Dialog } from '../../components/ui'
 import { isUUID } from '../auth/session'
@@ -15,6 +15,9 @@ import {
   ManualAction,
 } from './Shared'
 import * as service from './service'
+import { formatTime } from '../../lib/time'
+import { GA4SetupForm } from '../analytics/GA4SetupForm'
+import { hasPermission } from '../auth/permissions'
 
 export function IntegrationDetailPage() {
   const { id: clientID = '', connectionID = '' } = useParams()
@@ -137,20 +140,22 @@ function ConnectionDetail({
                 </dd>
               </div>
               <div>
-                <dt className="text-muted">Created (UTC)</dt>
+                <dt className="text-muted">Created (Europe/Istanbul)</dt>
                 <dd className="mt-1 break-all">
-                  <time dateTime={record.created_at}>{record.created_at}</time>
+                  <time dateTime={record.created_at}>{formatTime(record.created_at, 'Europe/Istanbul')}</time>
                 </dd>
               </div>
               <div>
-                <dt className="text-muted">Last metadata change (UTC)</dt>
+                <dt className="text-muted">Last metadata change (Europe/Istanbul)</dt>
                 <dd className="mt-1 break-all">
-                  <time dateTime={record.updated_at}>{record.updated_at}</time>
+                  <time dateTime={record.updated_at}>{formatTime(record.updated_at, 'Europe/Istanbul')}</time>
                 </dd>
               </div>
             </dl>
           </div>
           {record.state === 'revocation_failed' ? <ManualAction provider={record.provider} /> : null}
+          {record.provider === 'ga4' && hasPermission(operation.auth.session?.user.permissions ?? [], { permission: 'analytics.view', scope: 'client', clientID: operation.clientID }) ? <Link className="mt-4 block underline underline-offset-4" to={`/app/clients/${operation.clientID}/analytics/${record.id}`}>View GA4 reports</Link> : null}
+          {record.provider === 'ga4' && writable && ['pending', 'connected', 'reauthorization_required'].includes(record.state) ? <GA4SetupForm key={record.revision} record={record} operation={operation} onQueued={() => setNotice('GA4 synchronization queued. Reload the reports to check progress; provider access is not yet verified.')} /> : null}
           {writable ? (
             <div className="mt-5 border-t border-line pt-5">
               <h2 className="font-semibold">Disable local use</h2>
@@ -177,7 +182,7 @@ function ConnectionDetail({
         <Dialog
           open
           title="Disable local use?"
-          description="This stops local credential use immediately. Remote revocation is unavailable. You must also remove this application's access in Meta's account settings. Remote access may remain until then."
+          description={`This stops local credential use immediately. Remote revocation is unavailable. You must also remove this application's access in ${providerLabels[record.provider]} account settings. Remote access may remain until then.`}
           onClose={() => {
             if (!operation.pending) setConfirm(null)
           }}

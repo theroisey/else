@@ -24,7 +24,7 @@ export function IntegrationHeader({
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
           Recorded connection metadata. These states do not verify current
-          provider access or synchronization. Times are shown in UTC.
+          provider access or synchronization. Times use Europe/Istanbul.
         </p>
       </header>
       <nav

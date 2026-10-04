@@ -123,6 +123,7 @@ function Workspace({
     { label: 'Finance', path: 'billing', shown: !!data.finance },
     { label: 'Pricing', path: 'pricing', shown: has('pricing.view') },
     { label: 'Integrations', path: 'integrations', shown: has('integrations.view') },
+    { label: 'Web analytics', path: 'analytics', shown: has('analytics.view') },
     { label: 'Activity', path: 'activity', shown: !!data.activity },
     {
       label: 'Audit history',
@@ -315,8 +316,9 @@ function Workspace({
               Integration data unavailable
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted">
-              Marketing, commerce and web analytics integrations are not
-              available yet. No external performance data is connected.
+              External performance totals are not included in this overview.
+              Authorized users can open measured GA4 reports from Web analytics.
+              Marketing and commerce synchronization remain unavailable.
             </p>
           </aside>
         </div>

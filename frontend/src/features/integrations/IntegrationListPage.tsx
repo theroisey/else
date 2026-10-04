@@ -10,6 +10,8 @@ import type { Operation } from './hooks'
 import { IntegrationError, IntegrationHeader, IntegrationState } from './Shared'
 import * as service from './service'
 import { providerLabels } from './models'
+import { GA4CreateForm } from '../analytics/GA4CreateForm'
+import { formatTime } from '../../lib/time'
 
 export function IntegrationListPage() {
   const clientID = useParams().id ?? ''
@@ -37,6 +39,7 @@ function Connections({ operation }: { operation: Operation }) {
   const failed = query.isError || client.isError
   const rows = !busy && !failed ? query.data?.data : undefined
   function reload() {
+    operation.clearError()
     setHistory([''])
     setRefresh((v) => v + 1)
     void client.refetch()
@@ -47,9 +50,10 @@ function Connections({ operation }: { operation: Operation }) {
         clientID={clientID}
         name={!busy && !failed ? client.data?.name : undefined}
       />
-      <Button disabled={busy} onClick={reload}>
+      <Button disabled={busy || operation.pending} onClick={reload}>
         Refresh integrations
       </Button>
+      {!busy && !failed && rows && operation.permissions.manage && client.data?.status === 'active' ? <GA4CreateForm operation={operation} /> : null}
       {!busy && !failed && client.data?.status === 'archived' ? (
         <p role="status" className="mt-4 text-sm text-muted">
           This client is archived. Connection history remains readable; changes
@@ -72,7 +76,7 @@ function Connections({ operation }: { operation: Operation }) {
               <tr>
                 <th>Provider / Connection</th>
                 <th>Recorded state</th>
-                <th>Last metadata change (UTC)</th>
+                <th>Last metadata change (Europe/Istanbul)</th>
               </tr>
             </thead>
             <tbody>
@@ -97,7 +101,7 @@ function Connections({ operation }: { operation: Operation }) {
                       className="break-all font-mono text-xs"
                       dateTime={record.updated_at}
                     >
-                      {record.updated_at}
+                      {formatTime(record.updated_at, 'Europe/Istanbul')}
                     </time>
                   </td>
                 </tr>
@@ -110,7 +114,7 @@ function Connections({ operation }: { operation: Operation }) {
           <h2 className="font-semibold">No connections on this page</h2>
           <p className="mt-2 text-sm text-muted">
             No recorded connections are available with your current access.
-            Provider setup and synchronization are not available yet.
+            GA4 setup is available to authorized integration managers.
           </p>
         </div>
       )}

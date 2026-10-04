@@ -2,9 +2,11 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
+import { workspace as syntheticGA4Workspace } from '../src/features/analytics/fixtures.test-data'
 
 
 test.describe.configure({ mode: 'serial' })
+
 
 function database(sql: string) {
   const container = process.env.AUTH_TEST_CONTAINER
@@ -1366,6 +1368,69 @@ test('overview reconciles real sources in one bounded request and omits revoked 
   await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
   await expect(page.getByRole('heading',{name:'Due reminders',exact:true})).toHaveCount(0)
   expect(await page.evaluate(()=>localStorage.length+sessionStorage.length)).toBe(0)
+})
+
+test('GA4 creates audited pending setup, clears unavailable credentials and reads independent analytics status', async ({ page }, testInfo) => {
+  const client = 'fb555555-5555-4555-8555-555555555555', actor = 'fb111111-1111-4111-8111-111111111111', role = 'fb222222-2222-4222-8222-222222222222'
+  database(`INSERT INTO app.client_scopes(id) VALUES('${client}'); INSERT INTO app.clients(id,name) VALUES('${client}','Synthetic GA4 client'); INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actor}','ga4.browser.fixture@example.com','Synthetic GA4 operator',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO app.roles(id,role_key,display_name) VALUES('${role}','ga4_browser_fixture','Synthetic GA4 reader and manager'); INSERT INTO app.role_permissions(id,role_id,permission_key) SELECT gen_random_uuid(),'${role}',permission_key FROM app.permissions WHERE permission_key IN ('clients.view','analytics.view','integrations.view','integrations.manage'); INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),'${actor}','${role}','client','${client}');`)
+  const path = `/app/clients/${client}`
+  await page.goto(path + '/integrations')
+  await page.getByLabel('Email', { exact: true }).fill('ga4.browser.fixture@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByLabel('GA4 property ID', { exact: true }).fill('9700001')
+  await page.getByRole('button', { name: 'Add pending property', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'GA4 setup and synchronization', exact: true })).toBeVisible()
+  const connection = page.url().split('/').at(-1)!
+  expect(connection).toMatch(/^[a-f0-9-]{36}$/)
+  expect(database(`SELECT state FROM app.integration_connections WHERE id='${connection}'`)).toBe('pending')
+  expect(database(`SELECT count(*) FROM app.audit_events WHERE resource_id='${connection}' AND event_name='integration_connection.created'`)).toBe('1')
+  await page.getByLabel('Start date', { exact: true }).fill('2026-10-01')
+  await page.getByLabel('End date', { exact: true }).fill('2026-10-03')
+  await page.getByLabel('Service-account JSON key', { exact: true }).fill('Synthetic unavailable key fixture')
+  await page.getByRole('checkbox').check()
+  const response = page.waitForResponse(r => r.url().endsWith('/ga4/credentials') && r.request().method() === 'POST')
+  await page.getByRole('button', { name: 'Install key and queue sync', exact: true }).click()
+  // This isolated API deliberately has no encryption keyring or live Google key.
+  expect((await response).status()).toBe(503)
+  await expect(page.getByLabel('Service-account JSON key', { exact: true })).toHaveValue('')
+  await expect(page.getByRole('button', { name: 'Install key and queue sync', exact: true })).toBeDisabled()
+  expect(database(`SELECT count(*) FROM app.analytics_sync_jobs WHERE connection_id='${connection}'`)).toBe('0')
+  await page.getByRole('link', { name: 'View GA4 reports', exact: true }).click()
+  await page.getByLabel('Start date', { exact: true }).fill('2026-10-01')
+  await page.getByLabel('End date', { exact: true }).fill('2026-10-03')
+  await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
+  await expect(page.getByText('Not synchronized', { exact: true })).toBeVisible()
+  await expect(page.getByText(/No measured reports are available/)).toBeVisible()
+  // Deliberately synthetic stored report: this tests real report reads/rendering,
+  // not provider access or successful collection. No credential is installed.
+  const measured = syntheticGA4Workspace()
+  for (const report of [measured.summary, measured.daily, measured.acquisition, measured.devices, measured.landing]) {
+    report.client_id = client; report.connection_id = connection
+  }
+  const document = JSON.stringify(measured).replaceAll("'", "''")
+  database(`UPDATE app.integration_connections SET state='connected',revision=revision+1,updated_at=clock_timestamp() WHERE id='${connection}'; INSERT INTO app.analytics_sync_jobs(id,client_id,connection_id,requested_by,since,until,connection_revision,generation,credential_revision,state,attempts,finished_at) VALUES(gen_random_uuid(),'${client}','${connection}','${actor}','2026-10-01','2026-10-03',2,1,1,'succeeded',1,clock_timestamp()); INSERT INTO app.analytics_snapshots(client_id,connection_id,generation,since,until,workspace) VALUES('${client}','${connection}',1,'2026-10-01','2026-10-03','${document}'::jsonb);`)
+  await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
+  await expect(page.getByRole('table', { name: /Traffic acquisition/ })).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Daily active users bar chart', exact: true })).toBeVisible()
+  await expect(page.getByText('9007199254740993', { exact: true })).toHaveCount(5)
+  await expect(page.getByText('1.3333333333333333', { exact: true })).toHaveCount(5)
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 1000 }); await markTaskScreenshot(page)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`ga4-synthetic-reports-${width}.png`), fullPage: true })
+  }
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key IN ('integrations.view','integrations.manage')`)
+  await page.reload()
+  await page.getByLabel('Start date', { exact: true }).fill('2026-10-01')
+  await page.getByLabel('End date', { exact: true }).fill('2026-10-03')
+  await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
+  await expect(page.getByRole('table', { name: /Daily trends/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Connection setup and sync', exact: true })).toHaveCount(0)
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='analytics.view'`)
+  await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
+  expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
 })
 
 test('Release Center identifies the actual API build and removes revoked access', async ({ page }, testInfo) => {

@@ -32,7 +32,7 @@ export const providerLabels = {
   ga4: 'Google Analytics 4',
   woocommerce: 'WooCommerce',
 } as const
-const connectionSchema = z
+export const connectionSchema = z
   .object({
     id: uuid,
     client_id: uuid,
