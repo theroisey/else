@@ -16,7 +16,7 @@ func Bootstrap(ctx context.Context, pool *pgxpool.Pool, passwords Passwords, ema
 	if pool == nil || passwords == nil || !ok || !validDisplayName(displayName) || !validPassword(password) {
 		return "", ErrInvalidInput
 	}
-	hash, err := passwords.Hash(password)
+	hash, err := HashPassword(ctx, passwords, password)
 	if err != nil {
 		return "", err
 	}

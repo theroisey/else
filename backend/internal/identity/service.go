@@ -75,7 +75,10 @@ func (s *Service) Login(ctx context.Context, suppliedEmail, password string) (Lo
 	if !found {
 		verifyHash = s.dummyHash
 	}
-	verified := s.passwords.Verify(verifyHash, password)
+	verified, err := verifyPassword(ctx, s.passwords, verifyHash, password)
+	if err != nil {
+		return LoginResult{}, err
+	}
 	if !found || !validEmail || !validPassword(password) || !verified || status != "active" {
 		return LoginResult{}, ErrInvalidCredentials
 	}

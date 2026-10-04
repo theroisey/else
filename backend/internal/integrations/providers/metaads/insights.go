@@ -3,10 +3,9 @@
 package metaads
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
+	"github.com/theroisey/else/backend/internal/integrations/providers/internal/jsonvalue"
 	"math/big"
 	"regexp"
 	"sort"
@@ -150,38 +149,7 @@ func validDate(s string) bool {
 // object rejects duplicate decoded names, case aliases, unknown keys and trailing
 // JSON instead of encoding/json's default last-value-wins behavior.
 func object(raw []byte, allowed ...string) (map[string]json.RawMessage, bool) {
-	d := json.NewDecoder(bytes.NewReader(raw))
-	token, err := d.Token()
-	if err != nil || token != json.Delim('{') {
-		return nil, false
-	}
-	result := make(map[string]json.RawMessage)
-	for d.More() {
-		token, err = d.Token()
-		key, ok := token.(string)
-		if err != nil || !ok || result[key] != nil {
-			return nil, false
-		}
-		known := false
-		for _, candidate := range allowed {
-			known = known || key == candidate
-		}
-		if !known {
-			return nil, false
-		}
-		var value json.RawMessage
-		if d.Decode(&value) != nil {
-			return nil, false
-		}
-		result[key] = value
-	}
-	if token, err = d.Token(); err != nil || token != json.Delim('}') {
-		return nil, false
-	}
-	if _, err = d.Token(); err != io.EOF {
-		return nil, false
-	}
-	return result, true
+	return jsonvalue.Object(raw, allowed...)
 }
 
 func pagination(raw []byte) (next bool, cursor string, ok bool) {
