@@ -48,78 +48,22 @@ When multiple valid technical approaches exist, prefer the one that:
 
 # 3. Git Branch Strategy
 
-The repository has exactly three permanent branches:
+The user's 2026-10-04 instruction supersedes the former three-branch workflow:
+**`main` is the only branch.** Do not create frontend, backend, review or other
+development branches. Preserve in-progress work while consolidating existing
+branches; delete old branch references only after their committed work is in main.
 
-- `main`
-- `frontend`
-- `backend`
+Implement incremental, coherent changes on `main`, preserving frontend/backend
+directory ownership. Run the relevant local verification before committing and
+pushing. Record the associated existing issue, implementation, migration,
+authorization, audit and verification evidence in commits and documentation.
+Existing pull requests may be completed during consolidation after their required
+checks pass; subsequent work uses verified main commits without new PR branches.
 
-## main
-
-`main` is the production branch.
-
-Rules:
-
-- Never develop directly on `main`.
-- Never commit directly to `main`.
-- Changes reach `main` through Pull Requests.
-- `main` must always remain deployable.
-- Successful merges into `main` trigger production container builds.
-- Releases and production images originate from `main`.
-
-## frontend
-
-`frontend` is created from `main`.
-
-Frontend application code belongs under:
-
-```text
-/frontend
-```
-
-Frontend development must primarily happen on the `frontend` branch.
-
-The frontend branch must not contain unrelated backend implementation changes.
-
-After frontend work is complete:
-
-```text
-frontend -> Pull Request -> main
-```
-
-## backend
-
-`backend` is created from `main`.
-
-Backend application code belongs under:
-
-```text
-/backend
-```
-
-Backend development must primarily happen on the `backend` branch.
-
-The backend branch must not contain unrelated frontend implementation changes.
-
-After backend work is complete:
-
-```text
-backend -> Pull Request -> main
-```
-
-## Synchronization
-
-Whenever a Pull Request is merged into `main`, the other development branches must be synchronized with the latest `main` before continuing substantial development.
-
-Avoid long-lived divergence between:
-
-```text
-main
-frontend
-backend
-```
-
-Never use force pushes to synchronize branches.
+Main must remain deployable. All six CI gates still apply to main pushes, and
+publication promotes exactly the tested single application image. Publication is
+not production rollout authority. Never force-push, bypass checks or deploy
+implicitly.
 
 ---
 
@@ -133,10 +77,10 @@ Before implementing a feature:
 
 1. Inspect existing Issues.
 2. Search for an Issue covering the requested work.
-3. If none exists, create one.
+3. Work within the existing issues. The user's 2026-10-04 instruction forbids creating new issues for the remaining work.
 4. Define scope and acceptance criteria.
 5. Identify frontend/backend/database/security implications.
-6. Break large work into smaller Issues when necessary.
+6. Record incremental implementation and verification within the existing issue.
 7. Implement only after the scope is clear.
 
 Every Issue should preferably contain:
@@ -234,7 +178,12 @@ Each commit should leave the repository in a reasonably coherent state.
 
 ---
 
-# 6. Pull Request Requirements
+# 6. Change Review Requirements
+
+Under the main-only workflow, every change references an existing issue in its
+commit and records the review information below in documentation or the issue.
+Do not create a branch solely to satisfy the previous PR workflow. These PR
+requirements continue to apply to already-open consolidation pull requests.
 
 Every Pull Request must reference the relevant Issue.
 
@@ -1149,11 +1098,10 @@ Release actions themselves must be audited.
 
 The entire development environment should be runnable through Docker.
 
-The expected services should include at least:
+The user requires one application image. The expected services are:
 
 ```text
-frontend
-backend
+application (Go API, built React assets and bundled operator/worker binaries)
 postgres
 ```
 
@@ -1219,11 +1167,10 @@ Images should be published to GitHub Container Registry:
 ghcr.io
 ```
 
-Example image structure:
+The only published application image is:
 
 ```text
-ghcr.io/theroisey/else-frontend
-ghcr.io/theroisey/else-backend
+ghcr.io/theroisey/else
 ```
 
 Images should support tags such as:
@@ -1600,7 +1547,7 @@ A feature is complete when applicable conditions are met:
 - documentation is updated;
 - Docker build succeeds;
 - CI succeeds;
-- PR references the Issue;
+- verified commit or existing consolidation PR references the Issue;
 - acceptance criteria are satisfied.
 
 ---
@@ -1647,23 +1594,11 @@ Break large requests into manageable steps.
 
 Define acceptance criteria.
 
-## Step 4 — Choose Branch
+## Step 4 — Use main
 
-Frontend work:
-
-```text
-frontend
-```
-
-Backend work:
-
-```text
-backend
-```
-
-For cross-cutting work, coordinate changes carefully across both branches while keeping `main` stable.
-
-Do not create additional permanent branches unless explicitly requested.
+Use only `main` for every domain. Keep frontend/backend source ownership in their
+directories, preserve in-progress edits and verify each coherent change before
+pushing. Do not create development or review branches.
 
 ## Step 5 — Implement Incrementally
 
@@ -1699,7 +1634,7 @@ Check:
 
 Document completed work and unresolved items.
 
-## Step 9 — Prepare Pull Request
+## Step 9 — Prepare Verified Commit
 
 Explain:
 
@@ -1710,9 +1645,12 @@ Explain:
 - authorization impact;
 - audit impact.
 
-## Step 10 — Merge and Synchronize
+## Step 10 — Publish and Verify main
 
-After merge into `main`, synchronize `frontend` and `backend` as required before beginning further substantial work.
+Push the verified main commit without force, inspect all six CI gates and image
+publication, and record the evidence in the existing issue. Existing PRs and old
+branches are retired during consolidation; do not recreate them. Production
+deployment still requires explicit authority.
 
 ---
 
@@ -1754,7 +1692,7 @@ Do not:
 - bypass migrations;
 - deploy directly from development branches;
 - build production releases from `frontend` or `backend`;
-- commit directly to `main`;
+- push unverified or incomplete changes to `main`;
 - force-push branches;
 - create duplicate implementations without checking existing code;
 - introduce unnecessary dependencies;
@@ -1896,4 +1834,3 @@ Create or update a note when:
 Routine actions and obvious implementation details do not need to become notes.
 
 The goal is not to document everything. The goal is to preserve valuable context so that `notes/` becomes a useful, navigable, and continuously improving knowledge base for the project.
-
