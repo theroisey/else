@@ -1,6 +1,6 @@
 # Selected-provider workspace compatibility
 
-[#117](https://github.com/theroisey/else/issues/117) prepares the existing integration workspace for user-selected GA4/WooCommerce under #26/#27. No backend schema, credential, authorization, transport, setup, synchronization, metric or provider success changes. Backend remains Meta-only until its guarded connection/crypto catalog is separately expanded.
+[#117](https://github.com/theroisey/else/issues/117), owner-integrated through PR #118, prepares the existing integration workspace for user-selected GA4/WooCommerce under #26/#27. It changes no backend schema, credential, authorization, transport, setup, synchronization, metric or provider success. Separately owner-integrated [#119/migration 22](selected-provider-catalog.md) now supports the selected private connection/credential catalog; actual account setup, transport/synchronization and measured reports remain unavailable.
 
 The strict seven-field connection DTO accepts exactly `meta_ads`, `ga4` and `woocommerce`, displaying Meta Ads, Google Analytics 4 and WooCommerce. Unknown identifiers/private fields/malformed IDs/revisions/states/timestamps stay rejected. Local-disable responses must preserve the original provider/client/connection, expected revision and unavailable/unverified remote revocation; an allowed different provider is still an invalid response.
 
