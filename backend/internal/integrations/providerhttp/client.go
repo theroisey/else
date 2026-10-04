@@ -24,9 +24,10 @@ import (
 )
 
 const (
-	MaxRequestBytes  = 16384
-	MaxResponseBytes = 65536
-	requestBudget    = 10 * time.Second
+	MaxRequestBytes          = 16384
+	MaxResponseBytes         = 65536
+	MaxMetadataResponseBytes = 262144
+	requestBudget            = 10 * time.Second
 )
 
 var (
@@ -50,9 +51,10 @@ type resolver interface {
 type dial func(context.Context, string, string) (net.Conn, error)
 type Client struct{ state *clientState }
 type clientState struct {
-	origin    *url.URL
-	admission *Admission
-	http      *http.Client
+	origin        *url.URL
+	admission     *Admission
+	http          *http.Client
+	responseLimit int
 }
 
 func (c *Client) String() string             { return "<provider HTTPS client>" }
@@ -61,8 +63,24 @@ func (c *Client) Format(s fmt.State, _ rune) { _, _ = io.WriteString(s, c.String
 // New does not read ambient proxies, cookies, credentials or alternate hosts.
 // The origin must come from trusted stored metadata, not a public URL input.
 func New(origin string, admission *Admission) (*Client, error) {
+	return NewWithResponseLimit(origin, admission, MaxResponseBytes)
+}
+
+// NewWithResponseLimit supports a separately reviewed metadata budget. Callers
+// choose a compiled policy, never a user-supplied byte limit. Ordinary report and
+// token clients stay at 64 KiB; large filtered catalog metadata may use 256 KiB.
+// All other TLS/DNS/deadline/header/admission/privacy limits remain unchanged.
+func NewWithResponseLimit(origin string, admission *Admission, limit int) (*Client, error) {
+	if limit != MaxResponseBytes && limit != MaxMetadataResponseBytes {
+		return nil, ErrUnavailable
+	}
 	d := &net.Dialer{Timeout: 2 * time.Second, KeepAlive: -1}
-	return newClient(origin, admission, net.DefaultResolver, d.DialContext, nil)
+	c, err := newClient(origin, admission, net.DefaultResolver, d.DialContext, nil)
+	if err != nil {
+		return nil, err
+	}
+	c.state.responseLimit = limit
+	return c, nil
 }
 
 func parseOrigin(raw string) (*url.URL, error) {
@@ -150,7 +168,7 @@ func newClient(raw string, admission *Admission, resolve resolver, connect dial,
 			return nil, ErrUnavailable
 		},
 	}
-	return &Client{&clientState{origin, admission, &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}}, nil
+	return &Client{&clientState{origin, admission, &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, MaxResponseBytes}}, nil
 }
 
 var queryKeys = map[string]bool{
@@ -164,6 +182,9 @@ var queryKeys = map[string]bool{
 // redirects, headers and partial data are discarded. No business retry occurs.
 func (c *Client) Do(ctx context.Context, method, path string, query url.Values, body []byte, authorization, contentType string) ([]byte, error) {
 	if c == nil || c.state == nil || ctx == nil || ctx.Err() != nil || (method != "GET" && method != "POST") || len(body) > MaxRequestBytes || (method == "GET" && len(body) > 0) || len(authorization) > 4096 || strings.ContainsAny(authorization, "\r\n") || (authorization != "" && !strings.HasPrefix(authorization, "Bearer ") && !strings.HasPrefix(authorization, "Basic ")) {
+		return nil, ErrUnavailable
+	}
+	if c.state.responseLimit != MaxResponseBytes && c.state.responseLimit != MaxMetadataResponseBytes {
 		return nil, ErrUnavailable
 	}
 	if path == "" || !requestPath.MatchString(path) || strings.HasPrefix(path, "//") || len(path) > 512 {
@@ -263,15 +284,15 @@ func (c *Client) Do(ctx context.Context, method, path string, query url.Values, 
 		return nil, ErrUnavailable
 	}
 	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK || response.ContentLength > MaxResponseBytes || len(response.Header.Values("Content-Type")) != 1 || response.Header.Get("Content-Encoding") != "" {
+	if response.StatusCode != http.StatusOK || response.ContentLength > int64(c.state.responseLimit) || len(response.Header.Values("Content-Type")) != 1 || response.Header.Get("Content-Encoding") != "" {
 		return nil, ErrUnavailable
 	}
 	media, _, err := mime.ParseMediaType(response.Header.Get("Content-Type"))
 	if err != nil || media != "application/json" {
 		return nil, ErrUnavailable
 	}
-	data, err := io.ReadAll(io.LimitReader(response.Body, MaxResponseBytes+1))
-	if err != nil || len(data) < 1 || len(data) > MaxResponseBytes || bounded.Err() != nil || !utf8.Valid(data) || !json.Valid(data) {
+	data, err := io.ReadAll(io.LimitReader(response.Body, int64(c.state.responseLimit)+1))
+	if err != nil || len(data) < 1 || len(data) > c.state.responseLimit || bounded.Err() != nil || !utf8.Valid(data) || !json.Valid(data) {
 		clear(data)
 		return nil, ErrUnavailable
 	}
