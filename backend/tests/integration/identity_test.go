@@ -40,8 +40,11 @@ type identityFixture struct {
 }
 
 func newIdentityFixture(t *testing.T) *identityFixture {
+	return identityFixtureFromBase(t, newFixture(t))
+}
+
+func identityFixtureFromBase(t *testing.T, f *fixture) *identityFixture {
 	t.Helper()
-	f := newFixture(t)
 	if _, err := provider(t, f).Up(f.ctx); err != nil {
 		t.Fatal(err)
 	}

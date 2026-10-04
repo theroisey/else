@@ -36,13 +36,17 @@ type fixture struct {
 // Integration tests create and remove only their uniquely named databases/roles.
 // An explicitly supplied disposable PostgreSQL admin URL is mandatory.
 func newFixture(t *testing.T) *fixture {
+	return newFixtureWithTimeout(t, 30*time.Second)
+}
+
+func newFixtureWithTimeout(t *testing.T, timeout time.Duration) *fixture {
 	t.Helper()
 	raw := os.Getenv("TEST_DATABASE_URL")
 	c, err := config.LoadDatabase(func(string) (string, bool) { return raw, raw != "" }, "TEST_DATABASE_URL")
 	if err != nil {
 		t.Fatal("set TEST_DATABASE_URL to a disposable PostgreSQL admin database; integration tests never silently skip")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	admin, err := pgx.Connect(ctx, c.URL)
 	if err != nil {
 		cancel()

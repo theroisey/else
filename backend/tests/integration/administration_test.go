@@ -32,8 +32,11 @@ type administrationFixture struct {
 }
 
 func newAdministrationFixture(t *testing.T) *administrationFixture {
+	return administrationFixtureFromIdentity(t, newIdentityFixture(t))
+}
+
+func administrationFixtureFromIdentity(t *testing.T, f *identityFixture) *administrationFixture {
 	t.Helper()
-	f := newIdentityFixture(t)
 	seedClientScopes(t, f)
 	if _, err := f.admin.Exec(f.base.ctx, `GRANT EXECUTE ON FUNCTION
 		app.admin_users(uuid,uuid,integer),app.admin_user(uuid,uuid),app.admin_roles(uuid,uuid,integer),app.admin_role(uuid,uuid),

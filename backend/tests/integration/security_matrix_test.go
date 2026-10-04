@@ -4,21 +4,13 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
-	"net"
 	"net/http"
-	"net/url"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"reflect"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/theroisey/else/backend/internal/authorization"
@@ -29,24 +21,8 @@ import (
 // This exercises compiled production wiring, not a handler assembled by the
 // test. Domain suites retain deeper body/resource/concurrency coverage.
 func TestSecurityCompiledAPIDenialMatrix(t *testing.T) {
-	binary := filepath.Join(t.TempDir(), "api")
-	buildContext, stopBuild := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer stopBuild()
-	build := exec.CommandContext(buildContext, "sh", "scripts/build-api.sh", binary, "", "", "")
-	build.Dir = "../.."
-	build.Env = append(os.Environ(), "PATH="+filepath.Join(runtime.GOROOT(), "bin")+":"+os.Getenv("PATH"), "CGO_ENABLED=0")
-	if err := build.Run(); err != nil {
-		t.Fatal("compiled security API build failed")
-	}
+	binary := buildCompiledAPI(t)
 	f := newAdministrationFixture(t)
-	grants, err := os.ReadFile("../../scripts/grant-runtime.sql")
-	if err != nil {
-		t.Fatal("runtime grant source unavailable")
-	}
-	sql := strings.ReplaceAll(strings.ReplaceAll(string(grants), "\\set ON_ERROR_STOP on", ""), "else_runtime", f.runtimeRole)
-	if _, err := f.admin.Exec(f.base.ctx, sql); err != nil {
-		t.Fatal("compiled API runtime grants failed")
-	}
 	ctx := correlation.New(f.base.ctx)
 	f.user(t, "security.empty@example.com")
 	empty, err := f.service.Login(ctx, "security.empty@example.com", bootstrapPassword)
@@ -71,58 +47,18 @@ func TestSecurityCompiledAPIDenialMatrix(t *testing.T) {
 		t.Fatal("scoped session setup failed")
 	}
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal("private API address unavailable")
-	}
-	address := listener.Addr().String()
-	_ = listener.Close()
-	origin := "http://" + address
-	source, err := url.Parse(f.base.URL)
-	if err != nil {
-		t.Fatal("private runtime URL invalid")
-	}
+	api := startCompiledAPI(t, f, binary)
+	origin, apiContext, client := api.Origin, api.Context, api.Client
 	runtimeConfig := f.runtime.Config().ConnConfig
-	source.User = url.UserPassword(runtimeConfig.User, runtimeConfig.Password)
-	apiContext, stopAPI := context.WithCancel(f.base.ctx)
-	var logs bytes.Buffer
-	command := exec.CommandContext(apiContext, binary)
-	command.Env = []string{"DATABASE_URL=" + source.String(), "AUTH_PUBLIC_ORIGIN=" + origin, "AUTH_COOKIE_SECURE=false", "HTTP_ADDRESS=" + address}
-	command.Stdout, command.Stderr = &logs, &logs
-	if err := command.Start(); err != nil {
-		stopAPI()
-		t.Fatal("compiled security API startup failed")
-	}
 	// Read the buffer only after Wait: exec writes it concurrently while running.
 	defer func() {
-		stopAPI()
-		_ = command.Wait()
+		api.Close()
 		for _, forbidden := range []string{"synthetic-security-private-marker", f.login.Token, f.login.CSRF, empty.Token, empty.CSRF, scoped.Token, scoped.CSRF, runtimeConfig.Password} {
-			if strings.Contains(logs.String(), forbidden) {
+			if strings.Contains(api.Logs.String(), forbidden) {
 				t.Error("compiled API logs exposed synthetic private input")
 			}
 		}
 	}()
-	client := &http.Client{Timeout: 2 * time.Second}
-	ready := false
-	for n := 0; n < 100; n++ {
-		response, err := client.Get(origin + "/ready")
-		if err == nil {
-			_ = response.Body.Close()
-			if response.StatusCode == http.StatusOK {
-				ready = true
-				break
-			}
-		}
-		select {
-		case <-apiContext.Done():
-			t.Fatal("compiled API readiness canceled")
-		case <-time.After(50 * time.Millisecond):
-		}
-	}
-	if !ready {
-		t.Fatal("compiled security API not ready")
-	}
 
 	correlationID := regexp.MustCompile(`^[A-Z2-7]{26}$`)
 	seenIDs := map[string]bool{}
