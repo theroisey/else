@@ -124,6 +124,7 @@ function Workspace({
     { label: 'Pricing', path: 'pricing', shown: has('pricing.view') },
     { label: 'Integrations', path: 'integrations', shown: has('integrations.view') },
     { label: 'Web analytics', path: 'analytics', shown: has('analytics.view') },
+    { label: 'Commerce', path: 'commerce', shown: has('analytics.view') },
     { label: 'Activity', path: 'activity', shown: !!data.activity },
     {
       label: 'Audit history',
@@ -317,8 +318,8 @@ function Workspace({
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted">
               External performance totals are not included in this overview.
-              Authorized users can open measured GA4 reports from Web analytics.
-              Marketing and commerce synchronization remain unavailable.
+              Authorized users can open measured GA4 reports from Web analytics and WooCommerce reports from Commerce.
+              Marketing synchronization remains unavailable.
             </p>
           </aside>
         </div>

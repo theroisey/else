@@ -34,6 +34,8 @@ const IntegrationListPage = lazy(() => import('../features/integrations/Integrat
 const IntegrationDetailPage = lazy(() => import('../features/integrations/IntegrationDetailPage').then(m => ({ default: m.IntegrationDetailPage })))
 const AnalyticsListPage = lazy(() => import('../features/analytics/AnalyticsListPage').then(m => ({ default: m.AnalyticsListPage })))
 const AnalyticsReportPage = lazy(() => import('../features/analytics/AnalyticsReportPage').then(m => ({ default: m.AnalyticsReportPage })))
+const CommerceListPage = lazy(() => import('../features/ecommerce/CommerceListPage').then(m => ({ default: m.CommerceListPage })))
+const CommerceReportPage = lazy(() => import('../features/ecommerce/CommerceReportPage').then(m => ({ default: m.CommerceReportPage })))
 const AuditPage = lazy(() => import('../features/audit/AuditPage').then(m => ({ default: m.AuditPage })))
 const ReleasePage = lazy(() => import('../features/releases/ReleasePage').then(m => ({ default: m.ReleasePage })))
 const BillingListPage = lazy(() => import('../features/billing/BillingListPage').then(m => ({ default: m.BillingListPage })))
@@ -71,6 +73,8 @@ export function App() {
             <Route path="clients/:id/integrations/:connectionID" element={<ClientRoute name="Integration"><IntegrationDetailPage /></ClientRoute>} />
             <Route path="clients/:id/analytics" element={<ClientRoute name="Web analytics"><AnalyticsListPage /></ClientRoute>} />
             <Route path="clients/:id/analytics/:connectionID" element={<ClientRoute name="Web analytics"><AnalyticsReportPage /></ClientRoute>} />
+            <Route path="clients/:id/commerce" element={<ClientRoute name="Commerce"><CommerceListPage /></ClientRoute>} />
+            <Route path="clients/:id/commerce/:connectionID" element={<ClientRoute name="Commerce"><CommerceReportPage /></ClientRoute>} />
             <Route path="clients/:id/audit" element={<ClientRoute name="Audit"><AuditPage client /></ClientRoute>} />
             <Route path="clients/:id/billing" element={<ClientRoute name="Finance"><BillingListPage /></ClientRoute>} />
             <Route path="clients/:id/billing/new" element={<ClientRoute name="Finance"><BillingEditorPage create /></ClientRoute>} />

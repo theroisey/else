@@ -1,16 +1,13 @@
 import { z } from '../../lib/validation'
 import { APIError } from '../../services/authenticated'
 import { isUUID } from '../auth/session'
-import { connectionSchema, revisionSchema } from '../integrations/models'
+import { parseReportCatalog, syncStatus } from '../integrations/report-contracts'
+export { parseQueued } from '../integrations/report-contracts'
 
 const uuid = z.string().refine(isUUID)
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => {
   const d = new Date(v + 'T00:00:00Z')
   return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === v && v >= '2000-01-01'
-})
-const timestamp = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z$/).refine(v => {
-  const d = new Date(v)
-  return Number.isFinite(d.getTime()) && d.getUTCFullYear() >= 1 && d.toISOString().slice(0, 19) === v.slice(0, 19)
 })
 export const metricNames = ['activeUsers', 'sessions', 'screenPageViews', 'keyEvents'] as const
 const safeText = (max: number, multiline = false) => z.string().max(max).refine(v => new TextEncoder().encode(v).length <= max && !/[\p{Cc}\uFFFD]/u.test(multiline ? v.replaceAll('\n', '').replaceAll('\t', '') : v))
@@ -33,13 +30,7 @@ const workspace = z.object({
   definitions: z.array(definition).length(4), summary: report, daily: report,
   acquisition: report, devices: report, landing: report,
 }).strict()
-const status = z.object({
-  job_id: uuid.nullable(), state: z.enum(['not_synced', 'queued', 'running', 'succeeded', 'failed']),
-  reason: z.enum(['provider_unavailable', 'authorization_required', 'connection_changed', 'interrupted']).nullable(),
-  updated_at: timestamp.nullable(), synced_at: timestamp.nullable(), stale: z.boolean(),
-}).strict().refine(v => (v.state === 'failed') === (v.reason !== null) &&
-  (v.state === 'not_synced' ? v.job_id === null && v.updated_at === null : v.job_id !== null && v.updated_at !== null))
-const view = z.object({ status, data: workspace.nullable() }).strict()
+const view = z.object({ status: syncStatus, data: workspace.nullable() }).strict()
 export type Workspace = z.infer<typeof workspace>
 export type Report = z.infer<typeof report>
 export type View = z.infer<typeof view>
@@ -93,15 +84,5 @@ function compareTuple(a: string[], b: string[]) {
   return 0
 }
 export function parseCatalog(body: unknown, client: string, after = '') {
-  const parsed = z.object({ data: z.array(connectionSchema).max(25), next_id: uuid.nullable() }).strict().safeParse(body)
-  if (!parsed.success) throw new APIError(0, 'invalid_response')
-  const { data, next_id } = parsed.data
-  if (data.some((v, i) => v.client_id !== client || v.provider !== 'ga4' || v.id <= (i ? data[i - 1]!.id : after)) ||
-    next_id !== null && (data.length !== 25 || next_id !== data.at(-1)?.id)) throw new APIError(0, 'invalid_response')
-  return parsed.data
-}
-export function parseQueued(body: unknown, expectedRevision: bigint) {
-  const parsed = z.object({ job_id: uuid, state: z.literal('queued'), connection_revision: revisionSchema }).strict().safeParse(body)
-  if (!parsed.success || BigInt(parsed.data.connection_revision) !== expectedRevision) throw new APIError(0, 'invalid_response')
-  return parsed.data
+  return parseReportCatalog(body, client, 'ga4', after)
 }

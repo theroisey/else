@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { workspace as syntheticGA4Workspace } from '../src/features/analytics/fixtures.test-data'
+import { workspace as syntheticCommerceWorkspace } from '../src/features/ecommerce/fixtures.test-data'
 
 
 test.describe.configure({ mode: 'serial' })
@@ -1426,6 +1427,74 @@ test('GA4 creates audited pending setup, clears unavailable credentials and read
   await page.getByLabel('End date', { exact: true }).fill('2026-10-03')
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByRole('table', { name: /Daily trends/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Connection setup and sync', exact: true })).toHaveCount(0)
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='analytics.view'`)
+  await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
+  expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
+})
+
+test('WooCommerce creates audited pending setup, clears keys and reads separate exact stored cohorts', async ({ page }, testInfo) => {
+  const client = 'fc555555-5555-4555-8555-555555555555', actor = 'fc111111-1111-4111-8111-111111111111', role = 'fc222222-2222-4222-8222-222222222222'
+  database(`INSERT INTO app.client_scopes(id) VALUES('${client}'); INSERT INTO app.clients(id,name) VALUES('${client}','Synthetic WooCommerce client'); INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actor}','commerce.browser.fixture@example.com','Synthetic commerce operator',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO app.roles(id,role_key,display_name) VALUES('${role}','commerce_browser_fixture','Synthetic commerce reader and manager'); INSERT INTO app.role_permissions(id,role_id,permission_key) SELECT gen_random_uuid(),'${role}',permission_key FROM app.permissions WHERE permission_key IN ('clients.view','analytics.view','integrations.view','integrations.manage'); INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),'${actor}','${role}','client','${client}');`)
+  await page.goto(`/app/clients/${client}/integrations`)
+  await page.getByLabel('Email', { exact: true }).fill('commerce.browser.fixture@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByLabel('WooCommerce HTTPS origin', { exact: true }).fill('https://synthetic-store.example.com/wordpress')
+  await page.getByRole('checkbox', { name: /permanently bind/ }).check()
+  await page.getByRole('button', { name: 'Add pending store', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'WooCommerce setup and synchronization', exact: true })).toBeVisible()
+  const connection = page.url().split('/').at(-1)!
+  expect(connection).toMatch(/^[a-f0-9-]{36}$/)
+  expect(database(`SELECT state FROM app.integration_connections WHERE id='${connection}'`)).toBe('pending')
+  expect(database(`SELECT count(*) FROM app.audit_events WHERE resource_id='${connection}' AND event_name='integration_connection.created'`)).toBe('1')
+  await page.getByLabel('Start date (UTC)', { exact: true }).fill('2026-10-01')
+  await page.getByLabel('End date (UTC, exclusive)', { exact: true }).fill('2026-10-04')
+  await page.getByLabel('Consumer key', { exact: true }).fill('ck_' + 'a'.repeat(40))
+  await page.getByLabel('Consumer secret', { exact: true }).fill('cs_' + 'b'.repeat(40))
+  await page.getByRole('checkbox').check()
+  const response = page.waitForResponse(r => r.url().endsWith('/woocommerce/credentials') && r.request().method() === 'POST')
+  await page.getByRole('button', { name: 'Save Read key and queue sync', exact: true }).click()
+  // No encryption keyring or vendor access is configured in this isolated API.
+  expect((await response).status()).toBe(503)
+  await expect(page.getByLabel('Consumer key', { exact: true })).toHaveValue('')
+  await expect(page.getByLabel('Consumer secret', { exact: true })).toHaveValue('')
+  await expect(page.getByRole('button', { name: 'Save Read key and queue sync', exact: true })).toBeDisabled()
+  expect(database(`SELECT count(*) FROM app.analytics_sync_jobs WHERE connection_id='${connection}'`)).toBe('0')
+  await page.getByRole('link', { name: 'View WooCommerce reports', exact: true }).click()
+  await page.getByLabel('Start date (UTC)', { exact: true }).fill('2026-10-01')
+  await page.getByLabel('End date (UTC, exclusive)', { exact: true }).fill('2026-10-04')
+  await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
+  await expect(page.getByText('Not synchronized', { exact: true })).toBeVisible()
+  await expect(page.getByText(/No measured reports are available/)).toBeVisible()
+  // Synthetic private storage tests real authenticated reads/rendering only.
+  // It does not establish real-store access, collection or credential validity.
+  const measured = syntheticCommerceWorkspace()
+  for (const report of [measured.orders, measured.refunds, measured.products]) { report.client_id = client; report.connection_id = connection }
+  const workspaceJSON = JSON.stringify(measured).replaceAll("'", "''")
+  database(`UPDATE app.integration_connections SET state='connected',revision=revision+1,updated_at=clock_timestamp() WHERE id='${connection}'; INSERT INTO app.analytics_sync_jobs(id,client_id,connection_id,requested_by,since,until,provider,start_at,end_at,currency,connection_revision,generation,credential_revision,state,attempts,finished_at) VALUES(gen_random_uuid(),'${client}','${connection}','${actor}',NULL,NULL,'woocommerce','2026-10-01T00:00:00Z','2026-10-04T00:00:00Z','USD',2,1,1,'succeeded',1,clock_timestamp()); INSERT INTO app.analytics_snapshots(client_id,connection_id,generation,since,until,provider,start_at,end_at,currency,workspace) VALUES('${client}','${connection}',1,NULL,NULL,'woocommerce','2026-10-01T00:00:00Z','2026-10-04T00:00:00Z','USD','${workspaceJSON}'::jsonb);`)
+  await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
+  await expect(page.getByRole('table', { name: 'Order-created cohort', exact: true })).toBeVisible()
+  await expect(page.getByRole('table', { name: 'Refund-created events', exact: true })).toBeVisible()
+  await expect(page.getByRole('table', { name: 'Original product lines', exact: true })).toBeVisible()
+  await expect(page.getByText('USD 90,071,992,547,409.93', { exact: true })).toHaveCount(3)
+  await expect(page.getByRole('img', { name: 'Daily observed order totals and refunds', exact: true })).toBeVisible()
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 1000 }); await markTaskScreenshot(page)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`woocommerce-synthetic-reports-${width}.png`), fullPage: true })
+  }
+  await page.getByRole('combobox', { name: 'Report currency', exact: true }).selectOption('JPY')
+  await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
+  await expect(page.getByText(/No measured reports are available/)).toBeVisible()
+  await expect(page.getByRole('table')).toHaveCount(0)
+  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key IN ('integrations.view','integrations.manage')`)
+  await page.reload()
+  await page.getByLabel('Start date (UTC)', { exact: true }).fill('2026-10-01')
+  await page.getByLabel('End date (UTC, exclusive)', { exact: true }).fill('2026-10-04')
+  await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
+  await expect(page.getByRole('table', { name: 'Original product lines', exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Connection setup and sync', exact: true })).toHaveCount(0)
   database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='analytics.view'`)
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()

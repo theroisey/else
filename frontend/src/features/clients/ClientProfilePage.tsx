@@ -135,6 +135,7 @@ function ClientWorkspace({ id }: { id: string }) {
         {hasPermission(grants, {permission:'pricing.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/pricing`}>Pricing</Link> : null}
         {hasPermission(grants, {permission:'integrations.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/integrations`}>Integrations</Link> : null}
         {hasPermission(grants, {permission:'analytics.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/analytics`}>Web analytics</Link> : null}
+        {hasPermission(grants, {permission:'analytics.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/commerce`}>Commerce</Link> : null}
         {hasPermission(grants, {permission:'activity.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/activity`}>Activity</Link> : null}
         {hasPermission(grants, {permission:'audit.view',scope:'global'}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/audit`}>Audit history</Link> : null}
         <details className="min-w-0 text-xs text-muted">
