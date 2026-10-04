@@ -1485,7 +1485,7 @@ test('WooCommerce creates audited pending setup, clears keys and reads separate 
     expect(await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`woocommerce-synthetic-reports-${width}.png`), fullPage: true })
   }
-  await page.getByLabel('Report currency', { exact: true }).selectOption('JPY')
+  await page.getByRole('combobox', { name: 'Report currency', exact: true }).selectOption('JPY')
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByText(/No measured reports are available/)).toBeVisible()
   await expect(page.getByRole('table')).toHaveCount(0)
