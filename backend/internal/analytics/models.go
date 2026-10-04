@@ -11,6 +11,7 @@ import (
 
 	"github.com/theroisey/else/backend/internal/integrations/connections"
 	"github.com/theroisey/else/backend/internal/integrations/providers/ga4"
+	"github.com/theroisey/else/backend/internal/integrations/providers/metaads"
 	"github.com/theroisey/else/backend/internal/integrations/providers/woocommerce"
 )
 
@@ -70,6 +71,11 @@ type View struct {
 type CommerceView struct {
 	Status Status                 `json:"status"`
 	Data   *woocommerce.Workspace `json:"data"`
+}
+
+type MarketingView struct {
+	Status Status             `json:"status"`
+	Data   *metaads.Workspace `json:"data"`
 }
 
 type ConnectionPage struct {

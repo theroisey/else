@@ -1,6 +1,6 @@
 # Meta daily Insights normalization
 
-[#96](https://github.com/theroisey/else/issues/96) implements the concrete backend decoder under marketing parent #25. `internal/integrations/providers/metaads.Normalize` interprets complete already-collected account-level daily responses. It is a pure package: no HTTP route, credential access, provider traffic, persistence, audit or frontend success state is enabled.
+[#96](https://github.com/theroisey/else/issues/96) supplied the pure exact decoder. Existing [#25](https://github.com/theroisey/else/issues/25) now extends it with compiled read-only collection, encrypted manual user-token setup, durable background jobs, minimal stored reports and a measured workspace. See [synchronization and operations](meta-synchronization.md) and [workspace](meta-workspace.md). Verification uses explicit synthetic fixtures; actual account access and production activation are not inferred.
 
 ## Official contract evidence
 
@@ -10,7 +10,7 @@ Verified on 2026-10-03 from Meta's own `facebook/facebook-python-business-sdk` r
 - [AdAccount.get_insights](https://github.com/facebook/facebook-python-business-sdk/blob/efd8423a2e595ea8d4c04eb824ce113f2f1d68cd/facebook_business/adobjects/adaccount.py) defines GET `/insights`, `level`, `time_range` and `time_increment` parameters. The intended subset is daily account reporting without breakdowns, asynchronous jobs or attribution actions.
 - [AdsInsights fields/types](https://github.com/facebook/facebook-python-business-sdk/blob/efd8423a2e595ea8d4c04eb824ce113f2f1d68cd/facebook_business/adobjects/adsinsights.py) defines `account_id`, `account_currency`, `spend`, `impressions`, `clicks`, `date_start` and `date_stop` as strings. These seven fields are the decoder's exact row allowlist.
 
-This verifies the generated field/version contract. It does not establish minimum OAuth scopes, token ownership, callback/revocation policy, supported deployment account access, currency exponent/rounding or conversion attribution. Direct Meta authorization documentation is still excluded by the managed workspace's enforced network policy. Live transport/ingestion cannot be enabled before that policy is verified and recorded under #24/#25. No proxy bypass or unofficial documentation mirror was used.
+The generated contract alone does not establish authorization. The manual user-token lifecycle recorded under #25 on 2026-10-04 additionally uses Meta's official permission declaration and generated permissions/account endpoints, linked in the synchronization document. Direct developer documentation remains excluded by the workspace policy; approved official GitHub sources establish this bounded subset without a proxy bypass or unofficial mirror. In-app OAuth callbacks, token refresh and provider-side revocation remain outside the implemented manual lifecycle.
 
 ## Trusted context and bounds
 
@@ -26,8 +26,8 @@ Spend is an exact nonnegative provider-reported decimal string: at most 18 integ
 
 CTR percent = clicks / impressions × 100; CPC decimal = spend / clicks; CPM decimal = spend / impressions × 1000. Derived values retain spend's provider units and currency context, with six fractional digits rounded half up. A zero denominator produces JSON null. Total ratios use summed spend/counts, never an average of daily ratios. Clicks need not be unique and CTR is not capped at 100%. Attribution is explicitly unavailable: reach, conversion, CPA and ROAS are not manufactured from this subset.
 
-## Verification and remaining integration
+## Verification
 
-Clearly synthetic tests cover complete paginated/empty/zero reports, weighted totals, six-digit rounding ties, large exact values, calendar/DST limits, account/currency isolation, missing/duplicate dates, cycles/incomplete pages, size/type/duplicate-field boundaries and navigation/account-data redaction. Fuzzing requires every failure to return the same fixed error and an entirely empty report. All five exact-head CI gates remain required for review.
+Clearly synthetic tests cover complete paginated/empty/zero reports, weighted totals, six-digit rounding ties, large exact values, calendar/DST limits, account/currency isolation, missing/duplicate dates, cycles/incomplete pages, size/type/duplicate-field boundaries and navigation/account-data redaction. Fuzzing requires every failure to return the same fixed error and an entirely empty report. All six CI gates remain required for verified main changes.
 
-Before exposing this report, #24/#25 must add verified authorization/credential/HTTP policy, freshly fenced account context and sync/retention/audit storage; the separate frontend must consume authorized measured reports with honest age/error/unavailable states. This package does not mark a connection or sync successful and does not close either parent.
+The collector checks provider permission/account context before and after collection, with a fresh local fence before every request and final publication. Independent Go and SQL validation precedes complete durable publication. The workspace reads only stored authorized reports and keeps sync age/errors/unavailable metrics visible. Live deployment requires operator-provisioned compatible credentials and reviewed egress configuration; test fixtures do not establish those conditions.

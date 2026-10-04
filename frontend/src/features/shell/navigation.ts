@@ -36,6 +36,8 @@ export function safeReturnTo(value: unknown) {
   if (analytics && isUUID(analytics[1]) && (!analytics[2] || isUUID(analytics[2]))) return value
   const commerce = /^\/app\/clients\/([^/]+)\/commerce(?:\/([^/]+))?$/.exec(value)
   if (commerce && isUUID(commerce[1]) && (!commerce[2] || isUUID(commerce[2]))) return value
+  const marketing = /^\/app\/clients\/([^/]+)\/marketing(?:\/([^/]+))?$/.exec(value)
+  if (marketing && isUUID(marketing[1]) && (!marketing[2] || isUUID(marketing[2]))) return value
   const audit = /^\/app\/clients\/([^/]+)\/audit$/.exec(value)
   if (audit && isUUID(audit[1])) return value
   const task = /^\/app\/clients\/([^/]+)\/tasks(?:\/(new|[^/]+)(?:\/(edit))?)?$/.exec(value)

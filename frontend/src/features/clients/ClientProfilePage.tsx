@@ -136,21 +136,9 @@ function ClientWorkspace({ id }: { id: string }) {
         {hasPermission(grants, {permission:'integrations.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/integrations`}>Integrations</Link> : null}
         {hasPermission(grants, {permission:'analytics.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/analytics`}>Web analytics</Link> : null}
         {hasPermission(grants, {permission:'analytics.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/commerce`}>Commerce</Link> : null}
+        {hasPermission(grants, {permission:'analytics.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/marketing`}>Marketing</Link> : null}
         {hasPermission(grants, {permission:'activity.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/activity`}>Activity</Link> : null}
         {hasPermission(grants, {permission:'audit.view',scope:'global'}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/audit`}>Audit history</Link> : null}
-        <details className="min-w-0 text-xs text-muted">
-          <summary className="cursor-pointer rounded-sm px-3 py-2">
-            Additional modules · Unavailable
-          </summary>
-          <ul className="mt-2 grid gap-2 rounded-md border border-line bg-surface p-3 sm:grid-cols-2">
-            {[
-              'Marketing',
-              'E-commerce',
-            ].map((module) => (
-              <li key={module}>{module} · Unavailable</li>
-            ))}
-          </ul>
-        </details>
       </nav>
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="grid gap-5">

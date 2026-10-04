@@ -145,7 +145,8 @@ jobs:
   migrations:
     name: PostgreSQL integration
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # Includes setup plus the explicitly bounded 15-minute real-database suite.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

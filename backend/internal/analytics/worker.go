@@ -12,15 +12,18 @@ import (
 
 	"github.com/theroisey/else/backend/internal/audit"
 	"github.com/theroisey/else/backend/internal/correlation"
+	"github.com/theroisey/else/backend/internal/integrations/catalog"
 	"github.com/theroisey/else/backend/internal/integrations/credentials"
 	"github.com/theroisey/else/backend/internal/integrations/providerhttp"
 	"github.com/theroisey/else/backend/internal/integrations/providers/ga4"
+	"github.com/theroisey/else/backend/internal/integrations/providers/metaads"
 	"github.com/theroisey/else/backend/internal/integrations/providers/woocommerce"
 )
 
 type Worker struct {
 	service   *Service
 	adapter   *ga4.Adapter
+	marketing *metaads.Adapter
 	admission *providerhttp.Admission
 	cycles    atomic.Uint64
 }
@@ -36,7 +39,11 @@ func NewWorker(service *Service) (*Worker, error) {
 	if err != nil {
 		return nil, ErrInvalid
 	}
-	return &Worker{service: service, adapter: adapter, admission: admission}, nil
+	marketing, err := metaads.NewAdapter(admission)
+	if err != nil {
+		return nil, ErrInvalid
+	}
+	return &Worker{service: service, adapter: adapter, marketing: marketing, admission: admission}, nil
 }
 
 type claimed struct {
@@ -86,7 +93,7 @@ func (s *Service) claim(ctx context.Context, provider string) (claimed, error) {
 		}
 		switch job.state {
 		case "running":
-			if job.lease == nil || !validID(*job.lease) || job.account == nil || (provider == "ga4" && !property.MatchString(*job.account)) || (provider == "woocommerce" && !providerhttp.ValidOrigin(*job.account)) || len(job.envelope) == 0 || len(job.envelope) > credentials.MaxPlaintextBytes+1024 {
+			if job.lease == nil || !validID(*job.lease) || job.account == nil || ((provider == "ga4" || provider == "meta_ads") && !property.MatchString(*job.account)) || (provider == "woocommerce" && !providerhttp.ValidOrigin(*job.account)) || len(job.envelope) == 0 || len(job.envelope) > credentials.MaxPlaintextBytes+1024 {
 				return audit.Event{}, ErrUnavailable
 			}
 		case "failed":
@@ -125,6 +132,7 @@ func (s *Service) fence(ctx context.Context, job claimed) error {
 type providerCredential struct {
 	analytics *ga4.ServiceAccount
 	commerce  *woocommerce.ReadKey
+	marketing *metaads.ReadToken
 }
 
 func (providerCredential) Format(state fmt.State, _ rune) {
@@ -150,7 +158,11 @@ func (s *Service) credential(ctx context.Context, job claimed) (providerCredenti
 	if err != nil {
 		return providerCredential{}, ErrUnavailable
 	}
-	binding := credentials.Binding{ClientID: job.client, ConnectionID: job.connection, Provider: job.provider, Purpose: "provider_credential"}
+	purpose, supported := catalog.CredentialPurpose(job.provider)
+	if !supported {
+		return providerCredential{}, ErrUnavailable
+	}
+	binding := credentials.Binding{ClientID: job.client, ConnectionID: job.connection, Provider: job.provider, Purpose: purpose}
 	plaintext, err := s.ring.Open(binding, envelope)
 	defer clear(plaintext)
 	if err != nil || ctx.Err() != nil {
@@ -162,6 +174,8 @@ func (s *Service) credential(ctx context.Context, job claimed) (providerCredenti
 		credential.analytics, err = ga4.ParseServiceAccount(plaintext)
 	case "woocommerce":
 		credential.commerce, err = woocommerce.ParseReadKey(plaintext)
+	case "meta_ads":
+		credential.marketing, err = metaads.ParseReadToken(plaintext)
 	default:
 		return providerCredential{}, ErrUnavailable
 	}
@@ -183,6 +197,13 @@ func (s *Service) finish(ctx context.Context, job claimed, workspace any) error 
 		case "woocommerce":
 			value, ok := workspace.(*woocommerce.Workspace)
 			valid = ok && value != nil && woocommerce.ValidWorkspace(*value, job.period().expectation(job.client, job.connection))
+		case "meta_ads":
+			value, ok := workspace.(*metaads.Workspace)
+			if job.account == nil {
+				return ErrUnavailable
+			}
+			request := metaads.Request{ClientID: job.client, ConnectionID: job.connection, AccountID: *job.account, Since: job.period().since, Until: job.period().until}
+			valid = ok && value != nil && metaads.ValidWorkspace(*value, request)
 		}
 		if !valid {
 			return ErrUnavailable
@@ -201,6 +222,9 @@ func (s *Service) finish(ctx context.Context, job claimed, workspace any) error 
 		query := `SELECT job_id::text,client_id::text,connection_id::text,state,before_job_revision,job_revision,before_connection_revision,connection_revision,snapshot_id::text,before_snapshot_revision,snapshot_revision FROM app.analytics_sync_finish($1::uuid,$2::uuid,$3::jsonb)`
 		if job.provider == "woocommerce" {
 			query = `SELECT job_id::text,client_id::text,connection_id::text,state,before_job_revision,job_revision,before_connection_revision,connection_revision,snapshot_id::text,before_snapshot_revision,snapshot_revision FROM app.commerce_sync_finish($1::uuid,$2::uuid,$3::jsonb)`
+		}
+		if job.provider == "meta_ads" {
+			query = `SELECT job_id::text,client_id::text,connection_id::text,state,before_job_revision,job_revision,before_connection_revision,connection_revision,snapshot_id::text,before_snapshot_revision,snapshot_revision FROM app.marketing_sync_finish($1::uuid,$2::uuid,$3::jsonb)`
 		}
 		if err := q.QueryRow(ctx, query, job.id, *job.lease, raw).
 			Scan(&id, &client, &connection, &state, &beforeJob, &afterJob, &beforeConnection, &afterConnection, &snapshot, &beforeSnapshot, &afterSnapshot); err != nil {
@@ -240,18 +264,20 @@ func safeFinishError(err error) error {
 // use or network work. Every provider request rechecks its durable fence. Process
 // cancellation abandons the lease for bounded crash recovery; it cannot publish.
 func (w *Worker) RunOnce(ctx context.Context) (bool, error) {
-	if w == nil || w.service == nil || w.adapter == nil || w.admission == nil || ctx == nil || ctx.Err() != nil {
+	if w == nil || w.service == nil || w.adapter == nil || w.marketing == nil || w.admission == nil || ctx == nil || ctx.Err() != nil {
 		return false, ErrInvalid
 	}
 	operation, cancel := context.WithTimeout(correlation.New(ctx), 150*time.Second)
 	defer cancel()
-	provider, fallback := "ga4", "woocommerce"
-	if w.cycles.Add(1)%2 == 0 {
-		provider, fallback = fallback, provider
-	}
-	job, err := w.service.claim(operation, provider)
-	if errors.Is(err, errNoWork) {
-		job, err = w.service.claim(operation, fallback)
+	providers := [...]string{"ga4", "woocommerce", "meta_ads"}
+	start := (w.cycles.Add(1) - 1) % uint64(len(providers))
+	var job claimed
+	var err error
+	for i := range providers {
+		job, err = w.service.claim(operation, providers[(int(start)+i)%len(providers)])
+		if !errors.Is(err, errNoWork) {
+			break
+		}
 	}
 	defer clear(job.envelope)
 	if errors.Is(err, errNoWork) {
@@ -280,6 +306,12 @@ func (w *Worker) RunOnce(ctx context.Context) (bool, error) {
 				if err == nil {
 					workspace = &result
 				}
+			}
+		case "meta_ads":
+			request := metaads.Request{ClientID: job.client, ConnectionID: job.connection, AccountID: *job.account, Since: job.period().since, Until: job.period().until}
+			result, err := w.marketing.FetchFenced(operation, credential.marketing, request, func(ctx context.Context) error { return w.service.fence(ctx, job) })
+			if err == nil {
+				workspace = &result
 			}
 		}
 	}

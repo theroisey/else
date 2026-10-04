@@ -18,6 +18,7 @@ import (
 	"github.com/theroisey/else/backend/internal/integrations/credentials"
 	"github.com/theroisey/else/backend/internal/integrations/providerhttp"
 	"github.com/theroisey/else/backend/internal/integrations/providers/ga4"
+	"github.com/theroisey/else/backend/internal/integrations/providers/metaads"
 	"github.com/theroisey/else/backend/internal/integrations/providers/woocommerce"
 	"github.com/theroisey/else/backend/internal/integrations/vault"
 )
@@ -100,14 +101,21 @@ func (s *Service) CreateCommerce(ctx context.Context, actor, client, origin stri
 	return s.create(ctx, actor, client, "woocommerce", origin)
 }
 
+func (s *Service) CreateMarketing(ctx context.Context, actor, client, account string) (connections.Connection, error) {
+	return s.create(ctx, actor, client, "meta_ads", account)
+}
+
 func (s *Service) create(ctx context.Context, actor, client, provider, account string) (connections.Connection, error) {
 	id := newID()
-	if !validMutation(ctx, actor, client, id) || (provider == "ga4" && !property.MatchString(account)) || (provider == "woocommerce" && !providerhttp.ValidOrigin(account)) || (provider != "ga4" && provider != "woocommerce") {
+	if !validMutation(ctx, actor, client, id) || ((provider == "ga4" || provider == "meta_ads") && !property.MatchString(account)) || (provider == "woocommerce" && !providerhttp.ValidOrigin(account)) || (provider != "ga4" && provider != "woocommerce" && provider != "meta_ads") {
 		return connections.Connection{}, ErrInvalid
 	}
 	query := `SELECT id::text,client_id::text,provider,state,revision,created_at,updated_at FROM app.ga4_connection_create($1::uuid,$2::uuid,$3::uuid,$4)`
 	if provider == "woocommerce" {
 		query = `SELECT id::text,client_id::text,provider,state,revision,created_at,updated_at FROM app.commerce_connection_create($1::uuid,$2::uuid,$3::uuid,$4)`
+	}
+	if provider == "meta_ads" {
+		query = `SELECT id::text,client_id::text,provider,state,revision,created_at,updated_at FROM app.marketing_connection_create($1::uuid,$2::uuid,$3::uuid,$4)`
 	}
 	var result connections.Connection
 	err := audit.WithTransaction(ctx, s.pool, func(ctx context.Context, q audit.Queries) (audit.Event, error) {
@@ -317,6 +325,31 @@ func (s *Service) ReadCommerce(ctx context.Context, actor, client, connection, s
 	return result, nil
 }
 
+func (s *Service) SetupMarketing(ctx context.Context, actor, client, connection, expected, since, until string, plaintext []byte) (Queued, error) {
+	return s.setup(ctx, actor, client, connection, expected, syncPeriod{provider: "meta_ads", since: since, until: until}, plaintext)
+}
+
+func (s *Service) EnqueueMarketing(ctx context.Context, actor, client, connection, expected, since, until string) (Queued, error) {
+	return s.enqueue(ctx, actor, client, connection, expected, syncPeriod{provider: "meta_ads", since: since, until: until})
+}
+
+func (s *Service) ReadMarketing(ctx context.Context, actor, client, connection, since, until string) (MarketingView, error) {
+	status, raw, err := s.read(ctx, actor, client, connection, syncPeriod{provider: "meta_ads", since: since, until: until})
+	defer clear(raw)
+	if err != nil {
+		return MarketingView{}, err
+	}
+	result := MarketingView{Status: status}
+	if len(raw) > 0 {
+		workspace, err := metaads.DecodeWorkspace(raw, metaads.Request{ClientID: client, ConnectionID: connection, AccountID: "1", Since: since, Until: until})
+		if err != nil {
+			return MarketingView{}, ErrUnavailable
+		}
+		result.Data = &workspace
+	}
+	return result, nil
+}
+
 func (s *Service) read(ctx context.Context, actor, client, connection string, period syncPeriod) (Status, []byte, error) {
 	if ctx == nil || ctx.Err() != nil || !validID(actor) || !validID(client) || !validID(connection) || !period.valid(client, connection) {
 		return Status{}, nil, ErrInvalid
@@ -329,6 +362,9 @@ func (s *Service) read(ctx context.Context, actor, client, connection string, pe
 	if period.provider == "woocommerce" {
 		query = `SELECT job_id::text,job_state,reason,job_updated_at,last_synced_at,workspace FROM app.commerce_workspace_read($1::uuid,$2::uuid,$3::uuid,$4::timestamptz,$5::timestamptz,$6)`
 		args = []any{actor, client, connection, period.start, period.end, period.currency}
+	}
+	if period.provider == "meta_ads" {
+		query = `SELECT job_id::text,job_state,reason,job_updated_at,last_synced_at,workspace FROM app.marketing_workspace_read($1::uuid,$2::uuid,$3::uuid,$4::date,$5::date)`
 	}
 	err := s.pool.QueryRow(ctx, query, args...).Scan(&result.JobID, &state, &result.Reason, &result.UpdatedAt, &result.SyncedAt, &raw)
 	success := false
@@ -384,6 +420,10 @@ func (s *Service) ListCommerce(ctx context.Context, actor, client, after string)
 	return s.list(ctx, actor, client, after, "woocommerce")
 }
 
+func (s *Service) ListMarketing(ctx context.Context, actor, client, after string) (ConnectionPage, error) {
+	return s.list(ctx, actor, client, after, "meta_ads")
+}
+
 func (s *Service) list(ctx context.Context, actor, client, after, provider string) (ConnectionPage, error) {
 	if ctx == nil || ctx.Err() != nil || !validID(actor) || !validID(client) || (after != "" && !validID(after)) {
 		return ConnectionPage{}, ErrInvalid
@@ -395,6 +435,9 @@ func (s *Service) list(ctx context.Context, actor, client, after, provider strin
 	query := `SELECT id::text,client_id::text,provider,state,revision::text,created_at,updated_at FROM app.analytics_connection_list($1::uuid,$2::uuid,$3::uuid,26)`
 	if provider == "woocommerce" {
 		query = `SELECT id::text,client_id::text,provider,state,revision::text,created_at,updated_at FROM app.commerce_connection_list($1::uuid,$2::uuid,$3::uuid,26)`
+	}
+	if provider == "meta_ads" {
+		query = `SELECT id::text,client_id::text,provider,state,revision::text,created_at,updated_at FROM app.marketing_connection_list($1::uuid,$2::uuid,$3::uuid,26)`
 	}
 	rows, err := s.pool.Query(ctx, query, actor, client, cursor)
 	if err != nil {

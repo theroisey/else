@@ -190,7 +190,7 @@ it('shows no mutation controls to a scoped viewer and keeps unavailable modules 
   expect(screen.queryByRole('link', { name: 'Edit client' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Archive client' })).not.toBeInTheDocument()
   const modules = within(screen.getByRole('navigation', { name: 'Client modules' }))
-  expect(modules.getByText('Marketing · Unavailable')).toBeInTheDocument()
+  expect(modules.queryByRole('link', { name: 'Marketing' })).not.toBeInTheDocument()
   expect(modules.getByRole('link', {name:'Overview'})).toBeInTheDocument()
   expect(modules.queryAllByRole('link')).toHaveLength(1)
 })

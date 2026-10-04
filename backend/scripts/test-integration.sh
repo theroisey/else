@@ -42,5 +42,7 @@ export TEST_DATABASE_URL
 TEST_POSTGRES_CONTAINER=$task_container
 export TEST_POSTGRES_CONTAINER
 unset PGSERVICE
-# Verbose output retains fixed synthetic capacity metrics on successful runs.
-go test -race -tags integration -count=1 -v ./tests/integration "$@"
+# The complete real-database suite includes three provider lifecycles, capacity,
+# cancellation and archive/restore rehearsals. Bound the whole suite explicitly;
+# individual fixture/request/query/performance budgets remain unchanged.
+go test -race -tags integration -timeout 15m -count=1 -v ./tests/integration "$@"

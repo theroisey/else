@@ -15,7 +15,7 @@ export const syncStatus = z.object({
 }).strict().refine(v => (v.state === 'failed') === (v.reason !== null) &&
   (v.state === 'not_synced' ? v.job_id === null && v.updated_at === null : v.job_id !== null && v.updated_at !== null))
 
-export function parseReportCatalog(body: unknown, client: string, provider: 'ga4' | 'woocommerce', after = '') {
+export function parseReportCatalog(body: unknown, client: string, provider: 'ga4' | 'woocommerce' | 'meta_ads', after = '') {
   const parsed = z.object({ data: z.array(connectionSchema).max(25), next_id: uuid.nullable() }).strict().safeParse(body)
   if (!parsed.success) throw new APIError(0, 'invalid_response')
   const { data, next_id } = parsed.data

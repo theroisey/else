@@ -18,6 +18,7 @@ import * as service from './service'
 import { formatTime } from '../../lib/time'
 import { GA4SetupForm } from '../analytics/GA4SetupForm'
 import { WooCommerceSetupForm } from '../ecommerce/WooCommerceSetupForm'
+import { MetaSetupForm } from '../marketing/MetaSetupForm'
 import { hasPermission } from '../auth/permissions'
 
 export function IntegrationDetailPage() {
@@ -159,6 +160,8 @@ function ConnectionDetail({
           {record.provider === 'ga4' && writable && ['pending', 'connected', 'reauthorization_required'].includes(record.state) ? <GA4SetupForm key={record.revision} record={record} operation={operation} onQueued={() => setNotice('GA4 synchronization queued. Reload the reports to check progress; provider access is not yet verified.')} /> : null}
           {record.provider === 'woocommerce' && hasPermission(operation.auth.session?.user.permissions ?? [], { permission: 'analytics.view', scope: 'client', clientID: operation.clientID }) ? <Link className="mt-4 block underline underline-offset-4" to={`/app/clients/${operation.clientID}/commerce/${record.id}`}>View WooCommerce reports</Link> : null}
           {record.provider === 'woocommerce' && writable && ['pending', 'connected', 'reauthorization_required'].includes(record.state) ? <WooCommerceSetupForm key={record.revision} record={record} operation={operation} onQueued={() => setNotice('WooCommerce synchronization queued. Reload the stored reports to check progress; store access is not yet verified.')} /> : null}
+          {record.provider === 'meta_ads' && hasPermission(operation.auth.session?.user.permissions ?? [], { permission: 'analytics.view', scope: 'client', clientID: operation.clientID }) ? <Link className="mt-4 block underline underline-offset-4" to={`/app/clients/${operation.clientID}/marketing/${record.id}`}>View Meta reports</Link> : null}
+          {record.provider === 'meta_ads' && writable && ['pending', 'connected', 'reauthorization_required'].includes(record.state) ? <MetaSetupForm key={record.revision} record={record} operation={operation} onQueued={() => setNotice('Meta synchronization queued. Reload the stored reports to check progress; account access is not yet verified.')} /> : null}
           {writable ? (
             <div className="mt-5 border-t border-line pt-5">
               <h2 className="font-semibold">Disable local use</h2>

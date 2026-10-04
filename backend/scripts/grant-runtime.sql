@@ -62,6 +62,10 @@ GRANT EXECUTE ON FUNCTION app.commerce_connection_create(uuid,uuid,uuid,text),
  app.commerce_sync_enqueue(uuid,uuid,uuid,bigint,bigint,bigint,timestamptz,timestamptz,text,uuid,boolean),
  app.commerce_sync_cancel(uuid,uuid,uuid),app.provider_sync_claim(text),app.commerce_sync_finish(uuid,uuid,jsonb),
  app.commerce_workspace_read(uuid,uuid,uuid,timestamptz,timestamptz,text),app.commerce_connection_list(uuid,uuid,uuid,integer) TO else_runtime;
+GRANT EXECUTE ON FUNCTION app.marketing_connection_create(uuid,uuid,uuid,text),
+ app.marketing_sync_enqueue(uuid,uuid,uuid,bigint,bigint,bigint,date,date,uuid,boolean),
+ app.marketing_sync_cancel(uuid,uuid,uuid),app.marketing_sync_finish(uuid,uuid,jsonb),
+ app.marketing_workspace_read(uuid,uuid,uuid,date,date),app.marketing_connection_list(uuid,uuid,uuid,integer) TO else_runtime;
 GRANT EXECUTE ON FUNCTION app.pricing_read(uuid,uuid,uuid,uuid),app.pricing_list(uuid,uuid,uuid,uuid,integer),
  app.pricing_preview(uuid,uuid,jsonb),app.pricing_write(uuid,uuid,uuid,uuid,bigint,jsonb),
  app.pricing_copy(uuid,uuid,uuid,uuid,bigint,jsonb,uuid),app.pricing_snapshot_read(uuid,uuid,uuid) TO else_runtime;

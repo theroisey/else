@@ -168,6 +168,9 @@ func (f *analyticsFixture) finishRaw(t *testing.T, claim analyticsClaim, provide
 		if provider == "woocommerce" {
 			query = `SELECT job_id::text,client_id::text,connection_id::text,state,before_job_revision,job_revision,before_connection_revision,connection_revision,snapshot_id::text,before_snapshot_revision,snapshot_revision FROM app.commerce_sync_finish($1::uuid,$2::uuid,$3::jsonb)`
 		}
+		if provider == "meta_ads" {
+			query = `SELECT job_id::text,client_id::text,connection_id::text,state,before_job_revision,job_revision,before_connection_revision,connection_revision,snapshot_id::text,before_snapshot_revision,snapshot_revision FROM app.marketing_sync_finish($1::uuid,$2::uuid,$3::jsonb)`
+		}
 		if err := q.QueryRow(ctx, query, claim.id, *claim.lease, raw).Scan(&id, &client, &connection, &state, &bj, &aj, &bc, &ac, &snapshot, &bs, &as); err != nil {
 			return nil, err
 		}

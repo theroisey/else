@@ -2,13 +2,13 @@ import { z } from '../../lib/validation'
 import { APIError } from '../../services/authenticated'
 import { isUUID } from '../auth/session'
 import { parseReportCatalog, syncStatus } from '../integrations/report-contracts'
+import { reportDate as date, validDatePeriod as validPeriod } from '../integrations/date-period'
+import type { DatePeriod as Period } from '../integrations/date-period'
+export { validDatePeriod as validPeriod } from '../integrations/date-period'
+export type { DatePeriod as Period } from '../integrations/date-period'
 export { parseQueued } from '../integrations/report-contracts'
 
 const uuid = z.string().refine(isUUID)
-const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => {
-  const d = new Date(v + 'T00:00:00Z')
-  return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === v && v >= '2000-01-01'
-})
 export const metricNames = ['activeUsers', 'sessions', 'screenPageViews', 'keyEvents'] as const
 const safeText = (max: number, multiline = false) => z.string().max(max).refine(v => new TextEncoder().encode(v).length <= max && !/[\p{Cc}\uFFFD]/u.test(multiline ? v.replaceAll('\n', '').replaceAll('\t', '') : v))
 const integer = /^(0|[1-9][0-9]{0,17})$/
@@ -34,11 +34,6 @@ const view = z.object({ status: syncStatus, data: workspace.nullable() }).strict
 export type Workspace = z.infer<typeof workspace>
 export type Report = z.infer<typeof report>
 export type View = z.infer<typeof view>
-export interface Period { since: string; until: string }
-export function validPeriod(p: Period) {
-  return date.safeParse(p.since).success && date.safeParse(p.until).success && p.until >= p.since &&
-    Date.parse(p.until) - Date.parse(p.since) <= 30 * 86400000
-}
 export function parseView(body: unknown, client: string, connection: string, period: Period): View {
   const parsed = view.safeParse(body)
   if (!parsed.success || !validPeriod(period)) throw new APIError(0, 'invalid_response')

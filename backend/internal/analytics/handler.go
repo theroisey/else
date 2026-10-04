@@ -27,15 +27,15 @@ func NewHandler(service *Service, auth *identity.Handler, logger *slog.Logger) (
 }
 
 // WithMetadata keeps the existing list/detail/disconnect handler and adds only
-// the reviewed GA4/commerce routes. Each path authenticates the current session.
+// the reviewed provider routes. Each path authenticates the current session.
 func (h *Handler) WithMetadata(metadata http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/clients/"), "/")
-		if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) >= 2 && (parts[1] == "analytics" || parts[1] == "commerce") {
+		if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) >= 2 && (parts[1] == "analytics" || parts[1] == "commerce" || parts[1] == "marketing") {
 			h.ServeHTTP(w, r)
 			return
 		}
-		if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) >= 3 && parts[1] == "integrations" && ((len(parts) == 3 && (parts[2] == "ga4" || parts[2] == "woocommerce")) || (len(parts) >= 4 && (parts[3] == "ga4" || parts[3] == "woocommerce"))) {
+		if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) >= 3 && parts[1] == "integrations" && ((len(parts) == 3 && (parts[2] == "ga4" || parts[2] == "woocommerce" || parts[2] == "meta_ads")) || (len(parts) >= 4 && (parts[3] == "ga4" || parts[3] == "woocommerce" || parts[3] == "meta_ads"))) {
 			h.ServeHTTP(w, r)
 			return
 		}
@@ -54,7 +54,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveCommerce(w, r, session, parts)
 		return
 	}
-	if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) >= 2 && parts[1] == "analytics" && validID(parts[0]) {
+	dateProvider := "ga4"
+	if len(parts) >= 2 && (parts[1] == "marketing" || parts[1] == "integrations" && ((len(parts) == 3 && parts[2] == "meta_ads") || len(parts) >= 4 && parts[3] == "meta_ads")) {
+		dateProvider = "meta_ads"
+	}
+	if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) >= 2 && (parts[1] == "analytics" || parts[1] == "marketing") && validID(parts[0]) {
 		if r.Method != http.MethodGet {
 			h.method(w, r, "GET")
 			return
@@ -65,7 +69,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				h.fail(w, r, ErrInvalid)
 				return
 			}
-			page, err := h.service.List(r.Context(), session.User.ID, parts[0], query.Get("after"))
+			page, err := h.service.list(r.Context(), session.User.ID, parts[0], query.Get("after"), dateProvider)
 			if err != nil {
 				h.fail(w, r, err)
 				return
@@ -78,13 +82,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// The canonical analytics read uses the same protected report operation.
-		parts = append([]string{parts[0], "integrations", parts[2]}, "ga4")
+		parts = append([]string{parts[0], "integrations", parts[2]}, dateProvider)
 	}
 	if !strings.HasPrefix(r.URL.Path, "/api/v1/clients/") || len(parts) < 3 || parts[1] != "integrations" || !validID(parts[0]) {
 		h.fail(w, r, ErrInvalid)
 		return
 	}
-	if len(parts) == 4 && parts[3] == "ga4" && validID(parts[2]) {
+	if len(parts) == 4 && parts[3] == dateProvider && validID(parts[2]) {
 		if r.Method != http.MethodGet {
 			h.method(w, r, "GET")
 			return
@@ -94,7 +98,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.fail(w, r, err)
 			return
 		}
-		view, err := h.service.Read(r.Context(), session.User.ID, parts[0], parts[2], since, until)
+		var view any
+		if dateProvider == "meta_ads" {
+			view, err = h.service.ReadMarketing(r.Context(), session.User.ID, parts[0], parts[2], since, until)
+		} else {
+			view, err = h.service.Read(r.Context(), session.User.ID, parts[0], parts[2], since, until)
+		}
 		if err != nil {
 			h.fail(w, r, err)
 			return
@@ -102,9 +111,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		httpapi.WriteJSON(w, r, 200, view)
 		return
 	}
-	create := len(parts) == 3 && parts[2] == "ga4"
-	setup := len(parts) == 5 && validID(parts[2]) && parts[3] == "ga4" && parts[4] == "credentials"
-	sync := len(parts) == 5 && validID(parts[2]) && parts[3] == "ga4" && parts[4] == "sync"
+	create := len(parts) == 3 && parts[2] == dateProvider
+	setup := len(parts) == 5 && validID(parts[2]) && parts[3] == dateProvider && parts[4] == "credentials"
+	sync := len(parts) == 5 && validID(parts[2]) && parts[3] == dateProvider && parts[4] == "sync"
 	if !create && !setup && !sync {
 		h.fail(w, r, ErrInvalid)
 		return
@@ -121,19 +130,23 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	allowed := []string{"revision", "since", "until"}
-	if create {
-		allowed = []string{"property_id"}
-	} else if setup {
-		allowed = append(allowed, "credential_json")
+	accountField, credentialField, bodyLimit := "property_id", "credential_json", int64(32<<10)
+	if dateProvider == "meta_ads" {
+		accountField, credentialField, bodyLimit = "account_id", "access_token", 8<<10
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<10)
+	if create {
+		allowed = []string{accountField}
+	} else if setup {
+		allowed = append(allowed, credentialField)
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, bodyLimit)
 	fields, err := decodeFields(r.Body, allowed)
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
 	if create {
-		connection, err := h.service.Create(r.Context(), session.User.ID, parts[0], fields["property_id"])
+		connection, err := h.service.create(r.Context(), session.User.ID, parts[0], dateProvider, fields[accountField])
 		if err != nil {
 			h.fail(w, r, err)
 			return
@@ -144,13 +157,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var queued Queued
+	period := syncPeriod{provider: dateProvider, since: fields["since"], until: fields["until"]}
 	if setup {
-		plaintext := []byte(fields["credential_json"])
-		delete(fields, "credential_json")
+		plaintext := []byte(fields[credentialField])
+		delete(fields, credentialField)
 		defer clear(plaintext)
-		queued, err = h.service.Setup(r.Context(), session.User.ID, parts[0], parts[2], fields["revision"], fields["since"], fields["until"], plaintext)
+		queued, err = h.service.setup(r.Context(), session.User.ID, parts[0], parts[2], fields["revision"], period, plaintext)
 	} else {
-		queued, err = h.service.Enqueue(r.Context(), session.User.ID, parts[0], parts[2], fields["revision"], fields["since"], fields["until"])
+		queued, err = h.service.enqueue(r.Context(), session.User.ID, parts[0], parts[2], fields["revision"], period)
 	}
 	if err != nil {
 		h.fail(w, r, err)

@@ -1,5 +1,5 @@
-// Package metaads interprets the verified v26.0 daily account Insights contract.
-// It does not authorize callers, access credentials, fetch pages or persist data.
+// Package metaads validates and collects the verified v26.0 daily account
+// Insights contract. Authorization and durable storage belong to analytics.
 package metaads
 
 import (
