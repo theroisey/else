@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/theroisey/else/backend/internal/integrations/catalog"
 )
 
 var ErrInvalid = errors.New("invalid integration metadata request")
@@ -42,7 +44,7 @@ func validID(id string) bool {
 }
 func validConnection(c Connection, client string) bool {
 	n, e := strconv.ParseInt(c.Revision, 10, 64)
-	if !validID(c.ID) || c.ID != strings.ToLower(c.ID) || c.ClientID != client || c.Provider != "meta_ads" || e != nil || n < 1 || strconv.FormatInt(n, 10) != c.Revision {
+	if !validID(c.ID) || c.ID != strings.ToLower(c.ID) || c.ClientID != client || !catalog.Supported(c.Provider) || e != nil || n < 1 || strconv.FormatInt(n, 10) != c.Revision {
 		return false
 	}
 	switch c.State {

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/theroisey/else/backend/internal/audit"
 	"github.com/theroisey/else/backend/internal/correlation"
+	"github.com/theroisey/else/backend/internal/integrations/catalog"
 	"github.com/theroisey/else/backend/internal/integrations/credentials"
 )
 
@@ -122,10 +123,11 @@ func (s *Service) encrypt(ctx context.Context, actor, client, connection string,
 	if e != nil {
 		return Result{}, safeError(e)
 	}
-	if binding.ClientID != client || binding.ConnectionID != connection || binding.Provider != "meta_ads" || revision < 1 || generation < 1 {
+	purpose, supported := catalog.CredentialPurpose(binding.Provider)
+	if binding.ClientID != client || binding.ConnectionID != connection || !supported || revision < 1 || generation < 1 {
 		return Result{}, ErrUnavailable
 	}
-	binding.Purpose = "access_token"
+	binding.Purpose = purpose
 	if ctx.Err() != nil {
 		return Result{}, ErrUnavailable
 	}

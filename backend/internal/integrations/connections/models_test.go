@@ -40,6 +40,12 @@ func TestStrictBoundedFilter(t *testing.T) {
 func TestStoredMetadataValidationAndExactRevision(t *testing.T) {
 	stamp := time.Date(2026, 10, 3, 0, 0, 0, 123000, time.UTC)
 	c := Connection{ID: testConnection, ClientID: testClient, Provider: "meta_ads", State: "pending", Revision: "9223372036854775807", CreatedAt: stamp, UpdatedAt: stamp}
+	for _, provider := range []string{"meta_ads", "ga4", "woocommerce"} {
+		c.Provider = provider
+		if !validConnection(c, testClient) {
+			t.Fatal("selected stored provider rejected")
+		}
+	}
 	for _, state := range []string{"pending", "connected", "disconnect_pending", "revocation_failed", "disconnected", "reauthorization_required"} {
 		c.State = state
 		if !validConnection(c, testClient) {
