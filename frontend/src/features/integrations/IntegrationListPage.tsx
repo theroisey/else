@@ -11,6 +11,7 @@ import { IntegrationError, IntegrationHeader, IntegrationState } from './Shared'
 import * as service from './service'
 import { providerLabels } from './models'
 import { GA4CreateForm } from '../analytics/GA4CreateForm'
+import { WooCommerceCreateForm } from '../ecommerce/WooCommerceCreateForm'
 import { formatTime } from '../../lib/time'
 
 export function IntegrationListPage() {
@@ -54,6 +55,7 @@ function Connections({ operation }: { operation: Operation }) {
         Refresh integrations
       </Button>
       {!busy && !failed && rows && operation.permissions.manage && client.data?.status === 'active' ? <GA4CreateForm operation={operation} /> : null}
+      {!busy && !failed && rows && operation.permissions.manage && client.data?.status === 'active' ? <WooCommerceCreateForm operation={operation} /> : null}
       {!busy && !failed && client.data?.status === 'archived' ? (
         <p role="status" className="mt-4 text-sm text-muted">
           This client is archived. Connection history remains readable; changes
@@ -114,7 +116,7 @@ function Connections({ operation }: { operation: Operation }) {
           <h2 className="font-semibold">No connections on this page</h2>
           <p className="mt-2 text-sm text-muted">
             No recorded connections are available with your current access.
-            GA4 setup is available to authorized integration managers.
+            GA4 and WooCommerce setup are available to authorized integration managers.
           </p>
         </div>
       )}
