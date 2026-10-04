@@ -6,7 +6,7 @@ import { isUUID } from '../auth/session'
 import { AccessDenied } from '../clients/Shared'
 import { useIntegrations, useIntegrationClient } from './hooks'
 import type { Operation } from './hooks'
-import { canDisable } from './models'
+import { canDisable, providerLabels } from './models'
 import type { Connection } from './models'
 import {
   IntegrationError,
@@ -126,7 +126,7 @@ function ConnectionDetail({
           ) : null}
           <div className="mt-5 rounded-md border border-line bg-surface p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
-              <h2 className="text-lg font-semibold">Meta Ads</h2>
+              <h2 className="text-lg font-semibold">{providerLabels[record.provider]}</h2>
               <IntegrationState record={record} />
             </div>
             <dl className="mt-5 grid gap-5 text-sm sm:grid-cols-2">
@@ -150,7 +150,7 @@ function ConnectionDetail({
               </div>
             </dl>
           </div>
-          {record.state === 'revocation_failed' ? <ManualAction /> : null}
+          {record.state === 'revocation_failed' ? <ManualAction provider={record.provider} /> : null}
           {writable ? (
             <div className="mt-5 border-t border-line pt-5">
               <h2 className="font-semibold">Disable local use</h2>
