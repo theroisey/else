@@ -13,3 +13,12 @@ Authorized integration managers on active clients can add an immutable pending G
 Keys are held only in an uncontrolled textarea and the short-lived request path, never React state, query cache, browser storage, URLs or error text. Submission clears the field immediately; closing or replacing the form removes it. JavaScript strings cannot guarantee immediate physical memory erasure. Writes never retry automatically. An uncertain/conflicting/unavailable response disables further writes until fresh connection data is loaded, and the key must be supplied again. Saving shows queued status, not verified Google access. Protected server encryption configuration and a supervised worker from the same application image are required for successful setup and collection.
 
 No runtime package or application image is added. Contract/component tests use explicitly synthetic reports, including counts above JavaScript's safe integer limit and fractional key events. Browser coverage creates an audited pending property and checks unconfigured-keyring refusal, empty status, independent analytics permissions, revoked access and responsive layouts against actual Go/PostgreSQL. Synthetic fixtures and local tests do not establish live Google credentials, deployed egress or actual property ownership.
+
+## Verification
+
+All 474 frontend tests, lint/typecheck/build, compiled-Go CSP probes and 16 actual API/database browser flows pass. A subsequent table wrapping adjustment also passes its focused GA4 browser flow and fresh built-artifact CSP probes. The initial combined-image Compose rehearsal passes; final review-head CI and artifact checks remain separately tracked in [PR #126](https://github.com/theroisey/else/pull/126). Local browser verification used only an isolated generated copy on port 5177 and system Chromium, preserving the user's existing 5173 listener.
+
+The following views contain **synthetic stored report fixtures**. They verify rendering and actual API report reads, not live Google access or collection.
+
+![Synthetic GA4 desktop reports](screenshots/ga4-workspace-desktop.png)
+![Synthetic GA4 mobile reports](screenshots/ga4-workspace-mobile.png)
