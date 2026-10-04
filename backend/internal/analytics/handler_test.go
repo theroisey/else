@@ -38,3 +38,15 @@ func TestPeriodQueryCannotExpandTheReportOrExposeCredentials(t *testing.T) {
 		}
 	}
 }
+
+func TestCommerceQueryKeepsExplicitCurrencyAndUTCSeconds(t *testing.T) {
+	valid := "start=2026-10-01T00:00:00Z&end=2026-10-02T00:00:00Z&currency=USD"
+	if period, err := commercePeriodQuery(&url.URL{RawQuery: valid}); err != nil || period.provider != "woocommerce" {
+		t.Fatal("supported UTC commerce query refused")
+	}
+	for _, query := range []string{valid + "&token=private", valid + "&currency=TRY", strings.Replace(valid, "USD", "BTC", 1), strings.Replace(valid, "2026-10-02", "2026-11-02", 1), strings.Replace(valid, "00:00:00Z", "00:00:00%2B00:00", 1), ""} {
+		if period, err := commercePeriodQuery(&url.URL{RawQuery: query}); err != ErrInvalid || period != (syncPeriod{}) {
+			t.Fatal("expanded or unbounded commerce query accepted")
+		}
+	}
+}

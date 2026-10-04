@@ -58,6 +58,10 @@ GRANT EXECUTE ON FUNCTION app.ga4_connection_create(uuid,uuid,uuid,text),app.ana
  app.analytics_sync_cancel(uuid,uuid,uuid),app.analytics_job_allowed(uuid,uuid),app.analytics_sync_claim(),
  app.analytics_sync_finish(uuid,uuid,jsonb),app.analytics_workspace_read(uuid,uuid,uuid,date,date),
  app.analytics_snapshots_prune(integer),app.analytics_connection_list(uuid,uuid,uuid,integer) TO else_runtime;
+GRANT EXECUTE ON FUNCTION app.commerce_connection_create(uuid,uuid,uuid,text),
+ app.commerce_sync_enqueue(uuid,uuid,uuid,bigint,bigint,bigint,timestamptz,timestamptz,text,uuid,boolean),
+ app.commerce_sync_cancel(uuid,uuid,uuid),app.provider_sync_claim(text),app.commerce_sync_finish(uuid,uuid,jsonb),
+ app.commerce_workspace_read(uuid,uuid,uuid,timestamptz,timestamptz,text),app.commerce_connection_list(uuid,uuid,uuid,integer) TO else_runtime;
 GRANT EXECUTE ON FUNCTION app.pricing_read(uuid,uuid,uuid,uuid),app.pricing_list(uuid,uuid,uuid,uuid,integer),
  app.pricing_preview(uuid,uuid,jsonb),app.pricing_write(uuid,uuid,uuid,uuid,bigint,jsonb),
  app.pricing_copy(uuid,uuid,uuid,uuid,bigint,jsonb,uuid),app.pricing_snapshot_read(uuid,uuid,uuid) TO else_runtime;

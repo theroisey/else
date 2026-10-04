@@ -27,15 +27,15 @@ func NewHandler(service *Service, auth *identity.Handler, logger *slog.Logger) (
 }
 
 // WithMetadata keeps the existing list/detail/disconnect handler and adds only
-// the reviewed GA4 routes. Both paths perform their own real authentication.
+// the reviewed GA4/commerce routes. Each path authenticates the current session.
 func (h *Handler) WithMetadata(metadata http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/clients/"), "/")
-		if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) >= 2 && parts[1] == "analytics" {
+		if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) >= 2 && (parts[1] == "analytics" || parts[1] == "commerce") {
 			h.ServeHTTP(w, r)
 			return
 		}
-		if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) >= 3 && parts[1] == "integrations" && ((len(parts) == 3 && parts[2] == "ga4") || (len(parts) >= 4 && parts[3] == "ga4")) {
+		if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) >= 3 && parts[1] == "integrations" && ((len(parts) == 3 && (parts[2] == "ga4" || parts[2] == "woocommerce")) || (len(parts) >= 4 && (parts[3] == "ga4" || parts[3] == "woocommerce"))) {
 			h.ServeHTTP(w, r)
 			return
 		}
@@ -50,6 +50,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/clients/"), "/")
+	if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) >= 2 && (parts[1] == "commerce" || (parts[1] == "integrations" && ((len(parts) == 3 && parts[2] == "woocommerce") || (len(parts) >= 4 && parts[3] == "woocommerce")))) {
+		h.serveCommerce(w, r, session, parts)
+		return
+	}
 	if strings.HasPrefix(r.URL.Path, "/api/v1/clients/") && len(parts) >= 2 && parts[1] == "analytics" && validID(parts[0]) {
 		if r.Method != http.MethodGet {
 			h.method(w, r, "GET")
