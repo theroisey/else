@@ -31,7 +31,9 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
-git archive HEAD | tar -x -C "$task_directory"
+# Public tracked initializer scripts must remain readable after privilege drop,
+# even when the caller uses umask 077. Credentials are generated separately 0600.
+(umask 022; git archive HEAD | tar -x -C "$task_directory")
 . "$task_directory/backend/scripts/recover-compose-postgres.sh"
 sh "$task_directory/docker/dev/prepare.sh"
 FRONTEND_PORT=0

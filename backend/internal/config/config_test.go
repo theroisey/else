@@ -29,11 +29,12 @@ func TestLoadDefaultsAndOverrides(t *testing.T) {
 		"HTTP_REQUEST_TIMEOUT":  "4s",
 		"HTTP_SHUTDOWN_TIMEOUT": "3s", "HTTP_READINESS_TIMEOUT": "500ms",
 		"HTTP_MAX_HEADER_BYTES": "8192",
+		"FRONTEND_DIRECTORY":    "/frontend",
 	}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if overridden.Address != "[::1]:8081" || overridden.LogLevel != slog.LevelWarn ||
+	if overridden.FrontendDirectory != "/frontend" || overridden.Address != "[::1]:8081" || overridden.LogLevel != slog.LevelWarn ||
 		overridden.ReadinessTimeout != 500*time.Millisecond || overridden.MaxHeaderBytes != 8192 ||
 		overridden.ReadHeaderTimeout != 2*time.Second || overridden.ReadTimeout != 20*time.Second ||
 		overridden.WriteTimeout != 10*time.Second || overridden.IdleTimeout != 30*time.Second ||
@@ -47,6 +48,9 @@ func TestLoadRejectsUnsafeConfigurationWithoutEchoingValues(t *testing.T) {
 		name   string
 		values map[string]string
 	}{
+		{"frontend empty", map[string]string{"FRONTEND_DIRECTORY": ""}},
+		{"frontend relative", map[string]string{"FRONTEND_DIRECTORY": "secret-value"}},
+		{"frontend unclean", map[string]string{"FRONTEND_DIRECTORY": "/secret-value/../frontend"}},
 		{"address empty", map[string]string{"HTTP_ADDRESS": ""}},
 		{"address URL", map[string]string{"HTTP_ADDRESS": "https://secret-value:8080"}},
 		{"address injection", map[string]string{"HTTP_ADDRESS": "secret-value\n:8080"}},

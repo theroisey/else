@@ -73,7 +73,7 @@ try {
   stage = 'eval denial from ordinary same-origin script'
   await page.evaluate(() => new Promise((resolve, reject) => {
     const script = document.createElement('script')
-    script.src = '/_security-test/eval.js'
+    script.src = '/assets/_security-test-eval.js'
     script.onload = resolve
     script.onerror = reject
     document.head.append(script)
