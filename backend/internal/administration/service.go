@@ -178,7 +178,7 @@ func (s *Service) CreateUser(ctx context.Context, actor, email, name, password s
 		return Mutation{}, err
 	}
 	// Hashing uses the identity policy, never a caller-supplied hash.
-	hash, err := s.passwords.Hash(password)
+	hash, err := identity.HashPassword(ctx, s.passwords, password)
 	if err != nil {
 		if errors.Is(err, identity.ErrInvalidInput) {
 			return Mutation{}, ErrInvalid

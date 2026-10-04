@@ -67,6 +67,12 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.service.Login(r.Context(), input.Email, input.Password)
 	if err != nil {
+		if errors.Is(err, ErrPasswordWorkUnavailable) {
+			h.logger.WarnContext(r.Context(), "authentication_busy", "request_id", httpapi.RequestID(r.Context()))
+			w.Header().Set("Retry-After", "1")
+			httpapi.WriteError(w, r, http.StatusServiceUnavailable, "service_busy", "This operation is temporarily unavailable. Try again.")
+			return
+		}
 		if errors.Is(err, ErrInvalidCredentials) {
 			h.logger.WarnContext(r.Context(), "authentication_failed", "request_id", httpapi.RequestID(r.Context()))
 			httpapi.WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", "Email or password is incorrect.")
