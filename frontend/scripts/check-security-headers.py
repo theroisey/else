@@ -1,4 +1,5 @@
-"""Verify declared browser headers on actual nginx successes/errors/proxies."""
+"""Verify declared browser headers on actual single-process runtime responses."""
+import json
 from pathlib import Path
 import re
 import sys
@@ -14,14 +15,11 @@ def verify():
             or parsed.username or parsed.password or parsed.query or parsed.fragment
             or parsed.path not in ("", "/")):
         raise ValueError("private test origin required")
-    nginx = Path(__file__).resolve().parents[1].joinpath("nginx.conf").read_text()
+    policy = Path(__file__).resolve().parents[2].joinpath("backend/internal/http/browser-headers.json")
     names = ("Content-Security-Policy", "X-Frame-Options", "X-Content-Type-Options", "Referrer-Policy")
-    expected = {}
-    for name in names:
-        match = re.search(r'add_header ' + name + r' "([^"]+)" always;', nginx)
-        if not match:
-            raise ValueError("declared header missing")
-        expected[name] = match.group(1)
+    expected = json.loads(policy.read_text())
+    if set(expected) != set(names):
+        raise ValueError("declared header missing")
     if (expected["X-Frame-Options"] != "DENY" or expected["X-Content-Type-Options"] != "nosniff"
             or expected["Referrer-Policy"] != "no-referrer"
             or "'unsafe-inline'" in expected["Content-Security-Policy"]
@@ -57,7 +55,7 @@ def verify():
 if __name__ == "__main__":
     try:
         verify()
-        print("Actual nginx SPA/asset/public/API/error security headers verified without duplicates.")
+        print("Actual Go SPA/asset/public/API/error security headers verified without duplicates.")
     except Exception:
         print("Actual runtime security header verification failed.", file=sys.stderr)
         sys.exit(1)

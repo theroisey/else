@@ -10,7 +10,7 @@
 /docker/dev/.prepare.*/
 
 # Frontend dependencies and generated output.
-node_modules/
+node_modules
 dist/
 coverage/
 .vite/

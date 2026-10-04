@@ -1,5 +1,5 @@
 // Chromium enforcement/compatibility against a built artifact and real API.
-// Actual nginx header application is checked independently in Container CI.
+// Actual application-image header application is checked independently in Container CI.
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { chromium, expect } from '@playwright/test'
@@ -73,7 +73,7 @@ try {
   stage = 'eval denial from ordinary same-origin script'
   await page.evaluate(() => new Promise((resolve, reject) => {
     const script = document.createElement('script')
-    script.src = '/_security-test/eval.js'
+    script.src = '/assets/_security-test-eval.js'
     script.onload = resolve
     script.onerror = reject
     document.head.append(script)

@@ -3,12 +3,6 @@ services:
   backend:
     build:
       secrets: [proxy_ca]
-  frontend:
-    build:
-      secrets: [proxy_ca]
-  migrate:
-    build:
-      secrets: [proxy_ca]
 secrets:
   proxy_ca:
     file: ${CODEX_PROXY_CERT:?The managed session CA must be set}
