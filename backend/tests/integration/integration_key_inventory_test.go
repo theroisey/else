@@ -217,7 +217,9 @@ func TestIntegrationInventoryPrivateSQLAndPopulatedRollback(t *testing.T) {
 		}
 	}
 	p := provider(t, f.base)
-	if _, e := p.Down(f.base.ctx); e != nil {
+	// Target the inventory predecessor explicitly; later catalog migrations
+	// preserve this entrypoint instead of removing it.
+	if _, e := p.DownTo(f.base.ctx, 20); e != nil {
 		t.Fatal(e)
 	}
 	f.assertRow(t, 1, false, 2, 1, 2)
