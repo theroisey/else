@@ -14,6 +14,8 @@ Every unsafe auth request requires an exact `Origin` equal to `AUTH_PUBLIC_ORIGI
 
 The in-process login limiter allows five attempts per 15 minutes per digest of direct peer IP plus canonical email. It stores at most 10,000 buckets, refuses overflow and exposes a generic 429 with `Retry-After`. It supplements trusted-edge or distributed limiting; it is not cluster-wide. The backend ignores `Forwarded` and `X-Forwarded-For`. Deployments configure the external public origin and must rate-limit at the edge when a reverse proxy makes many clients share one direct peer.
 
+[#111](https://github.com/theroisey/else/issues/111) independently caps actual password hashing/verification at two synchronous operations per API process, shared by identity and user administration. See [password work admission](password-work.md). Full admission returns a fixed 503 `service_busy`, `Retry-After: 1`, no cookies and no successful mutation/audit. There is no request queue; cancellation does not release a running operation's slot before its CPU work ends. The Argon policy and known/unknown/disabled/wrong-password verification remain unchanged. This local resource bound supplements deployed edge/distributed protection.
+
 Logs contain fixed authentication event/error codes and the server request ID, without email, password, cookie/token, CSRF value, Origin, user agent or forwarded IP. Successful login and logout write `session.created` and `session.archived` atomically with the session mutation using the verified user actor. The bootstrap writes `user.created` atomically. Denied logins have no business mutation and produce safe logs rather than attacker-amplifiable database rows.
 
 ## API contract

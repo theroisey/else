@@ -84,7 +84,12 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("authorization_startup_failed", "error_code", "authorization_startup_failed")
 		return 1
 	}
-	identityService, err := identity.NewService(pool, identity.ArgonPasswords{}, authorizationService)
+	passwords, err := identity.NewBoundedPasswords(identity.ArgonPasswords{})
+	if err != nil {
+		logger.Error("identity_startup_failed", "error_code", "identity_startup_failed")
+		return 1
+	}
+	identityService, err := identity.NewService(pool, passwords, authorizationService)
 	if err != nil {
 		logger.Error("identity_startup_failed", "error_code", "identity_startup_failed")
 		return 1
@@ -94,7 +99,7 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("identity_startup_failed", "error_code", "identity_startup_failed")
 		return 1
 	}
-	administrationService, err := administration.NewService(pool, identity.ArgonPasswords{})
+	administrationService, err := administration.NewService(pool, passwords)
 	if err != nil {
 		logger.Error("administration_startup_failed", "error_code", "administration_startup_failed")
 		return 1
