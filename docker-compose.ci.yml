@@ -1,10 +1,7 @@
 # Applied only by the isolated Compose verification runner.
 services:
-  frontend:
-    build:
-      labels:
-        org.opencontainers.image.revision: ${CI_REVISION:?Missing tested revision}
   backend:
+    image: else-application:${CI_IMAGE_TAG:?Missing isolated image tag}
     build:
       args:
         BUILD_VERSION: sha-${CI_REVISION:?Missing tested revision}
@@ -12,3 +9,7 @@ services:
         BUILD_TIME: ${CI_BUILD_TIME:?Missing tested build time}
       labels:
         org.opencontainers.image.revision: ${CI_REVISION:?Missing tested revision}
+  migrate:
+    image: else-application:${CI_IMAGE_TAG:?Missing isolated image tag}
+  bootstrap-admin:
+    image: else-application:${CI_IMAGE_TAG:?Missing isolated image tag}

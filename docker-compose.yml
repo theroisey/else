@@ -23,9 +23,15 @@ services:
     networks: [database]
 
   backend:
+    image: roisey-else:local
     build:
-      context: ./backend
+      context: .
       target: production
+    ports:
+      - '127.0.0.1:${FRONTEND_PORT:-5173}:8080'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     environment:
       DATABASE_URL: postgres://else_runtime:${RUNTIME_PASSWORD:?Missing runtime password}@postgres:5432/else?sslmode=verify-full&sslrootcert=/etc/else/ca.crt
       AUTH_PUBLIC_ORIGIN: http://localhost:${FRONTEND_PORT:-5173}
@@ -37,23 +43,14 @@ services:
     stop_grace_period: 15s
     networks: [database, application]
 
-  frontend:
-    build:
-      context: ./frontend
-      target: development
-    ports:
-      - '127.0.0.1:${FRONTEND_PORT:-5173}:5173'
-    volumes:
-      - ./frontend/src:/app/src:ro
-    depends_on:
-      backend: {condition: service_healthy}
-    networks: [application]
-
   migrate:
     profiles: [tools]
-    build:
-      context: ./backend
-      target: migration
+    image: roisey-else:local
+    entrypoint: [/migrate]
+    command: [status]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     environment:
       MIGRATION_DATABASE_URL: postgres://else_migrator:${MIGRATOR_PASSWORD:?Missing migration password}@postgres:5432/else?sslmode=verify-full&sslrootcert=/etc/else/ca.crt
     volumes:
@@ -64,9 +61,11 @@ services:
 
   bootstrap-admin:
     profiles: [tools]
-    build:
-      context: ./backend
-      target: bootstrap
+    image: roisey-else:local
+    entrypoint: [/bootstrap-admin]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     environment:
       BOOTSTRAP_DATABASE_URL: postgres://else_migrator:${MIGRATOR_PASSWORD:?Missing migration password}@postgres:5432/else?sslmode=verify-full&sslrootcert=/etc/else/ca.crt
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}

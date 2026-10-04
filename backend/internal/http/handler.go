@@ -128,6 +128,21 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Path != "/health" && r.URL.Path != "/ready" {
+		if s.frontend != nil && r.URL.Path != "/api" && !strings.HasPrefix(r.URL.Path, "/api/") {
+			if r.URL.Path == "/status" {
+				if r.Method != http.MethodGet && r.Method != http.MethodHead {
+					w.Header().Set("Allow", "GET, HEAD")
+					writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+					return
+				}
+				writeJSON(w, r, http.StatusOK, struct {
+					Status string `json:"status"`
+				}{"ok"})
+				return
+			}
+			s.frontend.ServeHTTP(w, r)
+			return
+		}
 		writeError(w, r, http.StatusNotFound, "not_found", "Resource not found.")
 		return
 	}

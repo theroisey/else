@@ -86,20 +86,23 @@ if args[:2] == ['image', 'inspect']:
     def test_dry_run_lists_canonical_tags_without_registry_calls(self):
         result, calls = self.execute(dry=True, GITHUB_EVENT_NAME="workflow_dispatch", IMAGE_VERSION="v1.2.3")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len(result.stdout.splitlines()), 6)
-        self.assertIn(f"ghcr.io/example/else-frontend:sha-{REVISION}", result.stdout)
-        self.assertIn("ghcr.io/example/else-backend:v1.2.3", result.stdout)
+        self.assertEqual(len(result.stdout.splitlines()), 3)
+        self.assertIn(f"ghcr.io/example/else:sha-{REVISION}", result.stdout)
+        self.assertIn("ghcr.io/example/else:v1.2.3", result.stdout)
         self.assertEqual(calls, [])
 
-    def test_first_publication_promotes_both_tested_images(self):
+    def test_first_publication_promotes_one_tested_image(self):
         result, calls = self.execute()
         self.assertEqual(result.returncode, 0, result.stderr)
         pushes = [call[-1] for call in calls if call[0] == "push"]
+        self.assertEqual(len(pushes), 2)
         self.assertEqual(set(pushes), {
-            f"ghcr.io/example/else-frontend:sha-{REVISION}",
-            f"ghcr.io/example/else-backend:sha-{REVISION}",
-            "ghcr.io/example/else-frontend:latest", "ghcr.io/example/else-backend:latest",
+            f"ghcr.io/example/else:sha-{REVISION}",
+            f"ghcr.io/example/else:sha-{REVISION}",
+            "ghcr.io/example/else:latest", "ghcr.io/example/else:latest",
         })
+        self.assertTrue(any(call[0] == "tag" and call[1] == "else-application:ci" for call in calls))
+        self.assertTrue(all("else-frontend" not in str(call) and "else-backend" not in str(call) for call in calls))
 
     def test_mismatched_image_cannot_be_published(self):
         result, calls = self.execute(TEST_LOCAL_REVISION="b" * 40)
@@ -107,12 +110,12 @@ if args[:2] == ['image', 'inspect']:
         self.assertFalse(any(call[0] == "push" for call in calls))
 
     def test_repeat_promotion_preserves_existing_sha_and_adds_version(self):
-        existing = [f"ghcr.io/example/else-{component}:sha-{REVISION}" for component in ("frontend", "backend")]
+        existing = [f"ghcr.io/example/else:sha-{REVISION}"]
         result, calls = self.execute(TEST_EXISTING=json.dumps(existing), IMAGE_VERSION="v1.2.3")
         self.assertEqual(result.returncode, 0, result.stderr)
         pushes = [call[-1] for call in calls if call[0] == "push"]
         self.assertFalse(any(":sha-" in ref for ref in pushes))
-        self.assertEqual(sum(ref.endswith(":v1.2.3") for ref in pushes), 2)
+        self.assertEqual(sum(ref.endswith(":v1.2.3") for ref in pushes), 1)
 
     def test_old_main_run_cannot_replace_latest(self):
         result, calls = self.execute(TEST_MAIN_SHA="b" * 40)
@@ -120,7 +123,7 @@ if args[:2] == ['image', 'inspect']:
         self.assertFalse(any(call[0] == "push" and call[-1].endswith(":latest") for call in calls))
 
     def test_existing_version_for_another_revision_is_refused(self):
-        existing = ["ghcr.io/example/else-frontend:v1.2.3"]
+        existing = ["ghcr.io/example/else:v1.2.3"]
         result, calls = self.execute(TEST_EXISTING=json.dumps(existing), TEST_REMOTE_REVISION="b" * 40, IMAGE_VERSION="v1.2.3")
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(any(call[0] == "push" and call[-1].endswith(":v1.2.3") for call in calls))

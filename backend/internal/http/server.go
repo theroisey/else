@@ -30,6 +30,7 @@ type Server struct {
 	overview       http.Handler
 	integrations   http.Handler
 	releases       http.Handler
+	frontend       http.Handler
 	draining       atomic.Bool
 	httpServer     *http.Server
 }
@@ -186,6 +187,11 @@ func New(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth ..
 		return nil, fmt.Errorf("HTTP logger is required")
 	}
 	s := &Server{config: c, logger: logger, readiness: readiness}
+	frontend, err := loadFrontend(c.FrontendDirectory)
+	if err != nil {
+		return nil, err
+	}
+	s.frontend = frontend
 	if len(auth) > 1 {
 		return nil, fmt.Errorf("at most one authentication handler is allowed")
 	}
@@ -193,7 +199,7 @@ func New(c config.Config, logger *slog.Logger, readiness ReadinessCheck, auth ..
 		s.auth = auth[0]
 	}
 	s.httpServer = &http.Server{
-		Addr: c.Address, Handler: RequestMiddleware(logger, RequestDeadline(c.RequestTimeout, http.HandlerFunc(s.handler))),
+		Addr: c.Address, Handler: browserPolicy(RequestMiddleware(logger, RequestDeadline(c.RequestTimeout, http.HandlerFunc(s.handler)))),
 		ReadHeaderTimeout: c.ReadHeaderTimeout, ReadTimeout: c.ReadTimeout,
 		WriteTimeout: c.WriteTimeout, IdleTimeout: c.IdleTimeout,
 		MaxHeaderBytes: c.MaxHeaderBytes,

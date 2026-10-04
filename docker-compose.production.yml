@@ -1,8 +1,4 @@
 # Local verification of runtime images, not a production deployment recipe.
 services:
-  frontend:
-    build:
-      target: production
-    ports: !override
-      - '127.0.0.1:${FRONTEND_PORT:-5173}:8080'
-    volumes: !reset []
+  backend:
+    read_only: true
