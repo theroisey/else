@@ -1408,8 +1408,8 @@ test('GA4 creates audited pending setup, clears unavailable credentials and read
   for (const report of [measured.summary, measured.daily, measured.acquisition, measured.devices, measured.landing]) {
     report.client_id = client; report.connection_id = connection
   }
-  const document = JSON.stringify(measured).replaceAll("'", "''")
-  database(`UPDATE app.integration_connections SET state='connected',revision=revision+1,updated_at=clock_timestamp() WHERE id='${connection}'; INSERT INTO app.analytics_sync_jobs(id,client_id,connection_id,requested_by,since,until,connection_revision,generation,credential_revision,state,attempts,finished_at) VALUES(gen_random_uuid(),'${client}','${connection}','${actor}','2026-10-01','2026-10-03',2,1,1,'succeeded',1,clock_timestamp()); INSERT INTO app.analytics_snapshots(client_id,connection_id,generation,since,until,workspace) VALUES('${client}','${connection}',1,'2026-10-01','2026-10-03','${document}'::jsonb);`)
+  const workspaceJSON = JSON.stringify(measured).replaceAll("'", "''")
+  database(`UPDATE app.integration_connections SET state='connected',revision=revision+1,updated_at=clock_timestamp() WHERE id='${connection}'; INSERT INTO app.analytics_sync_jobs(id,client_id,connection_id,requested_by,since,until,connection_revision,generation,credential_revision,state,attempts,finished_at) VALUES(gen_random_uuid(),'${client}','${connection}','${actor}','2026-10-01','2026-10-03',2,1,1,'succeeded',1,clock_timestamp()); INSERT INTO app.analytics_snapshots(client_id,connection_id,generation,since,until,workspace) VALUES('${client}','${connection}',1,'2026-10-01','2026-10-03','${workspaceJSON}'::jsonb);`)
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByRole('table', { name: /Traffic acquisition/ })).toBeVisible()
   await expect(page.getByRole('img', { name: 'Daily active users bar chart', exact: true })).toBeVisible()
