@@ -11,7 +11,7 @@ export function ReportTable({ title, report, definitions }: { title: string; rep
     <h2 className="mb-3 text-lg font-semibold">{title}</h2>
     {!report.rows.length ? <p role="status" className="rounded-md border border-line p-4 text-muted">No observations for {title.toLowerCase()} in this period.</p> : <>
       <Table caption={`${title} · ${report.since} to ${report.until}`}><thead><tr>{report.dimensions.map(v => <th key={v}>{dimensionLabels[v]}</th>)}{definitions.map(v => <th key={v.name}>{v.display_name}</th>)}</tr></thead>
-        <tbody>{rows.map(row => <tr key={JSON.stringify(row.dimensions)}>{row.dimensions.map((v, i) => <td className="max-w-xs break-all" key={report.dimensions[i]}>{report.dimensions[i] === 'date' ? day(v) : v}</td>)}{row.metrics.map((v, i) => <td className="tabular-nums" key={definitions[i]!.name}>{v}</td>)}</tr>)}</tbody>
+        <tbody>{rows.map(row => <tr key={JSON.stringify(row.dimensions)}>{row.dimensions.map((v, i) => <td className={report.dimensions[i] === 'date' ? 'whitespace-nowrap' : report.dimensions[i] === 'landingPage' ? 'max-w-xs break-all' : 'max-w-xs break-words'} key={report.dimensions[i]}>{report.dimensions[i] === 'date' ? day(v) : v}</td>)}{row.metrics.map((v, i) => <td className="whitespace-nowrap tabular-nums" key={definitions[i]!.name}>{v}</td>)}</tr>)}</tbody>
       </Table>
       <div className="mt-3 flex flex-wrap items-center gap-3" aria-label={`${title} pages`}>
         <Button size="compact" disabled={page === 0} onClick={() => setPage(v => v - 1)}>Previous {title.toLowerCase()}</Button>
