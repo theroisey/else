@@ -99,6 +99,8 @@ Future domain timestamps should use TIMESTAMPTZ and UTC persistence/API semantic
 
 ## Disposable integration verification
 
+The [recovery runbook](recovery.md) documents actual logical backup/restore and a pinned previous/current API compatibility rehearsal, including retained-key, private-grant, checkpoint and rollback limits. Its tagged test requires the owned matching PostgreSQL container exported by the standard runner and reviewed Git history; an external test URL alone is insufficient for the complete suite.
+
 Run normal formatting/vet/unit checks as documented in the [HTTP guide](backend-http.md). With Go, Docker, and openssl available:
 
 ```sh
