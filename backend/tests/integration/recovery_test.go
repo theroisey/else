@@ -23,6 +23,7 @@ import (
 	"github.com/theroisey/else/backend/internal/billing"
 	"github.com/theroisey/else/backend/internal/correlation"
 	"github.com/theroisey/else/backend/internal/database"
+	"github.com/theroisey/else/backend/internal/integrations/catalog"
 	"github.com/theroisey/else/backend/internal/integrations/credentials"
 	"github.com/theroisey/else/backend/internal/integrations/keysource"
 	"github.com/theroisey/else/backend/internal/integrations/vault"
@@ -32,13 +33,23 @@ import (
 	"github.com/theroisey/else/backend/internal/tasks"
 )
 
-const recoveryPriorRevision = "9dc9ed9050f6927784dfc3a0bd503a9ffad9aaac"
+const recoveryPriorRevision = "12b84cdfb598faf89b6c585ec62bf922a7fef5d5"
 
 // This is an actual logical archive/restore, not a mocked database rewind.
 // It requires the runner's owned disposable server and matching client tools.
 func TestLogicalRecoveryAndCompatibleAPIRollback(t *testing.T) {
 	currentBinary := buildCompiledAPI(t)
 	priorBinary := buildRecoveryPriorAPI(t)
+	for _, selected := range []bool{false, true} {
+		name := "Meta_only_compatible_prior"
+		if selected {
+			name = "mixed_providers_prior_refused"
+		}
+		t.Run(name, func(t *testing.T) { rehearseLogicalRecovery(t, currentBinary, priorBinary, selected) })
+	}
+}
+
+func rehearseLogicalRecovery(t *testing.T, currentBinary, priorBinary string, selected bool) {
 	container := os.Getenv("TEST_POSTGRES_CONTAINER")
 	if !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(container) {
 		t.Fatal("logical recovery requires test-integration.sh's disposable PostgreSQL container")
@@ -46,6 +57,30 @@ func TestLogicalRecoveryAndCompatibleAPIRollback(t *testing.T) {
 	f := administrationFixtureFromIdentity(t, identityFixtureFromBase(t, newFixtureWithTimeout(t, 2*time.Minute)))
 	api := startCompiledAPI(t, f, currentBinary) // Actual checked-in runtime grants.
 	seedRecoveryFacts(t, f)
+	if selected {
+		service, err := vault.NewService(f.runtime, syntheticRing(t, "synthetic-primary", 0x6b))
+		if err != nil {
+			t.Fatal("selected recovery vault unavailable")
+		}
+		for index, provider := range []string{"ga4", "woocommerce"} {
+			id := connectionID(index + 2)
+			account := "123456789"
+			if provider == "woocommerce" {
+				account = "https://shop.example.com/store"
+			}
+			if _, err := f.admin.Exec(f.base.ctx, `INSERT INTO app.integration_connections(id,client_id,provider,provider_account_id) VALUES($1,$2,$3,$4)`, id, clientAID, provider, account); err != nil {
+				t.Fatal("selected recovery connection seed failed")
+			}
+			ctx := correlation.New(f.base.ctx)
+			checkpoint, err := service.Inspect(ctx, f.actor, clientAID, id)
+			if err != nil {
+				t.Fatal("selected recovery checkpoint failed")
+			}
+			if _, err := service.Replace(ctx, f.actor, clientAID, id, checkpoint, []byte("synthetic-recovery-credential")); err != nil {
+				t.Fatal("selected recovery credential seed failed")
+			}
+		}
+	}
 	api.Close() // Snapshot after stopping the API, with no background writers.
 	if _, err := f.admin.Exec(f.base.ctx, "SET TimeZone='UTC'"); err != nil {
 		t.Fatal("source UTC session unavailable")
@@ -145,6 +180,26 @@ func TestLogicalRecoveryAndCompatibleAPIRollback(t *testing.T) {
 		t.Fatal("retained key failed to authenticate restored ciphertext")
 	}
 	clear(secret)
+	if selected {
+		for index, provider := range []string{"ga4", "woocommerce"} {
+			id := connectionID(index + 2)
+			if admin.QueryRow(target.ctx, "SELECT envelope FROM app.integration_credentials WHERE connection_id=$1", id).Scan(&raw) != nil {
+				t.Fatal("selected restored envelope missing")
+			}
+			envelope, err := credentials.ParseEnvelope(raw)
+			clear(raw)
+			if err != nil {
+				t.Fatal("selected restored envelope invalid")
+			}
+			purpose, _ := catalog.CredentialPurpose(provider)
+			secret, err := ring.Open(credentials.Binding{ClientID: clientAID, ConnectionID: id, Provider: provider, Purpose: purpose}, envelope)
+			if err != nil || !bytes.Equal(secret, []byte("synthetic-recovery-credential")) {
+				clear(secret)
+				t.Fatal("selected restored ciphertext did not authenticate")
+			}
+			clear(secret)
+		}
+	}
 	if !reflect.DeepEqual(before, recoveryFingerprints(t, target.ctx, admin)) {
 		t.Fatal("restore key and privilege checks changed data")
 	}
@@ -152,7 +207,15 @@ func TestLogicalRecoveryAndCompatibleAPIRollback(t *testing.T) {
 	for index, binary := range []string{currentBinary, priorBinary, currentBinary} {
 		a := startCompiledAPI(t, recovered, binary)
 		for _, path := range []string{"clients/" + clientAID, "clients/" + clientAID + "/tasks", "clients/" + clientAID + "/reminders", "clients/" + clientAID + "/billing", "clients/" + clientAID + "/pricing", "clients/" + clientAID + "/integrations"} {
-			recoveryRequest(t, a, recovered, "GET", path, "")
+			if selected && strings.HasSuffix(path, "/integrations") {
+				if index == 1 {
+					recoveryPriorSelectedDenial(t, a, recovered)
+				} else {
+					recoveryRequest(t, a, recovered, "GET", path, "", "meta_ads", "ga4", "woocommerce")
+				}
+			} else {
+				recoveryRequest(t, a, recovered, "GET", path, "")
+			}
 		}
 		if index == 0 && !reflect.DeepEqual(before, recoveryFingerprints(t, target.ctx, admin)) {
 			t.Fatal("restored current API reads changed data")
@@ -170,7 +233,7 @@ func TestLogicalRecoveryAndCompatibleAPIRollback(t *testing.T) {
 			t.Fatal("current/prior/current recovery lost revision or atomic audit")
 		}
 	}
-	t.Logf("logical recovery matched %d table/history fingerprints; retained-key and runtime privilege checks passed; current/prior/current API reads and three audited revisions passed", len(before))
+	t.Logf("logical recovery matched %d table/history fingerprints; retained-key and runtime privilege checks passed; three audited revisions passed (mixed providers: %t, prior provider compatibility only for Meta)", len(before), selected)
 }
 
 func buildRecoveryPriorAPI(t *testing.T) string {
@@ -228,7 +291,7 @@ func recoveryFingerprints(t *testing.T, ctx context.Context, conn *pgx.Conn) map
 	return result
 }
 
-func recoveryRequest(t *testing.T, api *compiledAPI, f *administrationFixture, method, path, body string) {
+func recoveryRequest(t *testing.T, api *compiledAPI, f *administrationFixture, method, path, body string, providers ...string) {
 	t.Helper()
 	r, err := http.NewRequestWithContext(api.Context, method, api.Origin+"/api/v1/"+path, strings.NewReader(body))
 	if err != nil {
@@ -256,20 +319,65 @@ func recoveryRequest(t *testing.T, api *compiledAPI, f *administrationFixture, m
 	}
 	if method == "GET" && path != "clients/"+clientAID {
 		var entries []json.RawMessage
-		if json.Unmarshal(value.Data, &entries) != nil || len(entries) != 1 {
+		expected := 1
+		if len(providers) > 0 {
+			expected = len(providers)
+		}
+		if json.Unmarshal(value.Data, &entries) != nil || len(entries) != expected {
 			t.Fatal("real recovery API lost seeded domain rows")
 		}
-		var entry struct {
-			ID       string
-			ClientID string `json:"client_id"`
-		}
-		if json.Unmarshal(entries[0], &entry) != nil || entry.ID == "" || entry.ClientID != clientAID {
-			t.Fatal("real recovery API lost client-bound domain data")
+		seen := map[string]bool{}
+		for _, raw := range entries {
+			var entry struct {
+				ID       string
+				ClientID string `json:"client_id"`
+				Provider string
+			}
+			if json.Unmarshal(raw, &entry) != nil || entry.ID == "" || entry.ClientID != clientAID {
+				t.Fatal("real recovery API lost client-bound domain data")
+			}
+			if len(providers) > 0 {
+				allowed := false
+				for _, provider := range providers {
+					if provider == entry.Provider {
+						allowed = true
+					}
+				}
+				if !allowed || seen[entry.Provider] {
+					t.Fatal("mixed recovery metadata provider lost or duplicated")
+				}
+				seen[entry.Provider] = true
+			}
 		}
 	} else {
 		var entry struct{ ID string }
 		if json.Unmarshal(value.Data, &entry) != nil || entry.ID != clientAID {
 			t.Fatal("real recovery API client identity differs")
+		}
+	}
+}
+
+// The pinned integrated artifact predates the selected catalog. A bounded safe
+// error proves incompatibility; never approve it as a mixed-provider rollback.
+func recoveryPriorSelectedDenial(t *testing.T, api *compiledAPI, f *administrationFixture) {
+	t.Helper()
+	request, err := http.NewRequestWithContext(api.Context, "GET", api.Origin+"/api/v1/clients/"+clientAID+"/integrations", nil)
+	if err != nil {
+		t.Fatal("prior compatibility probe invalid")
+	}
+	request.AddCookie(&http.Cookie{Name: "else_session", Value: f.login.Token})
+	response, err := api.Client.Do(request)
+	if err != nil {
+		t.Fatal("prior compatibility probe unavailable")
+	}
+	defer response.Body.Close()
+	raw, err := io.ReadAll(io.LimitReader(response.Body, 65537))
+	if err != nil || len(raw) > 65536 || response.StatusCode != http.StatusBadRequest || response.Header.Get("Cache-Control") != "no-store" || !bytes.Contains(raw, []byte(`"code":"invalid_request"`)) {
+		t.Fatal("prior mixed-provider incompatibility was not safely observed")
+	}
+	for _, private := range []string{"shop.example.com", "123456789", "synthetic-recovery-credential", "provider_account_id", "envelope"} {
+		if bytes.Contains(raw, []byte(private)) {
+			t.Fatal("prior incompatibility exposed private data")
 		}
 	}
 }
