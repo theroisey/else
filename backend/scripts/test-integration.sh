@@ -38,6 +38,9 @@ done
 task_port=$(docker port "$task_container" 5432/tcp | awk -F: '{print $NF}')
 TEST_DATABASE_URL="postgres://postgres:$task_password@127.0.0.1:$task_port/postgres?sslmode=disable"
 export TEST_DATABASE_URL
+# Matching server-owned client tools are required for the logical recovery test.
+TEST_POSTGRES_CONTAINER=$task_container
+export TEST_POSTGRES_CONTAINER
 unset PGSERVICE
 # Verbose output retains fixed synthetic capacity metrics on successful runs.
 go test -race -tags integration -count=1 -v ./tests/integration
