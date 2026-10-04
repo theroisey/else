@@ -1,6 +1,6 @@
 # Exact WooCommerce order and refund interpretation
 
-[#115](https://github.com/theroisey/else/issues/115) supplies pure `NormalizeOrders`/`NormalizeRefunds` under [#27](https://github.com/theroisey/else/issues/27), using the user-selected WooCommerce provider. No authorization, credential access, transport, persistence, route, provider success state or frontend is supplied. These reports describe observed rows; they do not prove store ownership, freshness, a provider snapshot, recognized revenue or cash settlement.
+The original [#115](https://github.com/theroisey/else/issues/115) slice supplies pure `NormalizeOrders`/`NormalizeRefunds` under [#27](https://github.com/theroisey/else/issues/27), using the user-selected WooCommerce provider. The [read-only synchronization contract](woocommerce-synchronization.md) adds bounded collection, encrypted setup, durable background work, product-line aggregates and measured storage. These reports describe observed rows; they do not prove legal store ownership, a transactional provider snapshot, recognized revenue or cash settlement. The frontend workspace remains separate work under #27.
 
 ## Verified official sources
 
