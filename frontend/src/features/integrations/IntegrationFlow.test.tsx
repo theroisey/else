@@ -8,6 +8,7 @@ import { App } from '../../app/App'
 import { createQueryClient } from '../../app/query-client'
 import { sessionKey } from '../auth/session'
 import type { Session } from '../auth/session'
+import { providerLabels } from './models'
 import {
   clientID,
   otherID,
@@ -25,6 +26,25 @@ const json = (body: unknown, status = 200) =>
     status,
     headers: { 'Content-Type': 'application/json' },
   })
+it.each(['meta_ads', 'ga4', 'woocommerce'] as const)(
+  'shows stored %s provider on list/detail and honest manual attention',
+  async (provider) => {
+    const label = providerLabels[provider]
+    const { fetcher } = setup({
+      read: (url) => url.endsWith(record.id)
+        ? json({ data: { ...record, provider, state: 'revocation_failed', revision: '9007199254740994' } })
+        : json(page([{ ...record, provider, state: 'pending' }])),
+    })
+    const link = await screen.findByRole('link', { name: new RegExp(label) })
+    expect(screen.getByText('Pending')).toBeInTheDocument()
+    await userEvent.setup().click(link)
+    await screen.findByRole('heading', { name: label })
+    await screen.findByRole('heading', { name: 'Remote revocation requires manual action' })
+    expect(screen.getByText(/Local credential use is disabled/).textContent).toContain(label)
+    expect(screen.queryByRole('button', { name: 'Disable local use' })).not.toBeInTheDocument()
+    expect(fetcher.mock.calls.some(([, init]) => init.method === 'POST')).toBe(false)
+  },
+)
 function setup({
   session = identity,
   path = route,

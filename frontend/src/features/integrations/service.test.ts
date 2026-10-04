@@ -13,6 +13,20 @@ import {
 } from './fixtures.test-data'
 import * as api from './service'
 const record = connection()
+it.each(['meta_ads', 'ga4', 'woocommerce'] as const)(
+  'accepts selected %s metadata while preserving its immutable binding',
+  (provider) => {
+    const selected = { ...record, provider }
+    expect(parseConnection({ data: selected }, clientID, record.id).provider).toBe(provider)
+    expect(parsePage(page([selected]), clientID).data[0]?.provider).toBe(provider)
+    const next = { ...selected, state: 'revocation_failed', revision: '9007199254740994' }
+    const revocation = { status: 'unavailable', manual_action_required: true }
+    expect(parseDisconnect({ data: next, revocation }, selected).data.provider).toBe(provider)
+    for (const changed of ['meta_ads', 'ga4', 'woocommerce'].filter((value) => value !== provider)) {
+      expect(() => parseDisconnect({ data: { ...next, provider: changed }, revocation }, selected)).toThrow(APIError)
+    }
+  },
+)
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), {
     headers: { 'Content-Type': 'application/json' },

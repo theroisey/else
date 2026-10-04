@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { Button, Status, buttonStyles } from '../../components/ui'
 import { APIError } from '../../services/authenticated'
-import { labels } from './models'
+import { labels, providerLabels } from './models'
 import type { Connection } from './models'
 
 export function IntegrationHeader({
@@ -72,7 +72,7 @@ export function IntegrationState({ record }: { record: Connection }) {
     </Status>
   )
 }
-export function ManualAction() {
+export function ManualAction({ provider }: { provider: Connection['provider'] }) {
   return (
     <aside
       aria-labelledby="manual-revocation"
@@ -87,8 +87,8 @@ export function ManualAction() {
       </h2>
       <p className="mt-2 text-sm leading-6">
         Local credential use is disabled. Remote revocation is unavailable here.
-        Remove this application's access in Meta's account settings; provider
-        access may remain until you do. This application has not verified remote
+        Remove this application's access in the {providerLabels[provider]} account
+        settings; provider access may remain until you do. This application has not verified remote
         revocation.
       </p>
     </aside>

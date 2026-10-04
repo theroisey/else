@@ -1487,6 +1487,39 @@ test('integration metadata, confirmed local disable, uncertain outcome recovery 
   expect(database(`SELECT count(*)::text FROM app.audit_events WHERE resource_id='${second}' AND event_name='integration_connection.updated'`)).toBe('1')
   await page.setViewportSize({width:1440,height:1000});await markTaskScreenshot(page)
   await page.screenshot({path:testInfo.outputPath('integration-manual-desktop.png'),fullPage:true})
+  // Selected-provider DTO projections test the frontend compatibility only.
+  // The authenticated source remains Meta-only; no provider is connected or
+  // mutated. Preserve the actual session/grant path and label screenshots.
+  for(const [provider,label] of [['ga4','Google Analytics 4'],['woocommerce','WooCommerce']] as const) {
+    let mutations=0
+    const pattern=base+'/**'
+    const project: Parameters<typeof page.route>[1]=async intercepted=>{
+      if(intercepted.request().method()!=='GET') { mutations++;await intercepted.continue();return }
+      const response=await intercepted.fetch()
+      if(!response.ok()) { await intercepted.fulfill({response});return }
+      const value=await response.json()
+      value.data={...value.data,provider}
+      await intercepted.fulfill({response,json:value})
+    }
+    await page.route(pattern,project)
+    try {
+      await page.goto(path+'/'+second)
+      await expect(page.getByRole('heading',{name:label,exact:true})).toBeVisible()
+      await expect(page.getByText(/Local credential use is disabled/)).toContainText(label)
+      await expect(disable).toHaveCount(0)
+      for(const viewport of [{width:1440,height:1000},{width:390,height:844}]) {
+        await page.setViewportSize(viewport);await markTaskScreenshot(page)
+        await page.evaluate(()=>{
+          const banner=document.querySelector('[data-synthetic-verification]')
+          if(banner) banner.textContent='Synthetic provider DTO projection · no backend/provider activation'
+        })
+        expect(await page.evaluate(()=>document.documentElement.scrollWidth===document.documentElement.clientWidth)).toBe(true)
+        await page.screenshot({path:testInfo.outputPath(`integration-${provider}-${viewport.width}.png`),fullPage:true})
+      }
+      expect(mutations).toBe(0)
+      expect(database(`SELECT bool_and(provider='meta_ads')::text FROM app.integration_connections WHERE client_id='${client}'`)).toBe('true')
+    } finally { await page.unroute(pattern,project) }
+  }
   // Revoke manage while preserving view, then archive the client: history is retained.
   database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='integrations.manage'`)
   await page.goto(path+'/f8900000-0000-4000-8000-000000000003')
