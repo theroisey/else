@@ -27,11 +27,16 @@ export const labels = {
   disconnected: 'Disconnected (recorded)',
   reauthorization_required: 'Reauthorization required',
 } as const
+export const providerLabels = {
+  meta_ads: 'Meta Ads',
+  ga4: 'Google Analytics 4',
+  woocommerce: 'WooCommerce',
+} as const
 const connectionSchema = z
   .object({
     id: uuid,
     client_id: uuid,
-    provider: z.literal('meta_ads'),
+    provider: z.enum(['meta_ads', 'ga4', 'woocommerce']),
     state: z.enum([
       'pending',
       'connected',

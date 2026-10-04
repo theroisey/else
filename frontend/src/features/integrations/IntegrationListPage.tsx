@@ -9,6 +9,7 @@ import { useIntegrations, useIntegrationClient } from './hooks'
 import type { Operation } from './hooks'
 import { IntegrationError, IntegrationHeader, IntegrationState } from './Shared'
 import * as service from './service'
+import { providerLabels } from './models'
 
 export function IntegrationListPage() {
   const clientID = useParams().id ?? ''
@@ -82,7 +83,7 @@ function Connections({ operation }: { operation: Operation }) {
                       className="font-semibold underline underline-offset-4"
                       to={`/app/clients/${clientID}/integrations/${record.id}`}
                     >
-                      <span className="block">Meta Ads</span>
+                      <span className="block">{providerLabels[record.provider]}</span>
                       <span className="mt-1 block break-all font-mono text-xs">
                         {record.id}
                       </span>
