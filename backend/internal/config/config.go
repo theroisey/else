@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"path/filepath"
 	"strconv"
 	"time"
 )
 
 // Config contains only the settings needed by the HTTP foundation.
 type Config struct {
+	FrontendDirectory string
 	Address           string
 	LogLevel          slog.Level
 	ReadHeaderTimeout time.Duration
@@ -33,6 +35,12 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 	}
 	if value, ok := lookup("HTTP_ADDRESS"); ok {
 		c.Address = value
+	}
+	if value, ok := lookup("FRONTEND_DIRECTORY"); ok {
+		if value == "" || !filepath.IsAbs(value) || filepath.Clean(value) != value {
+			return Config{}, fmt.Errorf("FRONTEND_DIRECTORY must be an absolute clean path")
+		}
+		c.FrontendDirectory = value
 	}
 	if value, ok := lookup("LOG_LEVEL"); ok {
 		switch value {
@@ -83,6 +91,9 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 
 // Validate deliberately excludes raw setting values from its errors.
 func (c Config) Validate() error {
+	if c.FrontendDirectory != "" && (!filepath.IsAbs(c.FrontendDirectory) || filepath.Clean(c.FrontendDirectory) != c.FrontendDirectory) {
+		return fmt.Errorf("FRONTEND_DIRECTORY must be an absolute clean path")
+	}
 	host, port, err := net.SplitHostPort(c.Address)
 	if err != nil || (host != "" && host != "localhost" && net.ParseIP(host) == nil) {
 		return fmt.Errorf("HTTP_ADDRESS must contain an IP address or localhost and a numeric port")

@@ -1,11 +1,10 @@
-// Test-only preview of the built artifact under the exact nginx header policy.
+// Test-only preview under the exact compiled Go runtime header policy.
 import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 
-const nginx = readFileSync(new URL('./nginx.conf', import.meta.url), 'utf8')
-const headers: Record<string, string> = {}
+const headers: Record<string, string> = JSON.parse(readFileSync(new URL('../backend/internal/http/browser-headers.json', import.meta.url), 'utf8'))
 for (const name of ['Content-Security-Policy', 'X-Frame-Options', 'X-Content-Type-Options', 'Referrer-Policy']) {
-  const value = nginx.match(new RegExp(`add_header ${name} "([^"]+)" always;`))?.[1]
+  const value = headers[name]
   if (!value) throw new Error('Declared runtime security header is missing.')
   headers[name] = value
 }

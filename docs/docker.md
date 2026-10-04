@@ -1,32 +1,33 @@
-# Docker development environment
+# One application Docker image
 
-Related Issue: [#5](https://github.com/theroisey/else/issues/5), merged through frontend #37 and backend #38. Docker Engine with BuildKit, Compose 2.24.4 or newer, and host `openssl` are required. Node 24.21.0, Go 1.27.1, PostgreSQL 18.3, nginx, and the Dockerfile frontend are pinned by version and digest. [Issue #6's CI guide](ci.md) describes isolated development/runtime verification and publication gates.
+Related: [#32](https://github.com/theroisey/else/issues/32). The root Dockerfile builds React with pinned Node/npm and Go with its pinned toolchain, then produces one scratch runtime image. One Go process serves the built UI and versioned API on port 8080. Node, npm and Nginx are absent from the runtime. Static API, healthcheck, migration, admin bootstrap and credential rotation binaries share the same image, public CA roots and nonroot UID/GID 65532. PostgreSQL remains an external database or a separate vendor infrastructure container.
 
-## First startup
+Docker Engine with BuildKit, Compose 2.24.4+, and host openssl are required. Dockerfile syntax, Node 24.21.0, Go 1.27.1 and PostgreSQL 18.3 bases retain reviewed digest pins.
 
-From the repository root in a clean checkout containing both PRs:
+## Clean local startup
+
+From the repository root:
 
 ```sh
 sh docker/dev/prepare.sh
-docker compose build frontend backend migrate bootstrap-admin
+docker compose build backend
 docker compose up -d --wait postgres
 docker compose run --rm migrate up
 docker compose exec -T postgres psql -U postgres -d else < backend/scripts/grant-runtime.sql
 docker compose up -d --wait
 ```
 
-Open `http://localhost:5173`. Health, readiness and auth endpoints use the frontend origin and proxy to the backend. Identity has no login UI yet; use the [documented bootstrap/API contract](identity.md). `src/` is mounted read-only for Vite hot reload; package/config changes require a rebuild.
+Open http://localhost:5173. The historical service name `backend` now serves the whole application. Only its loopback port is published. Migrations run explicitly, never during API startup. Bootstrap uses `docker compose run --rm bootstrap-admin` with an interactive terminal and the documented [initial administrator policy](identity.md). Tool services use exactly the application image with an entrypoint override; only these operator processes receive the migrator URL.
 
-The preparation script generates three independent random passwords into ignored, mode-600 `.env` and a local CA-signed PostgreSQL certificate with the `postgres` DNS name into ignored `docker/dev/tls/`. It refuses to overwrite existing material. The CA signing key is discarded; the server key remains mode 600. Keep `.env` private and with its named database volume. The certificates expire after 365 days. Renewal needs a replacement server certificate and CA generated privately, followed by PostgreSQL/backend recreation with the new files; do not regenerate passwords for an existing database. For a disposable reset, see below.
+Preparation generates three independent passwords in ignored mode-600 .env and local CA-signed PostgreSQL TLS material, refusing to overwrite existing files. The CA signing key is discarded; the server key stays mode 600. Certificates expire after 365 days: renew certificates privately and recreate PostgreSQL/application mounts without changing established database passwords. Runtime and migrator roles are separate nonsuperusers. Only reviewed functions/columns are granted. Database URLs use verify-full and read-only CA mounts; the database network is internal.
 
-PostgreSQL initializes runtime and migration roles once when its volume is empty. Neither role is superuser, role administrator, or database creator; only the migrator owns the database and may change its schema. The API receives only the runtime URL; migration/bootstrap tools receive the migration URL. The checked-in grant file permits only reviewed audit and identity functions/columns, without blanket/default grants.
+Application and tool containers use read-only root filesystems, drop capabilities and prohibit privilege escalation. No frontend source or dependencies are mounted into the runtime. For hot reload, use the documented host npm development workflow with a separately started API; Docker always exercises the built artifact.
 
-Both URLs use `sslmode=verify-full` and a read-only CA mount. PostgreSQL copies its key into a private, postgres-owned volume directory before the official entrypoint starts the non-root server. Shared networking does not weaken the backend's loopback-only plaintext policy. The database health check connects using the runtime identity over verified TLS; the backend health check calls real `/ready`; frontend startup waits for backend readiness. Migrations are an explicit deployment step and never run at API startup.
-
-## Everyday use and verification
+## Health, persistence and isolated verification
 
 ```sh
 docker compose run --rm migrate status
+curl --fail http://localhost:5173/status
 curl --fail http://localhost:5173/health
 curl --fail http://localhost:5173/ready
 docker compose ps
@@ -34,29 +35,22 @@ docker compose stop
 docker compose up -d --wait
 ```
 
-`stop`, `restart`, and `down` preserve the named volume. Only localhost's frontend port is published; neither PostgreSQL nor the backend publishes a host port. The database network is internal. The dev server is intended for a trusted local workstation.
+Status/health report process liveness; readiness checks the actual database and turns 503 during outage/drain. Stop/restart/down preserve the named database volume. A later database outage does not automatically stop its consumers. Do not share rendered Compose config or container environments: they contain private database URLs. Validate with `config --quiet`.
 
-For persistence proof, apply the baseline, stop/down and start the services again, then check that migration status still shows it applied. For readiness outage proof, stop PostgreSQL after the stack is healthy: `/health` remains 200 and `/ready` becomes 503; start PostgreSQL and readiness should recover. `depends_on` controls initial startup; it does not stop consumers when a dependency fails later. Normal logs contain fixed events and safe error classifications. Avoid printing `docker compose config`, inspecting container environments, or sharing `.env`: rendered configuration includes database URLs/passwords. Use `config --quiet` for validation.
+`sh backend/scripts/test-compose.sh` tests a committed checkout in a unique project, temporary private credentials/TLS and disposable volume. It checks migrations, runtime role denials, TLS hostname rejection, static/API routing and security headers, database outage/recovery, persistence, immutable release metadata, protected key-source startup and same-image rotation/inventory diagnostics. After success it archives exactly `else-application:ci`. The production Compose override is retained for existing local verification commands; base Compose already uses the production artifact.
 
-## Static runtime verification
+## Managed build CA
 
-```sh
-docker compose -f docker-compose.yml -f docker-compose.production.yml build frontend backend migrate
-docker compose -f docker-compose.yml -f docker-compose.production.yml up -d --wait
-```
+When CODEX_PROXY_CERT is provided, add `-f docker-compose.proxy.yml` to the build command. The session CA is mounted as a BuildKit secret for dependency installation only. Keep platform proxy configuration and TLS verification. No session CA is copied into the final image.
 
-The override replaces the frontend bind mount and port mapping with nginx on container port 8080. nginx and the Go runtime use non-root users. The Go image contains static executables and public CA roots; the frontend runtime contains compiled assets, without npm tooling or database secrets. `/status` checks nginx liveness and `/ready` checks the backend. This is local runtime-image verification, not production deployment. Production credential storage, ingress/TLS, rollout, backups, and image publication belong to later Issues.
+## Deployment and tools
 
-## Managed proxy builds
+Publication promotes one tested repository, `ghcr.io/theroisey/else`, with immutable revision/version policy and a guarded latest alias; see [CI](ci.md). Pin a verified content digest for deployment. Existing split frontend/backend tags are historical artifacts and are not published by this workflow.
 
-When a managed cloud environment supplies `CODEX_PROXY_CERT`, add `-f docker-compose.proxy.yml` to build commands. The override supplies the session CA as a BuildKit secret only during networked dependency installation. Preserve the environment's Docker proxy defaults. Certificate verification remains enabled and the CA is not copied into image layers. Ordinary local builds use the base Compose file without this override.
+Operator commands use that same pinned image with `--entrypoint /migrate`, `--entrypoint /bootstrap-admin` or `--entrypoint /rotate-integration-credentials`, the appropriate private database/CA/key mounts and explicit authorization. See [rotation](integration-rotation-command.md) and [recovery](recovery.md). Bundling commands confers no privileges on the API: its database identity stays least privileged.
 
-## Disposable reset
+Deploy on a managed platform supporting a persistent Go container, HTTPS ingress and private PostgreSQL connectivity. Vercel's ordinary static/Node deployment does not run this image; choose a compatible managed container host before rollout. Set AUTH_PUBLIC_ORIGIN to the exact HTTPS origin, AUTH_COOKIE_SECURE=true, verified database TLS, per-replica connection budgets and protected mounted key material. Do not trust arbitrary forwarded identity headers. Edge throttling, secret ownership, monitoring and explicit rollout authority remain deployment requirements.
 
-Changing `.env` does not change passwords in an initialized database. Never discard a volume to fix credentials for valuable data. Only when all data in this local development project is disposable, `docker compose down --volumes` removes it permanently. Then remove this project's `.env` and `docker/dev/tls/`, run preparation again, and repeat first startup. Rollback with `docker compose run --rm migrate down` reverts one migration. Identity and audit migrations refuse nonempty history, and the baseline refuses a nonempty application schema. Reapply explicit grants after an empty down/up. See [identity](identity.md) and [audit storage](audit-log.md).
+FRONTEND_DIRECTORY is an optional absolute startup path for standalone API development; the image sets /frontend. Startup snapshots only bounded index/JS/CSS/font build files, rejects symlinks, source maps, secrets and unknown files, and caps total assets at 64 MiB per replica. SPA navigation is limited to implemented public/app routes; API/health paths never fall back to HTML. Static responses revalidate content ETags with no-cache; private API/errors retain no-store. Strict [browser security headers](browser-security.md) apply across responses.
 
-## Validation status
-
-Compose base/production/proxy configuration, shell syntax, generated-certificate hostname acceptance/rejection, private credential/key permissions, ignore rules, and refusal to overwrite existing credentials are validated. Go 1.27.1 formatting, vet, unit/race tests, and static binary builds pass. Node 24.21.0/npm 11.19.0 installation, lint, 16 frontend tests, typecheck, production build, and resolved container/host routing checks pass.
-
-Local image builds remain blocked by Docker Hub's unauthenticated pull limit. Issue #6's [GitHub PR run 36852928372](https://github.com/theroisey/else/actions/runs/36852928372) passed all source, PostgreSQL and combined Compose gates. PRs #39/#40 were owner-merged; [main run 36856821215](https://github.com/theroisey/else/actions/runs/36856821215) passed and published both tested images. Audit PR #41 and main run 36860620016 also passed. Identity-specific PostgreSQL/Compose evidence remains pending its PR run.
+For a deliberately disposable reset, `docker compose down --volumes` destroys the local database. Never use that command against a volume containing needed data. Follow the recovery runbook for durable environments.

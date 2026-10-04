@@ -31,13 +31,14 @@ After external operator authorization and protected configuration are establishe
 
 Accept only unique known space-separated flags. Actor/client and optional `--after` require canonical lowercase nonzero UUIDs; `--limit` is canonical decimal 1–100. Missing confirmation, duplicate/unknown/extra/missing flags, `--flag=value`, leading-zero limits and malformed values fail before configuration lookup, file reads or database access. Sole `--help` prints fixed usage without configuration access. Each page gets a fresh server-generated audit correlation ID.
 
-The Dockerfile's separate `rotation` target contains the static command and standard CA roots, running as `65532:65532`:
+The single root application image contains the static command and standard CA roots, running as `65532:65532`. Invoke the same pinned image with `--entrypoint /rotate-integration-credentials`:
 
 ```sh
-docker build --target rotation --tag else-rotation:reviewed backend
+docker build --target production --tag roisey-else:reviewed .
+docker run --rm --network none --entrypoint /rotate-integration-credentials roisey-else:reviewed --help
 ```
 
-Supply any managed-build CA using existing BuildKit secret guidance in [Docker documentation](docker.md). The API image/default Compose startup do not contain or execute this command; current GHCR publication does not publish an operator image. A separately approved operator deployment must provision verified network access, protected database configuration, CA trust and a read-only key mount readable by its effective UID. This document does not authorize production execution.
+Supply any managed-build CA using existing BuildKit secret guidance in [Docker documentation](docker.md). The application image contains this command; default Compose startup executes only the API. There is no separate published operator image. Authorized operator execution must provision verified network access, protected database configuration, CA trust and a read-only key mount readable by its effective UID. This document does not authorize production execution.
 
 The operation context is 45 seconds and honors SIGINT/SIGTERM; the library retains its thirty-second page context and separate transaction cleanup bounds. Exactly one `Run` occurs, with no automatic retry, loop, durable cursor, actor substitution or key-mode change.
 
@@ -71,6 +72,6 @@ The first audited reservation in restored mode can register fresh active materia
 
 Unit/race tests cover pre-configuration confirmation/grammar, help/cancellation, fixed panic/error classification and failed/short output. Disposable PostgreSQL tests use the same orchestration as the binary with synthetic protected files and runtime roles: bounded paging/resume/restart, fresh audit correlation, foreign empty-client denial, revoked grants, rejected source/configuration/preflight without accounting changes, restored-to-normal transition, failed first restored write with irreversible registration, partial commit failure/reconciliation and output loss after a known commit. Existing library tests retain deeper race, quota, retention and migration proofs.
 
-Container CI builds the separate non-root target and executes the actual binary for help, missing confirmation, protected loading without database configuration, and malformed/public/symlink/missing sources. All five exact-head gates remain required. No real credentials, provider calls, production operator execution or deployment is performed.
+Container CI uses the same tested nonroot application image with the explicit rotation entrypoint and executes the actual binary for help, missing confirmation, protected loading without database configuration, and malformed/public/symlink/missing sources. All five exact-head gates remain required. No real credentials, provider calls, production operator execution or deployment is performed.
 
 A real compiled-process PostgreSQL test closes the stdout pipe before execution and verifies exit 1 with fixed stderr after exactly one committed row. The command ignores SIGPIPE so this write failure reaches the documented reconciliation path; it never retries the committed page.

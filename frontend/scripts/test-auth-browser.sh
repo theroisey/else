@@ -64,7 +64,7 @@ DATABASE_URL="postgres://else_runtime:$task_password@127.0.0.1:$task_port/else?s
   AUTH_PUBLIC_ORIGIN=http://127.0.0.1:5173 AUTH_COOKIE_SECURE=false HTTP_ADDRESS=127.0.0.1:8080 \
   "$task_directory/api" > "$task_directory/api.log" 2>&1 &
 task_api_pid=$!
-# Built artifact compatibility uses exactly the declared nginx header policy.
+# Built artifact compatibility uses exactly the compiled Go runtime header policy.
 # Public/failed-login probes do not add successful-session audit fixture rows.
 (cd frontend && npm run build)
 (
