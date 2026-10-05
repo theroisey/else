@@ -123,7 +123,7 @@ func TestClientCreatorGetsNoImplicitAccess(t *testing.T) {
 func newClientFixture(t *testing.T) *clientFixture {
 	t.Helper()
 	f := newAdministrationFixture(t)
-	if _, err := f.admin.Exec(f.base.ctx, `GRANT EXECUTE ON FUNCTION app.client_read(uuid,uuid),app.client_list(uuid,uuid,integer,text,text,text,boolean),app.client_write(uuid,uuid,bigint,jsonb,boolean) TO `+f.runtimeRole); err != nil {
+	if _, err := f.admin.Exec(f.base.ctx, `GRANT EXECUTE ON FUNCTION app.client_read(uuid,uuid),app.client_list(uuid,uuid,integer,text,text,text,boolean),app.client_write(uuid,uuid,bigint,jsonb,boolean),app.website_legacy_marker(uuid,uuid) TO `+f.runtimeRole); err != nil {
 		t.Fatal(err)
 	}
 	service, err := clients.NewService(f.runtime)

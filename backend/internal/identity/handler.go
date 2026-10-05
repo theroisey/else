@@ -36,6 +36,8 @@ func NewHandler(service *Service, c config.Auth, logger *slog.Logger) (*Handler,
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	switch r.URL.Path {
+	case "/api/v1/auth/preferences":
+		h.preferences(w, r)
 	case "/api/v1/auth/login":
 		h.login(w, r)
 	case "/api/v1/auth/logout":

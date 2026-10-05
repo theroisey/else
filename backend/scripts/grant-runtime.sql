@@ -82,3 +82,13 @@ GRANT EXECUTE ON FUNCTION app.admin_users(uuid,uuid,integer),app.admin_user(uuid
                           app.admin_create_role(uuid,uuid,text,text[]),app.admin_replace_permissions(uuid,uuid,bigint,text[]),
                           app.admin_revoke_assignment(uuid,uuid,uuid,timestamptz)
 TO else_runtime;
+
+GRANT EXECUTE ON FUNCTION app.website_list(uuid,uuid,uuid,integer,text),app.website_read(uuid,uuid,uuid),
+ app.website_write(uuid,uuid,uuid,bigint,text,jsonb),app.website_connections(uuid,uuid,uuid,uuid,integer),
+ app.website_connection_binding(uuid,uuid,uuid,uuid,bigint,boolean),app.website_connection_allowed(uuid,uuid,uuid,uuid,boolean) TO else_runtime;
+
+GRANT EXECUTE ON FUNCTION app.user_locale_read(uuid),app.user_locale_write(uuid,text) TO else_runtime;
+
+GRANT EXECUTE ON FUNCTION app.website_activity(uuid,uuid,uuid,uuid,integer) TO else_runtime;
+
+GRANT EXECUTE ON FUNCTION app.website_legacy_marker(uuid,uuid) TO else_runtime;

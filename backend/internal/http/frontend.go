@@ -79,6 +79,8 @@ func loadFrontend(directory string) (http.Handler, error) {
 			mediaType = "font/woff2"
 		case strings.HasPrefix(name, "assets/") && path.Ext(name) == ".woff":
 			mediaType = "font/woff"
+		case name == "assets/roisey-r-v1.svg":
+			mediaType = "image/svg+xml"
 		case strings.HasPrefix(name, "assets/") && path.Ext(name) == ".ttf":
 			mediaType = "font/ttf"
 		default:

@@ -77,7 +77,7 @@ Before implementing a feature:
 
 1. Inspect existing Issues.
 2. Search for an Issue covering the requested work.
-3. Work within the existing issues. The user's 2026-10-04 instruction forbids creating new issues for the remaining work.
+3. Work within existing issues. The owner's 2026-10-05 instruction explicitly authorizes new issues for this refinement task (#129–#131), superseding the earlier prohibition for this scope.
 4. Define scope and acceptance criteria.
 5. Identify frontend/backend/database/security implications.
 6. Record incremental implementation and verification within the existing issue.

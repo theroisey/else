@@ -139,7 +139,7 @@ func TestActivityLifecycleRetainsEarlierEventsAfterReopenAndResourceArchival(t *
 		t.Fatal(err)
 	}
 	created := f.list(t, f.actor, client.ID, "", 25)
-	if len(created.Data) != 1 || created.Data[0].Summary != "Client created." {
+	if len(created.Data) != 2 || created.Data[0].Summary != "Website created." || created.Data[1].Summary != "Client created." {
 		t.Fatal("confirmed client creation omitted", created)
 	}
 	if _, err := f.records.Update(ctx, f.actor, clientAID, 1, profileFixture()); err != nil {

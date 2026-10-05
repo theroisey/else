@@ -52,7 +52,7 @@ func TestActivityQueryRejectsUnboundedAndUnknownInputs(t *testing.T) {
 	}
 }
 func TestActivityLabelsExcludeSecurityAndUnknownEvents(t *testing.T) {
-	if len(summaries) != 18 || summaries["task.completed"] != "Task completed." || summaries["milestone.updated"] != "Milestone updated." {
+	if len(summaries) != 21 || summaries["task.completed"] != "Task completed." || summaries["milestone.updated"] != "Milestone updated." {
 		t.Fatal("activity labels incomplete")
 	}
 	for _, event := range []string{"user.created", "role.updated", "role_assignment.created", "client.deleted", "task.deleted", "task.secret", "unknown.created", "reminder.delivered"} {

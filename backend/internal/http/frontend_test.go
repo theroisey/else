@@ -20,7 +20,7 @@ func frontendFixture(t *testing.T) string {
 	if err := os.Mkdir(filepath.Join(directory, "assets"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	for name, content := range map[string]string{"index.html": "<!doctype html><script src=\"/assets/app-123.js\"></script>", "assets/app-123.js": "console.log('synthetic public build')", "assets/font.woff2": "synthetic-font"} {
+	for name, content := range map[string]string{"index.html": "<!doctype html><script src=\"/assets/app-123.js\"></script>", "assets/app-123.js": "console.log('synthetic public build')", "assets/font.woff2": "synthetic-font", "assets/roisey-r-v1.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M1 1h1v1z"/></svg>`} {
 		if err := os.WriteFile(filepath.Join(directory, name), []byte(content), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -54,6 +54,7 @@ func TestSingleOriginFrontendAndAPIBoundaries(t *testing.T) {
 		{"GET", "/", 200, "text/html"}, {"GET", "/login", 200, "text/html"}, {"GET", "/app/clients/example/integrations", 200, "text/html"},
 		{"GET", "/service-status", 200, "text/html"}, {"HEAD", "/service-status", 200, "text/html"},
 		{"HEAD", "/assets/app-123.js", 200, "text/javascript"}, {"GET", "/assets/font.woff2", 200, "font/woff2"},
+		{"GET", "/assets/roisey-r-v1.svg", 200, "image/svg+xml"}, {"HEAD", "/assets/roisey-r-v1.svg", 200, "image/svg+xml"},
 		{"POST", "/login", 405, "application/json"}, {"GET", "/api/v1/auth/session", 401, "application/json"},
 		{"GET", "/api", 404, "application/json"}, {"GET", "/api/unknown", 404, "application/json"},
 		{"GET", "/api/v1/unknown", 404, "application/json"}, {"GET", "/health", 200, "application/json"},

@@ -225,7 +225,7 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("analytics_startup_failed")
 		return 1
 	}
-	server, err := httpapi.NewWithReleases(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler, taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler, pricingHandler, overviewHandler, analyticsHandler.WithMetadata(connectionHandler), releaseHandler)
+	server, err := httpapi.NewWithReleases(c, logger, pool.Ping, authHandler, administrationHandler, clientHandler.WithWebsiteProviders(analyticsHandler.WithMetadata(connectionHandler)), taskHandler, planningHandler, reminderHandler, activityHandler, auditHandler, billingHandler, pricingHandler, overviewHandler, analyticsHandler.WithMetadata(connectionHandler), releaseHandler)
 	if err != nil {
 		logger.Error("server_configuration_invalid")
 		return 1

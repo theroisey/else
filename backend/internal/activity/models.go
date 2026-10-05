@@ -40,6 +40,7 @@ type boundary struct {
 
 // Only server-owned labels are rendered; never concatenate audit/profile text.
 var summaries = map[string]string{
+	"website.created": "Website created.", "website.updated": "Website updated.", "website.archived": "Website archived.",
 	"client.created": "Client created.", "client.updated": "Client updated.", "client.archived": "Client archived.",
 	"task.created": "Task created.", "task.updated": "Task updated.", "task.archived": "Task archived.", "task.completed": "Task completed.", "task.cancelled": "Task cancelled.",
 	"plan.created": "Plan created.", "plan.updated": "Plan updated.", "plan.archived": "Plan archived.",

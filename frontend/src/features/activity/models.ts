@@ -4,6 +4,9 @@ import { instant } from '../../lib/time'
 import { isUUID } from '../auth/session'
 
 export const eventTypes = [
+  'website.created',
+  'website.updated',
+  'website.archived',
   'client.created',
   'client.updated',
   'client.archived',
@@ -24,6 +27,7 @@ export const eventTypes = [
   'reminder.dismissed',
 ] as const
 export const kindLabels = {
+  website: 'Website',
   client: 'Client',
   task: 'Task',
   plan: 'Plan',
@@ -56,7 +60,14 @@ const event = z
     client_id: uuid,
     occurred_at: timestamp,
     event_type: z.enum(eventTypes),
-    resource_kind: z.enum(['client', 'task', 'plan', 'milestone', 'reminder']),
+    resource_kind: z.enum([
+      'client',
+      'website',
+      'task',
+      'plan',
+      'milestone',
+      'reminder',
+    ]),
     resource_id: uuid,
     summary: z.string().max(40),
   })
@@ -74,7 +85,9 @@ export const activityEventSchema = event
 const page = z
   .object({
     data: z.array(event).max(25),
-    page: z.object({ limit: z.literal(25), next_cursor: cursorSchema.nullable() }).strict(),
+    page: z
+      .object({ limit: z.literal(25), next_cursor: cursorSchema.nullable() })
+      .strict(),
   })
   .strict()
   .refine(
@@ -87,7 +100,8 @@ const page = z
         try {
           return (
             instant(previous.occurred_at) > instant(v.occurred_at) ||
-            (instant(previous.occurred_at) === instant(v.occurred_at) && previous.id > v.id)
+            (instant(previous.occurred_at) === instant(v.occurred_at) &&
+              previous.id > v.id)
           )
         } catch {
           return false

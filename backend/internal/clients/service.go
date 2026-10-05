@@ -118,7 +118,7 @@ func (s *Service) write(ctx context.Context, actor, target string, revision int6
 	if err != nil {
 		return Mutation{}, ErrInvalid
 	}
-	err = audit.WithTransaction(ctx, s.pool, func(ctx context.Context, q audit.Queries) (audit.Event, error) {
+	mutate := func(ctx context.Context, q audit.Queries) (audit.Event, error) {
 		var code string
 		if err := q.QueryRow(ctx, `SELECT app.client_write($1::uuid,$2::uuid,$3,$4::jsonb,$5)`, actor, target, revision, raw, archive).Scan(&code); err != nil {
 			return audit.Event{}, err
@@ -147,6 +147,25 @@ func (s *Service) write(ctx context.Context, actor, target string, revision int6
 			action = audit.Archived
 		}
 		return audit.Event{Actor: audit.Actor{Kind: audit.User, UserID: actor}, Action: action, ResourceKind: "client", ResourceID: target, ClientID: target, Before: before, After: &audit.Snapshot{Exists: &exists, Revision: &next}, Metadata: audit.Metadata{Source: audit.HTTP}}, nil
+	}
+	err = audit.WithTransactionEvents(ctx, s.pool, func(ctx context.Context, q audit.Queries) ([]audit.Event, error) {
+		event, err := mutate(ctx, q)
+		if err != nil {
+			return nil, err
+		}
+		events := []audit.Event{event}
+		if revision == 0 && p.Website != "" {
+			var website *string
+			if err := q.QueryRow(ctx, `SELECT app.website_legacy_marker($1::uuid,$2::uuid)`, actor, target).Scan(&website); err != nil {
+				return nil, err
+			}
+			if website != nil {
+				exists := true
+				first := int64(1)
+				events = append(events, audit.Event{Actor: audit.Actor{Kind: audit.User, UserID: actor}, Action: audit.Created, ResourceKind: "website", ResourceID: *website, ClientID: target, After: &audit.Snapshot{Exists: &exists, Revision: &first}, Metadata: audit.Metadata{Source: audit.HTTP}})
+			}
+		}
+		return events, nil
 	})
 	if err != nil {
 		return Mutation{}, databaseError(err)
