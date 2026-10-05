@@ -46,25 +46,27 @@ export function CandidatePicker({
       <h3 className="font-semibold">
         {copy('Add tasks from this client', 'planning')}
       </h3>
-      <div className="mt-3 flex flex-wrap items-end gap-2">
-        <div className="min-w-0 flex-1">
-          <TextField
-            label={copy('Search task candidates', 'planning')}
-            maxLength={200}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-          />
+      <form
+        className="mt-3 filter-grid picker-filters"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (disabled || query.isFetching) return
+          setSearch(draft.trim())
+          setHistory([''])
+        }}
+      >
+        <TextField
+          label={copy('Search task candidates', 'planning')}
+          maxLength={200}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+        />
+        <div className="filter-actions">
+          <Button type="submit" disabled={disabled || query.isFetching}>
+            {copy('Search tasks', 'planning')}
+          </Button>
         </div>
-        <Button
-          disabled={disabled || query.isFetching}
-          onClick={() => {
-            setSearch(draft.trim())
-            setHistory([''])
-          }}
-        >
-          {copy('Search tasks', 'planning')}
-        </Button>
-      </div>
+      </form>
       {query.isPending ? (
         <p role="status" className="mt-3" aria-busy="true">
           {copy('Loading task candidates…', 'planning')}

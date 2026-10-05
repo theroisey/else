@@ -207,7 +207,10 @@ export function ReminderForm({
           )}
         </p>
       ) : null}
-      <fieldset disabled={disabled} className="grid min-w-0 gap-4 form-section">
+      <fieldset
+        disabled={disabled}
+        className="field-grid grid min-w-0 gap-4 form-section"
+      >
         <legend className="px-1 font-semibold">
           {copy('Reminder details', 'reminders')}
         </legend>
@@ -246,7 +249,7 @@ export function ReminderForm({
           disabled={disabled}
           error={copy(errors.owner_id?.message, 'reminders') ?? ''}
         />
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="field-grid grid gap-3 sm:grid-cols-2">
           <TextField
             label={copy('Scheduled date', 'reminders')}
             type="date"

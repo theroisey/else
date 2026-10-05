@@ -51,8 +51,9 @@ describe('foundation application', () => {
       screen.getByRole('heading', { name: 'Service status' }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Checking services' }),
+      screen.getByRole('button', { name: /^Check again\s*Checking services$/ }),
     ).toBeDisabled()
+    expect(screen.getByRole('status')).toHaveTextContent('Checking services')
     expect(screen.getAllByText('Checking')).toHaveLength(2)
     expect(
       screen.getByRole('region', { name: 'Service checks' }),

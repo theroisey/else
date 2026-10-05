@@ -1,3 +1,4 @@
+import { SelectField } from '../../components/ui'
 import { statusLabel } from '../../i18n/labels'
 import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
@@ -89,40 +90,37 @@ export function ResourcePicker({
       ) : null}
       {operation.permissions.taskView || operation.permissions.planningView ? (
         <>
-          <label className="grid gap-1.5 text-sm font-semibold">
-            {copy('Browse resources', 'reminders')}{' '}
-            <select
-              className="ui-input"
-              value={kind}
-              disabled={disabled}
-              onChange={(e) => {
-                setKind(e.target.value as Resource['kind'])
-                setParent('')
-                reset()
-              }}
-            >
-              {!allowed ? (
-                <option value={kind}>
-                  {copy(
-                    'Recorded {{value1}} · browse access unavailable',
-                    'reminders',
-                    { value1: statusLabel(kind) },
-                  )}
+          <SelectField
+            label={copy('Browse resources', 'reminders')}
+            value={kind}
+            disabled={disabled}
+            onChange={(e) => {
+              setKind(e.target.value as Resource['kind'])
+              setParent('')
+              reset()
+            }}
+          >
+            {!allowed ? (
+              <option value={kind}>
+                {copy(
+                  'Recorded {{value1}} · browse access unavailable',
+                  'reminders',
+                  { value1: statusLabel(kind) },
+                )}
+              </option>
+            ) : null}
+            {operation.permissions.taskView ? (
+              <option value="task">{copy('Tasks', 'reminders')}</option>
+            ) : null}
+            {operation.permissions.planningView ? (
+              <>
+                <option value="plan">{copy('Plans', 'reminders')}</option>
+                <option value="milestone">
+                  {copy('Milestones', 'reminders')}
                 </option>
-              ) : null}
-              {operation.permissions.taskView ? (
-                <option value="task">{copy('Tasks', 'reminders')}</option>
-              ) : null}
-              {operation.permissions.planningView ? (
-                <>
-                  <option value="plan">{copy('Plans', 'reminders')}</option>
-                  <option value="milestone">
-                    {copy('Milestones', 'reminders')}
-                  </option>
-                </>
-              ) : null}
-            </select>
-          </label>
+              </>
+            ) : null}
+          </SelectField>
           {allowed ? (
             <>
               {kind === 'milestone' ? (
@@ -149,22 +147,34 @@ export function ResourcePicker({
                   {copy('Choose another parent plan', 'reminders')}
                 </Button>
               ) : null}
-              <div className="flex flex-wrap items-end gap-2">
+              <div className="filter-grid picker-filters">
                 <TextField
                   label={copy('Search resources', 'reminders')}
+                  name="resource-search"
+                  type="search"
+                  autoComplete="off"
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
+                    e.preventDefault()
+                    if (disabled || query.isFetching) return
+                    setSearch(draft.trim())
+                    setHistory([''])
+                  }}
                   value={draft}
                   maxLength={200}
                   onChange={(e) => setDraft(e.target.value)}
                 />
-                <Button
-                  disabled={disabled || query.isFetching}
-                  onClick={() => {
-                    setSearch(draft.trim())
-                    setHistory([''])
-                  }}
-                >
-                  {copy('Search references', 'reminders')}
-                </Button>
+                <div className="filter-actions">
+                  <Button
+                    disabled={disabled || query.isFetching}
+                    onClick={() => {
+                      setSearch(draft.trim())
+                      setHistory([''])
+                    }}
+                  >
+                    {copy('Search references', 'reminders')}
+                  </Button>
+                </div>
               </div>
               {query.isPending ? (
                 <p role="status">

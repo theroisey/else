@@ -87,7 +87,10 @@ export function CopyForm({
           )}
         </p>
       ) : null}
-      <fieldset disabled={disabled} className="grid gap-4 sm:grid-cols-2">
+      <fieldset
+        disabled={disabled}
+        className="field-grid grid gap-4 sm:grid-cols-2"
+      >
         <TextField
           label={copy('Billing date (UTC calendar)', 'pricing')}
           type="date"

@@ -1,3 +1,4 @@
+import { SelectField } from '../../components/ui'
 import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
@@ -85,7 +86,7 @@ function List({ clientID }: { clientID: string }) {
         </div>
       ) : null}
       <form
-        className="mb-5 grid gap-3 filter-bar sm:grid-cols-2 xl:grid-cols-3"
+        className="mb-5 filter-bar filter-grid reminder-filters"
         onSubmit={(e) => {
           e.preventDefault()
           setFilter({
@@ -98,46 +99,43 @@ function List({ clientID }: { clientID: string }) {
         }}
       >
         <TextField
+          name="search"
+          type="search"
+          autoComplete="off"
           label={copy('Search reminders', 'reminders')}
           maxLength={200}
           value={draft.q}
           onChange={(e) => setDraft({ ...draft, q: e.target.value })}
         />
-        <label className="grid gap-1.5 text-sm font-semibold">
-          {copy('State', 'reminders')}{' '}
-          <select
-            className="ui-input"
-            value={draft.status}
-            onChange={(e) =>
-              setDraft({ ...draft, status: e.target.value as Filter['status'] })
-            }
-          >
-            <option value="all">{copy('All states', 'reminders')}</option>
-            {states.map((s) => (
-              <option key={s} value={s}>
-                {copy(labels[s], 'reminders')}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1.5 text-sm font-semibold">
-          {copy('Schedule view', 'reminders')}{' '}
-          <select
-            className="ui-input"
-            value={draft.due}
-            onChange={(e) =>
-              setDraft({ ...draft, due: e.target.value as Filter['due'] })
-            }
-          >
-            <option value="all">{copy('All schedules', 'reminders')}</option>
-            <option value="due">
-              {copy('Due pending reminders', 'reminders')}
+        <SelectField
+          label={copy('State', 'reminders')}
+          value={draft.status}
+          onChange={(e) =>
+            setDraft({ ...draft, status: e.target.value as Filter['status'] })
+          }
+        >
+          <option value="all">{copy('All states', 'reminders')}</option>
+          {states.map((s) => (
+            <option key={s} value={s}>
+              {copy(labels[s], 'reminders')}
             </option>
-            <option value="upcoming">
-              {copy('Upcoming pending reminders', 'reminders')}
-            </option>
-          </select>
-        </label>
+          ))}
+        </SelectField>
+        <SelectField
+          label={copy('Schedule view', 'reminders')}
+          value={draft.due}
+          onChange={(e) =>
+            setDraft({ ...draft, due: e.target.value as Filter['due'] })
+          }
+        >
+          <option value="all">{copy('All schedules', 'reminders')}</option>
+          <option value="due">
+            {copy('Due pending reminders', 'reminders')}
+          </option>
+          <option value="upcoming">
+            {copy('Upcoming pending reminders', 'reminders')}
+          </option>
+        </SelectField>
         <TextField
           label={copy('Owner filter', 'reminders')}
           description={copy(
@@ -147,22 +145,21 @@ function List({ clientID }: { clientID: string }) {
           value={draft.owner}
           onChange={(e) => setDraft({ ...draft, owner: e.target.value })}
         />
-        <label className="grid gap-1.5 text-sm font-semibold">
-          {copy('Order', 'reminders')}{' '}
-          <select
-            className="ui-input"
-            value={draft.sort}
-            onChange={(e) =>
-              setDraft({ ...draft, sort: e.target.value as Filter['sort'] })
-            }
-          >
-            <option value="id">{copy('ID ascending', 'reminders')}</option>
-            <option value="-id">{copy('ID descending', 'reminders')}</option>
-          </select>
-        </label>
-        <Button type="submit" className="self-end" disabled={busy}>
-          {copy('Apply filters', 'reminders')}
-        </Button>
+        <SelectField
+          label={copy('Order', 'reminders')}
+          value={draft.sort}
+          onChange={(e) =>
+            setDraft({ ...draft, sort: e.target.value as Filter['sort'] })
+          }
+        >
+          <option value="id">{copy('ID ascending', 'reminders')}</option>
+          <option value="-id">{copy('ID descending', 'reminders')}</option>
+        </SelectField>
+        <div className="filter-actions">
+          <Button type="submit" disabled={busy}>
+            {copy('Apply filters', 'reminders')}
+          </Button>
+        </div>
       </form>
       {query.isPending ? (
         <PageSkeleton label={copy('Loading reminders…', 'reminders')} />

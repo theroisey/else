@@ -1,3 +1,4 @@
+import { SelectField } from '../../components/ui'
 import { statusLabel } from '../../i18n/labels'
 import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
@@ -265,30 +266,27 @@ function PricingForm({
             )}
       </p>
       <fieldset disabled={disabled} className="grid gap-4 form-section">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="field-grid grid gap-4 sm:grid-cols-2">
           <TextField
             label={copy('Agreement title', 'pricing')}
             maxLength={200}
             {...register('title')}
           />
-          <label className="grid gap-1.5 text-sm font-semibold">
-            {copy('Currency', 'pricing')}{' '}
-            <select
-              className="ui-input"
-              {...register('currency')}
-              disabled={!!sheet}
-            >
-              <option value="">{copy('Choose currency', 'pricing')}</option>
-              {currencies.map((c) => (
-                <option key={c} value={c}>
-                  {copy('{{value1}} · {{value2}} decimal places', 'pricing', {
-                    value1: c,
-                    value2: exponents[c],
-                  })}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label={copy('Currency', 'pricing')}
+            {...register('currency')}
+            disabled={!!sheet}
+          >
+            <option value="">{copy('Choose currency', 'pricing')}</option>
+            {currencies.map((c) => (
+              <option key={c} value={c}>
+                {copy('{{value1}} · {{value2}} decimal places', 'pricing', {
+                  value1: c,
+                  value2: exponents[c],
+                })}
+              </option>
+            ))}
+          </SelectField>
           <TextField
             label={copy('Effective start (UTC calendar)', 'pricing')}
             type="date"
@@ -324,7 +322,7 @@ function PricingForm({
             <h2 className="font-semibold">
               {copy('Line {{value1}}', 'pricing', { value1: i + 1 })}
             </h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="field-grid mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <TextField
                 label={copy('Line {{value1}} description', 'pricing', {
                   value1: i + 1,
@@ -332,31 +330,30 @@ function PricingForm({
                 maxLength={200}
                 {...register(`lines.${i}.description`)}
               />
-              <label className="grid gap-1.5 text-sm font-semibold">
-                {copy('Line {{value1}} kind', 'pricing', { value1: i + 1 })}
-                <select className="ui-input" {...register(`lines.${i}.kind`)}>
-                  {kinds.map((k) => (
-                    <option key={k} value={k}>
-                      {statusLabel(k)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-1.5 text-sm font-semibold">
-                {copy('Line {{value1}} frequency', 'pricing', {
+              <SelectField
+                label={copy('Line {{value1}} kind', 'pricing', {
                   value1: i + 1,
                 })}
-                <select
-                  className="ui-input"
-                  {...register(`lines.${i}.frequency`)}
-                >
-                  {frequencies.map((f) => (
-                    <option key={f} value={f}>
-                      {statusLabel(f)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                {...register(`lines.${i}.kind`)}
+              >
+                {kinds.map((k) => (
+                  <option key={k} value={k}>
+                    {statusLabel(k)}
+                  </option>
+                ))}
+              </SelectField>
+              <SelectField
+                label={copy('Line {{value1}} frequency', 'pricing', {
+                  value1: i + 1,
+                })}
+                {...register(`lines.${i}.frequency`)}
+              >
+                {frequencies.map((f) => (
+                  <option key={f} value={f}>
+                    {statusLabel(f)}
+                  </option>
+                ))}
+              </SelectField>
               <TextField
                 label={copy('Line {{value1}} quantity', 'pricing', {
                   value1: i + 1,

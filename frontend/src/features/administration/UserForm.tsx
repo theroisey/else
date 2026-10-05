@@ -101,7 +101,7 @@ export function UserForm({
       }}
     >
       <form
-        className="mt-5 grid gap-4"
+        className="field-grid mt-5 grid gap-4"
         onSubmit={(event) => {
           void submit(event)
         }}

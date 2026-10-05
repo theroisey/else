@@ -1,3 +1,4 @@
+import { SelectField } from '../../components/ui'
 import { copy, useLocale } from '../../i18n/index'
 import { TextField } from '../../components/ui'
 import { currencies } from './models'
@@ -15,7 +16,7 @@ export function PeriodFields({
   useLocale()
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="field-grid sm:grid-cols-2">
         <TextField
           label={copy('Start date (UTC)', 'commerce')}
           type="date"
@@ -47,23 +48,20 @@ export function PeriodFields({
           }
         />
       </div>
-      <label className="grid gap-2 text-sm font-semibold">
-        {copy('Report currency', 'commerce')}
-        <select
-          className="ui-input font-normal"
-          value={period.currency}
-          disabled={disabled}
-          onChange={(e) =>
-            onChange({ ...period, currency: e.target.value as Currency })
-          }
-        >
-          {currencies.map((currency) => (
-            <option key={currency} value={currency}>
-              {currency}
-            </option>
-          ))}
-        </select>
-      </label>
+      <SelectField
+        label={copy('Report currency', 'commerce')}
+        value={period.currency}
+        disabled={disabled}
+        onChange={(e) =>
+          onChange({ ...period, currency: e.target.value as Currency })
+        }
+      >
+        {currencies.map((currency) => (
+          <option key={currency} value={currency}>
+            {currency}
+          </option>
+        ))}
+      </SelectField>
       <p className="text-xs text-muted">
         {copy(
           'Starts at 00:00 UTC on the start date and stops before 00:00 UTC on the end date, up to 31 days. Currency is explicit; amounts are never converted.',

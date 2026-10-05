@@ -5,6 +5,9 @@
 
 /* Material, text and state values are semantic. Both themes are deliberately composed. */
 :root {
+  --control-height: 2.5rem;
+  --control-compact-height: 2rem;
+  --field-label-gap: .375rem;
   color-scheme: light;
   --background: #f2f0ea;
   --surface: #f8f7f3;
@@ -128,10 +131,26 @@
   .page-title { @apply mt-2 break-words font-display text-[2.25rem] font-normal leading-[1.12] tracking-[-0.015em]; }
   .page-description { @apply mt-3 max-w-2xl text-sm leading-6 text-muted; }
   .page-actions { @apply flex flex-wrap items-center gap-2; }
-  .ui-button { @apply inline-flex items-center justify-center gap-2 rounded-sm border font-medium leading-5 transition-colors duration-150 disabled:pointer-events-none disabled:opacity-45; }
+  .ui-button { @apply inline-flex items-center justify-center gap-2 rounded-sm border font-medium leading-5 transition-colors duration-150 disabled:opacity-45; touch-action: manipulation; padding-block: .5rem; }
+  .ui-button-default { min-height: var(--control-height); }
+  .ui-button-compact { min-height: var(--control-compact-height); padding-block: .25rem; }
   .ui-button svg { @apply text-xs; }
-  .ui-input { @apply min-h-10 w-full min-w-0 rounded-sm border border-line-strong bg-surface px-3 py-2 text-sm text-ink shadow-none transition-colors duration-150 placeholder:text-muted hover:border-accent disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-muted; }
-  .ui-input:focus { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ui-button[aria-busy="true"] { cursor: progress; }
+  .ui-input { @apply w-full min-w-0 rounded-sm border border-line-strong bg-surface px-3 text-sm text-ink shadow-none transition-colors duration-150 placeholder:text-muted hover:border-accent disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-muted; min-height: var(--control-height); padding-block: .5rem; font-weight: 400; line-height: 1.25rem; }
+  input.ui-input, select.ui-input { height: var(--control-height); }
+  select.ui-input, select option { background-color: var(--surface); color: var(--text-primary); }
+  select.ui-input { appearance: auto; padding-block: 0; }
+  .ui-input:focus-visible { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ui-field, label:has(> .ui-input) { display: grid; min-width: 0; align-content: start; gap: var(--field-label-gap); font-size: .875rem; font-weight: 600; line-height: 1.25rem; }
+  .ui-label { font-size: .875rem; font-weight: 600; line-height: 1.25rem; color: var(--text-primary); }
+  .ui-field-body { display: grid; min-width: 0; align-content: start; gap: var(--field-label-gap); }
+  .field-grid { display: grid; gap: 1rem; }
+  .field-grid > .ui-field, .field-grid > label:has(> .ui-input), .filter-grid > .ui-field, .filter-grid > label:has(> .ui-input) { grid-row: span 2; grid-template-rows: subgrid; align-content: stretch; }
+  .filter-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--field-label-gap) 1rem; }
+  .filter-actions { display: grid; grid-row: span 2; grid-template-rows: subgrid; gap: var(--field-label-gap); }
+  .filter-actions::before { content: ''; }
+  .filter-actions > .ui-button { align-self: start; width: 100%; }
+  .filter-grid > .ui-field-body { grid-column: 1 / -1; }
   .ui-status { @apply inline-flex w-fit items-center gap-1.5 text-[0.6875rem] font-medium leading-5; }
   .ui-status::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
   .table-region { @apply relative max-w-full overflow-auto border-y border-line bg-surface; max-height: 70vh; scrollbar-width: thin; }
@@ -278,3 +297,25 @@
 .website-portfolio-link { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; padding: 1.5rem .5rem; border-bottom: 1px solid var(--border); transition: background-color var(--motion-fast, 140ms) ease; }
 .website-portfolio-link:hover { background: var(--surface); }
 .website-portfolio-link > div:first-child { flex: 1 1 18rem; }
+
+/* Shared field rows allocate the tallest localized label before sizing controls.
+   CSS subgrid preserves intrinsic layout; no per-page offsets or measurements. */
+@media (min-width: 640px) {
+  .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1280px) {
+  .filter-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .filter-grid.clients-filters { grid-template-columns: minmax(12rem, 2fr) minmax(8rem, 1.1fr) minmax(7rem, .8fr) minmax(10rem, 1.2fr) minmax(8rem, auto); }
+  .filter-grid.planning-filters { grid-template-columns: minmax(12rem, 1.8fr) repeat(3, minmax(8rem, 1fr)) minmax(8rem, auto); }
+  .filter-grid.reminder-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 639px), (pointer: coarse) {
+  :root { --control-height: 2.75rem; --control-compact-height: 2.75rem; }
+  .ui-input, .appearance-control select, .website-switcher select { font-size: 1rem; }
+  .ui-button, .appearance-control select, .website-switcher select { min-height: 2.75rem; }
+  .ui-table .ui-button { min-height: 2.75rem; }
+}
+.ui-field-body { font-weight: 400; }
+@media (min-width: 640px) {
+  .filter-grid.picker-filters { grid-template-columns: minmax(0, 1fr) minmax(7rem, auto); }
+}

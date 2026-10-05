@@ -107,7 +107,7 @@ export function ClientForm({ client }: { client?: Client }) {
         void handleSubmit(submit)(e)
       }}
     >
-      <fieldset disabled={busy} className="grid gap-4 form-section">
+      <fieldset disabled={busy} className="field-grid grid gap-4 form-section">
         <legend className="px-1 font-semibold">
           {copy('Client profile', 'clients')}
         </legend>
@@ -236,7 +236,7 @@ export function ClientForm({ client }: { client?: Client }) {
                 copy(errors.contacts?.[index]?.name?.message, 'clients') ?? ''
               }
             />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="field-grid grid gap-3 sm:grid-cols-2">
               <TextField
                 label={copy('Contact {{value1}} email', 'clients', {
                   value1: index + 1,

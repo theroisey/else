@@ -1,3 +1,4 @@
+import { SelectField } from '../../components/ui'
 import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
@@ -94,7 +95,7 @@ function PlanningList({ scope }: { scope: Scope }) {
         <OperationNotice operation={operation} reload={refresh} />
       ) : null}
       <form
-        className="mb-5 grid gap-3 filter-bar sm:grid-cols-2 xl:grid-cols-5"
+        className="mb-5 filter-bar filter-grid planning-filters"
         onSubmit={(e) => {
           e.preventDefault()
           setFilter({ ...draft, q: draft.q.trim() })
@@ -110,56 +111,49 @@ function PlanningList({ scope }: { scope: Scope }) {
           value={draft.q}
           onChange={(e) => setDraft({ ...draft, q: e.target.value })}
         />
-        <label className="grid gap-1.5 text-sm font-semibold">
-          {copy('State', 'planning')}{' '}
-          <select
-            className="ui-input"
-            value={draft.status}
-            onChange={(e) =>
-              setDraft({ ...draft, status: e.target.value as Filter['status'] })
-            }
-          >
-            <option value="all">{copy('All states', 'planning')}</option>
-            {(scope.planID ? milestoneStates : planStates).map((s) => (
-              <option key={s} value={s}>
-                {copy(labels[s], 'planning')}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1.5 text-sm font-semibold">
-          {copy('Archive', 'planning')}{' '}
-          <select
-            className="ui-input"
-            value={draft.archived}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                archived: e.target.value as Filter['archived'],
-              })
-            }
-          >
-            <option value="false">{copy('Current', 'planning')}</option>
-            <option value="true">{copy('Archived', 'planning')}</option>
-            <option value="all">{copy('All records', 'planning')}</option>
-          </select>
-        </label>
-        <label className="grid gap-1.5 text-sm font-semibold">
-          {copy('Order', 'planning')}{' '}
-          <select
-            className="ui-input"
-            value={draft.sort}
-            onChange={(e) =>
-              setDraft({ ...draft, sort: e.target.value as Filter['sort'] })
-            }
-          >
-            <option value="id">{copy('ID ascending', 'planning')}</option>
-            <option value="-id">{copy('ID descending', 'planning')}</option>
-          </select>
-        </label>
-        <Button type="submit" className="self-end" disabled={busy}>
-          {copy('Apply filters', 'planning')}
-        </Button>
+        <SelectField
+          label={copy('State', 'planning')}
+          value={draft.status}
+          onChange={(e) =>
+            setDraft({ ...draft, status: e.target.value as Filter['status'] })
+          }
+        >
+          <option value="all">{copy('All states', 'planning')}</option>
+          {(scope.planID ? milestoneStates : planStates).map((s) => (
+            <option key={s} value={s}>
+              {copy(labels[s], 'planning')}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField
+          label={copy('Archive', 'planning')}
+          value={draft.archived}
+          onChange={(e) =>
+            setDraft({
+              ...draft,
+              archived: e.target.value as Filter['archived'],
+            })
+          }
+        >
+          <option value="false">{copy('Current', 'planning')}</option>
+          <option value="true">{copy('Archived', 'planning')}</option>
+          <option value="all">{copy('All records', 'planning')}</option>
+        </SelectField>
+        <SelectField
+          label={copy('Order', 'planning')}
+          value={draft.sort}
+          onChange={(e) =>
+            setDraft({ ...draft, sort: e.target.value as Filter['sort'] })
+          }
+        >
+          <option value="id">{copy('ID ascending', 'planning')}</option>
+          <option value="-id">{copy('ID descending', 'planning')}</option>
+        </SelectField>
+        <div className="filter-actions">
+          <Button type="submit" disabled={busy}>
+            {copy('Apply filters', 'planning')}
+          </Button>
+        </div>
       </form>
       {query.isPending ? (
         <p role="status" aria-busy="true">

@@ -4,6 +4,7 @@ export { Dialog } from './Dialog'
 export { Status } from './Status'
 export { Table } from './Table'
 export { TextField } from './TextField'
+export { SelectField } from './SelectField'
 
 export { PageHeader } from './PageHeader'
 export { PageSkeleton } from './Skeleton'

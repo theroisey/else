@@ -1,3 +1,4 @@
+import { SelectField } from '../../components/ui'
 import { currentLocale } from '../../i18n'
 import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
@@ -111,56 +112,59 @@ export function ClientsPage() {
       ) : (
         <>
           <form
-            className="mb-5 grid items-end gap-3 filter-bar sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1fr)_minmax(8rem,1fr)_10rem_12rem_auto]"
+            className="mb-5 filter-bar filter-grid clients-filters"
             onSubmit={apply}
           >
             <TextField
+              name="search"
+              type="search"
+              autoComplete="off"
               label={copy('Search by name', 'clients')}
               value={draft.q}
               maxLength={100}
               onChange={(e) => setDraft({ ...draft, q: e.target.value })}
             />
             <TextField
+              name="tag"
+              autoComplete="off"
               label={copy('Tag', 'clients')}
               value={draft.tag}
               maxLength={40}
               onChange={(e) => setDraft({ ...draft, tag: e.target.value })}
             />
-            <label className="grid gap-1.5 font-semibold">
-              {copy('Status', 'clients')}{' '}
-              <select
-                className="ui-input font-normal"
-                value={draft.status}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    status: e.target.value as Filter['status'],
-                  })
-                }
-              >
-                <option value="active">{copy('Active', 'clients')}</option>
-                <option value="archived">{copy('Archived', 'clients')}</option>
-                <option value="all">{copy('All', 'clients')}</option>
-              </select>
-            </label>
-            <label className="grid gap-1.5 font-semibold">
-              {copy('Sort', 'clients')}{' '}
-              <select
-                className="ui-input font-normal"
-                value={draft.sort}
-                onChange={(e) =>
-                  setDraft({ ...draft, sort: e.target.value as Filter['sort'] })
-                }
-              >
-                <option value="id">
-                  {copy('Client ID ascending', 'clients')}
-                </option>
-                <option value="-id">
-                  {copy('Client ID descending', 'clients')}
-                </option>
-              </select>
-            </label>
-            <Button type="submit">{copy('Apply filters', 'clients')}</Button>
+            <SelectField
+              name="status"
+              label={copy('Status', 'clients')}
+              value={draft.status}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  status: e.target.value as Filter['status'],
+                })
+              }
+            >
+              <option value="active">{copy('Active', 'clients')}</option>
+              <option value="archived">{copy('Archived', 'clients')}</option>
+              <option value="all">{copy('All', 'clients')}</option>
+            </SelectField>
+            <SelectField
+              name="sort"
+              label={copy('Sort', 'clients')}
+              value={draft.sort}
+              onChange={(e) =>
+                setDraft({ ...draft, sort: e.target.value as Filter['sort'] })
+              }
+            >
+              <option value="id">
+                {copy('Client ID ascending', 'clients')}
+              </option>
+              <option value="-id">
+                {copy('Client ID descending', 'clients')}
+              </option>
+            </SelectField>
+            <div className="filter-actions">
+              <Button type="submit">{copy('Apply filters', 'clients')}</Button>
+            </div>
           </form>
           {query.isPending ? (
             <PageSkeleton label={copy('Loading clients…', 'clients')} />
@@ -178,7 +182,9 @@ export function ClientsPage() {
               </h2>
               <p className="mt-2 text-muted">
                 {copy(
-                  canCreate ? 'Adjust the filters, return to the previous page, or create a client.' : 'Adjust the filters or return to the previous page.',
+                  canCreate
+                    ? 'Adjust the filters, return to the previous page, or create a client.'
+                    : 'Adjust the filters or return to the previous page.',
                   'clients',
                 )}
               </p>

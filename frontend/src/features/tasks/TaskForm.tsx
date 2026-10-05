@@ -1,3 +1,4 @@
+import { SelectField } from '../../components/ui'
 import { statusLabel } from '../../i18n/labels'
 import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
@@ -216,28 +217,28 @@ export function TaskForm({
             </p>
           ) : null}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1.5 font-semibold">
-            {copy('Priority', 'tasks')}{' '}
-            <select className="ui-input font-normal" {...register('priority')}>
-              {priorities.map((p) => (
-                <option key={p} value={p}>
-                  {statusLabel(p)}
+        <div className="field-grid grid gap-3 sm:grid-cols-2">
+          <SelectField
+            label={copy('Priority', 'tasks')}
+            {...register('priority')}
+          >
+            {priorities.map((p) => (
+              <option key={p} value={p}>
+                {statusLabel(p)}
+              </option>
+            ))}
+          </SelectField>
+          {!task ? (
+            <SelectField
+              label={copy('Initial status', 'tasks')}
+              {...register('status')}
+            >
+              {(['todo', 'backlog'] as const).map((s) => (
+                <option key={s} value={s}>
+                  {copy(statusLabels[s], 'tasks')}
                 </option>
               ))}
-            </select>
-          </label>
-          {!task ? (
-            <label className="grid gap-1.5 font-semibold">
-              {copy('Initial status', 'tasks')}{' '}
-              <select className="ui-input font-normal" {...register('status')}>
-                {(['todo', 'backlog'] as const).map((s) => (
-                  <option key={s} value={s}>
-                    {copy(statusLabels[s], 'tasks')}
-                  </option>
-                ))}
-              </select>
-            </label>
+            </SelectField>
           ) : null}
         </div>
         <AssigneePicker
@@ -257,7 +258,7 @@ export function TaskForm({
             { value1: deviceTimezone() },
           )}
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="field-grid grid gap-3 sm:grid-cols-2">
           <TextField
             label={copy('Start time', 'tasks')}
             type="datetime-local"

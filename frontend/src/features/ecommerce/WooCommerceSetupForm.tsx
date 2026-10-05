@@ -75,7 +75,7 @@ export function WooCommerceSetupForm({
     <form
       noValidate
       autoComplete="off"
-      className="mt-5 grid gap-4 form-section"
+      className="field-grid mt-5 grid gap-4 form-section"
       onSubmit={(e) => {
         e.preventDefault()
         void submit(true)

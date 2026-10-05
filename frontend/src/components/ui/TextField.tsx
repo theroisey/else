@@ -35,32 +35,34 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
       undefined
 
     return (
-      <div className="grid gap-1.5">
-        <label className="text-sm font-semibold text-ink" htmlFor={inputID}>
+      <div className="ui-field">
+        <label className="ui-label" htmlFor={inputID}>
           {label}
         </label>
-        {description ? (
-          <p className="text-xs leading-5 text-muted" id={descriptionID}>
-            {description}
-          </p>
-        ) : null}
-        <input
-          {...props}
-          ref={ref}
-          id={inputID}
-          className={`ui-input ${error ? 'border-danger-strong' : ''} ${className}`.trim()}
-          aria-describedby={describedBy}
-          aria-invalid={error ? 'true' : invalid}
-        />
-        {error ? (
-          <p
-            className="text-xs font-medium text-danger-ink"
-            id={errorID}
-            role="alert"
-          >
-            {error}
-          </p>
-        ) : null}
+        <div className="ui-field-body">
+          <input
+            {...props}
+            ref={ref}
+            id={inputID}
+            className={`ui-input ${error ? 'border-danger-strong' : ''} ${className}`.trim()}
+            aria-describedby={describedBy}
+            aria-invalid={error ? 'true' : invalid}
+          />
+          {description ? (
+            <p className="text-xs leading-5 text-muted" id={descriptionID}>
+              {description}
+            </p>
+          ) : null}
+          {error ? (
+            <p
+              className="text-xs font-medium text-danger-ink"
+              id={errorID}
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
+        </div>
       </div>
     )
   },

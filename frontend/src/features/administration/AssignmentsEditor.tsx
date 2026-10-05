@@ -1,3 +1,4 @@
+import { SelectField } from '../../components/ui'
 import { statusLabel } from '../../i18n/labels'
 import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
@@ -265,24 +266,21 @@ export function AssignmentsEditor({
               />
             ) : (
               <>
-                <label className="grid gap-1.5 text-sm font-semibold">
-                  {copy('Scope', 'administration')}{' '}
-                  <select
-                    className="ui-input"
-                    value={scope}
-                    onChange={(e) => {
-                      setScope(e.target.value as 'global' | 'client')
-                      setRoleID('')
-                    }}
-                  >
-                    <option value="global">
-                      {copy('Global', 'administration')}
-                    </option>
-                    <option value="client">
-                      {copy('Client', 'administration')}
-                    </option>
-                  </select>
-                </label>
+                <SelectField
+                  label={copy('Scope', 'administration')}
+                  value={scope}
+                  onChange={(e) => {
+                    setScope(e.target.value as 'global' | 'client')
+                    setRoleID('')
+                  }}
+                >
+                  <option value="global">
+                    {copy('Global', 'administration')}
+                  </option>
+                  <option value="client">
+                    {copy('Client', 'administration')}
+                  </option>
+                </SelectField>
                 {scope === 'client' ? (
                   <TextField
                     label={copy('Client ID', 'administration')}
@@ -302,45 +300,34 @@ export function AssignmentsEditor({
                     }
                   />
                 ) : null}
-                <label className="grid gap-1.5 text-sm font-semibold">
-                  {copy('Role', 'administration')}{' '}
-                  <select
-                    className="ui-input"
-                    value={roleID}
-                    onChange={(e) => setRoleID(e.target.value)}
-                  >
-                    <option value="">
-                      {copy('Select a role', 'administration')}
-                    </option>
-                    {roles.data.data.map((r) => (
-                      <option
-                        value={r.id}
-                        key={r.id}
-                        disabled={
-                          !canAssign(
-                            grants,
-                            r,
-                            scope,
-                            client.trim().toLowerCase(),
-                          )
-                        }
-                      >
-                        {r.display_name}
-                        {!canAssign(
+                <SelectField
+                  label={copy('Role', 'administration')}
+                  value={roleID}
+                  onChange={(e) => setRoleID(e.target.value)}
+                >
+                  <option value="">
+                    {copy('Select a role', 'administration')}
+                  </option>
+                  {roles.data.data.map((r) => (
+                    <option
+                      value={r.id}
+                      key={r.id}
+                      disabled={
+                        !canAssign(
                           grants,
                           r,
                           scope,
                           client.trim().toLowerCase(),
                         )
-                          ? copy(
-                              ' · Unavailable at this scope',
-                              'administration',
-                            )
-                          : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                      }
+                    >
+                      {r.display_name}
+                      {!canAssign(grants, r, scope, client.trim().toLowerCase())
+                        ? copy(' · Unavailable at this scope', 'administration')
+                        : ''}
+                    </option>
+                  ))}
+                </SelectField>
                 <Pager
                   label={copy('Available role pagination', 'administration')}
                   page={roles.data}

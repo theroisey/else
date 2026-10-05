@@ -1,3 +1,4 @@
+import { SelectField } from '../../components/ui'
 import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Button, TextField } from '../../components/ui'
@@ -41,7 +42,7 @@ export function AuditFilters({
         }
       }}
     >
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="field-grid sm:grid-cols-2 xl:grid-cols-3">
         {Object.entries(labels)
           .filter(([key]) => !scope || key !== 'client_id')
           .map(([key, label]) => (
@@ -71,19 +72,16 @@ export function AuditFilters({
               onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
             />
           ))}
-        <label className="grid content-start gap-1.5 text-sm font-semibold">
-          {copy('Actor kind', 'audit')}{' '}
-          <select
-            className="ui-input"
-            value={draft.actor_kind}
-            disabled={busy}
-            onChange={(e) => setDraft({ ...draft, actor_kind: e.target.value })}
-          >
-            <option value="">{copy('All actors', 'audit')}</option>
-            <option value="user">{copy('User', 'audit')}</option>
-            <option value="system">{copy('System', 'audit')}</option>
-          </select>
-        </label>
+        <SelectField
+          label={copy('Actor kind', 'audit')}
+          value={draft.actor_kind}
+          disabled={busy}
+          onChange={(e) => setDraft({ ...draft, actor_kind: e.target.value })}
+        >
+          <option value="">{copy('All actors', 'audit')}</option>
+          <option value="user">{copy('User', 'audit')}</option>
+          <option value="system">{copy('System', 'audit')}</option>
+        </SelectField>
       </div>
       <p className="mt-3 text-xs text-muted">
         {copy(

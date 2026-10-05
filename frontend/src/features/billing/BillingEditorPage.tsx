@@ -243,7 +243,7 @@ function CollectionForm({
           retry={() => void catalog.refetch()}
         />
       ) : null}
-      <fieldset disabled={disabled} className="grid gap-4">
+      <fieldset disabled={disabled} className="field-grid grid gap-4">
         <label className="grid gap-1.5 text-sm font-semibold">
           {copy('Collection description', 'billing')}{' '}
           <textarea

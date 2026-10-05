@@ -1,3 +1,4 @@
+import { SelectField } from '../../components/ui'
 import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -39,21 +40,18 @@ export function LinkHistory({
         <h3 className="font-semibold">
           {copy('Task link history', 'planning')}
         </h3>
-        <label className="grid gap-1.5 text-xs font-semibold">
-          {copy('Reference history', 'planning')}{' '}
-          <select
-            className="ui-input"
-            value={filter}
-            onChange={(e) => {
-              setFilter(e.target.value as Filter['archived'])
-              setHistory([''])
-            }}
-          >
-            <option value="all">{copy('All links', 'planning')}</option>
-            <option value="false">{copy('Current links', 'planning')}</option>
-            <option value="true">{copy('Removed links', 'planning')}</option>
-          </select>
-        </label>
+        <SelectField
+          label={copy('Reference history', 'planning')}
+          value={filter}
+          onChange={(e) => {
+            setFilter(e.target.value as Filter['archived'])
+            setHistory([''])
+          }}
+        >
+          <option value="all">{copy('All links', 'planning')}</option>
+          <option value="false">{copy('Current links', 'planning')}</option>
+          <option value="true">{copy('Removed links', 'planning')}</option>
+        </SelectField>
       </div>
       {query.isPending ? (
         <p role="status" className="mt-3" aria-busy="true">

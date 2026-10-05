@@ -15,7 +15,10 @@ export function PeriodFields({
 }) {
   useLocale()
   return (
-    <fieldset disabled={disabled} className="grid gap-3 sm:grid-cols-2">
+    <fieldset
+      disabled={disabled}
+      className="field-grid grid gap-3 sm:grid-cols-2"
+    >
       <legend className="mb-2 text-sm text-muted">
         {copy('{{value1}} dates · Maximum 31 inclusive days', 'analytics', {
           value1: calendar,

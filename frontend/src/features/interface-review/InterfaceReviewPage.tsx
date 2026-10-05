@@ -103,7 +103,11 @@ export function InterfaceReviewPage() {
                 'common',
               )}
             </p>
-            <form className="mt-5 grid gap-4" onSubmit={validate} noValidate>
+            <form
+              className="field-grid mt-5 grid gap-4"
+              onSubmit={validate}
+              noValidate
+            >
               <TextField
                 label={copy('Review label', 'common')}
                 description={copy(

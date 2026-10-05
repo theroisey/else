@@ -1,3 +1,4 @@
+import { SelectField } from '../../components/ui'
 import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -128,7 +129,10 @@ export function PaymentForm({
           { value1: money(record.outstanding_minor, record.currency) },
         )}
       </p>
-      <fieldset disabled={disabled} className="grid gap-4 sm:grid-cols-2">
+      <fieldset
+        disabled={disabled}
+        className="field-grid grid gap-4 sm:grid-cols-2"
+      >
         <TextField
           label={copy('Payment amount ({{value1}})', 'billing', {
             value1: record.currency,
@@ -144,16 +148,16 @@ export function PaymentForm({
           {...register('paid_on')}
           error={copy(errors.paid_on?.message, 'billing') ?? ''}
         />
-        <label className="grid gap-1.5 text-sm font-semibold">
-          {copy('Payment method', 'billing')}{' '}
-          <select className="ui-input" {...register('method')}>
-            {methods.map((m) => (
-              <option key={m} value={m}>
-                {copy(methodLabels[m], 'billing')}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          label={copy('Payment method', 'billing')}
+          {...register('method')}
+        >
+          {methods.map((m) => (
+            <option key={m} value={m}>
+              {copy(methodLabels[m], 'billing')}
+            </option>
+          ))}
+        </SelectField>
         <TextField
           label={copy('Payment reference', 'billing')}
           description={copy(

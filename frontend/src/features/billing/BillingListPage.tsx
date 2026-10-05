@@ -1,3 +1,4 @@
+import { SelectField } from '../../components/ui'
 import { formatCalendarDate } from '../../i18n/format'
 import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
@@ -61,7 +62,7 @@ function List({ clientID }: { clientID: string }) {
       </BillingHeader>
       <FinanceSummary operation={operation} />
       <form
-        className="mb-5 grid gap-3 filter-bar sm:grid-cols-2 xl:grid-cols-4"
+        className="mb-5 filter-bar filter-grid"
         onSubmit={(e) => {
           e.preventDefault()
           setFilter({ ...draft, search: draft.search.trim() })
@@ -69,51 +70,50 @@ function List({ clientID }: { clientID: string }) {
         }}
       >
         <TextField
+          name="search"
+          type="search"
+          autoComplete="off"
           label={copy('Search collections', 'billing')}
           maxLength={100}
           value={draft.search}
           onChange={(e) => setDraft({ ...draft, search: e.target.value })}
         />
-        <label className="grid gap-1.5 text-sm font-semibold">
-          {copy('State', 'billing')}{' '}
-          <select
-            className="ui-input"
-            value={draft.status}
-            onChange={(e) =>
-              setDraft({ ...draft, status: e.target.value as Filter['status'] })
-            }
-          >
-            <option value="all">{copy('All states', 'billing')}</option>
-            {states.map((s) => (
-              <option key={s} value={s}>
-                {copy(labels[s], 'billing')}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1.5 text-sm font-semibold">
-          {copy('Currency filter', 'billing')}{' '}
-          <select
-            className="ui-input"
-            value={draft.currency}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                currency: e.target.value as Filter['currency'],
-              })
-            }
-          >
-            <option value="">
-              {copy('All currencies, shown separately', 'billing')}
+        <SelectField
+          label={copy('State', 'billing')}
+          value={draft.status}
+          onChange={(e) =>
+            setDraft({ ...draft, status: e.target.value as Filter['status'] })
+          }
+        >
+          <option value="all">{copy('All states', 'billing')}</option>
+          {states.map((s) => (
+            <option key={s} value={s}>
+              {copy(labels[s], 'billing')}
             </option>
-            {currencies.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        </label>
-        <Button type="submit" className="self-end" disabled={query.isFetching}>
-          {copy('Apply filters', 'billing')}
-        </Button>
+          ))}
+        </SelectField>
+        <SelectField
+          label={copy('Currency filter', 'billing')}
+          value={draft.currency}
+          onChange={(e) =>
+            setDraft({
+              ...draft,
+              currency: e.target.value as Filter['currency'],
+            })
+          }
+        >
+          <option value="">
+            {copy('All currencies, shown separately', 'billing')}
+          </option>
+          {currencies.map((c) => (
+            <option key={c}>{c}</option>
+          ))}
+        </SelectField>
+        <div className="filter-actions">
+          <Button type="submit" disabled={query.isFetching}>
+            {copy('Apply filters', 'billing')}
+          </Button>
+        </div>
       </form>
       {query.isPending ? (
         <PageSkeleton label={copy('Loading collections…', 'billing')} />

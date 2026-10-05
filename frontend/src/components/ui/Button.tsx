@@ -36,16 +36,22 @@ export function Button({
       disabled={disabled || loading}
       aria-busy={loading || undefined}
     >
-      {loading ? (
+      {loading && icon ? (
         <FontAwesomeIcon
-          className="motion-safe:animate-spin"
+          className="size-3 motion-safe:animate-spin"
           icon={faCircleNotch}
           aria-hidden="true"
         />
       ) : icon ? (
-        <FontAwesomeIcon icon={icon} aria-hidden="true" />
+        <FontAwesomeIcon className="size-3" icon={icon} aria-hidden="true" />
       ) : null}
-      <span>{loading && loadingLabel ? loadingLabel : children}</span>
+      <span>{children}</span>
+      {loading && loadingLabel ? (
+        <span className="sr-only" role="status">
+          {' '}
+          {loadingLabel}
+        </span>
+      ) : null}
     </button>
   )
 }

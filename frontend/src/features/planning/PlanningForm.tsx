@@ -241,7 +241,7 @@ export function PlanningForm({
             { value1: deviceTimezone() },
           )}
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="field-grid grid gap-3 sm:grid-cols-2">
           {!scope.planID ? (
             <TextField
               label={copy('Start time', 'planning')}
