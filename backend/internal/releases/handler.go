@@ -1,6 +1,4 @@
-// Package releases provides current binary metadata under fresh global grants.
-// Remote release, image provenance and deployment observations are unavailable
-// until an authenticated authoritative source is separately implemented.
+// Package releases provides read-only build and remote evidence under fresh grants.
 package releases
 
 import (
@@ -16,14 +14,12 @@ import (
 
 var ErrInvalid = errors.New("invalid release handler")
 
-type Observation struct {
-	Status string `json:"status"`
-}
 type Report struct {
 	Runtime         buildinfo.Metadata `json:"runtime"`
 	LatestRelease   Observation        `json:"latest_release"`
 	ImageProvenance Observation        `json:"image_provenance"`
 	Deployment      Observation        `json:"deployment"`
+	CheckedAt       string             `json:"checked_at,omitempty"`
 }
 
 type Handler struct {
@@ -31,13 +27,25 @@ type Handler struct {
 	authorizer *authorization.Service
 	logger     *slog.Logger
 	metadata   buildinfo.Metadata
+	provider   EvidenceProvider
 }
 
-func NewHandler(auth *identity.Handler, authorizer *authorization.Service, logger *slog.Logger) (*Handler, error) {
+func NewHandler(auth *identity.Handler, authorizer *authorization.Service, logger *slog.Logger, providers ...EvidenceProvider) (*Handler, error) {
 	if auth == nil || authorizer == nil || logger == nil {
 		return nil, ErrInvalid
 	}
-	return &Handler{auth, authorizer, logger, buildinfo.Current()}, nil
+	metadata := buildinfo.Current()
+	var provider EvidenceProvider = NewEvidenceService(EvidenceConfig{reason: "not_configured"}, metadata, nil)
+	if len(providers) > 1 {
+		return nil, ErrInvalid
+	}
+	if len(providers) == 1 {
+		if providers[0] == nil {
+			return nil, ErrInvalid
+		}
+		provider = providers[0]
+	}
+	return &Handler{auth: auth, authorizer: authorizer, logger: logger, metadata: metadata, provider: provider}, nil
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -65,8 +73,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		httpapi.WriteError(w, r, 403, "permission_denied", "Permission denied.")
 		return
 	}
-	u := Observation{Status: "unavailable"}
+	refresh := r.Header.Get("X-Release-Refresh")
+	if refresh != "" && refresh != "revalidate" {
+		httpapi.WriteError(w, r, 400, "invalid_request", "Release request is invalid.")
+		return
+	}
+	evidence := h.provider.Observe(r.Context(), refresh == "revalidate")
 	httpapi.WriteJSON(w, r, 200, struct {
 		Data Report `json:"data"`
-	}{Report{h.metadata, u, u, u}})
+	}{Report{Runtime: h.metadata, LatestRelease: evidence.LatestRelease, ImageProvenance: evidence.ImageProvenance, Deployment: evidence.Deployment, CheckedAt: evidence.CheckedAt}})
 }

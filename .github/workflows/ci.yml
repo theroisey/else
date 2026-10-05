@@ -192,6 +192,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
+      attestations: write
     concurrency:
       group: ghcr-publication
       cancel-in-progress: false
@@ -214,10 +216,29 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Promote verified application image
+        id: publication
         env:
           IMAGE_VERSION: ${{ inputs.version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash backend/scripts/publish-images.sh
+      - name: Attest the promoted tested image
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ${{ steps.publication.outputs.image }}
+          subject-digest: ${{ steps.publication.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
+      - name: Verify promoted image provenance
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TESTED_IMAGE: ${{ steps.publication.outputs.image }}
+          TESTED_DIGEST: ${{ steps.publication.outputs.digest }}
+        run: >-
+          gh attestation verify "oci://$TESTED_IMAGE@$TESTED_DIGEST"
+          --repo "$GITHUB_REPOSITORY"
+          --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/ci.yml"
+          --source-ref refs/heads/main
+          --source-digest "$GITHUB_SHA"
       - name: Published image pull and persistent upgrade rehearsal
         env:
           ELSE_TEST_DISTRIBUTION_IMAGE: ghcr.io/theroisey/else:sha-${{ github.sha }}

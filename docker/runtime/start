@@ -129,7 +129,7 @@ fi
 printf 'managed\n' > "$CONTROL/runtime-managed"
 sync -f "$CONTROL"
 log postgres starting_database
-gosu postgres postgres -D "$PGDATA" \
+env -u GITHUB_TOKEN -u GITHUB_REPOSITORY gosu postgres postgres -D "$PGDATA" \
   -c listen_addresses=127.0.0.1 -c port=5432 -c unix_socket_directories="$SOCKET" \
   -c hba_file=/opt/else/pg_hba.conf -c ssl=off -c timezone=UTC \
   -c logging_collector=off -c log_statement=none -c log_min_error_statement=panic \
@@ -224,7 +224,7 @@ unset MIGRATOR_SECRET RUNTIME_SECRET
 log app starting_roisey_else
 gosu 65532:65532 /api 9>&- &
 app_pid=$!
-gosu 65532:65532 /analytics-worker 9>&- &
+env -u GITHUB_TOKEN -u GITHUB_REPOSITORY gosu 65532:65532 /analytics-worker 9>&- &
 worker_pid=$!
 log worker starting_synchronization_worker
 # Check every child, including one that exited before monitoring started. Bash's

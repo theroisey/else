@@ -44,6 +44,13 @@ RUN rm -f /etc/apt/sources.list.d/pgdg.list \
 # Copy the runtime filesystem rather than inheriting PostgreSQL's anonymous
 # /var/lib/postgresql VOLUME. The distribution has exactly one persistent volume.
 FROM scratch AS production
+ARG BUILD_VERSION=""
+ARG BUILD_REVISION=""
+ARG BUILD_TIME=""
+LABEL org.opencontainers.image.source="https://github.com/theroisey/else" \
+    org.opencontainers.image.version=$BUILD_VERSION \
+    org.opencontainers.image.revision=$BUILD_REVISION \
+    org.opencontainers.image.created=$BUILD_TIME
 COPY --from=postgres-runtime / /
 COPY --from=backend-build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=backend-build /out/ /

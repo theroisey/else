@@ -1585,7 +1585,7 @@ test('Release Center identifies the actual API build and removes revoked access'
   expect(data.runtime.built_at).toBe(process.env.AUTH_TEST_BUILD_TIME)
   expect(data.runtime.version).toBe('sha-'+data.runtime.commit_sha)
   await expect(page.getByText(data.runtime.version,{exact:true})).toBeVisible()
-  await expect(page.getByText('A verified deployment source is not connected.',{exact:true})).toBeVisible()
+  await expect(page.getByText('No production deployment evidence source is connected. Artifact publication does not prove a rollout.',{exact:true})).toBeVisible()
   const before=database('SELECT count(*) FROM app.audit_events')
   await page.getByRole('button',{name:'Refresh release information',exact:true}).click()
   await expect(page.getByText(data.runtime.version,{exact:true})).toBeVisible()

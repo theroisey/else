@@ -70,10 +70,14 @@ it('shows complete API identity and separate unavailable evidence with one share
   expect(screen.getByText(revision, { exact: true })).toBeVisible()
   expect(screen.getByText('2026-10-03 18:00:00 UTC')).toBeVisible()
   expect(
-    screen.getByText('A verified release source is not connected.'),
+    screen.getAllByText(
+      'Configure server-only GitHub credentials to connect release evidence.',
+    )[0],
   ).toBeVisible()
   expect(
-    screen.getByText('A verified deployment source is not connected.'),
+    screen.getByText(
+      'No production deployment evidence source is connected. Artifact publication does not prove a rollout.',
+    ),
   ).toBeVisible()
   expect(
     screen.getByRole('link', { name: 'Release Center: API aaaaaaa' }),
@@ -211,4 +215,75 @@ it('clears protected metadata when the server reports an ended session', async (
   expect(
     screen.queryByRole('link', { name: /Release Center/ }),
   ).not.toBeInTheDocument()
+})
+
+it('renders real artifact fields and partial provenance without claiming deployment or signature verification', async () => {
+  const artifact = {
+    commit_sha: revision,
+    tag: 'sha-' + revision,
+    digest: 'sha256:' + 'c'.repeat(64),
+    image_reference: 'ghcr.io/theroisey/else@sha256:' + 'c'.repeat(64),
+    built_at: stamp.built_at,
+    published_at: null,
+    source: 'github_ghcr',
+  }
+  const result = {
+    data: {
+      ...report().data,
+      latest_release: { status: 'available', artifact },
+      image_provenance: {
+        status: 'available',
+        artifact,
+        attestation: { status: 'present', reason: 'signature_not_verified' },
+      },
+    },
+  }
+  const { fetcher } = setup(identity, () => json(result))
+  await screen.findByText('Published artifact identified')
+  expect(screen.getByText('Image metadata matched')).toBeVisible()
+  expect(
+    screen.getByText(
+      'A digest-matching attestation is present. Its signature has not been verified by this application.',
+    ),
+  ).toBeVisible()
+  expect(screen.getAllByText(artifact.digest)).toHaveLength(2)
+  await userEvent
+    .setup()
+    .click(screen.getByRole('button', { name: 'Refresh release information' }))
+  await waitFor(() =>
+    expect(
+      fetcher.mock.calls.filter(([path]) => path === '/api/v1/releases'),
+    ).toHaveLength(2),
+  )
+  expect(
+    fetcher.mock.calls
+      .filter(([path]) => path === '/api/v1/releases')
+      .at(-1)?.[1].headers,
+  ).toMatchObject({ 'X-Release-Refresh': 'revalidate' })
+})
+
+it('keeps runtime metadata readable during a safely classified GitHub outage', async () => {
+  setup(identity, () =>
+    json({
+      data: {
+        ...report().data,
+        latest_release: {
+          status: 'unavailable',
+          reason: 'authentication_failed',
+        },
+        image_provenance: { status: 'unavailable', reason: 'access_denied' },
+      },
+    }),
+  )
+  await screen.findByText(stamp.version)
+  expect(
+    screen.getByText(
+      'The GitHub credential is invalid or expired. Update the server credential.',
+    ),
+  ).toBeVisible()
+  expect(
+    screen.getByText(
+      'The credential cannot read this evidence. Check repository and package read permissions.',
+    ),
+  ).toBeVisible()
 })

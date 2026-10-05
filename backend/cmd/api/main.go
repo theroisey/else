@@ -14,6 +14,7 @@ import (
 	"github.com/theroisey/else/backend/internal/auditreader"
 	"github.com/theroisey/else/backend/internal/authorization"
 	"github.com/theroisey/else/backend/internal/billing"
+	"github.com/theroisey/else/backend/internal/buildinfo"
 	"github.com/theroisey/else/backend/internal/clients"
 	"github.com/theroisey/else/backend/internal/config"
 	"github.com/theroisey/else/backend/internal/database"
@@ -210,7 +211,8 @@ func run(ctx context.Context, lookup func(string) (string, bool), output io.Writ
 		logger.Error("integration_metadata_startup_failed")
 		return 1
 	}
-	releaseHandler, err := releases.NewHandler(authHandler, authorizationService, logger)
+	releaseEvidence := releases.NewEvidenceService(releases.LoadEvidenceConfig(lookup), buildinfo.Current(), nil)
+	releaseHandler, err := releases.NewHandler(authHandler, authorizationService, logger, releaseEvidence)
 	if err != nil {
 		logger.Error("release_startup_failed")
 		return 1

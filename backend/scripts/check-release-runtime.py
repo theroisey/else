@@ -42,10 +42,14 @@ def verify(path, origin, revision, built_at):
     status, raw = read(token=tokens[0])
     assert status == 200
     runtime = {"status": "available", "version": "sha-" + revision, "commit_sha": revision, "built_at": built_at} if revision else {"status": "unavailable", "version": None, "commit_sha": None, "built_at": None}
-    assert json.loads(raw) == {"data": {
-        "runtime": runtime,
-        "latest_release": {"status": "unavailable"}, "image_provenance": {"status": "unavailable"}, "deployment": {"status": "unavailable"},
-    }}
+    report = json.loads(raw)["data"]
+    assert set(report) == {"runtime", "latest_release", "image_provenance", "deployment", "checked_at"}
+    assert report["runtime"] == runtime
+    assert report["latest_release"] == {"status": "unavailable", "reason": "not_configured"}
+    assert report["image_provenance"] == {"status": "unavailable", "reason": "not_configured"}
+    assert report["deployment"] == {"status": "unavailable", "reason": "deployment_source_not_connected"}
+    from datetime import datetime
+    datetime.strptime(report["checked_at"], "%Y-%m-%dT%H:%M:%SZ")
     assert read("?source=synthetic", tokens[0])[0] == 400
     assert read("/extra", tokens[0])[0] == 400
     assert read(token=tokens[0], method="POST")[0] == 405

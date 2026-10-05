@@ -2,10 +2,11 @@ import { copy, useLocale } from '../../i18n/index'
 import { Button, PageSkeleton } from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { useReleaseReport } from './useReleaseReport'
+import { EvidencePanel } from './EvidencePanel'
 
 export function ReleasePage() {
   useLocale()
-  const { allowed, query } = useReleaseReport()
+  const { allowed, query, refresh } = useReleaseReport()
   if (!allowed) return <AccessDenied />
   const runtime =
     !query.isError && !query.isFetching ? query.data?.runtime : undefined
@@ -22,10 +23,7 @@ export function ReleasePage() {
             )}
           </p>
         </div>
-        <Button
-          disabled={query.isFetching}
-          onClick={() => void query.refetch()}
-        >
+        <Button disabled={query.isFetching} onClick={() => void refresh()}>
           {copy('Refresh release information', 'releases')}
         </Button>
       </header>
@@ -99,34 +97,23 @@ export function ReleasePage() {
             </p>
           </section>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
-            {[
-              [
-                copy('Latest release', 'releases'),
-                copy('A verified release source is not connected.', 'releases'),
-              ],
-              [
-                copy('Image provenance', 'releases'),
-                copy(
-                  'Verified image and artifact evidence is not connected.',
-                  'releases',
-                ),
-              ],
-              [
-                copy('Deployment', 'releases'),
-                copy(
-                  'A verified deployment source is not connected.',
-                  'releases',
-                ),
-              ],
-            ].map(([title, description]) => (
-              <section key={title} className="border border-line p-5">
-                <h2 className="font-semibold">{title}</h2>
-                <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {copy('Unavailable', 'releases')}
-                </p>
-                <p className="mt-3 text-sm text-muted">{description}</p>
-              </section>
-            ))}
+            {query.data ? (
+              <>
+                <EvidencePanel
+                  title="Latest release"
+                  observation={query.data.latest_release}
+                />
+                <EvidencePanel
+                  title="Image provenance"
+                  observation={query.data.image_provenance}
+                  provenance
+                />
+                <EvidencePanel
+                  title="Deployment"
+                  observation={query.data.deployment}
+                />
+              </>
+            ) : null}
           </div>
         </>
       ) : null}

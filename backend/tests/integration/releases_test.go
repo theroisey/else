@@ -225,3 +225,48 @@ func TestReleasesActualCompiledAPIStampIgnoresRuntimeOverrides(t *testing.T) {
 		t.Fatal("production container metadata verifier failed")
 	}
 }
+
+type releaseSpy struct {
+	calls   int
+	refresh bool
+}
+
+func (s *releaseSpy) Observe(_ context.Context, refresh bool) releases.Evidence {
+	s.calls++
+	s.refresh = refresh
+	return releases.Evidence{LatestRelease: releases.Observation{Status: "unavailable", Reason: "authentication_failed"}, ImageProvenance: releases.Observation{Status: "unavailable", Reason: "not_found"}, Deployment: releases.Observation{Status: "unavailable", Reason: "deployment_source_not_connected"}, CheckedAt: "2026-10-05T12:00:00Z"}
+}
+func TestEvidenceProviderRunsOnlyAfterFreshAuthorizationAndUsesNoStore(t *testing.T) {
+	f := newAdministrationFixture(t)
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	auth, err := identity.NewHandler(f.service, config.Auth{PublicOrigin: "https://else.example", CookieSecure: true}, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	spy := &releaseSpy{}
+	handler, err := releases.NewHandler(auth, f.authorizer, logger, spy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.handler = httpapi.RequestMiddleware(logger, handler)
+	assertStatus(t, f.request(t, nil, "GET", "releases", nil, nil), 401, "authentication_required")
+	f.user(t, "release.no-evidence@example.com")
+	login, err := f.service.Login(correlation.New(f.base.ctx), "release.no-evidence@example.com", bootstrapPassword)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStatus(t, f.request(t, &login, "GET", "releases", nil, nil), 403, "permission_denied")
+	assertStatus(t, f.request(t, &f.login, "GET", "releases?repository=evil/source", nil, nil), 400, "invalid_request")
+	if spy.calls != 0 {
+		t.Fatal("provider contacted before authorization/grammar")
+	}
+	w := f.request(t, &f.login, "GET", "releases", nil, func(r *http.Request) { r.Header.Set("X-Release-Refresh", "revalidate") })
+	assertStatus(t, w, 200, "")
+	if spy.calls != 1 || !spy.refresh || w.Header().Get("Cache-Control") != "no-store" || !strings.Contains(w.Body.String(), "authentication_failed") {
+		t.Fatal("refresh or partial state lost")
+	}
+	assertStatus(t, f.request(t, &f.login, "GET", "releases", nil, func(r *http.Request) { r.Header.Set("X-Release-Refresh", "evil/source") }), 400, "invalid_request")
+	if spy.calls != 1 {
+		t.Fatal("invalid refresh reached provider")
+	}
+}

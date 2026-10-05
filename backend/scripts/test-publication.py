@@ -34,6 +34,7 @@ class PublicationTests(unittest.TestCase):
             "GITHUB_SHA": REVISION,
             "GITHUB_REPOSITORY": "Example/Else",
             "IMAGE_VERSION": "",
+            "GITHUB_OUTPUT": "",
             "TEST_TRACE": str(self.trace),
             "TEST_EXISTING": "[]",
             "PATH": f"{self.root}:{os.environ['PATH']}",
@@ -47,6 +48,12 @@ with open(os.environ['TEST_TRACE'], 'a') as trace:
 if args[:2] == ['manifest', 'inspect']:
     sys.exit(0 if args[-1] in json.loads(os.environ['TEST_EXISTING']) else 1)
 if args[:2] == ['image', 'inspect']:
+    if args[3] == '{{.Id}}':
+        if ':v' in args[-1] and 'TEST_VERSION_ID' in os.environ:
+            print('sha256:' + os.environ['TEST_VERSION_ID'])
+            sys.exit(0)
+        print('sha256:' + os.environ.get('TEST_REMOTE_ID', 'c' * 64) if not args[-1].endswith(':ci') else 'sha256:' + 'c' * 64)
+        sys.exit(0)
     if args[-1].endswith(':ci'):
         print(os.environ.get('TEST_LOCAL_REVISION', os.environ['GITHUB_SHA']))
     else:
@@ -109,6 +116,12 @@ if args[:2] == ['image', 'inspect']:
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(any(call[0] == "push" for call in calls))
 
+    def test_matching_revision_does_not_allow_different_untested_image(self):
+        result, calls = self.execute(TEST_REMOTE_ID="d" * 64,
+                                    TEST_EXISTING=json.dumps([f"ghcr.io/example/else:sha-{REVISION}"]))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(any(call[0] == "push" for call in calls))
+
     def test_repeat_promotion_preserves_existing_sha_and_adds_version(self):
         existing = [f"ghcr.io/example/else:sha-{REVISION}"]
         result, calls = self.execute(TEST_EXISTING=json.dumps(existing), IMAGE_VERSION="v1.2.3")
@@ -127,6 +140,12 @@ if args[:2] == ['image', 'inspect']:
         result, calls = self.execute(TEST_EXISTING=json.dumps(existing), TEST_REMOTE_REVISION="b" * 40, IMAGE_VERSION="v1.2.3")
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(any(call[0] == "push" and call[-1].endswith(":v1.2.3") for call in calls))
+
+    def test_existing_version_with_matching_revision_but_different_content_is_refused(self):
+        result, calls = self.execute(TEST_EXISTING=json.dumps(["ghcr.io/example/else:v1.2.3"]),
+                                    TEST_VERSION_ID="d" * 64, IMAGE_VERSION="v1.2.3")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(any(call[0] == "push" and call[-1].endswith((":v1.2.3", ":latest")) for call in calls))
 
 
 if __name__ == "__main__":
