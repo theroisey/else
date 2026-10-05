@@ -1058,7 +1058,7 @@ test('pricing retains exact versions and immutable collections through lost-resp
   await page.getByRole('button',{name:'Sign in',exact:true}).click()
   await expect(page.getByRole('heading',{name:'No pricing agreements',exact:true})).toBeVisible()
   await page.getByRole('link',{name:'Create pricing agreement',exact:true}).click()
-  await expect(page.locator('[aria-current="page"]')).toHaveText('Create pricing agreement')
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' }).locator('[aria-current="page"]')).toHaveText('Create pricing agreement')
   await page.getByLabel('Agreement title').fill('Synthetic exact pricing agreement')
   await page.getByRole('combobox',{name:'Currency',exact:true}).selectOption('USD')
   await page.getByLabel('Line 1 description',{exact:true}).fill('Synthetic recurring service')
