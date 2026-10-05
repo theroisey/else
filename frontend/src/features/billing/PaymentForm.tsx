@@ -104,7 +104,7 @@ export function PaymentForm({
     <form
       noValidate
       onSubmit={handleSubmit(submit)}
-      className="mt-6 grid max-w-3xl gap-4 rounded-md border border-line bg-surface p-4 sm:p-5"
+      className="mt-6 grid max-w-3xl gap-4 form-section"
     >
       <h2 className="font-semibold">Record payment</h2>
       <p className="text-sm text-muted">

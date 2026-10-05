@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button, buttonStyles } from '../../components/ui'
+import { Button, buttonStyles, PageSkeleton } from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { useBilling } from './hooks'
 import { BillingHeader, BillingState, BillingError } from './Shared'
@@ -69,14 +69,12 @@ function Detail({
         </p>
       ) : null}
       {query.isPending ? (
-        <p role="status" aria-busy="true">
-          Loading collection…
-        </p>
+        <PageSkeleton label="Loading collection…" />
       ) : query.isError ? (
         <BillingError error={query.error} retry={reload} />
       ) : r ? (
         <>
-          <article className="rounded-md border border-line bg-surface p-4 sm:p-5">
+          <article className="form-section">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <h2 className="max-w-3xl whitespace-pre-wrap break-words text-lg font-semibold">
                 {r.description}
@@ -91,7 +89,7 @@ function Detail({
                   <dt className="text-xs text-muted">
                     {['Amount', 'Collected', 'Outstanding'][i]}
                   </dt>
-                  <dd className="mt-1 break-words font-mono text-sm">
+                  <dd className="mt-2 break-words font-display text-2xl tabular-nums">
                     {money(r[field], r.currency, r.currency_exponent)}
                   </dd>
                 </div>

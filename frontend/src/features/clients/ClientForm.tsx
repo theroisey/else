@@ -100,7 +100,7 @@ export function ClientForm({ client }: { client?: Client }) {
         void handleSubmit(submit)(e)
       }}
     >
-      <fieldset disabled={busy} className="grid gap-4 rounded-md border border-line bg-surface p-5">
+      <fieldset disabled={busy} className="grid gap-4 form-section">
         <legend className="px-1 font-semibold">Client profile</legend>
         <TextField
           label="Client name"
@@ -165,7 +165,7 @@ export function ClientForm({ client }: { client?: Client }) {
           ) : null}
         </div>
       </fieldset>
-      <fieldset disabled={busy} className="grid gap-4 rounded-md border border-line bg-surface p-5">
+      <fieldset disabled={busy} className="grid gap-4 form-section">
         <legend className="px-1 font-semibold">Contacts</legend>
         <p className="text-xs text-muted">
           Up to 20 contacts. Changes replace this client’s complete contact list.

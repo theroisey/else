@@ -25,7 +25,7 @@ export function FinanceSummary({ operation }: { operation: Operation }) {
       ) : query.isError ? (
         <BillingError error={query.error} retry={() => void query.refetch()} />
       ) : !query.data.length ? (
-        <p className="rounded-md border border-line bg-surface p-4 text-sm">
+        <p className="form-section text-sm">
           No balances recorded yet.
         </p>
       ) : (
@@ -41,7 +41,7 @@ export function FinanceSummary({ operation }: { operation: Operation }) {
                 'Cancelled obligations',
                 'Retained cancelled payments',
               ].map((v) => (
-                <th scope="col" key={v}>
+                <th scope="col" className={v === 'Currency' ? '' : 'text-right'} key={v}>
                   {v}
                 </th>
               ))}
@@ -63,7 +63,7 @@ export function FinanceSummary({ operation }: { operation: Operation }) {
                 ).map((field) => (
                   <td
                     key={field}
-                    className="whitespace-nowrap font-mono text-xs"
+                    className={`whitespace-nowrap tabular-nums text-right ${field === 'outstanding_minor' ? 'font-display text-2xl' : 'text-[0.8125rem]'}`}
                   >
                     {money(t[field], t.currency, t.currency_exponent)}
                   </td>

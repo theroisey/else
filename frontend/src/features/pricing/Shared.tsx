@@ -1,10 +1,10 @@
+import { ClientNavigation } from '../clients/ClientNavigation'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router'
-import { Button, buttonStyles } from '../../components/ui'
+import { Button } from '../../components/ui'
 import { APIError } from '../../services/authenticated'
 import { money } from '../billing/money'
 import { unscaled, utcToday } from './exact'
-import { pagePath, effective } from './models'
+import { effective } from './models'
 import type { Calculation, Version } from './models'
 import type { usePricing } from './hooks'
 export { Pager } from '../planning/Shared'
@@ -43,12 +43,12 @@ export function PricingHeader({
       permissions.clientView && !client.isError ? client.data : undefined
   return (
     <>
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+      <header className="page-header">
         <div className="min-w-0">
           <p className="eyebrow">
             {context?.name ?? 'Client workspace'} · Pricing
           </p>
-          <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight">
+          <h1 className="page-title">
             {title}
           </h1>
           <p className="mt-2 text-xs text-muted">
@@ -58,33 +58,7 @@ export function PricingHeader({
         </div>
         <div className="flex flex-wrap gap-2">{children}</div>
       </header>
-      <nav
-        aria-label="Client modules"
-        className="mb-5 flex flex-wrap gap-2 border-b border-line pb-4"
-      >
-        {context ? (
-          <Link
-            className={buttonStyles({ size: 'compact' })}
-            to={`/app/clients/${clientID}`}
-          >
-            Overview
-          </Link>
-        ) : null}
-        <Link
-          className={buttonStyles({ size: 'compact' })}
-          to={pagePath(clientID)}
-        >
-          Pricing
-        </Link>
-        {permissions.billingView ? (
-          <Link
-            className={buttonStyles({ size: 'compact' })}
-            to={`/app/clients/${clientID}/billing`}
-          >
-            Finance
-          </Link>
-        ) : null}
-      </nav>
+      <ClientNavigation clientID={clientID} />
       {context?.status === 'archived' ? (
         <p role="status" className="mb-4">
           This client is archived. Pricing history is retained; new changes are
@@ -129,7 +103,7 @@ export function Terms({
   manage?: boolean
 }) {
   return (
-    <section className="mt-4 rounded-md border border-line bg-surface p-4 sm:p-5">
+    <section className="mt-4 form-section">
       <h2 className="font-semibold">Pricing breakdown</h2>
       <p className="mt-1 text-xs text-muted">
         Discount precedes tax. Each line is rounded separately, then summed.
@@ -171,7 +145,7 @@ export function Terms({
                       ][i]
                     }
                   </dt>
-                  <dd className="mt-1 break-words font-mono text-xs">
+                  <dd className="mt-1 break-words tabular-nums text-sm">
                     {money(l[f], c.currency)}
                   </dd>
                 </div>
@@ -214,7 +188,7 @@ export function Terms({
                 ][i]
               }
             </dt>
-            <dd className="mt-1 break-words font-mono text-sm font-semibold">
+            <dd className="mt-1 break-words tabular-nums text-sm font-semibold">
               {money(c[f], c.currency)}
             </dd>
           </div>

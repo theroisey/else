@@ -1,7 +1,7 @@
 import { Component, Suspense } from 'react'
 import type { ReactNode } from 'react'
 import { useLocation } from 'react-router'
-import { Button } from '../../components/ui'
+import { Button, PageSkeleton } from '../../components/ui'
 
 class PageLoadBoundary extends Component<{ children: ReactNode; name: string }, { failed: boolean }> {
   state = { failed: false }
@@ -11,7 +11,7 @@ class PageLoadBoundary extends Component<{ children: ReactNode; name: string }, 
   render() {
     return this.state.failed ? (
       <section>
-        <h1 className="text-2xl font-semibold">{this.props.name} page unavailable</h1>
+        <h1 className="page-title">{this.props.name} page unavailable</h1>
         <p className="mt-3 text-muted" role="alert">
           Reload the page to try again.
         </p>
@@ -30,9 +30,7 @@ export function ClientRoute({ children, name = 'Client' }: { children: ReactNode
     <PageLoadBoundary key={pathname} name={name}>
       <Suspense
         fallback={
-          <p role="status" aria-busy="true">
-            Loading {name.toLowerCase()} page…
-          </p>
+          <PageSkeleton label={`Loading ${name.toLowerCase()} page…`} />
         }
       >
         {children}

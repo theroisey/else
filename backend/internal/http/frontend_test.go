@@ -52,6 +52,7 @@ func TestSingleOriginFrontendAndAPIBoundaries(t *testing.T) {
 		media        string
 	}{
 		{"GET", "/", 200, "text/html"}, {"GET", "/login", 200, "text/html"}, {"GET", "/app/clients/example/integrations", 200, "text/html"},
+		{"GET", "/service-status", 200, "text/html"}, {"HEAD", "/service-status", 200, "text/html"},
 		{"HEAD", "/assets/app-123.js", 200, "text/javascript"}, {"GET", "/assets/font.woff2", 200, "font/woff2"},
 		{"POST", "/login", 405, "application/json"}, {"GET", "/api/v1/auth/session", 401, "application/json"},
 		{"GET", "/api", 404, "application/json"}, {"GET", "/api/unknown", 404, "application/json"},

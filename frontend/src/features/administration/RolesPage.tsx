@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { faPlus, faRotateRight } from '@fortawesome/free-solid-svg-icons'
-import { Button, Status, Table } from '../../components/ui'
+import { Button, Status, Table, PageSkeleton } from '../../components/ui'
 import { hasPermission } from '../auth/permissions'
 import { useAdministration, useCursor } from './hooks'
 import { ErrorState, PageHeader, Pager } from './Shared'
@@ -59,9 +59,7 @@ export function RolesPage() {
         </p>
       ) : null}
       {query.isPending ? (
-        <p role="status" aria-busy="true">
-          Loading roles…
-        </p>
+        <PageSkeleton label="Loading roles…" />
       ) : query.isError ? (
         <ErrorState
           error={query.error}
@@ -70,7 +68,7 @@ export function RolesPage() {
           }}
         />
       ) : query.data.data.length === 0 ? (
-        <div className="rounded-md border border-line bg-surface p-6">
+        <div className="empty-state">
           <h2 className="font-semibold">No roles on this page</h2>
           <p className="mt-2 text-muted">Create a custom role or return to the previous page.</p>
         </div>

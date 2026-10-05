@@ -200,12 +200,12 @@ test('administration creates and updates accounts, manages scoped roles and revo
   const managedContext = await browser.newContext()
   try {
     const managed = await managedContext.newPage()
-    await managed.goto('http://127.0.0.1:5173/app/access')
+    await managed.goto(new URL('/app/access', page.url()).href)
     await managed.getByLabel('Email', { exact: true }).fill('managed.fixture@example.com')
     await managed.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
     await managed.getByRole('button', { name: 'Sign in', exact: true }).click()
     await expect(managed.getByRole('heading', { name: 'No permissions assigned', exact: true })).toBeVisible()
-    await managed.goto('http://127.0.0.1:5173/app/users')
+    await managed.goto(new URL('/app/users', page.url()).href)
     await expect(managed.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Disable Managed Updated Fixture', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused()
@@ -307,7 +307,7 @@ test('client records use real pagination, forms, conflict recovery, scoped acces
   const viewerContext = await browser.newContext()
   try {
     const viewer = await viewerContext.newPage()
-    await viewer.goto('http://127.0.0.1:5173/app/clients')
+    await viewer.goto(new URL('/app/clients', page.url()).href)
     await viewer.getByLabel('Email', { exact: true }).fill('client.viewer.fixture@example.com')
     await viewer.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
     await viewer.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -319,7 +319,7 @@ test('client records use real pagination, forms, conflict recovery, scoped acces
     await expect(viewer.getByRole('heading', { name: 'Synthetic Browser Client', exact: true })).toBeVisible()
     await expect(viewer.getByRole('link', { name: 'Edit client', exact: true })).toHaveCount(0)
     await expect(viewer.getByRole('button', { name: 'Archive client', exact: true })).toHaveCount(0)
-    await viewer.goto(`http://127.0.0.1:5173/app/clients/${clientID}`)
+    await viewer.goto(new URL(`/app/clients/${clientID}`, page.url()).href)
     await expect(viewer.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
     await expect(viewer.getByText('Updated Client Fixture', { exact: true })).toHaveCount(0)
   } finally { await viewerContext.close() }
@@ -467,7 +467,7 @@ test('client tasks preserve drafts, confirm transitions and archive, and isolate
     const viewer = await viewerContext.newPage()
     const reads: string[] = []
     viewer.on('request', request => { if (request.url().includes('/api/v1/clients/')) reads.push(new URL(request.url()).pathname) })
-    await viewer.goto(`http://127.0.0.1:5173${path}/${taskID}`)
+    await viewer.goto(new URL(`${path}/${taskID}`, page.url()).href)
     await viewer.getByLabel('Email', { exact: true }).fill('task.viewer.fixture@example.com')
     await viewer.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
     await viewer.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -477,7 +477,7 @@ test('client tasks preserve drafts, confirm transitions and archive, and isolate
     await expect(viewer.getByRole('button', { name: 'Archive Updated Task Fixture', exact: true })).toHaveCount(0)
     expect(reads).not.toContain(`/api/v1/clients/${clientID}`)
     expect(reads.some(url => url.endsWith('/assignees'))).toBe(false)
-    await viewer.goto('http://127.0.0.1:5173/app/clients/22222222-2222-4222-8222-222222222222/tasks')
+    await viewer.goto(new URL('/app/clients/22222222-2222-4222-8222-222222222222/tasks', page.url()).href)
     await expect(viewer.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
     await expect(viewer.getByText('Updated Task Fixture', { exact: true })).toHaveCount(0)
     expect(await viewer.evaluate(async () => (await fetch('/api/v1/clients/22222222-2222-4222-8222-222222222222/tasks')).status)).toBe(404)
@@ -607,7 +607,7 @@ test('planning keeps lifecycle explicit, preserves link history and protects tas
     const viewer = await viewerContext.newPage()
     const reads: string[] = []
     viewer.on('request', request => { if (request.url().includes('/api/v1/clients/')) reads.push(new URL(request.url()).pathname) })
-    await viewer.goto(`http://127.0.0.1:5173${milestonePath}`)
+    await viewer.goto(new URL(milestonePath, page.url()).href)
     await viewer.getByLabel('Email', { exact: true }).fill('planning.viewer.fixture@example.com')
     await viewer.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
     await viewer.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -624,7 +624,7 @@ test('planning keeps lifecycle explicit, preserves link history and protects tas
     await viewer.getByRole('button', { name: `Remove task reference ${taskID}`, exact: true }).click()
     await viewer.getByRole('button', { name: 'Save task links', exact: true }).click()
     await expect(viewer.getByText('Task links saved.', { exact: true })).toBeVisible()
-    await viewer.goto('http://127.0.0.1:5173/app/clients/22222222-2222-4222-8222-222222222222/plans')
+    await viewer.goto(new URL('/app/clients/22222222-2222-4222-8222-222222222222/plans', page.url()).href)
     await expect(viewer.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
   } finally { await viewerContext.close() }
   await page.getByRole('button', { name: 'Refresh milestone', exact: true }).click()
@@ -1225,7 +1225,7 @@ test('finance preserves exact currencies, reconciles a lost payment response and
   await expect(page.getByRole('heading',{name:'Collection details',exact:true})).toBeVisible()
   // A second legitimate API write invalidates the revision currently displayed.
   const csrf=(await page.context().cookies()).find(c=>c.name==='else_csrf')!.value
-  const competing=await page.request.put(`${base}/${usd}`,{headers:{Origin:'http://127.0.0.1:5173','X-CSRF-Token':csrf},data:{description:'Synthetic USD collection',internal_note:'Synthetic concurrent note',amount_minor:'10000',currency:'USD',due_date:yesterday,expected_revision:'3'}})
+  const competing=await page.request.put(`${base}/${usd}`,{headers:{Origin:new URL(page.url()).origin,'X-CSRF-Token':csrf},data:{description:'Synthetic USD collection',internal_note:'Synthetic concurrent note',amount_minor:'10000',currency:'USD',due_date:yesterday,expected_revision:'3'}})
   expect(competing.status()).toBe(200)
   await page.getByLabel('Payment amount (USD)').fill('1.00')
   await page.getByRole('button',{name:'Record payment',exact:true}).click()

@@ -79,7 +79,7 @@ describe('cookie session UI', () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(json(200, { data: identity })).mockResolvedValue(new Response(null, { status: 204 }))
     vi.stubGlobal('fetch', fetchMock)
     const client = renderApp()
-    await screen.findByRole('heading', { name: 'Welcome, Browser Fixture' })
+    await screen.findByRole('heading', { name: 'Operations workspace' })
     client.setQueryData(['private', 'fixture'], 'private fixture')
     const user = userEvent.setup()
     await user.click(screen.getByText('Browser Fixture', { selector: 'summary span' }))
@@ -94,12 +94,12 @@ describe('cookie session UI', () => {
   it('keeps the signed-in state when logout fails verification', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(200, { data: identity })))
     renderApp()
-    await screen.findByRole('heading', { name: 'Welcome, Browser Fixture' })
+    await screen.findByRole('heading', { name: 'Operations workspace' })
     const user = userEvent.setup()
     await user.click(screen.getByText('Browser Fixture', { selector: 'summary span' }))
     await user.click(screen.getByRole('button', { name: 'Sign out' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Request verification failed')
-    expect(screen.getByRole('heading', { name: 'Welcome, Browser Fixture' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Operations workspace' })).toBeInTheDocument()
   })
 
   it('fails closed on service/malformed responses and recovers after retry', async () => {
@@ -110,7 +110,7 @@ describe('cookie session UI', () => {
     expect(screen.queryByText(identity.user.email)).not.toBeInTheDocument()
     fetchMock.mockResolvedValue(json(200, { data: identity }))
     await userEvent.setup().click(screen.getByRole('button', { name: 'Try again' }))
-    expect(await screen.findByRole('heading', { name: 'Welcome, Browser Fixture' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Operations workspace' })).toBeInTheDocument()
   })
 
   it('drops stale identity and grants on a later 401, then recovers through login', async () => {
@@ -130,7 +130,7 @@ describe('cookie session UI', () => {
     const nearExpiry = { ...identity, session: { expires_at: new Date(Date.now() + 2_000).toISOString() } }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(200, { data: nearExpiry })))
     renderApp()
-    await screen.findByRole('heading', { name: 'Welcome, Browser Fixture' })
+    await screen.findByRole('heading', { name: 'Operations workspace' })
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument(), { timeout: 3_000 })
     expect(screen.getByRole('status')).toHaveTextContent('Your session ended')
   })

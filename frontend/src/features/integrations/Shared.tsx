@@ -1,7 +1,7 @@
-import { Link } from 'react-router'
+import { ClientNavigation } from '../clients/ClientNavigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
-import { Button, Status, buttonStyles } from '../../components/ui'
+import { Button, Status, PageHeader } from '../../components/ui'
 import { APIError } from '../../services/authenticated'
 import { labels, providerLabels } from './models'
 import type { Connection } from './models'
@@ -17,48 +17,12 @@ export function IntegrationHeader({
 }) {
   return (
     <>
-      <header className="mb-5">
-        <p className="eyebrow">{name ?? 'Client workspace'} · Integrations</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-          {detail ? 'Integration connection' : 'Integrations'}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-          Recorded connection metadata. These states do not verify current
-          provider access or synchronization. Times use Europe/Istanbul.
-        </p>
-      </header>
-      <nav
-        aria-label="Client modules"
-        className="mb-5 flex flex-wrap gap-2 border-b border-line pb-4"
-      >
-        <Link
-          className={buttonStyles({ size: 'compact' })}
-          to={`/app/clients/${clientID}`}
-        >
-          Overview
-        </Link>
-        <Link
-          className={buttonStyles({ size: 'compact' })}
-          to={`/app/clients/${clientID}/profile`}
-        >
-          Profile
-        </Link>
-        {detail ? (
-          <Link
-            className={buttonStyles({ size: 'compact' })}
-            to={`/app/clients/${clientID}/integrations`}
-          >
-            Integrations
-          </Link>
-        ) : (
-          <span
-            aria-current="page"
-            className="self-center px-3 text-sm font-semibold"
-          >
-            Integrations
-          </span>
-        )}
-      </nav>
+      <PageHeader
+        eyebrow={`${name ?? 'Client workspace'} · Integrations`}
+        title={detail ? 'Integration connection' : 'Integrations'}
+        description="Recorded connection metadata. These states do not verify current provider access or synchronization. Times use Europe/Istanbul."
+      />
+      <ClientNavigation clientID={clientID} />
     </>
   )
 }

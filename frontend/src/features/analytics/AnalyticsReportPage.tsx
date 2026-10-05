@@ -1,7 +1,8 @@
+import { ClientNavigation } from '../clients/ClientNavigation'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Status, buttonStyles } from '../../components/ui'
+import { Button, Status, buttonStyles, PageSkeleton } from '../../components/ui'
 import { formatTime } from '../../lib/time'
 import { isUUID } from '../auth/session'
 import { AccessDenied } from '../clients/Shared'
@@ -16,7 +17,7 @@ import * as service from './service'
 export function AnalyticsReportPage() {
   const { id = '', connectionID = '' } = useParams()
   const operation = useAnalytics(id)
-  if (!isUUID(id) || !isUUID(connectionID)) return <h1>Analytics not found</h1>
+  if (!isUUID(id) || !isUUID(connectionID)) return <h1 className="page-title">Analytics not found</h1>
   if (!operation.permissions.view) return <AccessDenied />
   return <Reports key={JSON.stringify([...operation.key, connectionID])} operation={operation} connectionID={connectionID} />
 }
@@ -28,9 +29,9 @@ function Reports({ operation, connectionID }: { operation: ReturnType<typeof use
     queryFn: ({ signal }) => operation.read(() => service.read(operation.clientID, connectionID, period!, signal)) })
   const busy = period !== null && query.isFetching
   return <section className="max-w-6xl">
-    <header className="mb-5"><p className="eyebrow">Client workspace · Web analytics</p><h1 className="mt-2 text-2xl font-semibold">GA4 reports</h1><p className="mt-2 text-sm text-muted">Choose the property dates of a stored report. Reading reports does not start a provider synchronization.</p></header>
-    <nav aria-label="Analytics navigation" className="mb-5 flex flex-wrap gap-2"><Link className={buttonStyles()} to={`/app/clients/${operation.clientID}/analytics`}>GA4 connections</Link>{operation.permissions.integrations ? <Link className={buttonStyles()} to={`/app/clients/${operation.clientID}/integrations/${connectionID}`}>Connection setup and sync</Link> : null}</nav>
-    <form className="grid max-w-xl gap-3 rounded-md border border-line bg-surface p-4" onSubmit={e => {
+    <header className="page-header"><div><p className="eyebrow">Client workspace · Web analytics</p><h1 className="page-title">GA4 reports</h1><p className="mt-2 text-sm text-muted">Choose the property dates of a stored report. Reading reports does not start a provider synchronization.</p></div></header>
+    <ClientNavigation clientID={operation.clientID} /><nav aria-label="Analytics navigation" className="mb-5 flex flex-wrap gap-2"><Link className={buttonStyles()} to={`/app/clients/${operation.clientID}/analytics`}>GA4 connections</Link>{operation.permissions.integrations ? <Link className={buttonStyles()} to={`/app/clients/${operation.clientID}/integrations/${connectionID}`}>Connection setup and sync</Link> : null}</nav>
+    <form className="grid max-w-xl gap-3 form-section" onSubmit={e => {
       e.preventDefault()
       if (validPeriod(draft)) {
         if (period?.since === draft.since && period.until === draft.until) void query.refetch()
@@ -40,7 +41,7 @@ function Reports({ operation, connectionID }: { operation: ReturnType<typeof use
       <PeriodFields period={draft} onChange={setDraft} disabled={busy} />
       <Button type="submit" disabled={busy || !validPeriod(draft)}>Load stored reports</Button>
     </form>
-    {!period ? <p role="status" className="mt-5 text-muted">Select a date range to load reports.</p> : busy || query.isPending ? <p role="status" className="py-8">Loading GA4 reports…</p> : query.isError ? <IntegrationError error={query.error} retry={() => void query.refetch()} /> : <MeasuredReports key={JSON.stringify([period, query.data.status.synced_at])} view={query.data} />}
+    {!period ? <p role="status" className="mt-5 text-muted">Select a date range to load reports.</p> : busy || query.isPending ? <PageSkeleton label="Loading GA4 reports…" /> : query.isError ? <IntegrationError error={query.error} retry={() => void query.refetch()} /> : <MeasuredReports key={JSON.stringify([period, query.data.status.synced_at])} view={query.data} />}
   </section>
 }
 const reasonLabels = { provider_unavailable: 'The provider request failed or returned an incomplete report. Review setup before requesting another synchronization.', authorization_required: 'Access changed. An authorized integration manager must review the connection.', connection_changed: 'The credential or connection changed. Older work was canceled.', interrupted: 'The worker was interrupted repeatedly. An integration manager can request a new synchronization.' }
@@ -48,7 +49,7 @@ function MeasuredReports({ view }: { view: View }) {
   const { status, data } = view
   const stateLabels = { not_synced: 'Not synchronized', queued: 'Queued', running: 'Synchronizing', succeeded: 'Synchronized', failed: 'Synchronization failed' }
   return <>
-    <aside className="mt-5 rounded-md border border-line bg-surface p-4" aria-label="Synchronization status">
+    <aside className="mt-5 border-l-2 border-line-strong pl-4 py-2" aria-label="Synchronization status">
       <Status tone={status.state === 'failed' || status.stale ? 'warning' : status.state === 'succeeded' ? 'success' : 'neutral'}>{stateLabels[status.state]}</Status>
       {status.reason ? <p className="mt-2 text-sm">{reasonLabels[status.reason]}</p> : null}
       <p className="mt-2 text-sm">Last successful synchronization: {status.synced_at ? <time dateTime={status.synced_at}>{formatTime(status.synced_at, 'Europe/Istanbul')} (Europe/Istanbul)</time> : 'Never'}</p>
@@ -57,7 +58,7 @@ function MeasuredReports({ view }: { view: View }) {
     </aside>
     {!data ? <p role="status" className="mt-5 rounded-md border border-line p-5">No measured reports are available for this period. A manager can queue this date range from connection setup.</p> : <>
       <p className="mt-5 text-sm text-muted">Property timezone: <strong>{data.summary.timezone}</strong> · {data.summary.since} through {data.summary.until}, inclusive.</p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{data.definitions.map((definition, i) => <section className="rounded-md border border-line bg-surface p-4" key={definition.name}>
+      <div className="metric-strip">{data.definitions.map((definition, i) => <section className="metric-cell" key={definition.name}>
         <h2 className="text-sm font-semibold">{definition.display_name}</h2><p className="mt-2 break-all text-2xl font-semibold tabular-nums">{data.summary.rows[0]?.metrics[i] ?? 'No observations'}</p><p className="mt-2 text-xs leading-5 text-muted">{definition.description}</p>
       </section>)}</div>
       <p className="mt-3 text-xs text-muted">Period totals come from GA4's independent summary. Daily users are not added together. Key events retain GA4's reported attribution fractions.</p>

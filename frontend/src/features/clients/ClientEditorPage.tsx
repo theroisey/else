@@ -1,3 +1,4 @@
+import { PageSkeleton } from '../../components/ui'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { hasPermission } from '../auth/permissions'
@@ -29,9 +30,7 @@ export function ClientEditorPage({ create = false }: { create?: boolean }) {
   if (!allowed) return <AccessDenied />
   if (!create && query.isPending)
     return (
-      <p role="status" aria-busy="true">
-        Loading client…
-      </p>
+      <PageSkeleton label="Loading client…" />
     )
   if (!create && query.isError)
     return (

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { faRotateRight } from '@fortawesome/free-solid-svg-icons'
-import { Button, TextField, Table, buttonStyles } from '../../components/ui'
+import { Button, TextField, Table, buttonStyles, PageSkeleton } from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { useReminders } from './hooks'
 import { defaultFilter, states, labels, pagePath } from './models'
@@ -62,7 +62,7 @@ function List({ clientID }: { clientID: string }) {
         </div>
       ) : null}
       <form
-        className="mb-5 grid gap-3 rounded-md border border-line bg-surface p-4 sm:grid-cols-2 xl:grid-cols-3"
+        className="mb-5 grid gap-3 filter-bar sm:grid-cols-2 xl:grid-cols-3"
         onSubmit={(e) => {
           e.preventDefault()
           setFilter({ ...draft, q: draft.q.trim(), owner: draft.owner.trim() || 'any' })
@@ -125,9 +125,7 @@ function List({ clientID }: { clientID: string }) {
         </Button>
       </form>
       {query.isPending ? (
-        <p role="status" aria-busy="true">
-          Loading reminders…
-        </p>
+        <PageSkeleton label="Loading reminders…" />
       ) : query.isError ? (
         <ReminderError
           error={query.error}
@@ -136,7 +134,7 @@ function List({ clientID }: { clientID: string }) {
           }}
         />
       ) : !query.data.data.length ? (
-        <div className="rounded-md border border-line bg-surface p-6">
+        <div className="empty-state">
           <h2 className="font-semibold">No reminders on this page</h2>
           <p className="mt-2 text-muted">
             Adjust the filters or create a reminder if you have access.

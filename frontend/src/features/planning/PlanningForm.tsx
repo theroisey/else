@@ -153,7 +153,7 @@ export function PlanningForm({
       ) : null}
       <fieldset
         disabled={disabled}
-        className="grid min-w-0 gap-4 rounded-md border border-line bg-surface p-5"
+        className="grid min-w-0 gap-4 form-section"
       >
         <legend className="px-1 font-semibold">
           {scope.planID ? 'Milestone' : 'Plan'} details

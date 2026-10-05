@@ -6,6 +6,8 @@
 !frontend/index.html
 !frontend/tsconfig*.json
 !frontend/vite.config.ts
+!frontend/public/
+!frontend/public/**
 !frontend/src/
 !frontend/src/**
 !backend/

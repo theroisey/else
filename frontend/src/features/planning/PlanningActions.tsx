@@ -31,7 +31,7 @@ export function PlanningActions({
     ? milestoneTransitions[record.status as (typeof milestoneStates)[number]]
     : planTransitions[record.status as (typeof planStates)[number]]
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="record-actions flex flex-wrap items-center gap-2">
       {operation.permissions.update && !terminal(record.status) ? (
         <Link
           className={buttonStyles({ size: 'compact' })}
@@ -42,7 +42,7 @@ export function PlanningActions({
       ) : null}
       {operation.permissions.update ? (
         <form
-          className="flex flex-wrap items-center gap-2"
+          className="inline-flex items-center gap-1.5"
           onSubmit={(e) => {
             e.preventDefault()
             if (!next || busy) return
@@ -61,7 +61,7 @@ export function PlanningActions({
           </label>
           <select
             id={'planning-status-' + record.id}
-            className="ui-input min-w-36 text-xs"
+            className="ui-input min-h-8 w-32 min-w-28 py-1 text-xs"
             value={next}
             disabled={busy}
             onChange={(e) => setNext(e.target.value as State | '')}
@@ -86,7 +86,7 @@ export function PlanningActions({
       {operation.permissions.archive ? (
         <Button
           size="compact"
-          variant="danger"
+          variant="danger-ghost"
           disabled={busy}
           aria-label={`Archive ${record.title}`}
           onClick={() => {

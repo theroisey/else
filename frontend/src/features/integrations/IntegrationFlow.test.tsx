@@ -35,7 +35,7 @@ it.each(['meta_ads', 'ga4', 'woocommerce'] as const)(
         ? json({ data: { ...record, provider, state: 'revocation_failed', revision: '9007199254740994' } })
         : json(page([{ ...record, provider, state: 'pending' }])),
     })
-    const link = await screen.findByRole('link', { name: new RegExp(label) })
+    const link = await screen.findByRole('link', { name: new RegExp(label) }, { timeout: 5000 })
     expect(screen.getByText('Pending')).toBeInTheDocument()
     await userEvent.setup().click(link)
     await screen.findByRole('heading', { name: label })

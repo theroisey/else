@@ -26,7 +26,7 @@ export function MetaSetupForm({ record, operation, onQueued }: { record: Connect
     const result = await operation.run(() => service.queue(record, period, credential))
     if (result) { await operation.cache.invalidateQueries({ queryKey: ['marketing'] }); onQueued() }
   }
-  return <form noValidate autoComplete="off" className="mt-5 grid gap-4 rounded-md border border-line bg-surface p-5" onSubmit={e => { e.preventDefault(); void submit(true) }}>
+  return <form noValidate autoComplete="off" className="mt-5 grid gap-4 form-section" onSubmit={e => { e.preventDefault(); void submit(true) }}>
     <h2 className="font-semibold">Meta setup and synchronization</h2>
     <p className="text-sm leading-6 text-muted">Provision a user token with <strong>ads_read</strong> permission and access to this ad account through your Meta application. Background collection checks the permission and account. Tokens can expire or be revoked; this application does not refresh them automatically. Applications requiring an app-secret proof need a compatible token configuration.</p>
     <PeriodFields period={period} onChange={setPeriod} disabled={blocked} calendar="Meta ad-account" />

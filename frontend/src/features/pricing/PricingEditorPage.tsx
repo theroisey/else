@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
-import { Button, TextField, buttonStyles } from '../../components/ui'
+import { Button, TextField, buttonStyles, PageSkeleton } from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { currencies } from '../billing/models'
 import { exponents } from '../billing/money'
@@ -120,7 +120,7 @@ function Editor({
         operation={op}
       />
       {!create && sheet.isPending ? (
-        <p role="status">Loading current pricing…</p>
+        <PageSkeleton label="Loading current pricing…" />
       ) : !create && sheet.isError ? (
         <PricingError error={sheet.error} retry={() => void sheet.refetch()} />
       ) : (
@@ -247,7 +247,7 @@ function PricingForm({
       </p>
       <fieldset
         disabled={disabled}
-        className="grid gap-4 rounded-md border border-line bg-surface p-4 sm:p-5"
+        className="grid gap-4 form-section"
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
@@ -300,7 +300,7 @@ function PricingForm({
         {array.fields.map((field, i) => (
           <article
             key={field.id}
-            className="min-w-0 rounded-md border border-line bg-surface p-4 sm:p-5"
+            className="min-w-0 form-section"
           >
             <h2 className="font-semibold">Line {i + 1}</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

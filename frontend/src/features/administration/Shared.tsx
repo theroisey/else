@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Button, Dialog } from '../../components/ui'
+import { Button, Dialog, PageHeader as Header } from '../../components/ui'
 import type { Page } from './models'
 import type { useCursor } from './hooks'
 import { AdministrationError } from './service'
@@ -14,14 +14,7 @@ export function PageHeader({
   children?: ReactNode
 }) {
   return (
-    <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <p className="eyebrow">Administration</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-2 max-w-xl leading-6 text-muted">{description}</p>
-      </div>
-      {children}
-    </header>
+<Header eyebrow="Administration" title={title} description={description}>{children}</Header>
   )
 }
 export function ErrorState({ error, retry }: { error: unknown; retry: () => void }) {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button, buttonStyles } from '../../components/ui'
+import { Button, Table, buttonStyles, PageSkeleton } from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { usePricing } from './hooks'
 import { PricingHeader, PricingError, Pager, Window } from './Shared'
@@ -42,15 +42,13 @@ function List({ clientID }: { clientID: string }) {
         ) : null}
       </PricingHeader>
       {query.isPending ? (
-        <p role="status" aria-busy="true">
-          Loading pricing agreements…
-        </p>
+        <PageSkeleton label="Loading pricing agreements…" />
       ) : query.isError ? (
         <PricingError error={query.error} retry={() => void query.refetch()} />
       ) : (
         <>
           {!query.data.data.length ? (
-            <div className="rounded-md border border-line bg-surface p-6">
+            <div className="empty-state">
               <h2 className="font-semibold">No pricing agreements</h2>
               <p className="mt-2 text-sm text-muted">
                 {cursor
@@ -59,31 +57,8 @@ function List({ clientID }: { clientID: string }) {
               </p>
             </div>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {query.data.data.map((s) => (
-                <article
-                  key={s.id}
-                  className="min-w-0 rounded-md border border-line bg-surface p-5"
-                >
-                  <p className="eyebrow">
-                    Latest version {s.revision} · {s.latest_version.currency}
-                  </p>
-                  <Link
-                    className="mt-2 block break-words text-lg font-semibold underline underline-offset-4"
-                    to={pagePath(clientID, s.id)}
-                  >
-                    {s.latest_version.title}
-                  </Link>
-                  <p className="my-3 break-words font-mono text-sm">
-                    {money(
-                      s.latest_version.total_minor,
-                      s.latest_version.currency,
-                    )}
-                  </p>
-                  <Window version={s.latest_version} />
-                </article>
-              ))}
-            </div>
+            <Table caption="Pricing agreements"><thead><tr><th scope="col">Agreement</th><th scope="col">Effective terms</th><th scope="col" className="text-right">Agreed amount</th></tr></thead><tbody>{query.data.data.map(s => <tr key={s.id}><td className="min-w-48"><Link className="break-words font-medium underline underline-offset-4" to={pagePath(clientID, s.id)}>{s.latest_version.title}</Link><p className="mt-1 text-xs text-muted">Latest version {s.revision} · {s.latest_version.currency}</p></td><td className="min-w-64"><Window version={s.latest_version} /></td><td className="whitespace-nowrap text-right tabular-nums font-medium">{money(s.latest_version.total_minor, s.latest_version.currency)}</td></tr>)}</tbody></Table>
+
           )}
           <Pager
             name="Pricing agreements"

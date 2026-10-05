@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button, TextField, Table, buttonStyles } from '../../components/ui'
+import { Button, TextField, Table, buttonStyles, PageSkeleton } from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { useBilling } from './hooks'
 import { BillingHeader, BillingState, BillingError, Pager } from './Shared'
@@ -51,7 +51,7 @@ function List({ clientID }: { clientID: string }) {
       </BillingHeader>
       <FinanceSummary operation={operation} />
       <form
-        className="mb-5 grid gap-3 rounded-md border border-line bg-surface p-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="mb-5 grid gap-3 filter-bar sm:grid-cols-2 xl:grid-cols-4"
         onSubmit={(e) => {
           e.preventDefault()
           setFilter({ ...draft, search: draft.search.trim() })
@@ -104,13 +104,11 @@ function List({ clientID }: { clientID: string }) {
         </Button>
       </form>
       {query.isPending ? (
-        <p role="status" aria-busy="true">
-          Loading collections…
-        </p>
+        <PageSkeleton label="Loading collections…" />
       ) : query.isError ? (
         <BillingError error={query.error} retry={() => void query.refetch()} />
       ) : !query.data.data.length ? (
-        <div className="rounded-md border border-line bg-surface p-6">
+        <div className="empty-state">
           <h2 className="font-semibold">No collections on this page</h2>
           <p className="mt-2 text-muted">
             Adjust the filters or create a collection if you have access.
@@ -129,7 +127,7 @@ function List({ clientID }: { clientID: string }) {
                 'Due date',
                 'Actions',
               ].map((v) => (
-                <th scope="col" key={v}>
+                <th scope="col" className={['Amount', 'Collected', 'Outstanding'].includes(v) ? 'text-right' : ''} key={v}>
                   {v}
                 </th>
               ))}
@@ -155,7 +153,7 @@ function List({ clientID }: { clientID: string }) {
                 ).map((field) => (
                   <td
                     key={field}
-                    className="whitespace-nowrap font-mono text-xs"
+                    className="whitespace-nowrap tabular-nums text-right text-[0.8125rem]"
                   >
                     {money(r[field], r.currency, r.currency_exponent)}
                   </td>

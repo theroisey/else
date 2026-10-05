@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { faRotateRight } from '@fortawesome/free-solid-svg-icons'
-import { Button, Table, buttonStyles } from '../../components/ui'
+import { Button, Table, buttonStyles, PageSkeleton } from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { useDueClock, useTasks } from './hooks'
 import { defaultFilter } from './models'
@@ -85,9 +85,7 @@ function TaskList({ clientID }: { clientID: string }) {
         }}
       />
       {query.isPending ? (
-        <p role="status" aria-busy="true">
-          Loading tasks…
-        </p>
+        <PageSkeleton label="Loading tasks…" />
       ) : query.isError ? (
         <TaskError
           error={query.error}
@@ -96,7 +94,7 @@ function TaskList({ clientID }: { clientID: string }) {
           }}
         />
       ) : !query.data.data.length ? (
-        <div className="rounded-md border border-line bg-surface p-6">
+        <div className="empty-state">
           <h2 className="font-semibold">No tasks on this page</h2>
           <p className="mt-2 text-muted">Adjust the filters or create a task if you have access.</p>
         </div>

@@ -12,7 +12,7 @@ function PaymentRow({ payment }: { payment: Payment }) {
   const [revealed, setRevealed] = useState(false)
   return (
     <tr>
-      <td className="whitespace-nowrap font-mono text-xs">
+      <td className="whitespace-nowrap tabular-nums text-right text-[0.8125rem]">
         {money(payment.amount_minor, payment.currency)}
       </td>
       <td className="whitespace-nowrap text-xs">{payment.paid_on}</td>
@@ -79,7 +79,7 @@ export function PaymentHistory({
       ) : query.isError ? (
         <BillingError error={query.error} retry={() => void query.refetch()} />
       ) : !query.data.data.length ? (
-        <p className="rounded-md border border-line bg-surface p-4 text-sm">
+        <p className="form-section text-sm">
           No payments recorded on this page.
         </p>
       ) : (
@@ -94,7 +94,7 @@ export function PaymentHistory({
                 'Note',
                 'Recorded',
               ].map((v) => (
-                <th key={v} scope="col">
+                <th className={v === 'Amount' ? 'text-right' : ''} key={v} scope="col">
                   {v}
                 </th>
               ))}

@@ -1,7 +1,8 @@
+import { ClientNavigation } from '../clients/ClientNavigation'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Table, buttonStyles } from '../../components/ui'
+import { Button, Table, PageSkeleton } from '../../components/ui'
 import { APIError } from '../../services/authenticated'
 import { isUUID } from '../auth/session'
 import { useRecordOperations } from '../auth/useRecordOperations'
@@ -25,7 +26,7 @@ export function AuditPage({ client = false }: { client?: boolean }) {
   if (client && !isUUID(scope))
     return (
       <section>
-        <h1 className="text-2xl font-semibold">Audit history not found</h1>
+        <h1 className="page-title">Audit history not found</h1>
         <p className="mt-3 text-muted">This client address is not valid.</p>
       </section>
     )
@@ -81,12 +82,12 @@ function AuditReader({
   }
   return (
     <section className="max-w-7xl">
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+      <header className="page-header">
         <div className="min-w-0">
           <p className="eyebrow">
             {scope ? 'Client workspace' : 'Security'} · History
           </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+          <h1 className="page-title">
             Audit history
           </h1>
           <p className="mt-2 text-sm text-muted">
@@ -103,26 +104,7 @@ function AuditReader({
         </Button>
       </header>
       {scope ? (
-        <nav
-          aria-label="Client modules"
-          className="mb-5 flex flex-wrap gap-2 border-b border-line pb-4"
-        >
-          <Link
-            className={buttonStyles({ size: 'compact' })}
-            to={`/app/clients/${scope}`}
-          >
-            Overview
-          </Link>
-          <Link className={buttonStyles({ size: 'compact' })} to="/app/audit">
-            All visible audit history
-          </Link>
-          <span
-            aria-current="page"
-            className="self-center px-3 text-sm font-semibold"
-          >
-            Audit history
-          </span>
-        </nav>
+        <ClientNavigation clientID={scope!} />
       ) : null}
       <AuditFilters scope={scope} busy={query.isFetching} onApply={apply} />
       {!filterAccess ? (
@@ -131,9 +113,7 @@ function AuditReader({
           the client filter.
         </p>
       ) : query.isPending || query.isFetching ? (
-        <p role="status" className="py-8 text-muted">
-          Loading audit history…
-        </p>
+        <PageSkeleton label="Loading audit history…" />
       ) : query.isError ? (
         <div className="rounded-md border border-danger-line bg-danger-surface p-4">
           <p role="alert">
@@ -201,7 +181,7 @@ function AuditReader({
           </tbody>
         </Table>
       ) : (
-        <div className="rounded-md border border-line bg-surface-subtle p-6">
+        <div className="empty-state">
           <h2 className="font-semibold">No audit events on this page</h2>
           <p className="mt-2 text-sm text-muted">
             No recorded events match these filters and your current access.

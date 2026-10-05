@@ -1,6 +1,7 @@
 import { faArrowRotateRight } from '@fortawesome/free-solid-svg-icons'
 import { useIsFetching } from '@tanstack/react-query'
-import { Button, Status, Table } from '../../components/ui'
+import { AppearanceSettings } from '../appearance/Appearance'
+import { Button, Status, Table, PageHeader } from '../../components/ui'
 import { useAuth } from '../auth/auth-context'
 import { sessionKey } from '../auth/session'
 
@@ -9,10 +10,11 @@ export function AccessPage() {
   const checking = useIsFetching({ queryKey: sessionKey }) > 0
   const grants = auth.session?.user.permissions ?? []
   return <section className="max-w-5xl">
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div><p className="eyebrow">Account</p><h1 className="mt-3 text-3xl font-semibold tracking-tight">My access</h1><p className="mt-3 max-w-xl leading-6 text-muted">Effective permissions returned for your account. Client access applies only within its listed scope.</p></div>
+    <PageHeader eyebrow="Account" title="My access" description="Your workspace preferences and effective account permissions.">
       <Button icon={faArrowRotateRight} loading={checking} loadingLabel="Refreshing access" onClick={() => { void auth.refresh() }}>Refresh access</Button>
-    </div>
+    </PageHeader>
+    <AppearanceSettings />
+    <h2 className="mb-2 text-lg font-semibold">Effective permissions</h2><p className="text-sm text-muted">Client access applies only within its listed scope.</p>
     <div className="mt-7">
       {grants.length ? <Table caption="Your effective permissions">
         <thead><tr><th scope="col">Permission</th><th scope="col">Scope</th><th scope="col">Client</th></tr></thead>

@@ -1,7 +1,8 @@
+import { ClientNavigation } from '../clients/ClientNavigation'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button, buttonStyles } from '../../components/ui'
+import { Button, PageSkeleton } from '../../components/ui'
 import { APIError } from '../../services/authenticated'
 import { useRecordOperations } from '../auth/useRecordOperations'
 import { isUUID } from '../auth/session'
@@ -18,7 +19,7 @@ export function ActivityPage() {
   if (!isUUID(clientID))
     return (
       <section>
-        <h1 className="text-2xl font-semibold">Activity not found</h1>
+        <h1 className="page-title">Activity not found</h1>
         <p className="mt-3 text-muted">This client address is not valid.</p>
       </section>
     )
@@ -58,10 +59,10 @@ function Timeline({
   }
   return (
     <section className="max-w-5xl">
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+      <header className="page-header">
         <div className="min-w-0">
           <p className="eyebrow">Client workspace · History</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Activity</h1>
+          <h1 className="page-title">Activity</h1>
           <p className="mt-2 text-sm text-muted">
             Recorded changes, newest first. Times are shown in UTC.
           </p>
@@ -71,39 +72,9 @@ function Timeline({
           Refresh activity
         </Button>
       </header>
-      <nav
-        aria-label="Client modules"
-        className="mb-5 flex flex-wrap gap-2 border-b border-line pb-4"
-      >
-        <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}`}>
-          Overview
-        </Link>
-        {permissions.taskView ? (
-          <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/tasks`}>
-            Tasks
-          </Link>
-        ) : null}
-        {permissions.planningView ? (
-          <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/plans`}>
-            Planning
-          </Link>
-        ) : null}
-        {permissions.reminderView ? (
-          <Link
-            className={buttonStyles({ size: 'compact' })}
-            to={`/app/clients/${clientID}/reminders`}
-          >
-            Reminders
-          </Link>
-        ) : null}
-        <span aria-current="page" className="self-center px-3 text-sm font-semibold">
-          Activity
-        </span>
-      </nav>
+      <ClientNavigation clientID={clientID} />
       {query.isFetching || query.isPending ? (
-        <p role="status" className="py-8 text-muted">
-          Loading activity…
-        </p>
+        <PageSkeleton label="Loading activity…" />
       ) : query.isError ? (
         <div className="rounded-md border border-danger-line bg-danger-surface p-4">
           <p role="alert">
@@ -123,7 +94,7 @@ function Timeline({
       ) : rows?.length ? (
         <ol
           aria-label="Client activity"
-          className="divide-y divide-line rounded-md border border-line bg-surface"
+          className="activity-timeline"
         >
           {rows.map((event) => (
             <li
@@ -147,7 +118,7 @@ function Timeline({
           ))}
         </ol>
       ) : (
-        <div className="rounded-md border border-line bg-surface-subtle p-6">
+        <div className="empty-state">
           <h2 className="font-semibold">No activity on this page</h2>
           <p className="mt-2 text-sm text-muted">
             There are no recorded events visible with your current access. Refresh to check for

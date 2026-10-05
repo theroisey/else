@@ -55,7 +55,7 @@ export function TaskLinks({
     }
   }
   return (
-    <section className="mt-6 min-w-0 rounded-md border border-line bg-surface p-5">
+    <section className="mt-6 min-w-0 form-section">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold">Linked tasks</h2>

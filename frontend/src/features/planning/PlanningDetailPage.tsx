@@ -102,7 +102,7 @@ function PlanningDetail({ scope, recordID }: { scope: Scope; recordID: string })
         </p>
       ) : null}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <section className="min-w-0 rounded-md border border-line bg-surface p-5">
+        <section className="workspace-section">
           <h2 className="font-semibold">Description</h2>
           <p className="mt-3 whitespace-pre-wrap break-words leading-6">
             {record.description || 'No description provided.'}
@@ -132,7 +132,7 @@ function PlanningDetail({ scope, recordID }: { scope: Scope; recordID: string })
             </p>
           ) : null}
         </section>
-        <aside className="min-w-0 rounded-md border border-line bg-surface p-5">
+        <aside className="context-rail">
           <h2 className="font-semibold">Record context</h2>
           <dl className="mt-4 grid gap-4">
             {[

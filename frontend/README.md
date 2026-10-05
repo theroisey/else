@@ -33,3 +33,7 @@ The [finance interface guide](../docs/billing-interface.md) documents exact amou
 The [pricing interface guide](../docs/pricing-interface.md) documents exact line forms and server previews, immutable effective version history, manager-only costs and collection-copy recovery. Pricing lives in `src/features/pricing/`; finance consumes cost-free snapshots and locks copied amounts before payment. The twelfth real-API browser flow verifies retained terms, identical replay after Back and access revocation.
 
 The [overview interface guide](../docs/overview-interface.md) documents the operational client root, one aggregate request, bounded attention, exact currencies, safe activity and permission-aware refresh. Overview lives in `src/features/overview/`; full profile management remains on the linked `/profile` route. The thirteenth browser flow verifies source reconciliation, request counts, responsive keyboard navigation, access loss and retained archived history.
+
+## Interface and appearance
+
+The [frontend redesign guide](../docs/frontend-redesign.md) documents the shared editorial system, self-hosted typography, Light/Dark/System persistence, CSP-safe initialization, client dossier tabs, drawers and command search. Official Roisey SVG integration remains pending website access or the owner-supplied asset.

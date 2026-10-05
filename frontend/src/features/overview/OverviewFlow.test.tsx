@@ -59,17 +59,17 @@ function setup(
     },
   }
 }
-it('shows attention first, exact finance, real activity and honest integrations with one aggregate read', async () => {
+it('shows exact finance, prioritized attention, real activity and honest integrations with one aggregate read', async () => {
   const { fetcher } = setup()
   await screen.findByRole('heading', { name: 'Synthetic overview client' }, {timeout:5000})
   expect(
     screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent),
   ).toEqual([
+    'Financial position',
     'Needs attention',
     'Next seven days',
-    'Financial position',
     'Recent activity',
-    'Integration data unavailable',
+    'Measured intelligence',
   ])
   expect(
     screen.getByRole('link', { name: 'Synthetic task 1' }),

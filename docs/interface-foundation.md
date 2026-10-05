@@ -34,7 +34,7 @@ The three-pixel focus indicator is 16.28:1 against the canvas and remains visibl
 - `Table` supplies a semantic caption and a named, keyboard-focusable scrolling region while consumers retain native headings, rows and cells. It does not invent sorting or pagination before a real collection needs them.
 - `Dialog` uses the native dialog surface with an accessible name and description, modal backdrop, initial focus, Tab/Shift+Tab containment, Escape/cancel and backdrop dismissal, body-scroll locking, and focus restoration. Destructive actions remain explicit buttons supplied by the consumer.
 
-No remote font, Font Awesome kit or additional UI dependency is loaded. Only the existing free-solid Font Awesome package is used.
+No remote font or Font Awesome kit is loaded. The redesign self-hosts OFL-licensed Manrope and Instrument Serif; the existing free-solid Font Awesome package remains the sole icon style. See the [current system and appearance guide](frontend-redesign.md).
 
 ## Verification
 

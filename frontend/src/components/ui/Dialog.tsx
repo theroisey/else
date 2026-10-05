@@ -7,7 +7,8 @@ const focusableSelector = [
   'select:not([disabled])', 'textarea:not([disabled])', 'summary', '[tabindex]:not([tabindex="-1"])',
 ].join(',')
 
-export function Dialog({ open, title, description, children, onClose, eyebrow = 'Confirmation' }: {
+export function Dialog({ open, title, description, children, onClose, eyebrow = 'Confirmation', variant = 'dialog' }: {
+  variant?: 'dialog' | 'drawer'
   open: boolean
   title: string
   description: string
@@ -77,7 +78,7 @@ export function Dialog({ open, title, description, children, onClose, eyebrow = 
   return createPortal(
     <dialog
       ref={dialogRef}
-      className="ui-dialog"
+      className={`ui-dialog ${variant === 'drawer' ? 'drawer' : ''}`}
       aria-labelledby={titleID}
       aria-describedby={descriptionID}
       onCancel={(event) => { event.preventDefault(); onClose() }}
@@ -88,7 +89,7 @@ export function Dialog({ open, title, description, children, onClose, eyebrow = 
       <div className="ui-dialog-panel">
         <div>
           <p className="eyebrow">{eyebrow}</p>
-          <h2 className="mt-2 text-lg font-semibold tracking-tight" id={titleID}>{title}</h2>
+          <h2 className="mt-2" id={titleID}>{title}</h2>
           <p className="mt-2 text-sm leading-6 text-muted" id={descriptionID}>{description}</p>
         </div>
         {children}

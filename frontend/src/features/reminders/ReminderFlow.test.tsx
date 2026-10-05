@@ -528,11 +528,11 @@ it('does not navigate from a departed route after an old mutation finishes', asy
   await u.click(screen.getByRole('button', { name: 'Save reminder' }))
   await waitFor(() => expect(writeCalls(fetcher)).toHaveLength(1))
   await u.click(screen.getByRole('link', { name: 'ROISEY ELSE' }))
-  await screen.findByRole('heading', { name: 'Welcome, Reminder Actor' })
+  await screen.findByRole('heading', { name: 'Operations workspace' })
   await act(async () => {
     finish(json({ data: { id: recordID, revision: 2 } }))
     await pending
   })
-  expect(screen.getByRole('heading', { name: 'Welcome, Reminder Actor' })).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Operations workspace' })).toBeVisible()
   expect(screen.queryByText('Reminder updated.')).not.toBeInTheDocument()
 })

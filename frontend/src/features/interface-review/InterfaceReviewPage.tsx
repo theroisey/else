@@ -1,3 +1,5 @@
+import { Brand } from '../../components/brand/Brand'
+import { AppearanceControl } from '../appearance/Appearance'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { faRotateLeft, faSave } from '@fortawesome/free-solid-svg-icons'
@@ -39,20 +41,21 @@ export function InterfaceReviewPage() {
   return (
     <div className="min-h-dvh">
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <span className="font-semibold tracking-tight">ROISEY ELSE</span>
-          <Link className={buttonStyles({ variant: 'ghost', size: 'compact' })} to="/status">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <Brand />
+          <Link className={buttonStyles({ variant: 'ghost', size: 'compact' })} to="/service-status">
             <span aria-hidden="true">←</span>
             Service status
           </Link>
         </div>
+        <div className="mx-auto max-w-6xl px-6 pb-4"><AppearanceControl /></div>
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
         <div className="grid gap-4 border-b border-line pb-8 sm:grid-cols-[1fr_auto] sm:items-end">
           <div>
             <p className="eyebrow">Interface foundation</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">Compact, clear, operational.</h1>
+            <h1 className="page-title">Compact, clear, operational.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
               A bounded review surface for shared controls. Examples use local UI state only and contain no client, credential, or business data.
             </p>

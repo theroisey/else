@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useLocation, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button } from '../../components/ui'
+import { Button, PageSkeleton } from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { useDueClock, useTasks } from './hooks'
 import { TaskDue, TaskError, TaskHeader, TaskState } from './Shared'
@@ -28,9 +28,7 @@ function TaskDetail({ clientID, taskID }: { clientID: string; taskID: string }) 
   if (!operation.permissions.view) return <AccessDenied />
   if (query.isPending)
     return (
-      <p role="status" aria-busy="true">
-        Loading task…
-      </p>
+      <PageSkeleton label="Loading task…" />
     )
   if (query.isError)
     return (
@@ -78,7 +76,7 @@ function TaskDetail({ clientID, taskID }: { clientID: string; taskID: string }) 
         </p>
       ) : null}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <section className="min-w-0 rounded-md border border-line bg-surface p-5">
+        <section className="workspace-section">
           <h2 className="font-semibold">Description</h2>
           <p className="mt-3 whitespace-pre-wrap break-words leading-6">
             {task.description || 'No description provided.'}
@@ -126,7 +124,7 @@ function TaskDetail({ clientID, taskID }: { clientID: string; taskID: string }) 
             ) : null}
           </dl>
         </section>
-        <aside className="min-w-0 rounded-md border border-line bg-surface p-5">
+        <aside className="context-rail">
           <h2 className="font-semibold">Record context</h2>
           <dl className="mt-4 grid gap-4">
             {[

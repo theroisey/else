@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import type { FieldPath } from 'react-hook-form'
-import { Button, TextField, buttonStyles } from '../../components/ui'
+import { Button, TextField, buttonStyles, PageSkeleton } from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { useBilling } from './hooks'
 import { BillingHeader, BillingError } from './Shared'
@@ -69,9 +69,7 @@ function Editor({
       {!create && query.data && snapshot.isPending ? <p role="status">Checking collection price origin…</p> : null}
       {!create && snapshot.isError ? <BillingError error={snapshot.error} retry={() => void snapshot.refetch()} /> : null}
       {!create && query.isPending ? (
-        <p role="status" aria-busy="true">
-          Loading collection…
-        </p>
+        <PageSkeleton label="Loading collection…" />
       ) : !create && query.isError ? (
         <BillingError error={query.error} retry={() => void query.refetch()} />
       ) : create || query.data ? (
@@ -192,13 +190,13 @@ function CollectionForm({
     <form
       noValidate
       onSubmit={handleSubmit(submit)}
-      className="grid max-w-3xl gap-4 rounded-md border border-line bg-surface p-4 sm:p-5"
+      className="grid max-w-3xl gap-4 form-section"
     >
       {record?.status === 'cancelled' ? (
         <p role="status">Cancelled collections are read only.</p>
       ) : null}
       {catalog.isPending ? (
-        <p role="status">Loading supported currencies…</p>
+        <PageSkeleton label="Loading supported currencies…" />
       ) : catalog.isError ? (
         <BillingError
           error={catalog.error}

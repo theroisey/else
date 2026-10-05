@@ -1,3 +1,4 @@
+import { PageSkeleton } from '../../components/ui'
 import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { AccessDenied } from '../clients/Shared'
@@ -39,9 +40,7 @@ function Editor({
     <section>
       <ReminderHeader title={create ? 'Create reminder' : 'Edit reminder'} operation={operation} />
       {!create && query.isPending ? (
-        <p role="status" aria-busy="true">
-          Loading reminder…
-        </p>
+        <PageSkeleton label="Loading reminder…" />
       ) : !create && query.isError && !query.data ? (
         <ReminderError
           error={query.error}

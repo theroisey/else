@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation } from 'react-router'
+import { Brand } from '../../components/brand/Brand'
+import { AppearanceControl } from '../appearance/Appearance'
 import { faArrowRightToBracket } from '@fortawesome/free-solid-svg-icons'
 import { Button, TextField, buttonStyles } from '../../components/ui'
 import { safeReturnTo } from '../shell/navigation'
@@ -48,15 +50,16 @@ export function LoginPage() {
     }
   }
 
-  return <div className="grid min-h-dvh grid-rows-[auto_1fr_auto]">
-    <header className="border-b border-line bg-surface px-5 py-4 sm:px-8"><span className="font-semibold tracking-tight">ROISEY ELSE</span></header>
-    <main className="mx-auto flex w-full max-w-md items-center px-5 py-12">
+  return <div className="login-page">
+    <header className="login-header"><Brand /><AppearanceControl /></header>
+    <main className="login-main">
+      <div className="login-editorial"><p className="eyebrow mb-7">Roisey Else · Private operations</p><h2>Precision in every<br />part of business.</h2><p className="mt-6 max-w-xs text-sm leading-7 text-muted">A considered workspace for client relationships, financial clarity and the work that matters.</p><p className="mt-10 text-[0.625rem] uppercase tracking-[0.18em] text-muted">Relationships / Operations / Intelligence</p></div>
       <section className="w-full" aria-labelledby="login-title">
         <p className="eyebrow">Your workspace</p>
-        <h1 id="login-title" className="mt-3 text-3xl font-semibold tracking-tight">Sign in</h1>
+        <h1 id="login-title" className="mt-3 text-3xl font-display font-normal tracking-tight">Sign in</h1>
         <p className="mt-3 leading-6 text-muted">Use your Roisey Else account to continue.</p>
         {auth.expired ? <p className="mt-5 rounded-sm border border-warning-line bg-warning-surface p-3 text-warning-ink" role="status">Your session ended. Sign in again to continue.</p> : null}
-        <form className="mt-7 grid gap-5 rounded-md border border-line bg-surface p-5 sm:p-6" onSubmit={(event) => { void submit(event) }} noValidate aria-busy={pending}>
+        <form className="login-form" onSubmit={(event) => { void submit(event) }} noValidate aria-busy={pending}>
           <TextField ref={emailRef} label="Email" name="email" type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} error={errors.email} disabled={pending} />
           <TextField ref={passwordRef} label="Password" name="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} error={errors.password} disabled={pending} />
           {message ? <p className="text-sm leading-6 text-danger-ink" role="alert">{message}</p> : null}
@@ -64,6 +67,6 @@ export function LoginPage() {
         </form>
       </section>
     </main>
-    <footer className="px-5 pb-6 text-center"><Link className={buttonStyles({ variant: 'ghost', size: 'compact' })} to="/status">Service status</Link></footer>
+    <footer className="login-footer"><span>Roisey Else · Authorized access</span><Link className={buttonStyles({ variant: 'ghost', size: 'compact' })} to="/service-status">Service status</Link></footer>
   </div>
 }

@@ -56,6 +56,8 @@ export function RoleForm({
     )
   return (
     <Dialog
+      variant="drawer"
+      eyebrow="Role definition"
       open
       title={role ? (editable ? 'Edit permissions' : 'Role permissions') : 'Create role'}
       description={

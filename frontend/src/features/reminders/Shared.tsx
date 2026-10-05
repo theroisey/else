@@ -1,10 +1,10 @@
+import { ClientNavigation } from '../clients/ClientNavigation'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router'
-import { Button, Status, buttonStyles } from '../../components/ui'
+import { Button, Status } from '../../components/ui'
 import { APIError } from '../../services/authenticated'
 import type { useReminders } from './hooks'
 import type { Summary } from './models'
-import { labels, pagePath } from './models'
+import { labels } from './models'
 import { offsetLabel } from './time'
 export { Pager } from '../planning/Shared'
 export type Operation = ReturnType<typeof useReminders>
@@ -33,38 +33,15 @@ export function ReminderHeader({
     context = permissions.clientView && !client.isError ? client.data : undefined
   return (
     <>
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+      <header className="page-header">
         <div className="min-w-0">
           <p className="eyebrow">{context?.name ?? 'Client workspace'} · Reminders</p>
-          <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="page-title">{title}</h1>
           <p className="mt-2 text-xs text-muted">One-time schedules · Completion is manual.</p>
         </div>
         <div className="flex flex-wrap gap-2">{children}</div>
       </header>
-      <nav
-        aria-label="Client modules"
-        className="mb-5 flex flex-wrap gap-2 border-b border-line pb-4"
-      >
-        {context ? (
-          <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}`}>
-            Overview
-          </Link>
-        ) : null}
-        {permissions.taskView ? (
-          <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/tasks`}>
-            Tasks
-          </Link>
-        ) : null}
-        {permissions.planningView ? (
-          <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/plans`}>
-            Planning
-          </Link>
-        ) : null}
-        <Link className={buttonStyles({ size: 'compact' })} to={pagePath(clientID)}>
-          Reminders
-        </Link>
-        {permissions.activityView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/activity`}>Activity</Link> : null}
-      </nav>
+      <ClientNavigation clientID={clientID} />
       {context?.status === 'archived' ? (
         <p role="status" className="mb-4">
           This client is archived. Reminder history remains available; changes are unavailable.

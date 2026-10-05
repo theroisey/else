@@ -32,7 +32,7 @@ export function GA4SetupForm({ record, operation, onQueued }: { record: Connecti
       onQueued(period)
     }
   }
-  return <form className="mt-5 grid gap-4 rounded-md border border-line bg-surface p-5" onSubmit={e => { e.preventDefault(); void submit(true) }}>
+  return <form className="mt-5 grid gap-4 form-section" onSubmit={e => { e.preventDefault(); void submit(true) }}>
     <h2 className="font-semibold">GA4 setup and synchronization</h2>
     <p className="text-sm leading-6 text-muted">Grant the service account Viewer access to this GA4 property and enable the Analytics Admin and Data APIs in its Google Cloud project. Use a property that excludes personal data. A background worker verifies access and collects reports; saving a key alone does not verify the connection.</p>
     <PeriodFields period={period} onChange={setPeriod} disabled={blocked} />

@@ -1,3 +1,4 @@
+import { useAppearance } from '../features/appearance/theme'
 import { Link, Navigate, Outlet, Route, Routes } from 'react-router'
 import { lazy } from 'react'
 import { buttonStyles } from '../components/ui'
@@ -52,10 +53,11 @@ function AuthArea() {
 }
 
 export function App() {
+  useAppearance()
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/app" replace />} />
-      <Route path="/status" element={<FoundationPage />} />
+      <Route path="/service-status" element={<FoundationPage />} />
       <Route path="/interface" element={<InterfaceReviewPage />} />
       <Route element={<AuthArea />}>
         <Route path="/login" element={<LoginPage />} />
@@ -115,16 +117,16 @@ export function App() {
                 <RolesPage />
               </PermissionGuard>
             } />
-            <Route path="*" element={<section><h1 className="text-2xl font-semibold">Page not found</h1><p className="mt-3 text-muted">This destination is not available.</p><Link className={buttonStyles({ className: 'mt-6' })} to="/app">Open workspace</Link></section>} />
+            <Route path="*" element={<section><h1 className="page-title">Page not found</h1><p className="mt-3 text-muted">This destination is not available.</p><Link className={buttonStyles({ className: 'mt-6' })} to="/app">Open workspace</Link></section>} />
           </Route>
         </Route>
       </Route>
       <Route path="*" element={
         <main className="mx-auto max-w-3xl px-6 py-16">
           <p className="eyebrow">Roisey Else</p>
-          <h1 className="mt-4 text-2xl font-semibold">Page not found</h1>
+          <h1 className="page-title mt-4">Page not found</h1>
           <p className="mt-3 text-muted">This address has no available page.</p>
-          <Link className={buttonStyles({ className: 'mt-6' })} to="/status">Open service status</Link>
+          <Link className={buttonStyles({ className: 'mt-6' })} to="/service-status">Open service status</Link>
         </main>
       } />
     </Routes>

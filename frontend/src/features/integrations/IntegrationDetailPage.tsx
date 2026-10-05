@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Dialog } from '../../components/ui'
+import { Button, Dialog, PageSkeleton } from '../../components/ui'
 import { isUUID } from '../auth/session'
 import { AccessDenied } from '../clients/Shared'
 import { useIntegrations, useIntegrationClient } from './hooks'
@@ -25,7 +25,7 @@ export function IntegrationDetailPage() {
   const { id: clientID = '', connectionID = '' } = useParams()
   const operation = useIntegrations(clientID)
   if (!isUUID(clientID) || !isUUID(connectionID))
-    return <h1 className="text-2xl font-semibold">Integration not found</h1>
+    return <h1 className="page-title">Integration not found</h1>
   if (!operation.permissions.view) return <AccessDenied />
   return (
     <ConnectionDetail
@@ -113,9 +113,7 @@ function ConnectionDetail({
         </div>
       ) : null}
       {busy || query.isPending || client.isPending ? (
-        <p role="status" className="py-8 text-muted">
-          Loading connection…
-        </p>
+        <PageSkeleton label="Loading connection…" />
       ) : failed ? (
         <IntegrationError
           error={query.isError ? query.error : client.error}
@@ -129,7 +127,7 @@ function ConnectionDetail({
               changes are unavailable.
             </p>
           ) : null}
-          <div className="mt-5 rounded-md border border-line bg-surface p-5">
+          <div className="mt-5 form-section">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <h2 className="text-lg font-semibold">{providerLabels[record.provider]}</h2>
               <IntegrationState record={record} />

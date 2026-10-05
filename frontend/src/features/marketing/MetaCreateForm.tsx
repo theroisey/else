@@ -9,7 +9,7 @@ export function MetaCreateForm({ operation }: { operation: Operation }) {
   const [confirmed, setConfirmed] = useState(false)
   const navigate = useNavigate()
   const blocked = operation.pending || !!operation.error
-  return <form className="my-5 grid gap-3 rounded-md border border-line bg-surface p-5" onSubmit={e => {
+  return <form className="my-5 grid gap-3 form-section" onSubmit={e => {
     e.preventDefault()
     if (blocked || !confirmed) return
     void operation.run(() => service.create(operation.clientID, account)).then(result => {

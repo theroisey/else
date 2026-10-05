@@ -32,7 +32,7 @@ export function WooCommerceSetupForm({ record, operation, onQueued }: { record: 
     const result = await operation.run(() => service.queue(record, period, credential))
     if (result) { await operation.cache.invalidateQueries({ queryKey: ['commerce'] }); onQueued() }
   }
-  return <form noValidate autoComplete="off" className="mt-5 grid gap-4 rounded-md border border-line bg-surface p-5" onSubmit={e => { e.preventDefault(); void submit(true) }}>
+  return <form noValidate autoComplete="off" className="mt-5 grid gap-4 form-section" onSubmit={e => { e.preventDefault(); void submit(true) }}>
     <h2 className="font-semibold">WooCommerce setup and synchronization</h2>
     <p className="text-sm leading-6 text-muted">Create a dedicated REST API key with <strong>Read</strong> permission in this store's WooCommerce settings. Use only the key for this immutable store connection. Saving locally encrypts the key and queues background collection; store access is verified only by a successful collection.</p>
     <PeriodFields period={period} onChange={setPeriod} disabled={blocked} />

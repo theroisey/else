@@ -24,7 +24,7 @@ export function TaskActions({
     archive = operation.permissions.archive
   const busy = operation.pending || !!operation.error
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="record-actions flex flex-wrap items-center gap-2">
       {update && !['done', 'cancelled'].includes(task.status) ? (
         <Link
           className={buttonStyles({ size: 'compact' })}
@@ -35,7 +35,7 @@ export function TaskActions({
       ) : null}
       {update ? (
         <form
-          className="flex flex-wrap items-center gap-2"
+          className="inline-flex items-center gap-1.5"
           onSubmit={(e) => {
             e.preventDefault()
             if (!next || busy) return
@@ -54,7 +54,7 @@ export function TaskActions({
           </label>
           <select
             id={'status-' + task.id}
-            className="ui-input min-w-36 text-xs"
+            className="ui-input min-h-8 w-32 min-w-28 py-1 text-xs"
             value={next}
             disabled={busy}
             onChange={(e) => setNext(e.target.value as TaskStatus | '')}
@@ -81,7 +81,7 @@ export function TaskActions({
       {archive ? (
         <Button
           size="compact"
-          variant="danger"
+          variant="danger-ghost"
           disabled={busy}
           aria-label={`Archive ${task.title}`}
           onClick={() => {

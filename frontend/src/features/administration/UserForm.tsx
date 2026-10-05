@@ -75,6 +75,8 @@ export function UserForm({
   }
   return (
     <Dialog
+      variant="drawer"
+      eyebrow="Account details"
       open
       title={user ? 'Edit account' : 'Create account'}
       description={

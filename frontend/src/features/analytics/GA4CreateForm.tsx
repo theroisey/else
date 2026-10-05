@@ -7,7 +7,7 @@ import * as service from './service'
 export function GA4CreateForm({ operation }: { operation: Operation }) {
   const [property, setProperty] = useState('')
   const navigate = useNavigate()
-  return <form className="my-5 grid gap-3 rounded-md border border-line bg-surface p-5" onSubmit={e => {
+  return <form className="my-5 grid gap-3 form-section" onSubmit={e => {
     e.preventDefault()
     if (operation.pending || operation.error) return
     void operation.run(() => service.create(operation.clientID, property)).then(result => {

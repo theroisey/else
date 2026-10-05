@@ -1,3 +1,4 @@
+import { PageSkeleton } from '../../components/ui'
 import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { AccessDenied } from '../clients/Shared'
@@ -52,9 +53,7 @@ function PlanningEditor({
         operation={operation}
       />
       {!create && query.isPending ? (
-        <p role="status" aria-busy="true">
-          Loading record…
-        </p>
+        <PageSkeleton label="Loading record…" />
       ) : !create && query.isError && !query.data ? (
         <PlanningError
           error={query.error}

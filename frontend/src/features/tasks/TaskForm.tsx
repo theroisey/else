@@ -154,7 +154,7 @@ export function TaskForm({
     >
       <fieldset
         disabled={busy || !operation.writable}
-        className="grid gap-4 rounded-md border border-line bg-surface p-5"
+        className="grid gap-4 form-section"
       >
         <legend className="px-1 font-semibold">Task details</legend>
         <TextField

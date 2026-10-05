@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Table } from '../../components/ui'
+import { Button, Table, PageSkeleton } from '../../components/ui'
 import { isUUID } from '../auth/session'
 import { AccessDenied } from '../clients/Shared'
 import { Pager } from '../planning/Shared'
@@ -19,7 +19,7 @@ export function IntegrationListPage() {
   const clientID = useParams().id ?? ''
   const operation = useIntegrations(clientID)
   if (!isUUID(clientID))
-    return <h1 className="text-2xl font-semibold">Integrations not found</h1>
+    return <h1 className="page-title">Integrations not found</h1>
   if (!operation.permissions.view) return <AccessDenied />
   return (
     <Connections key={JSON.stringify(operation.key)} operation={operation} />
@@ -65,9 +65,7 @@ function Connections({ operation }: { operation: Operation }) {
         </p>
       ) : null}
       {busy || query.isPending || client.isPending ? (
-        <p role="status" className="py-8 text-muted">
-          Loading integrations…
-        </p>
+        <PageSkeleton label="Loading integrations…" />
       ) : failed ? (
         <IntegrationError
           error={query.isError ? query.error : client.error}

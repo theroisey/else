@@ -62,7 +62,7 @@ function PlanningList({ scope }: { scope: Scope }) {
       ) : null}
       {!confirm ? <OperationNotice operation={operation} reload={refresh} /> : null}
       <form
-        className="mb-5 grid gap-3 rounded-md border border-line bg-surface p-4 sm:grid-cols-2 xl:grid-cols-5"
+        className="mb-5 grid gap-3 filter-bar sm:grid-cols-2 xl:grid-cols-5"
         onSubmit={(e) => {
           e.preventDefault()
           setFilter({ ...draft, q: draft.q.trim() })
@@ -130,7 +130,7 @@ function PlanningList({ scope }: { scope: Scope }) {
           }}
         />
       ) : !query.data.data.length ? (
-        <div className="rounded-md border border-line bg-surface p-6">
+        <div className="empty-state">
           <h2 className="font-semibold">No {name.toLowerCase()} on this page</h2>
           <p className="mt-2 text-muted">
             Adjust the filters or create a record if you have access.

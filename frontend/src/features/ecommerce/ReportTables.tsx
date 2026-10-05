@@ -10,8 +10,8 @@ function PagedTable<T>({ title, rows, columns, cells }: { title: string; rows: T
   return <section className="mt-6">
     <h2 className="mb-3 text-lg font-semibold">{title}</h2>
     {!rows.length ? <p role="status" className="rounded-md border border-line p-4 text-muted">No observations for {title.toLowerCase()} in this period.</p> : <>
-      <Table caption={title}><thead><tr>{columns.map(column => <th key={column}>{column}</th>)}</tr></thead>
-        <tbody>{visible.map((row, i) => <tr key={page * 25 + i}>{cells(row).map((cell, j) => <td className="whitespace-nowrap tabular-nums" key={columns[j]}>{cell}</td>)}</tr>)}</tbody>
+      <Table caption={title}><thead><tr>{columns.map((column, index) => <th className={index > 0 && !column.includes('UTC') && column !== 'Status' ? 'text-right' : ''} key={column}>{column}</th>)}</tr></thead>
+        <tbody>{visible.map((row, i) => <tr key={page * 25 + i}>{cells(row).map((cell, j) => <td className={`whitespace-nowrap tabular-nums ${j > 0 && !columns[j]?.includes('UTC') && columns[j] !== 'Status' ? 'text-right' : ''}`} key={columns[j]}>{cell}</td>)}</tr>)}</tbody>
       </Table>
       <div className="mt-3 flex flex-wrap items-center gap-3" aria-label={`${title} pages`}>
         <Button size="compact" disabled={page === 0} onClick={() => setPage(v => v - 1)}>Previous {title.toLowerCase()}</Button>
@@ -37,17 +37,20 @@ export function DailyTrend({ data }: { data: Workspace }) {
   if (!days.length) return null
   const maximum = days.reduce<bigint>((largest, row) => [row.orderGrand, row.refundAmount].reduce<bigint>((max, amount) => amount !== null && amount > max ? amount : max, largest), 0n)
   const width = 620 / days.length
-  return <figure className="mt-6 rounded-md border border-line bg-surface p-4">
+  const barWidth = Math.max(1, Math.min(18, width * 0.3))
+  return <figure className="chart-panel" tabIndex={0}>
     <figcaption className="font-semibold">Daily observed amounts (UTC)</figcaption>
-    <p className="mt-1 text-xs text-muted"><span className="text-accent-ink">Order-created grand totals</span> · <span className="text-warning-ink">Refund-created amounts</span>. Different cohorts are shown separately and never netted. Missing dates or series are not filled with zero.</p>
+    <p className="mt-1 text-xs text-muted"><span className="text-chart-primary">Order-created grand totals</span> · <span className="text-chart-secondary">Refund-created amounts</span>. Different cohorts are shown separately and never netted. Missing dates or series are not filled with zero.</p>
     <svg viewBox="0 0 640 190" role="img" aria-label="Daily observed order totals and refunds" className="mt-4 max-h-64 w-full">
+      <path d="M10 10H630 M10 80H630 M10 150H630" className="stroke-chart-grid" fill="none" strokeWidth="0.5" />
       {days.flatMap((row, i) => [row.orderGrand, row.refundAmount].map((amount, series) => {
         if (amount === null) return null
         // Only bounded drawing coordinates use Number; monetary values stay exact.
         const height = maximum ? Number(amount * 1400n / maximum) / 10 : 0
-        return <rect key={`${row.day}-${series}`} className={series === 0 ? 'text-accent-ink' : 'text-warning-ink'} x={10 + width * i + width * series / 2} y={150 - height} width={Math.max(1, width / 2 - 2)} height={height} fill="currentColor"><title>{row.day}: {series === 0 ? 'Order-created grand' : 'Refund-created amount'} {money(amount.toString(), data.orders.currency)}</title></rect>
+        return <rect key={`${row.day}-${series}`} className={series === 0 ? 'text-chart-primary' : 'text-chart-secondary'} x={10 + width * (i + 0.5) + (series === 0 ? -barWidth - 1 : 1)} y={150 - height} width={barWidth} height={height} fill="currentColor"><title>{row.day}: {series === 0 ? 'Order-created grand' : 'Refund-created amount'} {money(amount.toString(), data.orders.currency)}</title></rect>
       }))}
-      <text x="10" y="178" className="fill-current text-xs">{days[0]!.day}</text><text x="630" y="178" textAnchor="end" className="fill-current text-xs">{days.at(-1)!.day}</text>
+      <text x={Math.max(60, 10 + width / 2)} y="178" textAnchor="middle" className="fill-current text-xs">{days[0]!.day}</text>
+      {days.length > 1 ? <text x={Math.min(580, 630 - width / 2)} y="178" textAnchor="middle" className="fill-current text-xs">{days.at(-1)!.day}</text> : null}
     </svg>
   </figure>
 }

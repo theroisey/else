@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button } from '../../components/ui'
+import { Button, PageSkeleton } from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { useReminders } from './hooks'
 import { ReminderHeader, ReminderError, ReminderState, ReminderTime } from './Shared'
@@ -27,9 +27,7 @@ function Detail({ clientID, recordID }: { clientID: string; recordID: string }) 
   if (!operation.permissions.view) return <AccessDenied />
   if (query.isPending)
     return (
-      <p role="status" aria-busy="true">
-        Loading reminder…
-      </p>
+      <PageSkeleton label="Loading reminder…" />
     )
   if (query.isError && !query.data)
     return (
@@ -95,7 +93,7 @@ function Detail({ clientID, recordID }: { clientID: string; recordID: string }) 
         </p>
       ) : null}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <section className="min-w-0 rounded-md border border-line bg-surface p-5">
+        <section className="workspace-section">
           <h2 className="font-semibold">Description</h2>
           <p className="mt-3 whitespace-pre-wrap break-words leading-6">
             {record.description || 'No description provided.'}
@@ -134,7 +132,7 @@ function Detail({ clientID, recordID }: { clientID: string; recordID: string }) 
             </Link>
           ) : null}
         </section>
-        <aside className="min-w-0 rounded-md border border-line bg-surface p-5">
+        <aside className="context-rail">
           <h2 className="font-semibold">Record context</h2>
           <dl className="mt-4 grid gap-4">
             {[

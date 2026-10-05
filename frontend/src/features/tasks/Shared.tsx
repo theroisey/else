@@ -1,6 +1,6 @@
+import { ClientNavigation } from '../clients/ClientNavigation'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router'
-import { Button, Status, buttonStyles } from '../../components/ui'
+import { Button, Status } from '../../components/ui'
 import { APIError } from '../../services/authenticated'
 import type { Summary } from './models'
 import { statusLabels } from './models'
@@ -24,32 +24,17 @@ export function TaskHeader({
       : undefined
   return (
     <>
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+      <header className="page-header">
         <div className="min-w-0">
           <p className="eyebrow">{parent?.name ?? 'Client workspace'}</p>
-          <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="page-title">{title}</h1>
           <p className="mt-2 text-xs text-muted">
             Times shown in {deviceTimezone()} · Due soon means the next 24 hours.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">{children}</div>
       </header>
-      <nav
-        aria-label="Client modules"
-        className="mb-5 flex flex-wrap gap-2 border-b border-line pb-4"
-      >
-        {parent ? (
-          <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}`}>
-            Overview
-          </Link>
-        ) : null}
-        <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/tasks`}>
-          Tasks
-        </Link>
-        {operation.permissions.reminderView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/reminders`}>Reminders</Link> : null}
-        {operation.permissions.planningView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/plans`}>Planning</Link> : null}
-        {operation.permissions.activityView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${clientID}/activity`}>Activity</Link> : null}
-      </nav>
+      <ClientNavigation clientID={clientID} />
       {parent?.status === 'archived' ? (
         <p className="mb-4 rounded-md border border-line bg-surface-subtle p-3 text-sm">
           This client is archived. Task history remains available; changes are unavailable.

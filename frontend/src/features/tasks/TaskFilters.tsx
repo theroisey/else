@@ -15,7 +15,7 @@ export function TaskFilters({
 }) {
   return (
     <form
-      className="mb-5 grid items-end gap-3 rounded-md border border-line bg-surface p-4 sm:grid-cols-2 xl:grid-cols-4"
+      className="mb-5 grid items-end gap-3 filter-bar sm:grid-cols-2 xl:grid-cols-4"
       onSubmit={onApply}
     >
       <TextField

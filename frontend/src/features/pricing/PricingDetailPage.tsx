@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button, buttonStyles } from '../../components/ui'
+import { Button, buttonStyles, PageSkeleton } from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { usePricing } from './hooks'
 import { PricingHeader, PricingError, Terms, Window, Pager } from './Shared'
@@ -93,22 +93,18 @@ function Detail({
         ) : null}
       </PricingHeader>
       {sheet.isPending ? (
-        <p role="status" aria-busy="true">
-          Loading agreement…
-        </p>
+        <PageSkeleton label="Loading agreement…" />
       ) : sheet.isError ? (
         <PricingError error={sheet.error} retry={reload} />
       ) : (
         <>
           {versionID && selected.isPending ? (
-            <p role="status" aria-busy="true">
-              Loading retained version…
-            </p>
+            <PageSkeleton label="Loading retained version…" />
           ) : versionID && selected.isError ? (
             <PricingError error={selected.error} retry={reload} />
           ) : v ? (
             <>
-              <article className="rounded-md border border-line bg-surface p-4 sm:p-5">
+              <article className="form-section">
                 <p className="eyebrow">
                   Version {v.revision} · Latest version {sheet.data.revision}
                 </p>
@@ -159,7 +155,7 @@ function Detail({
               pagination to inspect more versions.
             </p>
             {versions.isPending ? (
-              <p role="status">Loading version history…</p>
+              <PageSkeleton label="Loading version history…" />
             ) : versions.isError ? (
               <PricingError
                 error={versions.error}
@@ -175,7 +171,7 @@ function Detail({
                     .map((r) => (
                       <li
                         key={r.id}
-                        className="rounded-md border border-line bg-surface p-4"
+                        className="form-section"
                       >
                         <Link
                           className="break-words font-semibold underline underline-offset-4"

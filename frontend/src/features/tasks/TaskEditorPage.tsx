@@ -1,3 +1,4 @@
+import { PageSkeleton } from '../../components/ui'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -57,9 +58,7 @@ function TaskEditor({
         </p>
       ) : null}
       {!create && query.isPending ? (
-        <p role="status" aria-busy="true">
-          Loading task…
-        </p>
+        <PageSkeleton label="Loading task…" />
       ) : !create && query.isError ? (
         <TaskError
           error={query.error}

@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { faRotateRight } from '@fortawesome/free-solid-svg-icons'
-import { Button, Status, Table, TextField, buttonStyles } from '../../components/ui'
+import { Button, Status, Table, TextField, buttonStyles, PageSkeleton } from '../../components/ui'
 import { hasPermission } from '../auth/permissions'
 import { canListClients, canOpenClients, defaultFilter } from './models'
 import type { Filter } from './models'
@@ -45,7 +45,7 @@ export function ClientsPage() {
   }
   return (
     <section>
-      <ClientHeader title="Clients" description="Find a client and open its workspace.">
+      <ClientHeader title="Clients" description="A private portfolio of client relationships. Open a record to review operations, finances and intelligence.">
         <div className="flex flex-wrap gap-2">
           {canRead ? (
             <Button
@@ -74,7 +74,7 @@ export function ClientsPage() {
         </p>
       ) : null}
       {!canRead ? (
-        <div className="rounded-md border border-line bg-surface p-6">
+        <div className="empty-state">
           <h2 className="font-semibold">Client creation access</h2>
           <p className="mt-2 text-muted">
             You can create clients. Viewing their records requires separately assigned access.
@@ -83,7 +83,7 @@ export function ClientsPage() {
       ) : (
         <>
           <form
-            className="mb-5 grid items-end gap-3 rounded-md border border-line bg-surface p-4 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1fr)_minmax(8rem,1fr)_10rem_12rem_auto]"
+            className="mb-5 grid items-end gap-3 filter-bar sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1fr)_minmax(8rem,1fr)_10rem_12rem_auto]"
             onSubmit={apply}
           >
             <TextField
@@ -129,9 +129,7 @@ export function ClientsPage() {
             <Button type="submit">Apply filters</Button>
           </form>
           {query.isPending ? (
-            <p role="status" aria-busy="true">
-              Loading clients…
-            </p>
+            <PageSkeleton label="Loading clients…" />
           ) : query.isError ? (
             <ClientError
               error={query.error}
@@ -140,7 +138,7 @@ export function ClientsPage() {
               }}
             />
           ) : query.data.data.length === 0 ? (
-            <div className="rounded-md border border-line bg-surface p-6">
+            <div className="empty-state">
               <h2 className="font-semibold">No clients on this page</h2>
               <p className="mt-2 text-muted">
                 Adjust the filters, return to the previous page
@@ -162,7 +160,7 @@ export function ClientsPage() {
                 {query.data.data.map((client) => (
                   <tr key={client.id}>
                     <td className="min-w-48">
-                      <p className="break-words font-semibold">{client.name}</p>
+                      <p className="break-words font-medium"><Link to={`/app/clients/${client.id}`} className="hover:underline underline-offset-4">{client.name}</Link></p>
                       {client.legal_name ? (
                         <p className="mt-1 break-words text-xs text-muted">{client.legal_name}</p>
                       ) : null}

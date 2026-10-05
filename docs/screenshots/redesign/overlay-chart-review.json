@@ -1,0 +1,156 @@
+[
+  {
+    "slug": "role-drawer",
+    "mode": "light",
+    "width": 1440
+  },
+  {
+    "slug": "role-drawer",
+    "mode": "light",
+    "width": 390
+  },
+  {
+    "slug": "role-drawer",
+    "mode": "light",
+    "width": 320
+  },
+  {
+    "slug": "role-drawer",
+    "mode": "dark",
+    "width": 1440
+  },
+  {
+    "slug": "role-drawer",
+    "mode": "dark",
+    "width": 390
+  },
+  {
+    "slug": "role-drawer",
+    "mode": "dark",
+    "width": 320
+  },
+  {
+    "slug": "assignments-drawer",
+    "mode": "light",
+    "width": 1440
+  },
+  {
+    "slug": "assignments-drawer",
+    "mode": "light",
+    "width": 390
+  },
+  {
+    "slug": "assignments-drawer",
+    "mode": "light",
+    "width": 320
+  },
+  {
+    "slug": "assignments-drawer",
+    "mode": "dark",
+    "width": 1440
+  },
+  {
+    "slug": "assignments-drawer",
+    "mode": "dark",
+    "width": 390
+  },
+  {
+    "slug": "assignments-drawer",
+    "mode": "dark",
+    "width": 320
+  },
+  {
+    "slug": "account-menu",
+    "mode": "light",
+    "width": 1440
+  },
+  {
+    "slug": "account-menu",
+    "mode": "light",
+    "width": 390
+  },
+  {
+    "slug": "account-menu",
+    "mode": "light",
+    "width": 320
+  },
+  {
+    "slug": "account-menu",
+    "mode": "dark",
+    "width": 1440
+  },
+  {
+    "slug": "account-menu",
+    "mode": "dark",
+    "width": 390
+  },
+  {
+    "slug": "account-menu",
+    "mode": "dark",
+    "width": 320
+  },
+  {
+    "module": "analytics",
+    "mode": "light",
+    "scroll": 680,
+    "width": 350,
+    "left": 40,
+    "labels": [
+      17
+    ]
+  },
+  {
+    "module": "analytics",
+    "mode": "dark",
+    "scroll": 680,
+    "width": 350,
+    "left": 40,
+    "labels": [
+      17
+    ]
+  },
+  {
+    "module": "commerce",
+    "mode": "light",
+    "scroll": 680,
+    "width": 350,
+    "left": 40,
+    "labels": [
+      17,
+      17
+    ]
+  },
+  {
+    "module": "commerce",
+    "mode": "dark",
+    "scroll": 680,
+    "width": 350,
+    "left": 40,
+    "labels": [
+      17,
+      17
+    ]
+  },
+  {
+    "module": "marketing",
+    "mode": "light",
+    "scroll": 680,
+    "width": 350,
+    "left": 40,
+    "labels": [
+      17,
+      17
+    ]
+  },
+  {
+    "module": "marketing",
+    "mode": "dark",
+    "scroll": 680,
+    "width": 350,
+    "left": 40,
+    "labels": [
+      17,
+      17
+    ]
+  }
+]

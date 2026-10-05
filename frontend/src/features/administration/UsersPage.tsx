@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { faPlus, faRotateRight } from '@fortawesome/free-solid-svg-icons'
-import { Button, Status, Table } from '../../components/ui'
+import { Button, Status, Table, PageSkeleton } from '../../components/ui'
 import { hasPermission } from '../auth/permissions'
 import { useAdministration, useCursor } from './hooks'
 import { Confirmation, ErrorState, PageHeader, Pager } from './Shared'
@@ -64,9 +64,7 @@ export function UsersPage() {
         </p>
       ) : null}
       {query.isPending ? (
-        <p role="status" aria-busy="true">
-          Loading users…
-        </p>
+        <PageSkeleton label="Loading users…" />
       ) : query.isError ? (
         <ErrorState
           error={query.error}
@@ -75,7 +73,7 @@ export function UsersPage() {
           }}
         />
       ) : query.data.data.length === 0 ? (
-        <div className="rounded-md border border-line bg-surface p-6">
+        <div className="empty-state">
           <h2 className="font-semibold">No users on this page</h2>
           <p className="mt-2 text-muted">Create an account or return to the previous page.</p>
         </div>
@@ -132,7 +130,7 @@ export function UsersPage() {
                     {manage && user.status === 'active' && user.id !== auth.session?.user.id ? (
                       <Button
                         size="compact"
-                        variant="danger"
+                        variant="danger-ghost"
                         aria-label={`Disable ${user.display_name}`}
                         onClick={() => {
                           operation.clearError()

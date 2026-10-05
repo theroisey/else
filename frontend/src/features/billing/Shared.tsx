@@ -1,8 +1,8 @@
+import { ClientNavigation } from '../clients/ClientNavigation'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router'
-import { Button, Status, buttonStyles } from '../../components/ui'
+import { Button, Status } from '../../components/ui'
 import { APIError } from '../../services/authenticated'
-import { labels, pagePath } from './models'
+import { labels } from './models'
 import type { Collection } from './models'
 import type { useBilling } from './hooks'
 export { Pager } from '../planning/Shared'
@@ -39,44 +39,14 @@ export function BillingHeader({
   const { clientID, permissions, client } = operation,
     context =
       permissions.clientView && !client.isError ? client.data : undefined
-  const links = [
-    { visible: !!context, label: 'Overview', path: `/app/clients/${clientID}` },
-    {
-      visible: permissions.taskView,
-      label: 'Tasks',
-      path: `/app/clients/${clientID}/tasks`,
-    },
-    {
-      visible: permissions.planningView,
-      label: 'Planning',
-      path: `/app/clients/${clientID}/plans`,
-    },
-    {
-      visible: permissions.reminderView,
-      label: 'Reminders',
-      path: `/app/clients/${clientID}/reminders`,
-    },
-    { visible: true, label: 'Finance', path: pagePath(clientID) },
-    { visible: permissions.pricingView, label: 'Pricing', path: `/app/clients/${clientID}/pricing` },
-    {
-      visible: permissions.activityView,
-      label: 'Activity',
-      path: `/app/clients/${clientID}/activity`,
-    },
-    {
-      visible: permissions.auditView,
-      label: 'Audit history',
-      path: `/app/clients/${clientID}/audit`,
-    },
-  ]
   return (
     <>
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+      <header className="page-header">
         <div className="min-w-0">
           <p className="eyebrow">
             {context?.name ?? 'Client workspace'} · Finance
           </p>
-          <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight">
+          <h1 className="page-title">
             {title}
           </h1>
           <p className="mt-2 text-xs text-muted">
@@ -86,22 +56,7 @@ export function BillingHeader({
         </div>
         <div className="flex flex-wrap gap-2">{children}</div>
       </header>
-      <nav
-        aria-label="Client modules"
-        className="mb-5 flex flex-wrap gap-2 border-b border-line pb-4"
-      >
-        {links
-          .filter((l) => l.visible)
-          .map((l) => (
-            <Link
-              key={l.label}
-              className={buttonStyles({ size: 'compact' })}
-              to={l.path}
-            >
-              {l.label}
-            </Link>
-          ))}
-      </nav>
+      <ClientNavigation clientID={clientID} />
       {context?.status === 'archived' ? (
         <p role="status" className="mb-4">
           This client is archived. Finance history remains available; new
@@ -124,7 +79,7 @@ export function BillingState({ record }: { record: Collection }) {
         record.status === 'paid'
           ? 'success'
           : record.status === 'overdue'
-            ? 'warning'
+            ? 'danger'
             : 'neutral'
       }
     >

@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import { createQueryClient } from './query-client'
 
-function renderApp(path = '/status') {
+function renderApp(path = '/service-status') {
   const client = createQueryClient()
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><App /></MemoryRouter></QueryClientProvider>)
   return client
@@ -27,7 +27,7 @@ describe('foundation application', () => {
     expect(screen.getAllByText('Checking')).toHaveLength(2)
     expect(screen.getByRole('region', { name: 'Service checks' })).toHaveAttribute('aria-busy', 'true')
     expect(screen.queryByText('Available')).not.toBeInTheDocument()
-    expect(screen.getByText(/Client operations are not available yet/)).toBeInTheDocument()
+    expect(screen.getByText(/These public availability checks contain no client data/)).toBeInTheDocument()
   })
 
   it('shows real health and readiness independently, then supports keyboard retry', async () => {
@@ -44,6 +44,8 @@ describe('foundation application', () => {
     expect(screen.getByRole('link', { name: 'Interface review' })).toHaveFocus()
     await user.tab()
     expect(screen.getByRole('link', { name: 'Workspace' })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('combobox', { name: 'Appearance' })).toHaveFocus()
     await user.tab()
     expect(button).toHaveFocus()
     await user.keyboard('{Enter}')

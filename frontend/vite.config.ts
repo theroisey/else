@@ -14,6 +14,8 @@ export default defineConfig({
       '^/api/v1/': { target: 'http://127.0.0.1:8080' },
     },
   },
+  // Small font subsets must remain same-origin assets under the strict font-src policy.
+  build: { assetsInlineLimit: 0 },
   preview: { host: '127.0.0.1', strictPort: true, proxy: {} },
   test: {
     include: ['src/**/*.test.{ts,tsx}'],

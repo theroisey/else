@@ -11,7 +11,7 @@ const reasons = {
 }
 const states = { not_synced: 'Not synchronized', queued: 'Queued', running: 'Synchronizing', succeeded: 'Synchronized', failed: 'Synchronization failed' }
 export function ReportStatus({ status, hasData }: { status: z.infer<typeof syncStatus>; hasData: boolean }) {
-  return <aside className="mt-5 rounded-md border border-line bg-surface p-4" aria-label="Synchronization status">
+  return <aside className="mt-5 form-section" aria-label="Synchronization status">
     <Status tone={status.state === 'failed' || status.stale ? 'warning' : status.state === 'succeeded' ? 'success' : 'neutral'}>{states[status.state]}</Status>
     {status.reason ? <p className="mt-2 text-sm">{reasons[status.reason]}</p> : null}
     <p className="mt-2 text-sm">Last successful synchronization: {status.synced_at ? <time dateTime={status.synced_at}>{formatTime(status.synced_at, 'Europe/Istanbul')} (Europe/Istanbul)</time> : 'Never'}</p>

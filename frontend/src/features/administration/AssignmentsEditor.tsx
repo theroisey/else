@@ -121,6 +121,8 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
     )
   return (
     <Dialog
+      variant="drawer"
+      eyebrow="Access assignments"
       open
       title={`Roles for ${user.display_name}`}
       description="Global assignments cover all clients. Client assignments grant only the role’s client permissions at the exact client scope."

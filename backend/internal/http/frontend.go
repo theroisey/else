@@ -117,7 +117,7 @@ func loadFrontend(directory string) (http.Handler, error) {
 			return
 		}
 		asset, found := assets[requestPath]
-		if !found && (requestPath == "/" || requestPath == "/login" || requestPath == "/interface" || requestPath == "/app" || strings.HasPrefix(requestPath, "/app/")) {
+		if !found && (requestPath == "/" || requestPath == "/login" || requestPath == "/interface" || requestPath == "/service-status" || requestPath == "/app" || strings.HasPrefix(requestPath, "/app/")) {
 			asset, found = index, true
 		}
 		if !found {

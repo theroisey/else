@@ -6,7 +6,13 @@ RUN --mount=type=secret,id=proxy_ca \
     if [ -f /run/secrets/proxy_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; fi; \
     npm install --global npm@11.19.0 --strict-ssl=true && npm ci --strict-ssl=true
 COPY frontend/ ./
-RUN npm run build
+RUN npm run build \
+    && mkdir -p /distribution/frontend /distribution/usr/share/licenses/else \
+    && cp -R dist/. /distribution/frontend/ \
+    && find /distribution/frontend -type d -exec chmod 0755 {} + \
+    && find /distribution/frontend -type f -exec chmod 0644 {} + \
+    && install -m 0644 node_modules/@fontsource-variable/manrope/LICENSE /distribution/usr/share/licenses/else/Manrope-OFL.txt \
+    && install -m 0644 node_modules/@fontsource/instrument-serif/LICENSE /distribution/usr/share/licenses/else/Instrument-Serif-OFL.txt
 
 FROM golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195 AS backend-build
 WORKDIR /src
@@ -41,7 +47,7 @@ FROM scratch AS production
 COPY --from=postgres-runtime / /
 COPY --from=backend-build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=backend-build /out/ /
-COPY --from=frontend-build /app/dist /frontend
+COPY --from=frontend-build /distribution/ /
 COPY --chmod=0755 docker/runtime/ /opt/else/
 COPY --chmod=0644 backend/scripts/grant-runtime.sql /opt/else/grant-runtime.sql
 USER 0:0

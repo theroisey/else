@@ -1,10 +1,12 @@
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost'
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'danger-ghost' | 'ghost' | 'text'
 export type ButtonSize = 'compact' | 'default'
 
 const variants: Record<ButtonVariant, string> = {
   primary: 'border-ink bg-ink text-surface hover:bg-ink-soft',
-  secondary: 'border-line-strong bg-surface text-ink hover:border-ink hover:bg-surface-subtle',
-  danger: 'border-danger-strong bg-danger-strong text-white hover:bg-danger-ink',
+  secondary: 'border-line bg-surface text-ink hover:border-ink hover:bg-surface-subtle',
+  'danger-ghost': 'border-transparent bg-transparent text-danger-ink hover:border-danger-line hover:bg-danger-surface',
+  danger: 'border-danger-strong bg-danger-strong text-on-danger hover:opacity-90',
+  text: 'border-transparent bg-transparent text-ink underline underline-offset-4 hover:text-accent',
   ghost: 'border-transparent bg-transparent text-ink hover:border-line hover:bg-surface-subtle',
 }
 

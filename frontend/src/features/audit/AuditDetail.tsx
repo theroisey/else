@@ -41,6 +41,7 @@ export function AuditDetail({
     : []
   return (
     <Dialog
+      variant="drawer"
       open
       eyebrow="Audit inspection"
       title="Audit event details"

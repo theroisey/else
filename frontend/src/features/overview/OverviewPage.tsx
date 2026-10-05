@@ -1,7 +1,8 @@
+import { ClientNavigation } from '../clients/ClientNavigation'
 import { Link, useLocation, useParams } from 'react-router'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Status, buttonStyles } from '../../components/ui'
+import { Button, Status, PageSkeleton } from '../../components/ui'
 import { formatTime } from '../../lib/time'
 import { APIError } from '../../services/authenticated'
 import { hasPermission } from '../auth/permissions'
@@ -20,7 +21,7 @@ export function OverviewPage() {
   if (!isUUID(client))
     return (
       <section>
-        <h1 className="text-2xl font-semibold">Overview not found</h1>
+        <h1 className="page-title">Overview not found</h1>
         <p className="mt-3 text-muted">This client address is not valid.</p>
       </section>
     )
@@ -85,17 +86,12 @@ function Workspace({
   }
   if (refreshing || query.isPending || query.isFetching)
     return (
-      <section aria-busy="true">
-        <h1 className="text-2xl font-semibold">Client overview</h1>
-        <p role="status" className="mt-4 text-muted">
-          Loading overview…
-        </p>
-      </section>
+      <PageSkeleton label="Loading overview…" />
     )
   if (query.isError)
     return (
       <section>
-        <h1 className="text-2xl font-semibold">Overview unavailable</h1>
+        <h1 className="page-title">Overview unavailable</h1>
         <p className="mt-3 text-muted" role="alert">
           {query.error instanceof APIError
             ? query.error.message
@@ -108,40 +104,18 @@ function Workspace({
     )
   const data = query.data
   const base = `/app/clients/${client}`
-  const has = (permission: string) =>
-    hasPermission(grants, { permission, scope: 'client', clientID: client })
   const saved =
     location.state?.clientSaved === 'created'
       ? 'Client created.'
       : location.state?.clientSaved === 'updated'
         ? 'Client updated.'
         : ''
-  const modules = [
-    { label: 'Tasks', path: 'tasks', shown: !!data.tasks },
-    { label: 'Planning', path: 'plans', shown: has('planning.view') },
-    { label: 'Reminders', path: 'reminders', shown: !!data.reminders },
-    { label: 'Finance', path: 'billing', shown: !!data.finance },
-    { label: 'Pricing', path: 'pricing', shown: has('pricing.view') },
-    { label: 'Integrations', path: 'integrations', shown: has('integrations.view') },
-    { label: 'Web analytics', path: 'analytics', shown: has('analytics.view') },
-    { label: 'Commerce', path: 'commerce', shown: has('analytics.view') },
-    { label: 'Marketing', path: 'marketing', shown: has('analytics.view') },
-    { label: 'Activity', path: 'activity', shown: !!data.activity },
-    {
-      label: 'Audit history',
-      path: 'audit',
-      shown: hasPermission(grants, {
-        permission: 'audit.view',
-        scope: 'global',
-      }),
-    },
-  ]
   return (
     <section className="max-w-6xl">
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+      <header className="page-header">
         <div className="min-w-0">
-          <p className="eyebrow">Client workspace · Overview</p>
-          <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight">
+          <p className="eyebrow">Client dossier · Overview</p>
+          <h1 className="page-title">
             {data.client.name}
           </h1>
           <div className="mt-3">
@@ -165,34 +139,7 @@ function Workspace({
           history remain readable; changes are unavailable.
         </p>
       ) : null}
-      <nav
-        aria-label="Client modules"
-        className="mb-6 flex flex-wrap gap-2 border-b border-line pb-4"
-      >
-        <span
-          aria-current="page"
-          className="self-center px-3 text-sm font-semibold"
-        >
-          Overview
-        </span>
-        <Link
-          className={buttonStyles({ size: 'compact' })}
-          to={`${base}/profile`}
-        >
-          Profile
-        </Link>
-        {modules
-          .filter((v) => v.shown)
-          .map((v) => (
-            <Link
-              key={v.path}
-              className={buttonStyles({ size: 'compact' })}
-              to={`${base}/${v.path}`}
-            >
-              {v.label}
-            </Link>
-          ))}
-      </nav>
+      <ClientNavigation clientID={client} />
       <p className="mb-7 text-xs text-muted">
         As of <time dateTime={data.as_of}>{formatTime(data.as_of)}</time> ·
         Upcoming window ends{' '}
@@ -200,7 +147,8 @@ function Workspace({
         Task times use your device’s timezone; reminders retain their scheduled
         timezone.
       </p>
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      {data.finance ? <FinancialPosition finance={data.finance} base={base} /> : null}
+      <div className="overview-workspace">
         <div className="min-w-0 space-y-8">
           {data.tasks || data.reminders ? (
             <>
@@ -259,14 +207,10 @@ function Workspace({
               </section>
             </>
           ) : null}
-          {data.finance && !data.tasks && !data.reminders ? (
-            <FinancialPosition finance={data.finance} base={base} />
-          ) : null}
+
         </div>
         <div className="min-w-0 space-y-8">
-          {data.finance && (data.tasks || data.reminders) ? (
-            <FinancialPosition finance={data.finance} base={base} />
-          ) : null}
+
           {data.activity ? (
             <section
               aria-labelledby="activity-title"
@@ -315,10 +259,10 @@ function Workspace({
             className="border-t border-line pt-6"
           >
             <h2 id="integrations-title" className="text-sm font-semibold">
-              Integration data unavailable
+              Measured intelligence
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted">
-              External performance totals are not included in this overview.
+              Performance reports are available in their dedicated workspaces.
               Authorized users can open measured GA4 reports from Web analytics, WooCommerce reports from Commerce and Meta Ads reports from Marketing.
             </p>
           </aside>

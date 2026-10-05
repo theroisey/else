@@ -1,6 +1,7 @@
+import { ClientNavigation } from '../clients/ClientNavigation'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { Button, Status, buttonStyles } from '../../components/ui'
+import { Button, Status } from '../../components/ui'
 import { APIError } from '../../services/authenticated'
 import { deviceTimezone, formatTime } from '../../lib/time'
 import { labels, pagePath } from './models'
@@ -32,57 +33,20 @@ export function PlanningHeader({
   const context = permissions.clientView && !client.isError ? client.data : undefined
   return (
     <>
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+      <header className="page-header">
         <div className="min-w-0">
           <p className="eyebrow">
             {context?.name ?? 'Client workspace'} · {scope.planID ? 'Milestones' : 'Planning'}
           </p>
-          <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="page-title">{title}</h1>
           <p className="mt-2 text-xs text-muted">
             Times shown in {deviceTimezone()} · Completion is manual.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">{children}</div>
       </header>
-      <nav
-        aria-label="Client modules"
-        className="mb-5 flex flex-wrap gap-2 border-b border-line pb-4"
-      >
-        {context ? (
-          <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${scope.clientID}`}>
-            Overview
-          </Link>
-        ) : null}
-        {permissions.taskView ? (
-          <Link
-            className={buttonStyles({ size: 'compact' })}
-            to={`/app/clients/${scope.clientID}/tasks`}
-          >
-            Tasks
-          </Link>
-        ) : null}
-        <Link
-          className={buttonStyles({ size: 'compact' })}
-          to={pagePath({ clientID: scope.clientID })}
-        >
-          Planning
-        </Link>
-        {permissions.reminderView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${scope.clientID}/reminders`}>Reminders</Link> : null}
-        {permissions.activityView ? <Link className={buttonStyles({ size: 'compact' })} to={`/app/clients/${scope.clientID}/activity`}>Activity</Link> : null}
-        {scope.planID ? (
-          <>
-            <Link
-              className={buttonStyles({ size: 'compact' })}
-              to={pagePath({ clientID: scope.clientID }, scope.planID)}
-            >
-              Parent plan
-            </Link>
-            <Link className={buttonStyles({ size: 'compact' })} to={pagePath(scope)}>
-              Milestones
-            </Link>
-          </>
-        ) : null}
-      </nav>
+      <ClientNavigation clientID={scope.clientID} />
+      {scope.planID ? <nav aria-label="Planning context" className="mb-5 flex gap-5 text-xs"><Link className="underline underline-offset-4" to={pagePath({ clientID: scope.clientID }, scope.planID)}>Parent plan</Link><Link className="underline underline-offset-4" to={pagePath(scope)}>Milestones</Link></nav> : null}
       {context?.status === 'archived' ? (
         <p role="status" className="mb-4">
           This client is archived. Planning history remains available; changes are unavailable.

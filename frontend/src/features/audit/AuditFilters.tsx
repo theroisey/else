@@ -25,7 +25,7 @@ export function AuditFilters({
   }
   return (
     <form
-      className="mb-5 rounded-md border border-line bg-surface p-4"
+      className="mb-5 filter-bar"
       aria-label="Audit filters"
       onSubmit={(e) => {
         e.preventDefault()

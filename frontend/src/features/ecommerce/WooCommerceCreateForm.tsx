@@ -9,7 +9,7 @@ export function WooCommerceCreateForm({ operation }: { operation: Operation }) {
   const [confirmed, setConfirmed] = useState(false)
   const navigate = useNavigate()
   const blocked = operation.pending || !!operation.error
-  return <form className="my-5 grid gap-3 rounded-md border border-line bg-surface p-5" onSubmit={e => {
+  return <form className="my-5 grid gap-3 form-section" onSubmit={e => {
     e.preventDefault()
     if (blocked || !confirmed || !service.validOrigin(origin)) return
     setConfirmed(false)

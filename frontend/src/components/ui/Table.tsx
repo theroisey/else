@@ -7,7 +7,7 @@ interface TableProps extends TableHTMLAttributes<HTMLTableElement> {
 
 export function Table({ caption, children, className = '', ...props }: TableProps) {
   return (
-    <div className="relative overflow-x-auto rounded-md border border-line bg-surface" role="region" aria-label={caption} tabIndex={0}>
+    <div className="table-region" role="region" aria-label={caption} tabIndex={0}>
       <table {...props} className={`ui-table ${className}`.trim()}>
         <caption className="sr-only">{caption}</caption>
         {children}

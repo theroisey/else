@@ -1,7 +1,8 @@
+import { ClientNavigation } from './ClientNavigation'
 import { useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Dialog, Status, buttonStyles } from '../../components/ui'
+import { Button, Dialog, Status, buttonStyles, PageSkeleton } from '../../components/ui'
 import { hasPermission } from '../auth/permissions'
 import { useClients } from './hooks'
 import { AccessDenied, ClientError } from './Shared'
@@ -31,9 +32,7 @@ function ClientWorkspace({ id }: { id: string }) {
   if (!allowed) return <AccessDenied />
   if (query.isPending)
     return (
-      <p role="status" aria-busy="true">
-        Loading client…
-      </p>
+      <PageSkeleton label="Loading client…" />
     )
   if (query.isError)
     return (
@@ -68,10 +67,10 @@ function ClientWorkspace({ id }: { id: string }) {
         : ''
   return (
     <section>
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+      <header className="page-header">
         <div className="min-w-0">
           <p className="eyebrow">Client workspace</p>
-          <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight">{client.name}</h1>
+          <h1 className="page-title">{client.name}</h1>
           {client.legal_name ? (
             <p className="mt-2 break-words text-muted">{client.legal_name}</p>
           ) : null}
@@ -117,32 +116,10 @@ function ClientWorkspace({ id }: { id: string }) {
           are retained. Changes and new assignments are unavailable.
         </p>
       ) : null}
-      <nav
-        aria-label="Client modules"
-        className="mb-6 flex flex-wrap gap-2 border-b border-line pb-4"
-      >
-        <Link className={buttonStyles()} to={`/app/clients/${id}`}>Overview</Link>
-        <span
-          aria-current="page"
-          className="rounded-sm border border-line bg-surface px-3 py-2 font-semibold"
-        >
-          Profile
-        </span>
-        {hasPermission(grants, {permission:'tasks.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/tasks`}>Tasks</Link> : null}
-        {hasPermission(grants, {permission:'planning.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/plans`}>Planning</Link> : null}
-        {hasPermission(grants, {permission:'reminders.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/reminders`}>Reminders</Link> : null}
-        {hasPermission(grants, {permission:'billing.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/billing`}>Finance</Link> : null}
-        {hasPermission(grants, {permission:'pricing.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/pricing`}>Pricing</Link> : null}
-        {hasPermission(grants, {permission:'integrations.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/integrations`}>Integrations</Link> : null}
-        {hasPermission(grants, {permission:'analytics.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/analytics`}>Web analytics</Link> : null}
-        {hasPermission(grants, {permission:'analytics.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/commerce`}>Commerce</Link> : null}
-        {hasPermission(grants, {permission:'analytics.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/marketing`}>Marketing</Link> : null}
-        {hasPermission(grants, {permission:'activity.view',scope:'client',clientID:id}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/activity`}>Activity</Link> : null}
-        {hasPermission(grants, {permission:'audit.view',scope:'global'}) ? <Link className={buttonStyles()} to={`/app/clients/${id}/audit`}>Audit history</Link> : null}
-      </nav>
+      <ClientNavigation clientID={id} />
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="grid gap-5">
-          <section className="rounded-md border border-line bg-surface p-5">
+          <section className="workspace-section">
             <h2 className="font-semibold">Profile</h2>
             <dl className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
@@ -159,7 +136,7 @@ function ClientWorkspace({ id }: { id: string }) {
               </div>
             </dl>
           </section>
-          <section className="rounded-md border border-line bg-surface p-5">
+          <section className="workspace-section">
             <h2 className="font-semibold">Contacts</h2>
             {client.contacts.length ? (
               <ul className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -180,7 +157,7 @@ function ClientWorkspace({ id }: { id: string }) {
             )}
           </section>
         </div>
-        <aside className="h-fit rounded-md border border-line bg-surface p-5">
+        <aside className="context-rail">
           <h2 className="font-semibold">Record context</h2>
           <dl className="mt-4 grid gap-4">
             <div>
