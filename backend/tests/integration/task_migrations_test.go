@@ -78,8 +78,8 @@ func TestTaskMigrationPreservesClientAndAuthorizationHistory(t *testing.T) {
 	f := newClientFixture(t)
 	ctx := correlation.New(f.base.ctx)
 	profile := profileFixture()
- profile.Website = "" // Keep this rollback fixture focused on client/task history, without website history.
- m, err := f.records.Create(ctx, f.actor, profile)
+	profile.Website = "" // Keep this rollback fixture focused on client/task history, without website history.
+	m, err := f.records.Create(ctx, f.actor, profile)
 	if err != nil {
 		t.Fatal(err)
 	}
