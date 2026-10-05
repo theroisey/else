@@ -168,7 +168,7 @@ compose stop else >/dev/null
 compose run --rm --no-deps --entrypoint sh else -c 'rm -rf /var/lib/roisey-else/.control' >/dev/null
 recover_compose_else
 verify_client
-[ "$(compose exec -T else /opt/else/operator psql -Atc 'SELECT count(*) FROM public.goose_db_version WHERE version_id > 0 AND is_applied')" = 27 ]
+[ "$(compose exec -T else /opt/else/operator psql -Atc 'SELECT count(*) FROM public.goose_db_version WHERE version_id > 0 AND is_applied')" = 28 ]
 # A usable real custom archive is created with the protected local administrator.
 compose exec -T else /opt/else/operator backup > "$task_directory/backup.dump"
 compose exec -T else gosu postgres pg_restore --list < "$task_directory/backup.dump" > "$task_directory/backup.list"
