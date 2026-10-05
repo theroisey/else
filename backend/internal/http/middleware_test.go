@@ -2,12 +2,14 @@ package httpapi
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestRequestLogsExcludeSensitiveInputAndUseServerOwnedIDs(t *testing.T) {
@@ -104,5 +106,53 @@ func TestTransportDiagnosticsAreStructuredAndRedacted(t *testing.T) {
 	n, err := writer.Write(input)
 	if n != len(input) || err != nil || strings.Contains(output.String(), "secret") || !strings.Contains(output.String(), "http_transport_error") {
 		t.Fatal("transport diagnostic was dropped or leaked raw details")
+	}
+}
+
+func TestSuccessfulProbesAndSessionChecksAreDebugOnly(t *testing.T) {
+	for _, path := range []string{"/health", "/ready", "/api/v1/auth/session"} {
+		var info, debug bytes.Buffer
+		for _, entry := range []struct {
+			output *bytes.Buffer
+			level  slog.Level
+		}{{&info, slog.LevelInfo}, {&debug, slog.LevelDebug}} {
+			h := RequestMiddleware(slog.New(slog.NewJSONHandler(entry.output, &slog.HandlerOptions{Level: entry.level})), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }))
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+			if w.Header().Get("X-Request-ID") == "" {
+				t.Fatal("correlation lost")
+			}
+		}
+		if info.Len() != 0 || !strings.Contains(debug.String(), `"level":"DEBUG"`) {
+			t.Fatal("routine success not quiet at INFO")
+		}
+	}
+}
+func TestProbeFailuresUnusualRequestsAndCancellationRemainVisible(t *testing.T) {
+	for _, entry := range []struct {
+		method, path string
+		status       int
+		cancel       bool
+	}{{"GET", "/ready", 503, false}, {"GET", "/health", 500, false}, {"POST", "/ready", 200, false}, {"GET", "/ready?unexpected=secret", 200, false}, {"GET", "/api/v1/auth/session", 401, false}, {"GET", "/api/v1/auth/session", 403, false}, {"POST", "/api/v1/auth/login", 200, false}, {"GET", "/ready", 200, true}, {"GET", "/api/v1/auth/session", 204, false}} {
+		var output bytes.Buffer
+		h := RequestMiddleware(slog.New(slog.NewJSONHandler(&output, nil)), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(entry.status) }))
+		r := httptest.NewRequest(entry.method, entry.path, nil)
+		if entry.cancel {
+			ctx, cancel := context.WithCancel(r.Context())
+			cancel()
+			r = r.WithContext(ctx)
+		}
+		h.ServeHTTP(httptest.NewRecorder(), r)
+		if !strings.Contains(output.String(), "request_completed") || strings.Contains(output.String(), "secret") {
+			t.Fatal("important request suppressed or leaked")
+		}
+	}
+	for _, duration := range []time.Duration{time.Second, 2 * time.Second} {
+		if quietSuccessfulRead(httptest.NewRequest("GET", "/ready", nil), 200, false, duration) {
+			t.Fatal("slow probe suppressed")
+		}
+	}
+	if !quietSuccessfulRead(httptest.NewRequest("HEAD", "/health", nil), 204, false, time.Millisecond) {
+		t.Fatal("ordinary HEAD not quiet")
 	}
 }

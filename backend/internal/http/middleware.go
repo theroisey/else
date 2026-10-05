@@ -24,6 +24,7 @@ type responseRecorder struct {
 	http.ResponseWriter
 	status      int
 	wroteHeader bool
+	writeFailed bool
 }
 
 func (w *responseRecorder) WriteHeader(status int) {
@@ -39,7 +40,11 @@ func (w *responseRecorder) Write(value []byte) (int, error) {
 	if !w.wroteHeader {
 		w.WriteHeader(http.StatusOK)
 	}
-	return w.ResponseWriter.Write(value)
+	n, err := w.ResponseWriter.Write(value)
+	if err != nil {
+		w.writeFailed = true
+	}
+	return n, err
 }
 
 func (w *responseRecorder) Unwrap() http.ResponseWriter {
@@ -57,9 +62,15 @@ func RequestMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 		recorder := &responseRecorder{ResponseWriter: w, status: http.StatusOK}
 		aborted := false
 		defer func() {
-			logger.InfoContext(r.Context(), "request_completed",
+			duration := time.Since(started)
+			aborted = aborted || recorder.writeFailed || r.Context().Err() != nil
+			level := slog.LevelInfo
+			if quietSuccessfulRead(r, recorder.status, aborted, duration) {
+				level = slog.LevelDebug
+			}
+			logger.Log(r.Context(), level, "request_completed",
 				"request_id", id, "method", safeMethod(r.Method), "route", routeLabel(r.URL.Path),
-				"status_code", recorder.status, "duration_ms", time.Since(started).Milliseconds(),
+				"status_code", recorder.status, "duration_ms", duration.Milliseconds(),
 				"aborted", aborted)
 		}()
 		defer func() {
@@ -77,6 +88,19 @@ func RequestMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 	})
 }
 
+// Only ordinary fast, successful probes/session reads are quiet at INFO.
+// Query-bearing requests, cancellations, unexpected methods/statuses and slow
+// reads retain correlated INFO records; auth mutations/errors are unaffected.
+func quietSuccessfulRead(r *http.Request, status int, aborted bool, duration time.Duration) bool {
+	if aborted || duration >= time.Second || status < 200 || status >= 300 || r.URL.RawQuery != "" || r.URL.ForceQuery {
+		return false
+	}
+	if (r.URL.Path == "/health" || r.URL.Path == "/ready") && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
+		return true
+	}
+	return r.URL.Path == "/api/v1/auth/session" && r.Method == http.MethodGet && status == http.StatusOK
+}
+
 func routeLabel(path string) string {
 	switch path {
 	case "/health", "/ready":
@@ -87,7 +111,7 @@ func routeLabel(path string) string {
 		return "/api/v1/auth/logout"
 	case "/api/v1/auth/session":
 		return "/api/v1/auth/session"
-	case "/api/v1/users", "/api/v1/roles", "/api/v1/permissions", "/api/v1/clients", "/api/v1/audit-logs":
+	case "/api/v1/users", "/api/v1/roles", "/api/v1/permissions", "/api/v1/clients", "/api/v1/audit-logs", "/api/v1/releases":
 		return path
 	default:
 		if strings.HasPrefix(path, "/api/v1/audit-logs/") {

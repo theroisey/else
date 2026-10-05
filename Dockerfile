@@ -61,5 +61,5 @@ USER 0:0
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/18/bin \
     LANG=en_US.utf8 HTTP_ADDRESS=0.0.0.0:8080 FRONTEND_DIRECTORY=/frontend
 EXPOSE 8080
-HEALTHCHECK --interval=10s --timeout=3s --start-period=120s --retries=6 CMD ["/healthcheck"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=120s --start-interval=5s --retries=3 CMD ["/healthcheck"]
 ENTRYPOINT ["/usr/bin/tini", "--", "/opt/else/start"]

@@ -30,7 +30,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     gcTime: 0,
     refetchOnWindowFocus: 'always',
     refetchOnReconnect: 'always',
-    refetchInterval: 60_000,
   })
 
   const forgetSession = useCallback(
@@ -40,7 +39,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         predicate: (entry) => entry.queryKey[0] !== 'auth',
       })
       hadSession.current = false
-      client.setQueryData<IdentityState>(sessionKey, { session: null, expired })
+      client.setQueryData<IdentityState>(sessionKey, {
+        session: null,
+        expired,
+      })
     },
     [client],
   )
@@ -76,7 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await client.cancelQueries({ queryKey: sessionKey })
     const identity = await service.login(email, password)
     await client.cancelQueries()
-    client.removeQueries({ predicate: (entry) => entry.queryKey[0] !== 'auth' })
+    client.removeQueries({
+      predicate: (entry) => entry.queryKey[0] !== 'auth',
+    })
     hadSession.current = true
     client.setQueryData<IdentityState>(sessionKey, {
       session: identity,

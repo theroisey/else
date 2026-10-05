@@ -101,3 +101,7 @@ A panic before headers produces a generic `500` and a safe correlated failure ev
 SIGINT/SIGTERM marks readiness unavailable, stops accepting new connections, and allows active requests to finish within the configured shutdown deadline. On deadline expiry, force-close connections and return an error. Request contexts are not prematurely tied to the signal context, so ordinary shutdown can complete active work. The lifecycle waits for the serving goroutine to finish before returning.
 
 The ordering follows the [Go HTTP shutdown contract](https://pkg.go.dev/net/http#Server.Shutdown). Tests use real listeners to prove graceful completion, deadline closure, cancellation, and listener failure propagation.
+
+## Routine request logging (#133)
+
+Normal fast successful GET/HEAD probes of exact `/health` and `/ready`, and successful GET `/api/v1/auth/session`, produce `request_completed` only at DEBUG. INFO still includes failures/non-2xx, unexpected methods, query-bearing requests, cancellations/aborts/write failures and latency of at least one second. Session reads require exactly 200 for quieting; auth mutations and 401/403/security errors remain visible. Server-owned request correlation is preserved at every level. `LOG_LEVEL=debug` restores routine read visibility without exposing request values.
