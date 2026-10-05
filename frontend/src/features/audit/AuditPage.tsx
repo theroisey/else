@@ -1,3 +1,5 @@
+import { formatTime } from '../../lib/time'
+import { copy, useLocale } from '../../i18n/index'
 import { ClientNavigation } from '../clients/ClientNavigation'
 import { useState } from 'react'
 import { useParams } from 'react-router'
@@ -16,6 +18,7 @@ import { AuditDetail } from './AuditDetail'
 import * as service from './service'
 
 export function AuditPage({ client = false }: { client?: boolean }) {
+  useLocale()
   const params = useParams()
   const scope = client ? params.id : undefined
   const operation = useRecordOperations('audit', scope)
@@ -26,8 +29,12 @@ export function AuditPage({ client = false }: { client?: boolean }) {
   if (client && !isUUID(scope))
     return (
       <section>
-        <h1 className="page-title">Audit history not found</h1>
-        <p className="mt-3 text-muted">This client address is not valid.</p>
+        <h1 className="page-title">
+          {copy('Audit history not found', 'audit')}
+        </h1>
+        <p className="mt-3 text-muted">
+          {copy('This client address is not valid.', 'audit')}
+        </p>
       </section>
     )
   if (!permissions.view) return <AccessDenied />
@@ -49,6 +56,7 @@ function AuditReader({
   operation: ReturnType<typeof useRecordOperations>
   permissions: ReturnType<typeof auditPermissions>
 }) {
+  useLocale()
   const [filters, setFilters] = useState({ ...emptyFilters })
   const [history, setHistory] = useState([''])
   const [refresh, setRefresh] = useState(0)
@@ -85,41 +93,44 @@ function AuditReader({
       <header className="page-header">
         <div className="min-w-0">
           <p className="eyebrow">
-            {scope ? 'Client workspace' : 'Security'} · History
+            {copy('{{value1}} · History', 'audit', {
+              value1: copy(scope ? 'Client workspace' : 'Security', 'audit'),
+            })}
           </p>
-          <h1 className="page-title">
-            Audit history
-          </h1>
+          <h1 className="page-title">{copy('Audit history', 'audit')}</h1>
           <p className="mt-2 text-sm text-muted">
-            Recorded events, newest first. Exact times are shown in UTC.
+            {copy(
+              'Recorded events, newest first. Exact times are shown in UTC.',
+              'audit',
+            )}
           </p>
           {scope ? (
             <p className="mt-2 break-all font-mono text-xs text-muted">
-              Client {scope}
+              {copy('Client {{value1}}', 'audit', { value1: scope })}
             </p>
           ) : null}
         </div>
         <Button disabled={query.isFetching} onClick={reload}>
-          Refresh audit history
+          {copy('Refresh audit history', 'audit')}
         </Button>
       </header>
-      {scope ? (
-        <ClientNavigation clientID={scope!} />
-      ) : null}
+      {scope ? <ClientNavigation clientID={scope!} /> : null}
       <AuditFilters scope={scope} busy={query.isFetching} onApply={apply} />
       {!filterAccess ? (
         <p role="alert">
-          This client is not available with your current access. Clear or change
-          the client filter.
+          {copy(
+            'This client is not available with your current access. Clear or change the client filter.',
+            'audit',
+          )}
         </p>
       ) : query.isPending || query.isFetching ? (
-        <PageSkeleton label="Loading audit history…" />
+        <PageSkeleton label={copy('Loading audit history…', 'audit')} />
       ) : query.isError ? (
         <div className="rounded-md border border-danger-line bg-danger-surface p-4">
           <p role="alert">
             {query.error instanceof APIError
-              ? query.error.message
-              : 'Unable to load audit history. Try again.'}
+              ? copy(query.error.message, 'audit')
+              : copy('Unable to load audit history. Try again.', 'audit')}
           </p>
           <Button
             className="mt-3"
@@ -127,18 +138,18 @@ function AuditReader({
               void query.refetch()
             }}
           >
-            Try again
+            {copy('Try again', 'audit')}
           </Button>
         </div>
       ) : rows?.length ? (
-        <Table caption="Audit events">
+        <Table caption={copy('Audit events', 'audit')}>
           <thead>
             <tr>
-              <th scope="col">Event / Time (UTC)</th>
-              <th scope="col">Actor</th>
-              <th scope="col">Client</th>
-              <th scope="col">Resource</th>
-              <th scope="col">Request / Details</th>
+              <th scope="col">{copy('Event / Time (UTC)', 'audit')}</th>
+              <th scope="col">{copy('Actor', 'audit')}</th>
+              <th scope="col">{copy('Client', 'audit')}</th>
+              <th scope="col">{copy('Resource', 'audit')}</th>
+              <th scope="col">{copy('Request / Details', 'audit')}</th>
             </tr>
           </thead>
           <tbody>
@@ -150,14 +161,14 @@ function AuditReader({
                     className="mt-1 block font-mono text-xs text-muted"
                     dateTime={row.occurred_at}
                   >
-                    {row.occurred_at}
+                    {formatTime(row.occurred_at, 'UTC')}
                   </time>
                 </th>
                 <td className="max-w-48 break-all font-mono text-xs">
-                  {row.actor_user_id ?? 'System'}
+                  {row.actor_user_id ?? copy('System', 'audit')}
                 </td>
                 <td className="max-w-48 break-all font-mono text-xs">
-                  {row.client_id ?? 'Global'}
+                  {row.client_id ?? copy('Global', 'audit')}
                 </td>
                 <td className="max-w-48 break-all text-xs">
                   <span className="block">{row.resource_kind}</span>
@@ -170,10 +181,14 @@ function AuditReader({
                   <Button
                     size="compact"
                     className="mt-2"
-                    aria-label={`Inspect ${row.event_type} event ${row.id}`}
+                    aria-label={copy(
+                      'Inspect {{value1}} event {{value2}}',
+                      'audit',
+                      { value1: row.event_type, value2: row.id },
+                    )}
                     onClick={() => setSelected(row)}
                   >
-                    Inspect event
+                    {copy('Inspect event', 'audit')}
                   </Button>
                 </td>
               </tr>
@@ -182,15 +197,19 @@ function AuditReader({
         </Table>
       ) : (
         <div className="empty-state">
-          <h2 className="font-semibold">No audit events on this page</h2>
+          <h2 className="font-semibold">
+            {copy('No audit events on this page', 'audit')}
+          </h2>
           <p className="mt-2 text-sm text-muted">
-            No recorded events match these filters and your current access.
-            Change filters or refresh to check for newer events.
+            {copy(
+              'No recorded events match these filters and your current access. Change filters or refresh to check for newer events.',
+              'audit',
+            )}
           </p>
         </div>
       )}
       <Pager
-        name="Audit"
+        name={copy('Audit', 'audit')}
         history={history}
         next={
           !query.isError && !query.isFetching && filterAccess
@@ -204,8 +223,10 @@ function AuditReader({
         }}
       />
       <p className="mt-4 text-xs text-muted">
-        Read only. Each page reflects current access. Refresh returns to the
-        newest events.
+        {copy(
+          'Read only. Each page reflects current access. Refresh returns to the newest events.',
+          'audit',
+        )}
       </p>
       {selected &&
       rows?.some((row) => row.id === selected.id) &&

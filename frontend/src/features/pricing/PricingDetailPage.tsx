@@ -1,3 +1,5 @@
+import { currentLocale } from '../../i18n'
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -9,6 +11,7 @@ import { pagePath } from './models'
 import { CopyForm } from './CopyForm'
 import * as api from './service'
 export function PricingDetailPage() {
+  useLocale()
   const { id = '', sheetID = '', versionID = '' } = useParams()
   return (
     <Detail
@@ -28,6 +31,7 @@ function Detail({
   sheetID: string
   versionID: string
 }) {
+  useLocale()
   const op = usePricing(clientID),
     [history, setHistory] = useState(['']),
     cursor = history.at(-1)!
@@ -75,9 +79,12 @@ function Detail({
   }
   return (
     <section>
-      <PricingHeader title="Pricing agreement" operation={op}>
+      <PricingHeader
+        title={copy('Pricing agreement', 'pricing')}
+        operation={op}
+      >
         <Button disabled={busy} onClick={reload}>
-          Refresh agreement
+          {copy('Refresh agreement', 'pricing')}
         </Button>
         {op.permissions.manage &&
         op.writable &&
@@ -88,25 +95,31 @@ function Detail({
             className={buttonStyles({ variant: 'primary' })}
             to={pagePath(clientID, sheetID) + '/new-version'}
           >
-            Create new version
+            {copy('Create new version', 'pricing')}
           </Link>
         ) : null}
       </PricingHeader>
       {sheet.isPending ? (
-        <PageSkeleton label="Loading agreement…" />
+        <PageSkeleton label={copy('Loading agreement…', 'pricing')} />
       ) : sheet.isError ? (
         <PricingError error={sheet.error} retry={reload} />
       ) : (
         <>
           {versionID && selected.isPending ? (
-            <PageSkeleton label="Loading retained version…" />
+            <PageSkeleton
+              label={copy('Loading retained version…', 'pricing')}
+            />
           ) : versionID && selected.isError ? (
             <PricingError error={selected.error} retry={reload} />
           ) : v ? (
             <>
               <article className="form-section">
                 <p className="eyebrow">
-                  Version {v.revision} · Latest version {sheet.data.revision}
+                  {copy(
+                    'Version {{value1}} · Latest version {{value2}}',
+                    'pricing',
+                    { value1: v.revision, value2: sheet.data.revision },
+                  )}
                 </p>
                 <h2 className="mt-2 break-words text-xl font-semibold">
                   {v.title}
@@ -115,18 +128,25 @@ function Detail({
                   <Window version={v} />
                 </div>
                 <p className="mt-3 whitespace-pre-wrap break-words text-sm text-muted">
-                  {v.note || 'No pricing note.'}
+                  {v.note || copy('No pricing note.', 'pricing')}
                 </p>
                 <p className="mt-3 text-xs text-muted">
-                  Retained {new Date(v.created_at).toLocaleString()}. Historical
-                  lines and original dates are read only.
+                  {copy(
+                    'Retained {{value1}}. Historical lines and original dates are read only.',
+                    'pricing',
+                    {
+                      value1: new Date(v.created_at).toLocaleString(
+                        currentLocale(),
+                      ),
+                    },
+                  )}
                 </p>
                 {versionID ? (
                   <Link
                     className="mt-3 inline-block text-sm underline"
                     to={pagePath(clientID, sheetID)}
                   >
-                    Open latest version
+                    {copy('Open latest version', 'pricing')}
                   </Link>
                 ) : null}
               </article>
@@ -149,13 +169,19 @@ function Detail({
             </>
           ) : null}
           <section className="mt-6">
-            <h2 className="text-lg font-semibold">Version history</h2>
+            <h2 className="text-lg font-semibold">
+              {copy('Version history', 'pricing')}
+            </h2>
             <p className="mt-1 text-xs text-muted">
-              Every version is retained. Latest-first within each page; use
-              pagination to inspect more versions.
+              {copy(
+                'Every version is retained. Latest-first within each page; use pagination to inspect more versions.',
+                'pricing',
+              )}
             </p>
             {versions.isPending ? (
-              <PageSkeleton label="Loading version history…" />
+              <PageSkeleton
+                label={copy('Loading version history…', 'pricing')}
+              />
             ) : versions.isError ? (
               <PricingError
                 error={versions.error}
@@ -169,22 +195,22 @@ function Detail({
                       BigInt(a.revision) > BigInt(b.revision) ? -1 : 1,
                     )
                     .map((r) => (
-                      <li
-                        key={r.id}
-                        className="form-section"
-                      >
+                      <li key={r.id} className="form-section">
                         <Link
                           className="break-words font-semibold underline underline-offset-4"
                           to={pagePath(clientID, sheetID) + '/versions/' + r.id}
                         >
-                          Version {r.revision} · {r.title}
+                          {copy('Version {{value1}} · {{value2}}', 'pricing', {
+                            value1: r.revision,
+                            value2: r.title,
+                          })}
                         </Link>
                         <Window version={r} />
                       </li>
                     ))}
                 </ol>
                 <Pager
-                  name="Pricing versions"
+                  name={copy('Pricing versions', 'pricing')}
                   history={history}
                   next={versions.data.page.next_cursor}
                   busy={versions.isFetching}

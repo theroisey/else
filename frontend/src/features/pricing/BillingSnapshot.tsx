@@ -1,3 +1,5 @@
+import { formatCalendarDate } from '../../i18n/format'
+import { copy, useLocale } from '../../i18n/index'
 import { Link } from 'react-router'
 import { hasPermission } from '../auth/permissions'
 import { BillingError } from '../billing/Shared'
@@ -13,11 +15,12 @@ export function BillingSnapshot({
   operation: Operation
   record: Collection
 }) {
+  useLocale()
   const q = useBillingSnapshot(op, record)
   if (q.isPending)
     return (
       <p role="status" className="mt-4">
-        Checking copied pricing terms…
+        {copy('Checking copied pricing terms…', 'pricing')}
       </p>
     )
   if (q.isError)
@@ -31,18 +34,26 @@ export function BillingSnapshot({
     })
   return (
     <section className="mt-6">
-      <h2 className="text-lg font-semibold">Copied pricing terms</h2>
+      <h2 className="text-lg font-semibold">
+        {copy('Copied pricing terms', 'pricing')}
+      </h2>
       <p className="mt-2 break-words text-sm">
-        {s.title} · Version {s.pricing_revision} · Billing date {s.billing_date}
-        . These copied lines and the collection amount are fixed, including
-        before the first payment.
+        {copy(
+          '{{value1}} · Version {{value2}} · Billing date {{value3}} . These copied lines and the collection amount are fixed, including before the first payment.',
+          'pricing',
+          {
+            value1: s.title,
+            value2: s.pricing_revision,
+            value3: formatCalendarDate(s.billing_date),
+          },
+        )}
       </p>
       {view ? (
         <Link
           className="mt-2 inline-block text-sm underline"
           to={pagePath(op.clientID, s.sheet_id) + '/versions/' + s.version_id}
         >
-          Open retained pricing version
+          {copy('Open retained pricing version', 'pricing')}
         </Link>
       ) : null}
       <Terms calculation={s} />

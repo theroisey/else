@@ -1,3 +1,5 @@
+import { formatTime } from '../../lib/time'
+import { copy, useLocale } from '../../i18n/index'
 import { ClientNavigation } from '../clients/ClientNavigation'
 import { useState } from 'react'
 import { useParams } from 'react-router'
@@ -13,14 +15,20 @@ import { kindLabels } from './models'
 import * as service from './service'
 
 export function ActivityPage() {
+  useLocale()
   const clientID = useParams().id!
   const operation = useRecordOperations('activity', clientID)
-  const permissions = activityPermissions(operation.auth.session?.user.permissions ?? [], clientID)
+  const permissions = activityPermissions(
+    operation.auth.session?.user.permissions ?? [],
+    clientID,
+  )
   if (!isUUID(clientID))
     return (
       <section>
-        <h1 className="page-title">Activity not found</h1>
-        <p className="mt-3 text-muted">This client address is not valid.</p>
+        <h1 className="page-title">{copy('Activity not found', 'activity')}</h1>
+        <p className="mt-3 text-muted">
+          {copy('This client address is not valid.', 'activity')}
+        </p>
       </section>
     )
   if (!permissions.view) return <AccessDenied />
@@ -43,16 +51,20 @@ function Timeline({
   operation: ReturnType<typeof useRecordOperations>
   permissions: ReturnType<typeof activityPermissions>
 }) {
+  useLocale()
   const [history, setHistory] = useState([''])
   const [refresh, setRefresh] = useState(0)
   const query = useQuery({
     queryKey: [...operation.key, 'list', refresh, history.at(-1)],
-    queryFn: ({ signal }) => operation.read(() => service.list(clientID, history.at(-1)!, signal)),
+    queryFn: ({ signal }) =>
+      operation.read(() => service.list(clientID, history.at(-1)!, signal)),
     staleTime: 0,
     refetchOnWindowFocus: true,
   })
   const rows =
-    !query.isError && !query.isFetching ? query.data?.data.filter(permissions.allows) : undefined
+    !query.isError && !query.isFetching
+      ? query.data?.data.filter(permissions.allows)
+      : undefined
   function reload() {
     setHistory([''])
     setRefresh((v) => v + 1)
@@ -61,26 +73,33 @@ function Timeline({
     <section className="max-w-5xl">
       <header className="page-header">
         <div className="min-w-0">
-          <p className="eyebrow">Client workspace · History</p>
-          <h1 className="page-title">Activity</h1>
-          <p className="mt-2 text-sm text-muted">
-            Recorded changes, newest first. Times are shown in UTC.
+          <p className="eyebrow">
+            {copy('Client workspace · History', 'activity')}
           </p>
-          <p className="mt-2 break-all font-mono text-xs text-muted">Client {clientID}</p>
+          <h1 className="page-title">{copy('Activity', 'activity')}</h1>
+          <p className="mt-2 text-sm text-muted">
+            {copy(
+              'Recorded changes, newest first. Times are shown in UTC.',
+              'activity',
+            )}
+          </p>
+          <p className="mt-2 break-all font-mono text-xs text-muted">
+            {copy('Client {{value1}}', 'activity', { value1: clientID })}
+          </p>
         </div>
         <Button disabled={query.isFetching} onClick={reload}>
-          Refresh activity
+          {copy('Refresh activity', 'activity')}
         </Button>
       </header>
       <ClientNavigation clientID={clientID} />
       {query.isFetching || query.isPending ? (
-        <PageSkeleton label="Loading activity…" />
+        <PageSkeleton label={copy('Loading activity…', 'activity')} />
       ) : query.isError ? (
         <div className="rounded-md border border-danger-line bg-danger-surface p-4">
           <p role="alert">
             {query.error instanceof APIError
-              ? query.error.message
-              : 'Unable to load activity. Try again.'}
+              ? copy(query.error.message, 'activity')
+              : copy('Unable to load activity. Try again.', 'activity')}
           </p>
           <Button
             className="mt-3"
@@ -88,12 +107,12 @@ function Timeline({
               void query.refetch()
             }}
           >
-            Try again
+            {copy('Try again', 'activity')}
           </Button>
         </div>
       ) : rows?.length ? (
         <ol
-          aria-label="Client activity"
+          aria-label={copy('Client activity', 'activity')}
           className="activity-timeline"
         >
           {rows.map((event) => (
@@ -102,9 +121,12 @@ function Timeline({
               className="grid gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:px-5"
             >
               <div className="min-w-0">
-                <p className="font-semibold">{event.summary}</p>
+                <p className="font-semibold">
+                  {copy(event.summary, 'activity')}
+                </p>
                 <p className="mt-1 break-all text-xs text-muted">
-                  {kindLabels[event.resource_kind]} reference ·{' '}
+                  {copy(kindLabels[event.resource_kind], 'activity')}{' '}
+                  {copy('reference ·', 'activity')}{' '}
                   <span className="font-mono">{event.resource_id}</span>
                 </p>
               </div>
@@ -112,29 +134,40 @@ function Timeline({
                 className="break-all font-mono text-xs text-muted sm:text-right"
                 dateTime={event.occurred_at}
               >
-                {event.occurred_at}
+                {formatTime(event.occurred_at, 'UTC')}
               </time>
             </li>
           ))}
         </ol>
       ) : (
         <div className="empty-state">
-          <h2 className="font-semibold">No activity on this page</h2>
+          <h2 className="font-semibold">
+            {copy('No activity on this page', 'activity')}
+          </h2>
           <p className="mt-2 text-sm text-muted">
-            There are no recorded events visible with your current access. Refresh to check for
-            newer changes.
+            {copy(
+              'There are no recorded events visible with your current access. Refresh to check for newer changes.',
+              'activity',
+            )}
           </p>
         </div>
       )}
       <Pager
-        name="Activity"
+        name={copy('Activity', 'activity')}
         history={history}
-        next={!query.isError && !query.isFetching ? query.data?.page.next_cursor : null}
+        next={
+          !query.isError && !query.isFetching
+            ? query.data?.page.next_cursor
+            : null
+        }
         busy={query.isFetching}
         onChange={setHistory}
       />
       <p className="mt-4 text-xs text-muted">
-        Each page reflects current access. Refresh returns to the newest events.
+        {copy(
+          'Each page reflects current access. Refresh returns to the newest events.',
+          'activity',
+        )}
       </p>
     </section>
   )

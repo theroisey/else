@@ -44,7 +44,11 @@ function invalid(): never {
   throw new Error('Invalid administration response.')
 }
 function text(value: unknown, max: number): value is string {
-  return typeof value === 'string' && [...value].length > 0 && [...value].length <= max
+  return (
+    typeof value === 'string' &&
+    [...value].length > 0 &&
+    [...value].length <= max
+  )
 }
 function timestamp(value: unknown): value is string {
   return typeof value === 'string' && Number.isFinite(Date.parse(value))
@@ -88,7 +92,9 @@ export function parseRole(value: unknown): Role {
     !timestamp(value.updated_at) ||
     !Array.isArray(value.permissions) ||
     value.permissions.length > 100 ||
-    !value.permissions.every((p: unknown) => typeof p === 'string' && permissionScope(p)) ||
+    !value.permissions.every(
+      (p: unknown) => typeof p === 'string' && permissionScope(p),
+    ) ||
     new Set(value.permissions).size !== value.permissions.length
   )
     return invalid()
@@ -111,7 +117,9 @@ export function parseAssignment(value: unknown): Assignment {
     !text(value.display_name, 100) ||
     !timestamp(value.assigned_at) ||
     (value.scope !== 'global' && value.scope !== 'client') ||
-    (value.scope === 'global' ? value.client_id !== null : !isUUID(value.client_id))
+    (value.scope === 'global'
+      ? value.client_id !== null
+      : !isUUID(value.client_id))
   )
     return invalid()
   return {
@@ -125,7 +133,8 @@ export function parseAssignment(value: unknown): Assignment {
   }
 }
 export function parseCatalog(body: unknown): Permission[] {
-  if (!isRecord(body) || !Array.isArray(body.data) || body.data.length > 100) return invalid()
+  if (!isRecord(body) || !Array.isArray(body.data) || body.data.length > 100)
+    return invalid()
   const result = body.data.map((value: unknown) => {
     if (
       !isRecord(value) ||
@@ -141,10 +150,14 @@ export function parseCatalog(body: unknown): Permission[] {
       description: value.description,
     }
   })
-  if (new Set(result.map((p) => p.permission)).size !== result.length) return invalid()
+  if (new Set(result.map((p) => p.permission)).size !== result.length)
+    return invalid()
   return result
 }
-export function parsePage<T>(body: unknown, parse: (value: unknown) => T): Page<T> {
+export function parsePage<T>(
+  body: unknown,
+  parse: (value: unknown) => T,
+): Page<T> {
   if (
     !isRecord(body) ||
     !Array.isArray(body.data) ||
@@ -157,7 +170,10 @@ export function parsePage<T>(body: unknown, parse: (value: unknown) => T): Page<
     return invalid()
   return {
     data: body.data.map(parse),
-    page: { limit: body.page.limit, next_cursor: body.page.next_cursor as string | null },
+    page: {
+      limit: body.page.limit,
+      next_cursor: body.page.next_cursor as string | null,
+    },
   }
 }
 export function globallyControls(grants: readonly Grant[], permission: string) {
@@ -172,7 +188,8 @@ export function canAssign(
   scope: 'global' | 'client',
   client: string,
 ) {
-  if (!hasPermission(grants, { permission: 'roles.manage', scope: 'global' })) return false
+  if (!hasPermission(grants, { permission: 'roles.manage', scope: 'global' }))
+    return false
   const applicable = role.permissions.filter(
     (p) => scope === 'global' || permissionScope(p) === 'client',
   )
@@ -181,7 +198,11 @@ export function canAssign(
     applicable.every((p) =>
       scope === 'global'
         ? globallyControls(grants, p)
-        : hasPermission(grants, { permission: p, scope: 'client', clientID: client }),
+        : hasPermission(grants, {
+            permission: p,
+            scope: 'client',
+            clientID: client,
+          }),
     )
   )
 }
@@ -194,7 +215,11 @@ export function profileErrors(email: string, name: string, password?: string) {
     email.trim().length > 254
   )
     errors.email = 'Enter a valid email address.'
-  if (!name.trim() || [...name.trim()].length > 100 || /[\p{Cc}]/u.test(name.trim()))
+  if (
+    !name.trim() ||
+    [...name.trim()].length > 100 ||
+    /[\p{Cc}]/u.test(name.trim())
+  )
     errors.name = 'Use 1–100 characters without control characters.'
   if (
     password !== undefined &&

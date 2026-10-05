@@ -1,3 +1,5 @@
+import { statusLabel } from '../../i18n/labels'
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Button, Dialog, Table, TextField } from '../../components/ui'
@@ -9,10 +11,20 @@ import { canAssign } from './models'
 import type { Assignment, User } from './models'
 import * as api from './service'
 
-export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () => void }) {
+export function AssignmentsEditor({
+  user,
+  onClose,
+}: {
+  user: User
+  onClose: () => void
+}) {
+  useLocale()
   const operation = useAdministration()
   const grants = operation.auth.session?.user.permissions ?? []
-  const manage = hasPermission(grants, { permission: 'roles.manage', scope: 'global' })
+  const manage = hasPermission(grants, {
+    permission: 'roles.manage',
+    scope: 'global',
+  })
   const cursor = useCursor()
   const roleCursor = useCursor()
   const [roleID, setRoleID] = useState('')
@@ -24,16 +36,19 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
   const actor = operation.auth.session?.user.id
   const assignments = useQuery({
     queryKey: ['administration', actor, 'assignments', user.id, cursor.cursor],
-    queryFn: ({ signal }) => operation.read(() => api.assignments(user.id, signal, cursor.cursor)),
+    queryFn: ({ signal }) =>
+      operation.read(() => api.assignments(user.id, signal, cursor.cursor)),
   })
   const roles = useQuery({
     queryKey: ['administration', actor, 'roles', roleCursor.cursor],
-    queryFn: ({ signal }) => operation.read(() => api.roles(signal, roleCursor.cursor)),
+    queryFn: ({ signal }) =>
+      operation.read(() => api.roles(signal, roleCursor.cursor)),
     enabled: manage && user.status === 'active',
   })
   const removalRole = useQuery({
     queryKey: ['administration', actor, 'role', remove?.role_id],
-    queryFn: ({ signal }) => operation.read(() => api.role(remove!.role_id, signal)),
+    queryFn: ({ signal }) =>
+      operation.read(() => api.role(remove!.role_id, signal)),
     enabled: !!remove && manage,
   })
   const role = roles.data?.data.find((r) => r.id === roleID)
@@ -51,19 +66,28 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
       canAssign(grants, removalRole.data, remove.scope, remove.client_id ?? '')
     return (
       <Confirmation
-        title={`Remove ${remove.display_name}?`}
-        description={`Revoke this ${remove.scope} assignment for ${user.display_name}. Existing sessions immediately lose the permissions it grants.`}
+        title={copy('Remove {{value1}}?', 'administration', {
+          value1: remove.display_name,
+        })}
+        description={copy(
+          'Revoke this {{value1}} assignment for {{value2}}. Existing sessions immediately lose the permissions it grants.',
+          'administration',
+          { value1: remove.scope, value2: user.display_name },
+        )}
         pending={operation.pending}
         disabled={!allowed}
         error={
-          operation.error ||
+          copy(operation.error, 'administration') ||
           (removalRole.isPending
-            ? 'Checking current role permissions…'
+            ? copy('Checking current role permissions…', 'administration')
             : allowed
               ? ''
-              : 'You must control every effective permission at this assignment’s scope.')
+              : copy(
+                  'You must control every effective permission at this assignment’s scope.',
+                  'administration',
+                ))
         }
-        label="Remove assignment"
+        label={copy('Remove assignment', 'administration')}
         onCancel={() => setRemove(null)}
         onConfirm={() => {
           if (allowed)
@@ -87,12 +111,26 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
   if (confirm && role)
     return (
       <Confirmation
-        title={`Assign ${role.display_name}?`}
-        description={`Grant this role to ${user.display_name} ${scope === 'global' ? 'globally' : `for client ${client.trim().toLowerCase()}`}. Review the scope before confirming.`}
+        title={copy('Assign {{value1}}?', 'administration', {
+          value1: role.display_name,
+        })}
+        description={copy(
+          'Grant this role to {{value1}} {{value2}}. Review the scope before confirming.',
+          'administration',
+          {
+            value1: user.display_name,
+            value2:
+              scope === 'global'
+                ? copy('globally', 'administration')
+                : copy('for client {{client}}', 'administration', {
+                    client: client.trim().toLowerCase(),
+                  }),
+          },
+        )}
         pending={operation.pending}
         disabled={!canAdd}
-        error={operation.error}
-        label="Assign role"
+        error={copy(operation.error, 'administration')}
+        label={copy('Assign role', 'administration')}
         onCancel={() => setConfirm(false)}
         onConfirm={() => {
           if (canAdd)
@@ -103,7 +141,9 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
                   body: {
                     role_id: role.id,
                     scope,
-                    ...(scope === 'client' ? { client_id: client.trim().toLowerCase() } : {}),
+                    ...(scope === 'client'
+                      ? { client_id: client.trim().toLowerCase() }
+                      : {}),
                     confirm: true,
                   },
                 }),
@@ -122,18 +162,23 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
   return (
     <Dialog
       variant="drawer"
-      eyebrow="Access assignments"
+      eyebrow={copy('Access assignments', 'administration')}
       open
-      title={`Roles for ${user.display_name}`}
-      description="Global assignments cover all clients. Client assignments grant only the role’s client permissions at the exact client scope."
+      title={copy('Roles for {{value1}}', 'administration', {
+        value1: user.display_name,
+      })}
+      description={copy(
+        'Global assignments cover all clients. Client assignments grant only the role’s client permissions at the exact client scope.',
+        'administration',
+      )}
       onClose={() => {
         if (!operation.pending) onClose()
       }}
     >
       <div className="mt-5 grid gap-4">
-        {notice ? <p role="status">{notice}</p> : null}
+        {notice ? <p role="status">{copy(notice, 'administration')}</p> : null}
         {assignments.isPending ? (
-          <p role="status">Loading assignments…</p>
+          <p role="status">{copy('Loading assignments…', 'administration')}</p>
         ) : assignments.isError ? (
           <ErrorState
             error={assignments.error}
@@ -142,14 +187,16 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
             }}
           />
         ) : assignments.data.data.length === 0 ? (
-          <p className="text-muted">No active role assignments on this page.</p>
+          <p className="text-muted">
+            {copy('No active role assignments on this page.', 'administration')}
+          </p>
         ) : (
-          <Table caption="Active role assignments">
+          <Table caption={copy('Active role assignments', 'administration')}>
             <thead>
               <tr>
-                <th scope="col">Role</th>
-                <th scope="col">Scope</th>
-                <th scope="col">Action</th>
+                <th scope="col">{copy('Role', 'administration')}</th>
+                <th scope="col">{copy('Scope', 'administration')}</th>
+                <th scope="col">{copy('Action', 'administration')}</th>
               </tr>
             </thead>
             <tbody>
@@ -157,7 +204,9 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
                 <tr key={a.id}>
                   <td>{a.display_name}</td>
                   <td>
-                    <span className="block capitalize">{a.scope}</span>
+                    <span className="block capitalize">
+                      {statusLabel(a.scope)}
+                    </span>
                     {a.client_id ? (
                       <span className="block break-all font-mono text-xs text-muted">
                         {a.client_id}
@@ -169,16 +218,22 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
                       <Button
                         size="compact"
                         variant="danger"
-                        aria-label={`Remove ${a.display_name}`}
+                        aria-label={copy(
+                          'Remove {{value1}}',
+                          'administration',
+                          { value1: a.display_name },
+                        )}
                         onClick={() => {
                           operation.clearError()
                           setRemove(a)
                         }}
                       >
-                        Remove
+                        {copy('Remove', 'administration')}
                       </Button>
                     ) : (
-                      <span className="text-xs text-muted">View only</span>
+                      <span className="text-xs text-muted">
+                        {copy('View only', 'administration')}
+                      </span>
                     )}
                   </td>
                 </tr>
@@ -187,16 +242,20 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
           </Table>
         )}
         <Pager
-          label="Assignment pagination"
+          label={copy('Assignment pagination', 'administration')}
           page={assignments.isError ? undefined : assignments.data}
           cursor={cursor}
           busy={assignments.isFetching}
         />
         {manage && user.status === 'active' ? (
           <fieldset className="grid gap-3 border-t border-line pt-4">
-            <legend className="font-semibold">Assign a role</legend>
+            <legend className="font-semibold">
+              {copy('Assign a role', 'administration')}
+            </legend>
             {roles.isPending ? (
-              <p role="status">Loading available roles…</p>
+              <p role="status">
+                {copy('Loading available roles…', 'administration')}
+              </p>
             ) : roles.isError ? (
               <ErrorState
                 error={roles.error}
@@ -207,7 +266,7 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
             ) : (
               <>
                 <label className="grid gap-1.5 text-sm font-semibold">
-                  Scope
+                  {copy('Scope', 'administration')}{' '}
                   <select
                     className="ui-input"
                     value={scope}
@@ -216,54 +275,83 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
                       setRoleID('')
                     }}
                   >
-                    <option value="global">Global</option>
-                    <option value="client">Client</option>
+                    <option value="global">
+                      {copy('Global', 'administration')}
+                    </option>
+                    <option value="client">
+                      {copy('Client', 'administration')}
+                    </option>
                   </select>
                 </label>
                 {scope === 'client' ? (
                   <TextField
-                    label="Client ID"
+                    label={copy('Client ID', 'administration')}
                     value={client}
                     onChange={(e) => {
                       setClient(e.target.value)
                       setRoleID('')
                     }}
-                    description="Enter the exact client UUID for this scoped assignment."
+                    description={copy(
+                      'Enter the exact client UUID for this scoped assignment.',
+                      'administration',
+                    )}
                     error={
-                      client && !isUUID(client.trim().toLowerCase()) ? 'Enter a nonzero UUID.' : ''
+                      client && !isUUID(client.trim().toLowerCase())
+                        ? copy('Enter a nonzero UUID.', 'administration')
+                        : ''
                     }
                   />
                 ) : null}
                 <label className="grid gap-1.5 text-sm font-semibold">
-                  Role
+                  {copy('Role', 'administration')}{' '}
                   <select
                     className="ui-input"
                     value={roleID}
                     onChange={(e) => setRoleID(e.target.value)}
                   >
-                    <option value="">Select a role</option>
+                    <option value="">
+                      {copy('Select a role', 'administration')}
+                    </option>
                     {roles.data.data.map((r) => (
                       <option
                         value={r.id}
                         key={r.id}
-                        disabled={!canAssign(grants, r, scope, client.trim().toLowerCase())}
+                        disabled={
+                          !canAssign(
+                            grants,
+                            r,
+                            scope,
+                            client.trim().toLowerCase(),
+                          )
+                        }
                       >
                         {r.display_name}
-                        {!canAssign(grants, r, scope, client.trim().toLowerCase())
-                          ? ' · Unavailable at this scope'
+                        {!canAssign(
+                          grants,
+                          r,
+                          scope,
+                          client.trim().toLowerCase(),
+                        )
+                          ? copy(
+                              ' · Unavailable at this scope',
+                              'administration',
+                            )
                           : ''}
                       </option>
                     ))}
                   </select>
                 </label>
                 <Pager
-                  label="Available role pagination"
+                  label={copy('Available role pagination', 'administration')}
                   page={roles.data}
                   cursor={roleCursor}
                   busy={roles.isFetching}
                 />
                 <p className="text-xs text-muted">
-                  Only roles whose effective permissions you control at this scope are available.
+                  {copy(
+                    'Only roles whose effective permissions you control at this scope are available.',
+                    'administration',
+                  )}
                 </p>
                 <Button
                   disabled={!canAdd}
@@ -273,7 +361,7 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
                     setConfirm(true)
                   }}
                 >
-                  Review assignment
+                  {copy('Review assignment', 'administration')}
                 </Button>
               </>
             )}
@@ -281,12 +369,15 @@ export function AssignmentsEditor({ user, onClose }: { user: User; onClose: () =
         ) : (
           <p className="text-xs text-muted">
             {user.status === 'disabled'
-              ? 'Disabled accounts cannot receive new assignments.'
-              : 'Changes require roles.manage.'}
+              ? copy(
+                  'Disabled accounts cannot receive new assignments.',
+                  'administration',
+                )
+              : copy('Changes require roles.manage.', 'administration')}
           </p>
         )}
         <div className="flex justify-end">
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose}>{copy('Close', 'administration')}</Button>
         </div>
       </div>
     </Dialog>

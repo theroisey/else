@@ -1,6 +1,8 @@
-export const deviceTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone
+import { currentLocale } from '../i18n/locale.ts'
+export const deviceTimezone = () =>
+  Intl.DateTimeFormat().resolvedOptions().timeZone
 export function formatTime(value: string, timezone = deviceTimezone()) {
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(currentLocale(), {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: timezone,
@@ -9,7 +11,10 @@ export function formatTime(value: string, timezone = deviceTimezone()) {
 // PostgreSQL responses have microsecond precision; retain it when comparing instants.
 export function instant(value: string) {
   const tail = /\.(\d+)/.exec(value)?.[1] ?? ''
-  return BigInt(Date.parse(value)) * 1000n + BigInt(tail.slice(3, 6).padEnd(3, '0') || '0')
+  return (
+    BigInt(Date.parse(value)) * 1000n +
+    BigInt(tail.slice(3, 6).padEnd(3, '0') || '0')
+  )
 }
 export function localInput(value: string | null) {
   if (!value) return ''
@@ -30,6 +35,8 @@ export function localTimestamp(value: string, original: string | null = null) {
     d.getUTCFullYear() < 1 ||
     d.getUTCFullYear() > 9999
   )
-    throw new Error('This local date and time does not exist. Choose another time.')
+    throw new Error(
+      'This local date and time does not exist. Choose another time.',
+    )
   return d.toISOString()
 }

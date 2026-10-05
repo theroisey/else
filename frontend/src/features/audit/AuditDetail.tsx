@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useQuery } from '@tanstack/react-query'
 import { Button, Dialog, Table } from '../../components/ui'
 import { APIError } from '../../services/authenticated'
@@ -18,6 +19,7 @@ export function AuditDetail({
   operation: ReturnType<typeof useRecordOperations>
   onClose: () => void
 }) {
+  useLocale()
   const permissions = auditPermissions(
     operation.auth.session?.user.permissions ?? [],
     scope,
@@ -43,20 +45,23 @@ export function AuditDetail({
     <Dialog
       variant="drawer"
       open
-      eyebrow="Audit inspection"
-      title="Audit event details"
-      description="Recorded safe markers. History is read only."
+      eyebrow={copy('Audit inspection', 'audit')}
+      title={copy('Audit event details', 'audit')}
+      description={copy(
+        'Recorded safe markers. History is read only.',
+        'audit',
+      )}
       onClose={onClose}
     >
-      <Button onClick={onClose}>Close details</Button>
+      <Button onClick={onClose}>{copy('Close details', 'audit')}</Button>
       {query.isPending || query.isFetching ? (
-        <p role="status">Loading audit details…</p>
+        <p role="status">{copy('Loading audit details…', 'audit')}</p>
       ) : query.isError || !detail ? (
         <div>
           <p role="alert">
             {query.error instanceof APIError
-              ? query.error.message
-              : 'Unable to load audit details. Try again.'}
+              ? copy(query.error.message, 'audit')
+              : copy('Unable to load audit details. Try again.', 'audit')}
           </p>
           <Button
             className="mt-3"
@@ -64,7 +69,7 @@ export function AuditDetail({
               void query.refetch()
             }}
           >
-            Retry details
+            {copy('Retry details', 'audit')}
           </Button>
         </div>
       ) : (
@@ -74,39 +79,47 @@ export function AuditDetail({
               Event: detail.event_type,
               'Event ID': detail.id,
               'Occurred at (UTC)': detail.occurred_at,
-              Actor: detail.actor_user_id ?? 'System',
+              Actor: detail.actor_user_id ?? copy('System', 'audit'),
               'Actor kind': detail.actor_kind,
-              Client: detail.client_id ?? 'Global',
+              Client: detail.client_id ?? copy('Global', 'audit'),
               'Resource kind': detail.resource_kind,
               Resource: detail.resource_id,
               'Request ID': detail.request_id,
               'Schema version': String(detail.schema_version),
             }).map(([label, value]) => (
               <div key={label}>
-                <dt className="text-muted">{label}</dt>
+                <dt className="text-muted">{copy(label, 'audit')}</dt>
                 <dd className="mt-1 break-all font-mono">{value}</dd>
               </div>
             ))}
           </dl>
           <section>
-            <h3 className="mb-3 font-semibold">Safe field differences</h3>
+            <h3 className="mb-3 font-semibold">
+              {copy('Safe field differences', 'audit')}
+            </h3>
             <p className="mb-3 text-xs text-muted">
-              Before snapshot: {snapshotState(detail.before_state)} · After
-              snapshot: {snapshotState(detail.after_state)}
+              {copy(
+                'Before snapshot: {{value1}} · After snapshot: {{value2}}',
+                'audit',
+                {
+                  value1: snapshotState(detail.before_state),
+                  value2: snapshotState(detail.after_state),
+                },
+              )}
             </p>
             {changes.length ? (
-              <Table caption="Safe field differences">
+              <Table caption={copy('Safe field differences', 'audit')}>
                 <thead>
                   <tr>
-                    <th scope="col">Field</th>
-                    <th scope="col">Before</th>
-                    <th scope="col">After</th>
+                    <th scope="col">{copy('Field', 'audit')}</th>
+                    <th scope="col">{copy('Before', 'audit')}</th>
+                    <th scope="col">{copy('After', 'audit')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {changes.map((change) => (
                     <tr key={change.key}>
-                      <th scope="row">{change.label}</th>
+                      <th scope="row">{copy(change.label, 'audit')}</th>
                       <td className="break-all font-mono text-xs">
                         {markerValue(change.before, change.key)}
                       </td>
@@ -118,12 +131,12 @@ export function AuditDetail({
                 </tbody>
               </Table>
             ) : (
-              <p>No marker differences recorded.</p>
+              <p>{copy('No marker differences recorded.', 'audit')}</p>
             )}
           </section>
           <details>
             <summary className="cursor-pointer text-sm font-semibold">
-              Raw safe snapshots and metadata
+              {copy('Raw safe snapshots and metadata', 'audit')}
             </summary>
             <pre className="mt-3 whitespace-pre-wrap break-all rounded-sm border border-line bg-surface-subtle p-3 text-xs">
               {JSON.stringify(

@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useFieldArray, useForm } from 'react-hook-form'
@@ -19,6 +20,7 @@ const draftOf = (profile: Profile): Draft => ({
   tags_text: profile.tags.join('\n'),
 })
 export function ClientForm({ client }: { client?: Client }) {
+  useLocale()
   const operation = useClients()
   const navigate = useNavigate()
   const [revision, setRevision] = useState(client?.revision ?? 1)
@@ -55,7 +57,9 @@ export function ClientForm({ client }: { client?: Client }) {
       return
     }
     const result = await operation.run(() =>
-      client ? api.update(client.id, parsed.data, revision) : api.create(parsed.data),
+      client
+        ? api.update(client.id, parsed.data, revision)
+        : api.create(parsed.data),
     )
     if (!result) return
     if (
@@ -81,7 +85,10 @@ export function ClientForm({ client }: { client?: Client }) {
     setReloadError('')
     try {
       const current = await operation.read(() => api.client(client.id))
-      operation.cache.setQueryData([...operation.key, 'detail', client.id], current)
+      operation.cache.setQueryData(
+        [...operation.key, 'detail', client.id],
+        current,
+      )
       setRevision(current.revision)
       reset(draftOf(current))
       operation.clearError()
@@ -101,33 +108,46 @@ export function ClientForm({ client }: { client?: Client }) {
       }}
     >
       <fieldset disabled={busy} className="grid gap-4 form-section">
-        <legend className="px-1 font-semibold">Client profile</legend>
+        <legend className="px-1 font-semibold">
+          {copy('Client profile', 'clients')}
+        </legend>
         <TextField
-          label="Client name"
+          label={copy('Client name', 'clients')}
           required
           maxLength={400}
           {...register('name')}
-          error={errors.name?.message ?? ''}
+          error={copy(errors.name?.message, 'clients') ?? ''}
         />
         <TextField
-          label="Legal name"
+          label={copy('Legal name', 'clients')}
           maxLength={400}
           {...register('legal_name')}
-          error={errors.legal_name?.message ?? ''}
+          error={copy(errors.legal_name?.message, 'clients') ?? ''}
         />
         <TextField
-          label="Website"
+          label={
+            client
+              ? copy('Legacy profile website', 'clients')
+              : copy('Initial website', 'clients')
+          }
+          description={copy(
+            'Manage independent properties in the Websites area. This legacy field is retained for compatibility.',
+            'clients',
+          )}
           type="url"
           maxLength={2048}
           {...register('website')}
-          error={errors.website?.message ?? ''}
+          error={copy(errors.website?.message, 'clients') ?? ''}
         />
         <div className="grid gap-1.5">
           <label htmlFor="client-notes" className="font-semibold">
-            Internal notes
+            {copy('Internal notes', 'clients')}
           </label>
           <p id="client-notes-help" className="text-xs text-muted">
-            Up to 4,000 characters in one paragraph. Line breaks are not supported.
+            {copy(
+              'Up to 4,000 characters in one paragraph. Line breaks are not supported.',
+              'clients',
+            )}
           </p>
           <textarea
             id="client-notes"
@@ -138,17 +158,24 @@ export function ClientForm({ client }: { client?: Client }) {
             aria-describedby="client-notes-help client-notes-error"
           />
           {errors.notes ? (
-            <p id="client-notes-error" role="alert" className="text-xs text-danger-ink">
-              {errors.notes.message}
+            <p
+              id="client-notes-error"
+              role="alert"
+              className="text-xs text-danger-ink"
+            >
+              {copy(errors.notes.message, 'clients')}
             </p>
           ) : null}
         </div>
         <div className="grid gap-1.5">
           <label htmlFor="client-tags" className="font-semibold">
-            Tags
+            {copy('Tags', 'clients')}
           </label>
           <p id="client-tags-help" className="text-xs text-muted">
-            One tag per line. Up to 20 distinct tags, 40 characters each; saved in lowercase.
+            {copy(
+              'One tag per line. Up to 20 distinct tags, 40 characters each; saved in lowercase.',
+              'clients',
+            )}
           </p>
           <textarea
             id="client-tags"
@@ -159,57 +186,87 @@ export function ClientForm({ client }: { client?: Client }) {
             aria-describedby="client-tags-help client-tags-error"
           />
           {errors.tags_text ? (
-            <p id="client-tags-error" role="alert" className="text-xs text-danger-ink">
-              {errors.tags_text.message}
+            <p
+              id="client-tags-error"
+              role="alert"
+              className="text-xs text-danger-ink"
+            >
+              {copy(errors.tags_text.message, 'clients')}
             </p>
           ) : null}
         </div>
       </fieldset>
       <fieldset disabled={busy} className="grid gap-4 form-section">
-        <legend className="px-1 font-semibold">Contacts</legend>
+        <legend className="px-1 font-semibold">
+          {copy('Contacts', 'clients')}
+        </legend>
         <p className="text-xs text-muted">
-          Up to 20 contacts. Changes replace this client’s complete contact list.
+          {copy(
+            'Up to 20 contacts. Changes replace this client’s complete contact list.',
+            'clients',
+          )}
         </p>
         {contacts.fields.map((contact, index) => (
-          <div key={contact.id} className="grid gap-3 border-b border-line pb-4 last:border-b-0">
+          <div
+            key={contact.id}
+            className="grid gap-3 border-b border-line pb-4 last:border-b-0"
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-semibold">Contact {index + 1}</h3>
+              <h3 className="font-semibold">
+                {copy('Contact {{value1}}', 'clients', { value1: index + 1 })}
+              </h3>
               <Button
                 size="compact"
                 onClick={() => contacts.remove(index)}
-                aria-label={`Remove contact ${index + 1}`}
+                aria-label={copy('Remove contact {{value1}}', 'clients', {
+                  value1: index + 1,
+                })}
               >
-                Remove
+                {copy('Remove', 'clients')}
               </Button>
             </div>
             <TextField
-              label={`Contact ${index + 1} name`}
+              label={copy('Contact {{value1}} name', 'clients', {
+                value1: index + 1,
+              })}
               required
               maxLength={200}
               {...register(`contacts.${index}.name`)}
-              error={errors.contacts?.[index]?.name?.message ?? ''}
+              error={
+                copy(errors.contacts?.[index]?.name?.message, 'clients') ?? ''
+              }
             />
             <div className="grid gap-3 sm:grid-cols-2">
               <TextField
-                label={`Contact ${index + 1} email`}
+                label={copy('Contact {{value1}} email', 'clients', {
+                  value1: index + 1,
+                })}
                 type="email"
                 maxLength={254}
                 {...register(`contacts.${index}.email`)}
-                error={errors.contacts?.[index]?.email?.message ?? ''}
+                error={
+                  copy(errors.contacts?.[index]?.email?.message, 'clients') ??
+                  ''
+                }
               />
               <TextField
-                label={`Contact ${index + 1} phone`}
+                label={copy('Contact {{value1}} phone', 'clients', {
+                  value1: index + 1,
+                })}
                 type="tel"
                 maxLength={80}
                 {...register(`contacts.${index}.phone`)}
-                error={errors.contacts?.[index]?.phone?.message ?? ''}
+                error={
+                  copy(errors.contacts?.[index]?.phone?.message, 'clients') ??
+                  ''
+                }
               />
             </div>
           </div>
         ))}
-        {errors.contacts?.message ? (
+        {copy(errors.contacts?.message, 'clients') ? (
           <p role="alert" className="text-xs text-danger-ink">
-            {errors.contacts.message}
+            {copy(errors.contacts?.message, 'clients')}
           </p>
         ) : null}
         <div>
@@ -217,17 +274,20 @@ export function ClientForm({ client }: { client?: Client }) {
             disabled={contacts.fields.length >= 20}
             onClick={() => contacts.append({ name: '', email: '', phone: '' })}
           >
-            Add contact
+            {copy('Add contact', 'clients')}
           </Button>
         </div>
       </fieldset>
-      {operation.error ? (
+      {copy(operation.error, 'clients') ? (
         <div className="rounded-md border border-danger-line bg-danger-surface p-4">
-          <p role="alert">{operation.error}</p>
+          <p role="alert">{copy(operation.error, 'clients')}</p>
           {client ? (
             <>
               <p className="mt-3 text-xs text-muted">
-                Reloading discards your draft. Review the current record before saving again.
+                {copy(
+                  'Reloading discards your draft. Review the current record before saving again.',
+                  'clients',
+                )}
               </p>
               <Button
                 className="mt-3"
@@ -236,7 +296,7 @@ export function ClientForm({ client }: { client?: Client }) {
                   void reload()
                 }}
               >
-                Reload current data
+                {copy('Reload current data', 'clients')}
               </Button>
             </>
           ) : null}
@@ -244,22 +304,29 @@ export function ClientForm({ client }: { client?: Client }) {
       ) : null}
       {reloadError ? (
         <p role="alert" className="text-danger-ink">
-          {reloadError}
+          {copy(reloadError, 'clients')}
         </p>
       ) : null}
       <div className="flex flex-wrap justify-end gap-2">
         {busy ? (
-          <Button disabled>Cancel</Button>
+          <Button disabled>{copy('Cancel', 'clients')}</Button>
         ) : (
           <Link
             className={buttonStyles()}
             to={client ? `/app/clients/${client.id}` : '/app/clients'}
           >
-            Cancel
+            {copy('Cancel', 'clients')}
           </Link>
         )}
-        <Button type="submit" variant="primary" loading={busy} loadingLabel="Saving client">
-          {client ? 'Save client' : 'Create client'}
+        <Button
+          type="submit"
+          variant="primary"
+          loading={busy}
+          loadingLabel={copy('Saving client', 'clients')}
+        >
+          {client
+            ? copy('Save client', 'clients')
+            : copy('Create client', 'clients')}
         </Button>
       </div>
     </form>

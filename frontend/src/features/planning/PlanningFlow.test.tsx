@@ -1,5 +1,12 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor, within, act } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+  act,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -23,12 +30,18 @@ const base = `/api/v1/clients/${clientID}/plans`,
   route = `/app/clients/${clientID}/plans`,
   childRoute = route + '/' + planID + '/milestones/' + milestoneID
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
 const page = (data: unknown[], next_cursor: string | null = null) => ({
   data,
   page: { limit: 25, next_cursor },
 })
-type Override = (url: string, init: RequestInit) => Response | Promise<Response> | undefined
+type Override = (
+  url: string,
+  init: RequestInit,
+) => Response | Promise<Response> | undefined
 function setup(
   path = route,
   session: Session = identity,
@@ -42,16 +55,31 @@ function setup(
   const fetcher = vi.fn((url: string, init: RequestInit) => {
     const custom = override(url, init)
     if (custom) return Promise.resolve(custom)
-    if (url === '/api/v1/auth/session') return Promise.resolve(json({ data: session }))
+    if (url === '/api/v1/auth/preferences')
+      return Promise.resolve(json({ data: { locale: null } }))
+    if (url === '/api/v1/auth/session')
+      return Promise.resolve(json({ data: session }))
     if (url.startsWith(base + '/' + planID + '/task-candidates?'))
-      return Promise.resolve(json(page([{ id: otherID, title: 'Candidate Task', status: 'todo' }])))
+      return Promise.resolve(
+        json(page([{ id: otherID, title: 'Candidate Task', status: 'todo' }])),
+      )
     if (url.includes('/task-links?'))
       return Promise.resolve(
-        json(page([{ id: otherID, task_id: taskID, linked_at: date, unlinked_at: null }])),
+        json(
+          page([
+            {
+              id: otherID,
+              task_id: taskID,
+              linked_at: date,
+              unlinked_at: null,
+            },
+          ]),
+        ),
       )
     const isChild = url.includes('/milestones')
     if (init.method === 'GET') {
-      if (url.includes('?')) return Promise.resolve(json(page([isChild ? child : record])))
+      if (url.includes('?'))
+        return Promise.resolve(json(page([isChild ? child : record])))
       return Promise.resolve(json({ data: isChild ? child : record }))
     }
     const body = JSON.parse(init.body as string),
@@ -90,26 +118,48 @@ it('opens scoped planning-only views without client/task reads or write controls
     ...identity,
     user: {
       ...identity.user,
-      permissions: [{ permission: 'planning.view', scope: 'client' as const, client_id: clientID }],
+      permissions: [
+        {
+          permission: 'planning.view',
+          scope: 'client' as const,
+          client_id: clientID,
+        },
+      ],
     },
   }
   const { fetcher } = setup(route, session)
-  await screen.findByRole('link', { name: 'Open Plan Fixture' }, { timeout: 5000 })
-  expect(screen.queryByRole('link', { name: 'Create plan' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('link', { name: 'Edit plan' })).not.toBeInTheDocument()
+  await screen.findByRole(
+    'link',
+    { name: 'Open Plan Fixture' },
+    { timeout: 5000 },
+  )
+  expect(
+    screen.queryByRole('link', { name: 'Create plan' }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('link', { name: 'Edit plan' }),
+  ).not.toBeInTheDocument()
   expect(
     fetcher.mock.calls.some(
-      ([url]) => url === `/api/v1/clients/${clientID}` || url.includes('/tasks'),
+      ([url]) =>
+        url === `/api/v1/clients/${clientID}` || url.includes('/tasks'),
     ),
   ).toBe(false)
   expect(
-    within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Planning'),
+    within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText(
+      'Planning',
+    ),
   ).toBeInTheDocument()
 })
 it('denies foreign-client planning before domain reads', async () => {
   const { fetcher } = setup(`/app/clients/${otherID}/plans/${planID}`)
   await screen.findByRole('heading', { name: 'Access denied' })
-  expect(fetcher.mock.calls.every(([url]) => url === '/api/v1/auth/session')).toBe(true)
+  expect(
+    fetcher.mock.calls.every(
+      ([url]) =>
+        url === '/api/v1/auth/session' || url === '/api/v1/auth/preferences',
+    ),
+  ).toBe(true)
 })
 it('validates and creates a plan with normalized text and explicit dates', async () => {
   const { fetcher } = setup(route + '/new')
@@ -117,10 +167,14 @@ it('validates and creates a plan with normalized text and explicit dates', async
   await u.click(await screen.findByRole('button', { name: 'Create plan' }))
   await screen.findByText('Use 1–200 characters without control characters.')
   await u.type(screen.getByLabelText('Plan title'), ' Created Plan ')
-  fireEvent.change(screen.getByLabelText('Due time'), { target: { value: '2026-10-03T12:00' } })
+  fireEvent.change(screen.getByLabelText('Due time'), {
+    target: { value: '2026-10-03T12:00' },
+  })
   await u.click(screen.getByRole('button', { name: 'Create plan' }))
   await screen.findByRole('heading', { name: 'Created Plan' })
-  const call = fetcher.mock.calls.find(([url, init]) => url === base && init.method === 'POST')!
+  const call = fetcher.mock.calls.find(
+    ([url, init]) => url === base && init.method === 'POST',
+  )!
   expect(JSON.parse(call[1].body as string)).toEqual({
     title: 'Created Plan',
     description: '',
@@ -129,7 +183,11 @@ it('validates and creates a plan with normalized text and explicit dates', async
   })
 })
 it('validates milestone due dates against current parent and omits start_at', async () => {
-  const parent = { ...plan, start_at: '2026-10-02T12:00:00Z', due_at: '2026-10-03T12:00:00Z' }
+  const parent = {
+    ...plan,
+    start_at: '2026-10-02T12:00:00Z',
+    due_at: '2026-10-03T12:00:00Z',
+  }
   const { fetcher } = setup(
     route + '/' + planID + '/milestones/new',
     identity,
@@ -137,17 +195,26 @@ it('validates milestone due dates against current parent and omits start_at', as
     parent,
   )
   const u = userEvent.setup()
-  await waitFor(() => expect(screen.getByLabelText('Milestone title')).toBeEnabled())
+  await waitFor(() =>
+    expect(screen.getByLabelText('Milestone title')).toBeEnabled(),
+  )
   expect(screen.queryByLabelText('Start time')).not.toBeInTheDocument()
   await u.type(screen.getByLabelText('Milestone title'), ' New Milestone ')
-  fireEvent.change(screen.getByLabelText('Due time'), { target: { value: '2026-10-04T12:00' } })
+  fireEvent.change(screen.getByLabelText('Due time'), {
+    target: { value: '2026-10-04T12:00' },
+  })
   await u.click(screen.getByRole('button', { name: 'Create milestone' }))
-  await screen.findByText('Milestone due time must be inside the current plan date window.')
-  fireEvent.change(screen.getByLabelText('Due time'), { target: { value: '2026-10-03T12:00' } })
+  await screen.findByText(
+    'Milestone due time must be inside the current plan date window.',
+  )
+  fireEvent.change(screen.getByLabelText('Due time'), {
+    target: { value: '2026-10-03T12:00' },
+  })
   await u.click(screen.getByRole('button', { name: 'Create milestone' }))
   await screen.findByRole('heading', { name: 'New Milestone' })
   const call = fetcher.mock.calls.find(
-    ([url, init]) => url === base + '/' + planID + '/milestones' && init.method === 'POST',
+    ([url, init]) =>
+      url === base + '/' + planID + '/milestones' && init.method === 'POST',
   )!
   expect(JSON.parse(call[1].body as string)).toEqual({
     title: 'New Milestone',
@@ -157,14 +224,18 @@ it('validates milestone due dates against current parent and omits start_at', as
 })
 it('preserves metadata drafts through conflicts until explicit reload', async () => {
   let conflict = false
-  const { fetcher } = setup(route + '/' + planID + '/edit', identity, (url, init) => {
-    if (init.method === 'PUT') {
-      conflict = true
-      return json({ error: { code: 'conflict' } }, 409)
-    }
-    if (conflict && url === base + '/' + planID && init.method === 'GET')
-      return json({ data: { ...plan, title: 'Current Plan', revision: 2 } })
-  })
+  const { fetcher } = setup(
+    route + '/' + planID + '/edit',
+    identity,
+    (url, init) => {
+      if (init.method === 'PUT') {
+        conflict = true
+        return json({ error: { code: 'conflict' } }, 409)
+      }
+      if (conflict && url === base + '/' + planID && init.method === 'GET')
+        return json({ data: { ...plan, title: 'Current Plan', revision: 2 } })
+    },
+  )
   const u = userEvent.setup()
   await screen.findByDisplayValue('Plan Fixture')
   await u.clear(screen.getByLabelText('Plan title'))
@@ -175,23 +246,32 @@ it('preserves metadata drafts through conflicts until explicit reload', async ()
   expect(screen.getByRole('button', { name: 'Save plan' })).toBeDisabled()
   await u.click(screen.getByRole('button', { name: 'Reload current data' }))
   await screen.findByDisplayValue('Current Plan')
-  expect(fetcher.mock.calls.filter(([, init]) => init.method === 'PUT')).toHaveLength(1)
+  expect(
+    fetcher.mock.calls.filter(([, init]) => init.method === 'PUT'),
+  ).toHaveLength(1)
 })
 it('preserves drafts when a background detail refresh fails', async () => {
   let fail = false
-  const { cache } = setup(route + '/' + planID + '/edit', identity, (url, init) =>
-    fail && url === base + '/' + planID && init.method === 'GET'
-      ? json({ error: { code: 'service_unavailable' } }, 503)
-      : undefined,
+  const { cache } = setup(
+    route + '/' + planID + '/edit',
+    identity,
+    (url, init) =>
+      fail && url === base + '/' + planID && init.method === 'GET'
+        ? json({ error: { code: 'service_unavailable' } }, 503)
+        : undefined,
   )
   await screen.findByDisplayValue('Plan Fixture')
-  fireEvent.change(screen.getByLabelText('Plan title'), { target: { value: 'Kept Draft' } })
+  fireEvent.change(screen.getByLabelText('Plan title'), {
+    target: { value: 'Kept Draft' },
+  })
   fail = true
   await act(async () => {
     await cache.invalidateQueries({ queryKey: ['planning'] })
   })
   expect(screen.getByLabelText('Plan title')).toHaveValue('Kept Draft')
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Save plan' })).toBeDisabled())
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Save plan' })).toBeDisabled(),
+  )
   expect(screen.getByRole('alert')).toBeInTheDocument()
 })
 it('keeps terminal parent milestones readable while blocking changes and candidates', async () => {
@@ -202,9 +282,15 @@ it('keeps terminal parent milestones readable while blocking changes and candida
   })
   await screen.findByRole('heading', { name: 'Milestone Fixture' })
   await screen.findByText(/The parent plan is completed/)
-  expect(screen.queryByRole('link', { name: 'Edit milestone' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'Edit task links' })).not.toBeInTheDocument()
-  expect(fetcher.mock.calls.some(([url]) => url.includes('task-candidates'))).toBe(false)
+  expect(
+    screen.queryByRole('link', { name: 'Edit milestone' }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: 'Edit task links' }),
+  ).not.toBeInTheDocument()
+  expect(
+    fetcher.mock.calls.some(([url]) => url.includes('task-candidates')),
+  ).toBe(false)
 })
 it('changes plan state manually and reopens without changing child or task records', async () => {
   const { fetcher } = setup(route + '/' + planID, identity, () => undefined, {
@@ -212,12 +298,24 @@ it('changes plan state manually and reopens without changing child or task recor
     status: 'active',
   })
   const u = userEvent.setup()
-  await u.selectOptions(await screen.findByLabelText('Next status for Plan Fixture'), 'completed')
-  await u.click(screen.getByRole('button', { name: 'Change status of Plan Fixture' }))
+  await u.selectOptions(
+    await screen.findByLabelText('Next status for Plan Fixture'),
+    'completed',
+  )
+  await u.click(
+    screen.getByRole('button', { name: 'Change status of Plan Fixture' }),
+  )
   await screen.findByText('Completed', { selector: 'dt' })
-  expect(screen.queryByRole('link', { name: 'Edit plan' })).not.toBeInTheDocument()
-  await u.selectOptions(screen.getByLabelText('Next status for Plan Fixture'), 'active')
-  await u.click(screen.getByRole('button', { name: 'Change status of Plan Fixture' }))
+  expect(
+    screen.queryByRole('link', { name: 'Edit plan' }),
+  ).not.toBeInTheDocument()
+  await u.selectOptions(
+    screen.getByLabelText('Next status for Plan Fixture'),
+    'active',
+  )
+  await u.click(
+    screen.getByRole('button', { name: 'Change status of Plan Fixture' }),
+  )
   await screen.findByRole('link', { name: 'Edit plan' })
   expect(
     fetcher.mock.calls
@@ -228,29 +326,44 @@ it('changes plan state manually and reopens without changing child or task recor
 it('confirms archival before writing and retains record details', async () => {
   const { fetcher } = setup(route + '/' + planID)
   const u = userEvent.setup()
-  await u.click(await screen.findByRole('button', { name: 'Archive Plan Fixture' }))
+  await u.click(
+    await screen.findByRole('button', { name: 'Archive Plan Fixture' }),
+  )
   await screen.findByRole('dialog', { name: 'Archive Plan Fixture?' })
-  expect(fetcher.mock.calls.some(([url]) => url.endsWith('/archive'))).toBe(false)
+  expect(fetcher.mock.calls.some(([url]) => url.endsWith('/archive'))).toBe(
+    false,
+  )
   await u.click(screen.getByRole('button', { name: 'Confirm archive' }))
   await screen.findByText('Record archived.')
   expect(screen.getByText('Synthetic private plan text')).toBeInTheDocument()
-  expect(screen.queryByRole('link', { name: 'Edit plan' })).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('link', { name: 'Edit plan' }),
+  ).not.toBeInTheDocument()
 })
 it('retains or removes historical task IDs without requesting candidates or task metadata', async () => {
   const { fetcher } = setup(childRoute)
   const u = userEvent.setup()
   await u.click(await screen.findByRole('button', { name: 'Edit task links' }))
   await screen.findByText(/Task access is unavailable/)
-  expect(screen.queryByRole('link', { name: 'Task ' + taskID })).not.toBeInTheDocument()
-  await u.click(screen.getByRole('button', { name: 'Remove task reference ' + taskID }))
+  expect(
+    screen.queryByRole('link', { name: 'Task ' + taskID }),
+  ).not.toBeInTheDocument()
+  await u.click(
+    screen.getByRole('button', { name: 'Remove task reference ' + taskID }),
+  )
   await u.click(screen.getByRole('button', { name: 'Save task links' }))
   await screen.findByText('Task links saved.')
   const call = fetcher.mock.calls.find(
     ([url, init]) => url.endsWith('/task-links') && init.method === 'PUT',
   )!
-  expect(JSON.parse(call[1].body as string)).toEqual({ task_ids: [], expected_revision: 1 })
+  expect(JSON.parse(call[1].body as string)).toEqual({
+    task_ids: [],
+    expected_revision: 1,
+  })
   expect(
-    fetcher.mock.calls.some(([url]) => url.includes('task-candidates') || url.includes('/tasks/')),
+    fetcher.mock.calls.some(
+      ([url]) => url.includes('task-candidates') || url.includes('/tasks/'),
+    ),
   ).toBe(false)
 })
 it('preserves selected candidates through conflicts and reloads only by explicit action', async () => {
@@ -260,7 +373,11 @@ it('preserves selected candidates through conflicts and reloads only by explicit
       ...identity.user,
       permissions: [
         ...identity.user.permissions,
-        { permission: 'tasks.view', scope: 'client' as const, client_id: clientID },
+        {
+          permission: 'tasks.view',
+          scope: 'client' as const,
+          client_id: clientID,
+        },
       ],
     },
   }
@@ -286,7 +403,9 @@ it('preserves selected candidates through conflicts and reloads only by explicit
   expect(screen.getByRole('button', { name: 'Save task links' })).toBeDisabled()
   await u.click(screen.getByRole('button', { name: 'Reload task references' }))
   await waitFor(() =>
-    expect(screen.getByRole('checkbox', { name: /Candidate Task/ })).not.toBeChecked(),
+    expect(
+      screen.getByRole('checkbox', { name: /Candidate Task/ }),
+    ).not.toBeChecked(),
   )
   expect(screen.getByText('No task references selected.')).toBeInTheDocument()
 })
@@ -319,20 +438,31 @@ it('does not navigate after a late mutation response from an unmounted route', a
   await act(async () => {
     finish(json({ data: { id: planID, revision: 1 } }))
   })
-  expect(screen.queryByRole('heading', { name: 'Leaving Draft' })).not.toBeInTheDocument()
-  expect(screen.getByRole('link', { name: 'Open Plan Fixture' })).toBeInTheDocument()
+  expect(
+    screen.queryByRole('heading', { name: 'Leaving Draft' }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.getByRole('link', { name: 'Open Plan Fixture' }),
+  ).toBeInTheDocument()
 })
 it('shows safe errors and bounded empty states', async () => {
-  setup(route, identity, (url) => (url.startsWith(base + '?') ? json(page([])) : undefined))
+  setup(route, identity, (url) =>
+    url.startsWith(base + '?') ? json(page([])) : undefined,
+  )
   await screen.findByRole('heading', { name: 'No plans on this page' })
   expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
 })
 it('preserves UTC microseconds when metadata dates are unchanged', async () => {
   const original = '2026-10-02T12:00:00.123456Z'
-  const { fetcher } = setup(route + '/' + planID + '/edit', identity, () => undefined, {
-    ...plan,
-    start_at: original,
-  })
+  const { fetcher } = setup(
+    route + '/' + planID + '/edit',
+    identity,
+    () => undefined,
+    {
+      ...plan,
+      start_at: original,
+    },
+  )
   const u = userEvent.setup()
   await u.click(await screen.findByRole('button', { name: 'Save plan' }))
   await screen.findByText('Record updated.')
@@ -346,7 +476,11 @@ it('discards cached task titles on a grant change while retaining reference IDs'
       ...identity.user,
       permissions: [
         ...identity.user.permissions,
-        { permission: 'tasks.view', scope: 'client' as const, client_id: clientID },
+        {
+          permission: 'tasks.view',
+          scope: 'client' as const,
+          client_id: clientID,
+        },
       ],
     },
   }
@@ -360,7 +494,9 @@ it('discards cached task titles on a grant change while retaining reference IDs'
   await screen.findByText(/Task access is unavailable/)
   expect(screen.queryByText('Candidate Task')).not.toBeInTheDocument()
   expect(screen.getByText('Task reference ' + taskID)).toBeInTheDocument()
-  expect(screen.queryByRole('link', { name: 'Task ' + taskID })).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('link', { name: 'Task ' + taskID }),
+  ).not.toBeInTheDocument()
 })
 it('preserves new selections after task access is revoked and requires their removal before saving', async () => {
   const session = {
@@ -369,7 +505,11 @@ it('preserves new selections after task access is revoked and requires their rem
       ...identity.user,
       permissions: [
         ...identity.user.permissions,
-        { permission: 'tasks.view', scope: 'client' as const, client_id: clientID },
+        {
+          permission: 'tasks.view',
+          scope: 'client' as const,
+          client_id: clientID,
+        },
       ],
     },
   }
@@ -384,14 +524,23 @@ it('preserves new selections after task access is revoked and requires their rem
   expect(screen.queryByText('Candidate Task')).not.toBeInTheDocument()
   expect(screen.getByText('Task reference ' + otherID)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Save task links' })).toBeDisabled()
-  await u.click(screen.getByRole('button', { name: 'Remove task reference ' + otherID }))
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Save task links' })).toBeEnabled())
+  await u.click(
+    screen.getByRole('button', { name: 'Remove task reference ' + otherID }),
+  )
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'Save task links' }),
+    ).toBeEnabled(),
+  )
   await u.click(screen.getByRole('button', { name: 'Save task links' }))
   await screen.findByText('Task links saved.')
   const call = fetcher.mock.calls.find(
     ([url, init]) => url.endsWith('/task-links') && init.method === 'PUT',
   )!
-  expect(JSON.parse(call[1].body as string)).toEqual({ task_ids: [taskID], expected_revision: 1 })
+  expect(JSON.parse(call[1].body as string)).toEqual({
+    task_ids: [taskID],
+    expected_revision: 1,
+  })
 })
 it('keeps selections during candidate paging errors and resets the cursor when searching', async () => {
   const session = {
@@ -400,7 +549,11 @@ it('keeps selections during candidate paging errors and resets the cursor when s
       ...identity.user,
       permissions: [
         ...identity.user.permissions,
-        { permission: 'tasks.view', scope: 'client' as const, client_id: clientID },
+        {
+          permission: 'tasks.view',
+          scope: 'client' as const,
+          client_id: clientID,
+        },
       ],
     },
   }
@@ -409,9 +562,14 @@ it('keeps selections during candidate paging errors and resets the cursor when s
     if (!url.includes('/task-candidates?')) return undefined
     const params = new URL(url, 'http://fixture.test').searchParams
     if (params.has('cursor'))
-      return fail ? json({ error: { code: 'service_unavailable' } }, 503) : json(page([]))
+      return fail
+        ? json({ error: { code: 'service_unavailable' } }, 503)
+        : json(page([]))
     const candidates = Array.from({ length: 25 }, (_, index) => ({
-      id: index === 24 ? otherID : `77777777-7777-4777-8777-${String(index).padStart(12, '0')}`,
+      id:
+        index === 24
+          ? otherID
+          : `77777777-7777-4777-8777-${String(index).padStart(12, '0')}`,
       title: index === 24 ? 'Candidate Task' : `Other fixture ${index}`,
       status: 'todo',
     }))
@@ -420,10 +578,14 @@ it('keeps selections during candidate paging errors and resets the cursor when s
   const u = userEvent.setup()
   await u.click(await screen.findByRole('button', { name: 'Edit task links' }))
   await u.click(await screen.findByRole('checkbox', { name: /Candidate Task/ }))
-  const pager = screen.getByRole('navigation', { name: 'Task candidates pagination' })
+  const pager = screen.getByRole('navigation', {
+    name: 'Task candidates pagination',
+  })
   await u.click(within(pager).getByRole('button', { name: 'Next' }))
   await screen.findByRole('button', { name: 'Try again' })
-  expect(screen.getByRole('list', { name: 'Task references' })).toHaveTextContent(otherID)
+  expect(
+    screen.getByRole('list', { name: 'Task references' }),
+  ).toHaveTextContent(otherID)
   fail = false
   await u.click(screen.getByRole('button', { name: 'Try again' }))
   await screen.findByText('No eligible tasks on this page.')
@@ -431,7 +593,9 @@ it('keeps selections during candidate paging errors and resets the cursor when s
   await u.click(screen.getByRole('button', { name: 'Search tasks' }))
   await screen.findByRole('checkbox', { name: /Candidate Task/ })
   expect(screen.getByRole('checkbox', { name: /Candidate Task/ })).toBeChecked()
-  const latest = fetcher.mock.calls.filter(([url]) => url.includes('/task-candidates?')).at(-1)![0]
+  const latest = fetcher.mock.calls
+    .filter(([url]) => url.includes('/task-candidates?'))
+    .at(-1)![0]
   const params = new URL(latest, 'http://fixture.test').searchParams
   expect(params.get('q')).toBe('literal %')
   expect(params.has('cursor')).toBe(false)
@@ -443,7 +607,11 @@ it('enforces the 50-reference limit while allowing explicit removals', async () 
       ...identity.user,
       permissions: [
         ...identity.user.permissions,
-        { permission: 'tasks.view', scope: 'client' as const, client_id: clientID },
+        {
+          permission: 'tasks.view',
+          scope: 'client' as const,
+          client_id: clientID,
+        },
       ],
     },
   }
@@ -451,14 +619,25 @@ it('enforces the 50-reference limit while allowing explicit removals', async () 
     { length: 50 },
     (_, index) => `77777777-7777-4777-8777-${String(index).padStart(12, '0')}`,
   )
-  setup(childRoute, session, () => undefined, plan, { ...milestone, task_ids: references })
+  setup(childRoute, session, () => undefined, plan, {
+    ...milestone,
+    task_ids: references,
+  })
   const u = userEvent.setup()
   await u.click(await screen.findByRole('button', { name: 'Edit task links' }))
-  expect(await screen.findByRole('checkbox', { name: /Candidate Task/ })).toBeDisabled()
-  await u.click(screen.getByRole('button', { name: 'Remove task reference ' + references[0] }))
+  expect(
+    await screen.findByRole('checkbox', { name: /Candidate Task/ }),
+  ).toBeDisabled()
+  await u.click(
+    screen.getByRole('button', {
+      name: 'Remove task reference ' + references[0],
+    }),
+  )
   await u.click(screen.getByRole('checkbox', { name: /Candidate Task/ }))
   expect(screen.getByRole('checkbox', { name: /Candidate Task/ })).toBeChecked()
   expect(
-    within(screen.getByRole('list', { name: 'Task references' })).getAllByRole('listitem'),
+    within(screen.getByRole('list', { name: 'Task references' })).getAllByRole(
+      'listitem',
+    ),
   ).toHaveLength(50)
 })

@@ -1,14 +1,31 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useForm } from 'react-hook-form'
 import type { FieldPath } from 'react-hook-form'
 import { Button, TextField, buttonStyles } from '../../components/ui'
-import { emptyMetadata, metadataSchema, pagePath, recordKey, terminal } from './models'
+import {
+  emptyMetadata,
+  metadataSchema,
+  pagePath,
+  recordKey,
+  terminal,
+} from './models'
 import type { Metadata, RecordData } from './models'
 import type { Operation } from './Shared'
-import { deviceTimezone, instant, localInput, localTimestamp } from '../../lib/time'
+import {
+  deviceTimezone,
+  instant,
+  localInput,
+  localTimestamp,
+} from '../../lib/time'
 import * as api from './service'
-type Draft = { title: string; description: string; start_local: string; due_local: string }
+type Draft = {
+  title: string
+  description: string
+  start_local: string
+  due_local: string
+}
 const draftOf = (m: Metadata): Draft => ({
   title: m.title,
   description: m.description,
@@ -24,6 +41,7 @@ export function PlanningForm({
   operation: Operation
   checking?: boolean
 }) {
+  useLocale()
   const { scope } = operation
   const navigate = useNavigate()
   const [baseline, setBaseline] = useState<Metadata>(record ?? emptyMetadata),
@@ -39,7 +57,9 @@ export function PlanningForm({
     setError,
     formState: { errors },
   } = useForm<Draft>({ defaultValues: draftOf(baseline) })
-  const blocked = unavailable || (!!record && (!!record.archived_at || terminal(record.status)))
+  const blocked =
+    unavailable ||
+    (!!record && (!!record.archived_at || terminal(record.status)))
   const busy = operation.pending || reloading,
     disabled = busy || checking || !operation.writable || !!blocked
   async function submit(draft: Draft) {
@@ -59,7 +79,11 @@ export function PlanningForm({
         if (field === 'start_local') start = value
         else due = value
       } catch {
-        setError(field, { message: 'Choose a valid local date and time.' }, { shouldFocus: true })
+        setError(
+          field,
+          { message: 'Choose a valid local date and time.' },
+          { shouldFocus: true },
+        )
         return
       }
     }
@@ -76,7 +100,8 @@ export function PlanningForm({
       }
       for (const issue of parsed.error.issues)
         setError(
-          fields[String(issue.path[0])] ?? (String(issue.path[0]) as FieldPath<Draft>),
+          fields[String(issue.path[0])] ??
+            (String(issue.path[0]) as FieldPath<Draft>),
           { message: issue.message },
           { shouldFocus: true },
         )
@@ -92,13 +117,18 @@ export function PlanningForm({
     ) {
       setError(
         'due_local',
-        { message: 'Milestone due time must be inside the current plan date window.' },
+        {
+          message:
+            'Milestone due time must be inside the current plan date window.',
+        },
         { shouldFocus: true },
       )
       return
     }
     const result = await operation.run(() =>
-      record ? api.update(scope, record.id, parsed.data, revision) : api.create(scope, parsed.data),
+      record
+        ? api.update(scope, record.id, parsed.data, revision)
+        : api.create(scope, parsed.data),
     )
     if (result)
       navigate(pagePath(scope, result.id), {
@@ -112,7 +142,10 @@ export function PlanningForm({
     setReloadError('')
     try {
       const current = await operation.read(() => api.detail(scope, record.id))
-      operation.cache.setQueryData([...operation.key, ...recordKey(scope, record.id)], current)
+      operation.cache.setQueryData(
+        [...operation.key, ...recordKey(scope, record.id)],
+        current,
+      )
       if (current.archived_at || terminal(current.status)) {
         setUnavailable(
           'This record is archived or terminal. Reopen an unarchived record before editing.',
@@ -131,7 +164,7 @@ export function PlanningForm({
       setReloading(false)
     }
   }
-  const name = scope.planID ? 'milestone' : 'plan'
+  const name = copy(scope.planID ? 'milestone' : 'plan', 'planning')
   return (
     <form
       noValidate
@@ -143,34 +176,45 @@ export function PlanningForm({
     >
       {blocked ? (
         <p role="status">
-          This record is archived or terminal. Reopen an unarchived record before editing.
+          {copy(
+            'This record is archived or terminal. Reopen an unarchived record before editing.',
+            'planning',
+          )}
         </p>
       ) : !operation.writable ? (
         <p role="status">
-          Changes are unavailable while the client or parent plan is archived, terminal, or being
-          checked.
+          {copy(
+            'Changes are unavailable while the client or parent plan is archived, terminal, or being checked.',
+            'planning',
+          )}
         </p>
       ) : null}
-      <fieldset
-        disabled={disabled}
-        className="grid min-w-0 gap-4 form-section"
-      >
+      <fieldset disabled={disabled} className="grid min-w-0 gap-4 form-section">
         <legend className="px-1 font-semibold">
-          {scope.planID ? 'Milestone' : 'Plan'} details
+          {scope.planID
+            ? copy('Milestone details', 'planning')
+            : copy('Plan details', 'planning')}
         </legend>
         <TextField
-          label={scope.planID ? 'Milestone title' : 'Plan title'}
+          label={
+            scope.planID
+              ? copy('Milestone title', 'planning')
+              : copy('Plan title', 'planning')
+          }
           required
           maxLength={400}
           {...register('title')}
-          error={errors.title?.message ?? ''}
+          error={copy(errors.title?.message, 'planning') ?? ''}
         />
         <div className="grid gap-1.5">
           <label className="font-semibold" htmlFor="planning-description">
-            Description
+            {copy('Description', 'planning')}
           </label>
           <p className="text-xs text-muted" id="planning-description-help">
-            Plain text, up to 8,000 characters. Line breaks are supported.
+            {copy(
+              'Plain text, up to 8,000 characters. Line breaks are supported.',
+              'planning',
+            )}
           </p>
           <textarea
             id="planning-description"
@@ -181,47 +225,59 @@ export function PlanningForm({
             aria-describedby="planning-description-help planning-description-error"
           />
           {errors.description ? (
-            <p id="planning-description-error" role="alert" className="text-xs text-danger-ink">
-              {errors.description.message}
+            <p
+              id="planning-description-error"
+              role="alert"
+              className="text-xs text-danger-ink"
+            >
+              {copy(errors.description.message, 'planning')}
             </p>
           ) : null}
         </div>
         <p className="text-xs text-muted">
-          Enter dates in {deviceTimezone()}. During a repeated daylight-saving hour, a changed time
-          uses its first occurrence.
+          {copy(
+            'Enter dates in {{value1}}. During a repeated daylight-saving hour, a changed time uses its first occurrence.',
+            'planning',
+            { value1: deviceTimezone() },
+          )}
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           {!scope.planID ? (
             <TextField
-              label="Start time"
+              label={copy('Start time', 'planning')}
               type="datetime-local"
               step={1}
               {...register('start_local')}
-              error={errors.start_local?.message ?? ''}
+              error={copy(errors.start_local?.message, 'planning') ?? ''}
             />
           ) : null}
           <TextField
-            label="Due time"
+            label={copy('Due time', 'planning')}
             type="datetime-local"
             step={1}
             {...register('due_local')}
-            error={errors.due_local?.message ?? ''}
+            error={copy(errors.due_local?.message, 'planning') ?? ''}
           />
         </div>
         <p className="text-xs text-muted">
-          {scope.planID
-            ? 'Due time must be inside the supplied plan dates.'
-            : 'Changing plan dates must preserve all nonarchived milestone due dates.'}{' '}
-          Dates do not change status automatically.
+          {copy(
+            scope.planID
+              ? 'Due time must be inside the supplied plan dates. Dates do not change status automatically.'
+              : 'Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically.',
+            'planning',
+          )}
         </p>
       </fieldset>
-      {operation.error ? (
+      {copy(operation.error, 'planning') ? (
         <div className="rounded-md border border-danger-line bg-danger-surface p-4">
-          <p role="alert">{operation.error}</p>
+          <p role="alert">{copy(operation.error, 'planning')}</p>
           {record && operation.errorCode === 'conflict' ? (
             <>
               <p className="mt-2 text-xs text-muted">
-                Your draft is preserved. Reloading discards the draft and uses the current record.
+                {copy(
+                  'Your draft is preserved. Reloading discards the draft and uses the current record.',
+                  'planning',
+                )}
               </p>
               <Button
                 className="mt-3"
@@ -230,7 +286,7 @@ export function PlanningForm({
                   void reload()
                 }}
               >
-                Reload current data
+                {copy('Reload current data', 'planning')}
               </Button>
             </>
           ) : null}
@@ -238,7 +294,7 @@ export function PlanningForm({
       ) : null}
       {reloadError ? (
         <p role="alert" className="text-danger-ink">
-          {reloadError}
+          {copy(reloadError, 'planning')}
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
@@ -246,13 +302,15 @@ export function PlanningForm({
           type="submit"
           variant="primary"
           loading={busy}
-          loadingLabel={`Saving ${name}`}
+          loadingLabel={copy('Saving {{value1}}', 'planning', { value1: name })}
           disabled={disabled || operation.errorCode === 'conflict'}
         >
-          {record ? 'Save ' + name : 'Create ' + name}
+          {copy(record ? 'Save {{value1}}' : 'Create {{value1}}', 'planning', {
+            value1: name,
+          })}
         </Button>
         <Link className={buttonStyles()} to={pagePath(scope, record?.id)}>
-          Cancel
+          {copy('Cancel', 'planning')}
         </Link>
       </div>
     </form>

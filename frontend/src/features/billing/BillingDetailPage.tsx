@@ -1,3 +1,5 @@
+import { formatCalendarDate } from '../../i18n/format'
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -13,6 +15,7 @@ import { CancelCollection } from './CancelCollection'
 import { BillingSnapshot } from '../pricing/BillingSnapshot'
 import * as api from './service'
 export function BillingDetailPage() {
+  useLocale()
   const { id = '', collectionID = '' } = useParams()
   return (
     <Detail
@@ -29,6 +32,7 @@ function Detail({
   clientID: string
   recordID: string
 }) {
+  useLocale()
   const operation = useBilling(clientID),
     [confirm, setConfirm] = useState(false),
     [notice, setNotice] = useState('')
@@ -47,9 +51,12 @@ function Detail({
   }
   return (
     <section>
-      <BillingHeader title="Collection details" operation={operation}>
+      <BillingHeader
+        title={copy('Collection details', 'billing')}
+        operation={operation}
+      >
         <Button disabled={busy} onClick={reload}>
-          Refresh collection
+          {copy('Refresh collection', 'billing')}
         </Button>
         {r &&
         operation.permissions.update &&
@@ -59,17 +66,17 @@ function Detail({
             className={buttonStyles()}
             to={pagePath(clientID, r.id) + '/edit'}
           >
-            Edit collection
+            {copy('Edit collection', 'billing')}
           </Link>
         ) : null}
       </BillingHeader>
       {notice ? (
         <p role="status" className="mb-4">
-          {notice}
+          {copy(notice, 'billing')}
         </p>
       ) : null}
       {query.isPending ? (
-        <PageSkeleton label="Loading collection…" />
+        <PageSkeleton label={copy('Loading collection…', 'billing')} />
       ) : query.isError ? (
         <BillingError error={query.error} retry={reload} />
       ) : r ? (
@@ -87,7 +94,13 @@ function Detail({
               ).map((field, i) => (
                 <div key={field}>
                   <dt className="text-xs text-muted">
-                    {['Amount', 'Collected', 'Outstanding'][i]}
+                    {
+                      [
+                        copy('Amount', 'billing'),
+                        copy('Collected', 'billing'),
+                        copy('Outstanding', 'billing'),
+                      ][i]
+                    }
                   </dt>
                   <dd className="mt-2 break-words font-display text-2xl tabular-nums">
                     {money(r[field], r.currency, r.currency_exponent)}
@@ -95,18 +108,28 @@ function Detail({
                 </div>
               ))}
               <div>
-                <dt className="text-xs text-muted">Due date (UTC calendar)</dt>
-                <dd className="mt-1 text-sm">{r.due_date ?? 'Not set'}</dd>
+                <dt className="text-xs text-muted">
+                  {copy('Due date (UTC calendar)', 'billing')}
+                </dt>
+                <dd className="mt-1 text-sm">
+                  {r.due_date
+                    ? formatCalendarDate(r.due_date)
+                    : copy('Not set', 'billing')}
+                </dd>
               </div>
             </dl>
-            <h3 className="mt-5 text-sm font-semibold">Internal note</h3>
+            <h3 className="mt-5 text-sm font-semibold">
+              {copy('Internal note', 'billing')}
+            </h3>
             <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted">
-              {r.internal_note || 'Not provided'}
+              {r.internal_note || copy('Not provided', 'billing')}
             </p>
             {r.cancelled_at ? (
               <p className="mt-4 text-sm">
-                Remaining obligation closed. Retained payments remain in
-                history.
+                {copy(
+                  'Remaining obligation closed. Retained payments remain in history.',
+                  'billing',
+                )}
               </p>
             ) : null}
           </article>
@@ -123,7 +146,7 @@ function Detail({
                 setConfirm(true)
               }}
             >
-              Cancel collection
+              {copy('Cancel collection', 'billing')}
             </Button>
           ) : null}
           {operation.permissions.update &&

@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useQuery } from '@tanstack/react-query'
 import { Table } from '../../components/ui'
 import { BillingError } from './Shared'
@@ -5,6 +6,7 @@ import type { Operation } from './Shared'
 import { money } from './money'
 import * as api from './service'
 export function FinanceSummary({ operation }: { operation: Operation }) {
+  useLocale()
   const query = useQuery({
     queryKey: [...operation.key, 'summary'],
     queryFn: ({ signal }) =>
@@ -12,36 +14,44 @@ export function FinanceSummary({ operation }: { operation: Operation }) {
     enabled: operation.permissions.view,
   })
   return (
-    <section aria-label="Currency balances" className="mb-6">
-      <h2 className="mb-3 font-semibold">Balances by currency</h2>
+    <section aria-label={copy('Currency balances', 'billing')} className="mb-6">
+      <h2 className="mb-3 font-semibold">
+        {copy('Balances by currency', 'billing')}
+      </h2>
       <p className="mb-3 text-xs text-muted">
-        All collections for this client, independent of table filters. Cancelled
-        obligations and their retained payments are shown separately.
+        {copy(
+          'All collections for this client, independent of table filters. Cancelled obligations and their retained payments are shown separately.',
+          'billing',
+        )}
       </p>
       {query.isPending ? (
         <p role="status" aria-busy="true">
-          Loading balances…
+          {copy('Loading balances…', 'billing')}
         </p>
       ) : query.isError ? (
         <BillingError error={query.error} retry={() => void query.refetch()} />
       ) : !query.data.length ? (
         <p className="form-section text-sm">
-          No balances recorded yet.
+          {copy('No balances recorded yet.', 'billing')}
         </p>
       ) : (
-        <Table caption="Balances by currency">
+        <Table caption={copy('Balances by currency', 'billing')}>
           <thead>
             <tr>
               {[
-                'Currency',
-                'Active obligations',
-                'Collected',
-                'Outstanding',
-                'Overdue',
-                'Cancelled obligations',
-                'Retained cancelled payments',
+                copy('Currency', 'billing'),
+                copy('Active obligations', 'billing'),
+                copy('Collected', 'billing'),
+                copy('Outstanding', 'billing'),
+                copy('Overdue', 'billing'),
+                copy('Cancelled obligations', 'billing'),
+                copy('Retained cancelled payments', 'billing'),
               ].map((v) => (
-                <th scope="col" className={v === 'Currency' ? '' : 'text-right'} key={v}>
+                <th
+                  scope="col"
+                  className={v === 'Currency' ? '' : 'text-right'}
+                  key={v}
+                >
                   {v}
                 </th>
               ))}

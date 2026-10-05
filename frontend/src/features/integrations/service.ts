@@ -1,3 +1,4 @@
+import { websiteAPIBase } from '../websites/service'
 import { APIError, authenticatedJSON } from '../../services/authenticated'
 import { isUUID } from '../auth/session'
 import {
@@ -33,15 +34,19 @@ export async function detail(
   clientID: string,
   id: string,
   signal: AbortSignal,
+  website?: string,
 ) {
   return parseConnection(
-    await authenticatedJSON(path(clientID, id), { signal }),
+    await authenticatedJSON(
+      `${websiteAPIBase(clientID, website)}/integrations/${id}`,
+      { signal },
+    ),
     clientID,
     id,
   )
 }
-export async function disconnect(record: Connection) {
-  const endpoint = path(record.client_id, record.id)
+export async function disconnect(record: Connection, website?: string) {
+  const endpoint = `${websiteAPIBase(record.client_id, website)}/integrations/${record.id}`
   if (!canDisable(record)) throw new APIError(0, 'invalid_request')
   return parseDisconnect(
     await authenticatedJSON(`${endpoint}/disconnect`, {

@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { PageSkeleton } from '../../components/ui'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
@@ -9,6 +10,7 @@ import { TaskForm } from './TaskForm'
 import * as api from './service'
 
 export function TaskEditorPage({ create = false }: { create?: boolean }) {
+  useLocale()
   const { id = '', taskID = '' } = useParams()
   return (
     <TaskEditor
@@ -28,37 +30,45 @@ function TaskEditor({
   taskID: string
   create: boolean
 }) {
+  useLocale()
   const operation = useTasks(clientID),
     [unavailable, setUnavailable] = useState('')
-  const allowed = create ? operation.permissions.create : operation.permissions.update
+  const allowed = create
+    ? operation.permissions.create
+    : operation.permissions.update
   const query = useQuery({
     queryKey: [...operation.key, 'detail', taskID],
-    queryFn: ({ signal }) => operation.read(() => api.detail(clientID, taskID, signal)),
+    queryFn: ({ signal }) =>
+      operation.read(() => api.detail(clientID, taskID, signal)),
     enabled: allowed && !create,
   })
   if (!allowed) return <AccessDenied />
   const blocked =
     unavailable ||
     (query.data?.archived_at
-      ? 'This task is archived. Its history is retained.'
+      ? copy('This task is archived. Its history is retained.', 'tasks')
       : ['done', 'cancelled'].includes(query.data?.status ?? '')
-        ? 'Reopen this task before editing its metadata.'
+        ? copy('Reopen this task before editing its metadata.', 'tasks')
         : '')
   return (
     <section>
       <TaskHeader
-        title={create ? 'Create task' : 'Edit task'}
+        title={
+          create ? copy('Create task', 'tasks') : copy('Edit task', 'tasks')
+        }
         clientID={clientID}
         operation={operation}
       />
       {!operation.writable ? (
         <p className="mb-4" role="status">
-          Task changes are unavailable while the client is archived or its current state is being
-          checked.
+          {copy(
+            'Task changes are unavailable while the client is archived or its current state is being checked.',
+            'tasks',
+          )}
         </p>
       ) : null}
       {!create && query.isPending ? (
-        <PageSkeleton label="Loading task…" />
+        <PageSkeleton label={copy('Loading task…', 'tasks')} />
       ) : !create && query.isError ? (
         <TaskError
           error={query.error}
@@ -73,11 +83,15 @@ function TaskEditor({
             className="mt-3 inline-block underline underline-offset-4"
             to={`/app/clients/${clientID}/tasks/${taskID}`}
           >
-            Open task
+            {copy('Open task', 'tasks')}
           </Link>
         </div>
       ) : create ? (
-        <TaskForm clientID={clientID} operation={operation} onUnavailable={setUnavailable} />
+        <TaskForm
+          clientID={clientID}
+          operation={operation}
+          onUnavailable={setUnavailable}
+        />
       ) : query.data ? (
         <TaskForm
           key={taskID}

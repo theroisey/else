@@ -1,3 +1,4 @@
+import { copy } from '../../i18n/index'
 import { z } from '../../lib/validation'
 import { APIError } from '../../services/authenticated'
 import { instant } from '../../lib/time'
@@ -199,21 +200,21 @@ export function markerValue(
   key: keyof Snapshot,
 ) {
   return value === undefined
-    ? 'Not recorded'
+    ? copy('Not recorded', 'audit')
     : typeof value === 'boolean'
       ? value
-        ? 'Yes'
-        : 'No'
+        ? copy('Yes', 'audit')
+        : copy('No', 'audit')
       : key.endsWith('status')
         ? value.replaceAll('_', ' ')
         : value
 }
 export function snapshotState(value: Snapshot | null) {
   return value === null
-    ? 'Not recorded'
+    ? copy('Not recorded', 'audit')
     : Object.keys(value).length
-      ? 'Recorded markers'
-      : 'Empty snapshot'
+      ? copy('Recorded markers', 'audit')
+      : copy('Empty snapshot', 'audit')
 }
 export const filterKeys = [
   'actor_id',

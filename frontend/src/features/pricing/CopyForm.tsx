@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { Button, TextField } from '../../components/ui'
@@ -18,6 +19,7 @@ export function CopyForm({
   revision: string
   checking: boolean
 }) {
+  useLocale()
   const recovery = useCopyRecovery(),
     [error, setError] = useState(''),
     { register, handleSubmit, control } = useForm({
@@ -68,30 +70,37 @@ export function CopyForm({
       className="mt-6 grid gap-4 form-section"
     >
       <h2 className="text-lg font-semibold">
-        Create collection from this version
+        {copy('Create collection from this version', 'pricing')}
       </h2>
       <p className="text-sm">
-        Version {v.revision} · Fixed amount {money(v.total_minor, v.currency)}.
-        Copied lines and amount remain unchanged when pricing changes. Internal
-        costs and pricing notes are excluded.
+        {copy(
+          'Version {{value1}} · Fixed amount {{value2}}. Copied lines and amount remain unchanged when pricing changes. Internal costs and pricing notes are excluded.',
+          'pricing',
+          { value1: v.revision, value2: money(v.total_minor, v.currency) },
+        )}
       </p>
       {v.total_minor === '0' ? (
-        <p role="status">A zero-total agreement cannot create a collection.</p>
+        <p role="status">
+          {copy(
+            'A zero-total agreement cannot create a collection.',
+            'pricing',
+          )}
+        </p>
       ) : null}
       <fieldset disabled={disabled} className="grid gap-4 sm:grid-cols-2">
         <TextField
-          label="Billing date (UTC calendar)"
+          label={copy('Billing date (UTC calendar)', 'pricing')}
           type="date"
           max={utcToday()}
           {...register('billing_date')}
         />
         <TextField
-          label="Collection due date (UTC calendar)"
+          label={copy('Collection due date (UTC calendar)', 'pricing')}
           type="date"
           {...register('due_date')}
         />
         <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">
-          Collection internal note
+          {copy('Collection internal note', 'pricing')}{' '}
           <textarea
             className="ui-input min-h-24"
             maxLength={8000}
@@ -99,26 +108,31 @@ export function CopyForm({
           />
         </label>
         <label className="flex items-start gap-2 text-sm sm:col-span-2">
-          <input type="checkbox" className="mt-1" {...register('confirm')} />I
-          confirm this fixed collection amount.
+          <input type="checkbox" className="mt-1" {...register('confirm')} />
+          {copy('I confirm this fixed collection amount.', 'pricing')}{' '}
         </label>
       </fieldset>
       {!effective(v, date) ? (
         <p role="status" className="text-sm">
-          This version is not effective on the selected billing date.
+          {copy(
+            'This version is not effective on the selected billing date.',
+            'pricing',
+          )}
         </p>
       ) : null}
-      {error ? <p role="alert">{error}</p> : null}
+      {error ? <p role="alert">{copy(error, 'pricing')}</p> : null}
       <p className="text-xs text-muted">
-        Keep this page open until confirmed. A lost response must be reconciled
-        with the original command before any replacement collection.
+        {copy(
+          'Keep this page open until confirmed. A lost response must be reconciled with the original command before any replacement collection.',
+          'pricing',
+        )}
       </p>
       <Button
         variant="primary"
         type="submit"
         disabled={disabled || !effective(v, date)}
       >
-        Create collection from version
+        {copy('Create collection from version', 'pricing')}
       </Button>
     </form>
   )

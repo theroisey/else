@@ -9,19 +9,35 @@ let changes: EventTarget
 beforeEach(() => {
   dark = false
   changes = new EventTarget()
-  vi.stubGlobal('matchMedia', vi.fn(() => ({
-    get matches() { return dark },
-    addEventListener: changes.addEventListener.bind(changes),
-    removeEventListener: changes.removeEventListener.bind(changes),
-  })))
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => ({
+      get matches() {
+        return dark
+      },
+      addEventListener: changes.addEventListener.bind(changes),
+      removeEventListener: changes.removeEventListener.bind(changes),
+    })),
+  )
   setAppearance('system')
   localStorage.clear()
 })
-afterEach(() => { setAppearance('system'); localStorage.clear() })
+afterEach(() => {
+  setAppearance('system')
+  localStorage.clear()
+})
 it('persists explicit selection, shares controls and follows device changes only in System', async () => {
-  render(<><AppearanceControl /><AppearanceSettings /></>)
+  render(
+    <>
+      <AppearanceControl />
+      <AppearanceSettings />
+    </>,
+  )
   const user = userEvent.setup()
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Appearance' }), 'dark')
+  await user.selectOptions(
+    screen.getByRole('combobox', { name: 'Appearance' }),
+    'dark',
+  )
   expect(document.documentElement).toHaveClass('dark')
   expect(localStorage.getItem('roisey-else.appearance')).toBe('dark')
   expect(screen.getByRole('radio', { name: 'Dark' })).toBeChecked()
@@ -29,26 +45,61 @@ it('persists explicit selection, shares controls and follows device changes only
   expect(document.documentElement).toHaveClass('dark')
   await user.click(screen.getByRole('radio', { name: 'System' }))
   expect(document.documentElement).not.toHaveClass('dark')
-  act(() => { dark = true; changes.dispatchEvent(new Event('change')) })
+  act(() => {
+    dark = true
+    changes.dispatchEvent(new Event('change'))
+  })
   expect(document.documentElement).toHaveClass('dark')
-  expect(screen.getByText('Following your device · dark theme')).toBeVisible()
+  expect(screen.getByText('Following your device · Dark theme')).toBeVisible()
 })
 it('synchronizes a preference change from another tab and ignores unrelated storage', () => {
   render(<AppearanceControl />)
-  act(() => { localStorage.setItem('roisey-else.appearance', 'dark'); window.dispatchEvent(new StorageEvent('storage', { key: 'roisey-else.appearance' })) })
+  act(() => {
+    localStorage.setItem('roisey-else.appearance', 'dark')
+    window.dispatchEvent(
+      new StorageEvent('storage', { key: 'roisey-else.appearance' }),
+    )
+  })
   expect(document.documentElement).toHaveClass('dark')
   expect(screen.getByRole('combobox')).toHaveValue('dark')
-  act(() => { localStorage.setItem('roisey-else.appearance', 'untrusted-value'); window.dispatchEvent(new StorageEvent('storage', { key: 'unrelated' })) })
+  act(() => {
+    localStorage.setItem('roisey-else.appearance', 'untrusted-value')
+    window.dispatchEvent(new StorageEvent('storage', { key: 'unrelated' }))
+  })
   expect(screen.getByRole('combobox')).toHaveValue('dark')
-  act(() => window.dispatchEvent(new StorageEvent('storage', { key: 'roisey-else.appearance' })))
+  act(() =>
+    window.dispatchEvent(
+      new StorageEvent('storage', { key: 'roisey-else.appearance' }),
+    ),
+  )
   expect(screen.getByRole('combobox')).toHaveValue('system')
   expect(document.documentElement).not.toHaveClass('dark')
 })
 it('keeps appearance controls usable when persistence is unavailable', async () => {
-  const save = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Denied', 'SecurityError') })
+  const save = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new DOMException('Denied', 'SecurityError')
+  })
   render(<AppearanceControl />)
   await userEvent.setup().selectOptions(screen.getByRole('combobox'), 'dark')
   expect(document.documentElement).toHaveClass('dark')
   expect(screen.getByRole('combobox')).toHaveValue('dark')
   save.mockRestore()
+})
+
+it('keeps browser chrome consistent with the chosen theme and device changes', () => {
+  const chrome = document.createElement('meta')
+  chrome.name = 'theme-color'
+  document.head.append(chrome)
+  render(<AppearanceControl />)
+  act(() => setAppearance('dark'))
+  expect(chrome.content).toBe('#11110f')
+  act(() => setAppearance('light'))
+  expect(chrome.content).toBe('#f2f0ea')
+  act(() => {
+    setAppearance('system')
+    dark = true
+    changes.dispatchEvent(new Event('change'))
+  })
+  expect(chrome.content).toBe('#11110f')
+  chrome.remove()
 })

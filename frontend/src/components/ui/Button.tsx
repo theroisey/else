@@ -1,3 +1,4 @@
+import { useLocale } from '../../i18n/index'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { faCircleNotch } from '@fortawesome/free-solid-svg-icons'
@@ -15,9 +16,18 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({
-  variant = 'secondary', size = 'default', icon, loading = false,
-  loadingLabel, disabled, className = '', children, type = 'button', ...props
+  variant = 'secondary',
+  size = 'default',
+  icon,
+  loading = false,
+  loadingLabel,
+  disabled,
+  className = '',
+  children,
+  type = 'button',
+  ...props
 }: ButtonProps) {
+  useLocale()
   return (
     <button
       {...props}
@@ -26,9 +36,15 @@ export function Button({
       disabled={disabled || loading}
       aria-busy={loading || undefined}
     >
-      {loading
-        ? <FontAwesomeIcon className="motion-safe:animate-spin" icon={faCircleNotch} aria-hidden="true" />
-        : icon ? <FontAwesomeIcon icon={icon} aria-hidden="true" /> : null}
+      {loading ? (
+        <FontAwesomeIcon
+          className="motion-safe:animate-spin"
+          icon={faCircleNotch}
+          aria-hidden="true"
+        />
+      ) : icon ? (
+        <FontAwesomeIcon icon={icon} aria-hidden="true" />
+      ) : null}
       <span>{loading && loadingLabel ? loadingLabel : children}</span>
     </button>
   )

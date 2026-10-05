@@ -1,8 +1,15 @@
+import { statusLabel } from '../../i18n/labels'
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
-import { Button, TextField, buttonStyles, PageSkeleton } from '../../components/ui'
+import {
+  Button,
+  TextField,
+  buttonStyles,
+  PageSkeleton,
+} from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { currencies } from '../billing/models'
 import { exponents } from '../billing/money'
@@ -84,6 +91,7 @@ function draftOf(s?: Sheet): Draft {
   }
 }
 export function PricingEditorPage({ create = false }: { create?: boolean }) {
+  useLocale()
   const { id = '', sheetID = '' } = useParams()
   return (
     <Editor
@@ -103,6 +111,7 @@ function Editor({
   sheetID: string
   create: boolean
 }) {
+  useLocale()
   const op = usePricing(clientID),
     sheet = useQuery({
       queryKey: [...op.key, 'detail', sheetID],
@@ -115,12 +124,14 @@ function Editor({
     <section>
       <PricingHeader
         title={
-          create ? 'Create pricing agreement' : 'Create new pricing version'
+          create
+            ? copy('Create pricing agreement', 'pricing')
+            : copy('Create new pricing version', 'pricing')
         }
         operation={op}
       />
       {!create && sheet.isPending ? (
-        <PageSkeleton label="Loading current pricing…" />
+        <PageSkeleton label={copy('Loading current pricing…', 'pricing')} />
       ) : !create && sheet.isError ? (
         <PricingError error={sheet.error} retry={() => void sheet.refetch()} />
       ) : (
@@ -143,6 +154,7 @@ function PricingForm({
   sheet?: Sheet | undefined
   checking: boolean
 }) {
+  useLocale()
   const navigate = useNavigate(),
     [preview, setPreview] = useState<{
       input: Profile
@@ -186,7 +198,7 @@ function PricingForm({
               }
             } catch (e) {
               throw new Error(
-                `Line ${i + 1}: ${e instanceof Error ? e.message : 'Check numeric inputs.'}`,
+                `Line ${i + 1}: ${e instanceof Error ? e.message : copy('Check numeric inputs.', 'pricing')}`,
                 { cause: e },
               )
             }
@@ -242,47 +254,54 @@ function PricingForm({
     >
       <p className="text-sm text-muted">
         {sheet
-          ? `Append to version ${sheet.revision}. Earlier pricing and billing copies stay unchanged. Same-day versions supersede earlier versions for that date.`
-          : 'Choose one currency for this agreement. It stays fixed for every version.'}
+          ? copy(
+              'Append to version {{value1}}. Earlier pricing and billing copies stay unchanged. Same-day versions supersede earlier versions for that date.',
+              'pricing',
+              { value1: sheet.revision },
+            )
+          : copy(
+              'Choose one currency for this agreement. It stays fixed for every version.',
+              'pricing',
+            )}
       </p>
-      <fieldset
-        disabled={disabled}
-        className="grid gap-4 form-section"
-      >
+      <fieldset disabled={disabled} className="grid gap-4 form-section">
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
-            label="Agreement title"
+            label={copy('Agreement title', 'pricing')}
             maxLength={200}
             {...register('title')}
           />
           <label className="grid gap-1.5 text-sm font-semibold">
-            Currency
+            {copy('Currency', 'pricing')}{' '}
             <select
               className="ui-input"
               {...register('currency')}
               disabled={!!sheet}
             >
-              <option value="">Choose currency</option>
+              <option value="">{copy('Choose currency', 'pricing')}</option>
               {currencies.map((c) => (
                 <option key={c} value={c}>
-                  {c} · {exponents[c]} decimal places
+                  {copy('{{value1}} · {{value2}} decimal places', 'pricing', {
+                    value1: c,
+                    value2: exponents[c],
+                  })}
                 </option>
               ))}
             </select>
           </label>
           <TextField
-            label="Effective start (UTC calendar)"
+            label={copy('Effective start (UTC calendar)', 'pricing')}
             type="date"
             {...register('effective_from')}
           />
           <TextField
-            label="Effective end (exclusive, UTC calendar)"
+            label={copy('Effective end (exclusive, UTC calendar)', 'pricing')}
             type="date"
             {...register('effective_until')}
           />
         </div>
         <label className="grid gap-1.5 text-sm font-semibold">
-          Pricing note
+          {copy('Pricing note', 'pricing')}{' '}
           <textarea
             className="ui-input min-h-24"
             maxLength={2000}
@@ -290,79 +309,104 @@ function PricingForm({
           />
         </label>
         <p className="text-xs text-muted">
-          End is optional and exclusive. A newer version caps the preceding
-          effective window. Future versions may be scheduled; expired windows
-          can leave gaps.
+          {copy(
+            'End is optional and exclusive. A newer version caps the preceding effective window. Future versions may be scheduled; expired windows can leave gaps.',
+            'pricing',
+          )}
         </p>
       </fieldset>
       <fieldset disabled={disabled} className="grid min-w-0 gap-4">
-        <legend className="mb-3 text-lg font-semibold">Agreement lines</legend>
+        <legend className="mb-3 text-lg font-semibold">
+          {copy('Agreement lines', 'pricing')}
+        </legend>
         {array.fields.map((field, i) => (
-          <article
-            key={field.id}
-            className="min-w-0 form-section"
-          >
-            <h2 className="font-semibold">Line {i + 1}</h2>
+          <article key={field.id} className="min-w-0 form-section">
+            <h2 className="font-semibold">
+              {copy('Line {{value1}}', 'pricing', { value1: i + 1 })}
+            </h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <TextField
-                label={`Line ${i + 1} description`}
+                label={copy('Line {{value1}} description', 'pricing', {
+                  value1: i + 1,
+                })}
                 maxLength={200}
                 {...register(`lines.${i}.description`)}
               />
               <label className="grid gap-1.5 text-sm font-semibold">
-                Line {i + 1} kind
+                {copy('Line {{value1}} kind', 'pricing', { value1: i + 1 })}
                 <select className="ui-input" {...register(`lines.${i}.kind`)}>
                   {kinds.map((k) => (
                     <option key={k} value={k}>
-                      {k.replace('_', ' ')}
+                      {statusLabel(k)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="grid gap-1.5 text-sm font-semibold">
-                Line {i + 1} frequency
+                {copy('Line {{value1}} frequency', 'pricing', {
+                  value1: i + 1,
+                })}
                 <select
                   className="ui-input"
                   {...register(`lines.${i}.frequency`)}
                 >
                   {frequencies.map((f) => (
                     <option key={f} value={f}>
-                      {f}
+                      {statusLabel(f)}
                     </option>
                   ))}
                 </select>
               </label>
               <TextField
-                label={`Line ${i + 1} quantity`}
+                label={copy('Line {{value1}} quantity', 'pricing', {
+                  value1: i + 1,
+                })}
                 inputMode="decimal"
                 maxLength={30}
-                description="Up to six decimal places; greater than zero."
+                description={copy(
+                  'Up to six decimal places; greater than zero.',
+                  'pricing',
+                )}
                 {...register(`lines.${i}.quantity`)}
               />
               <TextField
-                label={`Line ${i + 1} unit price`}
+                label={copy('Line {{value1}} unit price', 'pricing', {
+                  value1: i + 1,
+                })}
                 inputMode="decimal"
                 maxLength={30}
-                description="Major units in the selected currency; zero allowed."
+                description={copy(
+                  'Major units in the selected currency; zero allowed.',
+                  'pricing',
+                )}
                 {...register(`lines.${i}.price`)}
               />
               <TextField
-                label={`Line ${i + 1} discount (%)`}
+                label={copy('Line {{value1}} discount (%)', 'pricing', {
+                  value1: i + 1,
+                })}
                 inputMode="decimal"
                 maxLength={8}
                 {...register(`lines.${i}.discount`)}
               />
               <TextField
-                label={`Line ${i + 1} tax (%)`}
+                label={copy('Line {{value1}} tax (%)', 'pricing', {
+                  value1: i + 1,
+                })}
                 inputMode="decimal"
                 maxLength={8}
                 {...register(`lines.${i}.tax`)}
               />
               <TextField
-                label={`Line ${i + 1} internal unit cost`}
+                label={copy('Line {{value1}} internal unit cost', 'pricing', {
+                  value1: i + 1,
+                })}
                 inputMode="decimal"
                 maxLength={30}
-                description="Optional; never copied to billing."
+                description={copy(
+                  'Optional; never copied to billing.',
+                  'pricing',
+                )}
                 {...register(`lines.${i}.cost`)}
               />
             </div>
@@ -372,21 +416,23 @@ function PricingForm({
                 disabled={!i}
                 onClick={() => array.swap(i, i - 1)}
               >
-                Move line {i + 1} up
+                {copy('Move line {{value1}} up', 'pricing', { value1: i + 1 })}
               </Button>
               <Button
                 size="compact"
                 disabled={i === array.fields.length - 1}
                 onClick={() => array.swap(i, i + 1)}
               >
-                Move line {i + 1} down
+                {copy('Move line {{value1}} down', 'pricing', {
+                  value1: i + 1,
+                })}
               </Button>
               <Button
                 size="compact"
                 disabled={array.fields.length === 1}
                 onClick={() => array.remove(i)}
               >
-                Remove line {i + 1}
+                {copy('Remove line {{value1}}', 'pricing', { value1: i + 1 })}
               </Button>
             </div>
           </article>
@@ -395,12 +441,12 @@ function PricingForm({
           disabled={array.fields.length >= 50}
           onClick={() => array.append(emptyLine())}
         >
-          Add line
+          {copy('Add line', 'pricing')}
         </Button>
       </fieldset>
       {message ? (
         <p role="alert" className="text-danger-ink">
-          {message}
+          {copy(message, 'pricing')}
         </p>
       ) : null}
       {op.error ? (
@@ -411,15 +457,19 @@ function PricingForm({
       {current ? (
         <>
           <p role="status">
-            Preview matches the current draft. Confirm these fixed line totals
-            before saving.
+            {copy(
+              'Preview matches the current draft. Confirm these fixed line totals before saving.',
+              'pricing',
+            )}
           </p>
           <Terms calculation={current.calculation} manage />
         </>
       ) : (
         <p className="text-sm text-muted">
-          Preview required. Changes to any field invalidate the previous
-          preview.
+          {copy(
+            'Preview required. Changes to any field invalidate the previous preview.',
+            'pricing',
+          )}
         </p>
       )}
       <div className="flex flex-wrap gap-2">
@@ -428,7 +478,7 @@ function PricingForm({
           loading={previewing}
           onClick={() => void handleSubmit(calculate)()}
         >
-          Preview pricing
+          {copy('Preview pricing', 'pricing')}
         </Button>
         <Button
           type="submit"
@@ -436,10 +486,14 @@ function PricingForm({
           disabled={disabled || !current}
           loading={op.pending}
         >
-          {sheet ? 'Save new version' : 'Save pricing agreement'}
+          {sheet
+            ? copy('Save new version', 'pricing')
+            : copy('Save pricing agreement', 'pricing')}
         </Button>
         <Link className={buttonStyles()} to={pagePath(op.clientID, sheet?.id)}>
-          {frozen ? 'Review current pricing' : 'Cancel'}
+          {frozen
+            ? copy('Review current pricing', 'pricing')
+            : copy('Cancel', 'pricing')}
         </Link>
       </div>
     </form>

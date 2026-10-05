@@ -28,11 +28,21 @@ function paging(cursor: string) {
   return q
 }
 function scoped(scope: Scope, r: Summary) {
-  return r.client_id === scope.clientID.toLowerCase() && r.plan_id === scope.planID?.toLowerCase()
+  return (
+    r.client_id === scope.clientID.toLowerCase() &&
+    r.plan_id === scope.planID?.toLowerCase()
+  )
 }
-export async function list(scope: Scope, f: Filter, cursor: string, signal: AbortSignal) {
+export async function list(
+  scope: Scope,
+  f: Filter,
+  cursor: string,
+  signal: AbortSignal,
+) {
   if (
-    !['all', ...(scope.planID ? milestoneStates : planStates)].includes(f.status) ||
+    !['all', ...(scope.planID ? milestoneStates : planStates)].includes(
+      f.status,
+    ) ||
     !['false', 'true', 'all'].includes(f.archived) ||
     !['id', '-id'].includes(f.sort) ||
     [...f.q.trim()].length > 100 ||
@@ -44,14 +54,19 @@ export async function list(scope: Scope, f: Filter, cursor: string, signal: Abor
   q.set('archived', f.archived)
   q.set('sort', f.sort)
   if (f.q.trim()) q.set('q', f.q.trim())
-  const p = parsePage(await authenticatedJSON(`${path(scope)}?${q}`, { signal }))
+  const p = parsePage(
+    await authenticatedJSON(`${path(scope)}?${q}`, { signal }),
+  )
   if (p.page.limit !== 25 || p.data.some((r) => !scoped(scope, r)))
     throw new APIError(0, 'invalid_response')
   return p
 }
 export async function detail(scope: Scope, id: string, signal?: AbortSignal) {
-  const r = parseRecord(await authenticatedJSON(path(scope, id), signal ? { signal } : {}))
-  if (!scoped(scope, r) || r.id !== id.toLowerCase()) throw new APIError(0, 'invalid_response')
+  const r = parseRecord(
+    await authenticatedJSON(path(scope, id), signal ? { signal } : {}),
+  )
+  if (!scoped(scope, r) || r.id !== id.toLowerCase())
+    throw new APIError(0, 'invalid_response')
   return r
 }
 function expected(v: number) {
@@ -73,11 +88,19 @@ function metadata(scope: Scope, p: Metadata) {
 }
 export async function create(scope: Scope, p: Metadata) {
   return confirmed(
-    await authenticatedJSON(path(scope), { method: 'POST', body: metadata(scope, p) }),
+    await authenticatedJSON(path(scope), {
+      method: 'POST',
+      body: metadata(scope, p),
+    }),
     1,
   )
 }
-export async function update(scope: Scope, id: string, p: Metadata, revision: number) {
+export async function update(
+  scope: Scope,
+  id: string,
+  p: Metadata,
+  revision: number,
+) {
   expected(revision)
   return confirmed(
     await authenticatedJSON(path(scope, id), {
@@ -88,7 +111,12 @@ export async function update(scope: Scope, id: string, p: Metadata, revision: nu
     id,
   )
 }
-export async function transition(scope: Scope, id: string, status: State, revision: number) {
+export async function transition(
+  scope: Scope,
+  id: string,
+  status: State,
+  revision: number,
+) {
   expected(revision)
   if (!(scope.planID ? milestoneStates : planStates).some((s) => s === status))
     throw new APIError(0, 'invalid_request')
@@ -118,7 +146,11 @@ export async function candidates(
   search: string,
   signal: AbortSignal,
 ) {
-  if (!scope.planID || [...search.trim()].length > 100 || /[\p{Cc}]/u.test(search))
+  if (
+    !scope.planID ||
+    [...search.trim()].length > 100 ||
+    /[\p{Cc}]/u.test(search)
+  )
     throw new APIError(0, 'invalid_request')
   const q = paging(cursor)
   if (search.trim()) q.set('q', search.trim())
@@ -142,11 +174,18 @@ export async function links(
     throw new APIError(0, 'invalid_request')
   const q = paging(cursor)
   q.set('archived', archived)
-  const p = parseLinks(await authenticatedJSON(`${path(scope, id)}/task-links?${q}`, { signal }))
+  const p = parseLinks(
+    await authenticatedJSON(`${path(scope, id)}/task-links?${q}`, { signal }),
+  )
   if (p.page.limit !== 25) throw new APIError(0, 'invalid_response')
   return p
 }
-export async function replaceLinks(scope: Scope, id: string, ids: string[], revision: number) {
+export async function replaceLinks(
+  scope: Scope,
+  id: string,
+  ids: string[],
+  revision: number,
+) {
   expected(revision)
   if (!scope.planID) throw new APIError(0, 'invalid_request')
   return confirmed(

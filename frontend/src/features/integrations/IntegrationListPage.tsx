@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -16,16 +17,22 @@ import { MetaCreateForm } from '../marketing/MetaCreateForm'
 import { formatTime } from '../../lib/time'
 
 export function IntegrationListPage() {
+  useLocale()
   const clientID = useParams().id ?? ''
   const operation = useIntegrations(clientID)
   if (!isUUID(clientID))
-    return <h1 className="page-title">Integrations not found</h1>
+    return (
+      <h1 className="page-title">
+        {copy('Integrations not found', 'integrations')}
+      </h1>
+    )
   if (!operation.permissions.view) return <AccessDenied />
   return (
     <Connections key={JSON.stringify(operation.key)} operation={operation} />
   )
 }
 function Connections({ operation }: { operation: Operation }) {
+  useLocale()
   const { clientID } = operation
   const [history, setHistory] = useState([''])
   const [refresh, setRefresh] = useState(0)
@@ -53,19 +60,39 @@ function Connections({ operation }: { operation: Operation }) {
         name={!busy && !failed ? client.data?.name : undefined}
       />
       <Button disabled={busy || operation.pending} onClick={reload}>
-        Refresh integrations
+        {copy('Refresh integrations', 'integrations')}
       </Button>
-      {!busy && !failed && rows && operation.permissions.manage && client.data?.status === 'active' ? <GA4CreateForm operation={operation} /> : null}
-      {!busy && !failed && rows && operation.permissions.manage && client.data?.status === 'active' ? <WooCommerceCreateForm operation={operation} /> : null}
-      {!busy && !failed && rows && operation.permissions.manage && client.data?.status === 'active' ? <MetaCreateForm operation={operation} /> : null}
+      {!busy &&
+      !failed &&
+      rows &&
+      operation.permissions.manage &&
+      client.data?.status === 'active' ? (
+        <GA4CreateForm operation={operation} />
+      ) : null}
+      {!busy &&
+      !failed &&
+      rows &&
+      operation.permissions.manage &&
+      client.data?.status === 'active' ? (
+        <WooCommerceCreateForm operation={operation} />
+      ) : null}
+      {!busy &&
+      !failed &&
+      rows &&
+      operation.permissions.manage &&
+      client.data?.status === 'active' ? (
+        <MetaCreateForm operation={operation} />
+      ) : null}
       {!busy && !failed && client.data?.status === 'archived' ? (
         <p role="status" className="mt-4 text-sm text-muted">
-          This client is archived. Connection history remains readable; changes
-          are unavailable.
+          {copy(
+            'This client is archived. Connection history remains readable; changes are unavailable.',
+            'integrations',
+          )}
         </p>
       ) : null}
       {busy || query.isPending || client.isPending ? (
-        <PageSkeleton label="Loading integrations…" />
+        <PageSkeleton label={copy('Loading integrations…', 'integrations')} />
       ) : failed ? (
         <IntegrationError
           error={query.isError ? query.error : client.error}
@@ -73,12 +100,17 @@ function Connections({ operation }: { operation: Operation }) {
         />
       ) : rows?.length ? (
         <div className="mt-5">
-          <Table caption="Integration connections">
+          <Table caption={copy('Integration connections', 'integrations')}>
             <thead>
               <tr>
-                <th>Provider / Connection</th>
-                <th>Recorded state</th>
-                <th>Last metadata change (Europe/Istanbul)</th>
+                <th>{copy('Provider / Connection', 'integrations')}</th>
+                <th>{copy('Recorded state', 'integrations')}</th>
+                <th>
+                  {copy(
+                    'Last metadata change (Europe/Istanbul)',
+                    'integrations',
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -89,7 +121,9 @@ function Connections({ operation }: { operation: Operation }) {
                       className="font-semibold underline underline-offset-4"
                       to={`/app/clients/${clientID}/integrations/${record.id}`}
                     >
-                      <span className="block">{providerLabels[record.provider]}</span>
+                      <span className="block">
+                        {copy(providerLabels[record.provider], 'integrations')}
+                      </span>
                       <span className="mt-1 block break-all font-mono text-xs">
                         {record.id}
                       </span>
@@ -113,22 +147,29 @@ function Connections({ operation }: { operation: Operation }) {
         </div>
       ) : (
         <div className="mt-5 rounded-md border border-line bg-surface-subtle p-6">
-          <h2 className="font-semibold">No connections on this page</h2>
+          <h2 className="font-semibold">
+            {copy('No connections on this page', 'integrations')}
+          </h2>
           <p className="mt-2 text-sm text-muted">
-            No recorded connections are available with your current access.
-            GA4, WooCommerce and Meta setup are available to authorized integration managers.
+            {copy(
+              'No recorded connections are available with your current access. GA4, WooCommerce and Meta setup are available to authorized integration managers.',
+              'integrations',
+            )}
           </p>
         </div>
       )}
       <Pager
-        name="Integrations"
+        name={copy('Integrations', 'integrations')}
         history={history}
         next={!busy && !failed ? query.data?.page.next_cursor : null}
         busy={busy}
         onChange={setHistory}
       />
       <p className="mt-4 text-xs text-muted">
-        Each page checks current access. Refresh returns to the first page.
+        {copy(
+          'Each page checks current access. Refresh returns to the first page.',
+          'integrations',
+        )}
       </p>
     </section>
   )

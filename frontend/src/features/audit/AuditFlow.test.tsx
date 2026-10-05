@@ -30,6 +30,8 @@ function setup(
 ) {
   let current = session
   const fetcher = vi.fn((url: string, init: RequestInit) => {
+    if (url === '/api/v1/auth/preferences')
+      return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: current }))
     if (
@@ -81,6 +83,13 @@ it.each(['billing.payment_recorded', 'billing.cancelled'])(
             },
       ),
     )
+    // The first route includes cold lazy-module loading before its data read.
+    // Wait for that stage explicitly before checking the event's action.
+    await screen.findByRole(
+      'heading',
+      { name: 'Audit history' },
+      { timeout: 5000 },
+    )
     const u = userEvent.setup()
     await u.click(
       await screen.findByRole('button', {
@@ -102,7 +111,15 @@ it.each(['billing.payment_recorded', 'billing.cancelled'])(
 it('reads global history with exact references and no directory calls, raw metadata or write controls', async () => {
   const { fetcher } = setup()
   const table = await screen.findByRole('table', { name: 'Audit events' })
-  expect(within(table).getByText(date)).toHaveAttribute('datetime', date)
+  expect(
+    within(table).getByText(
+      new Intl.DateTimeFormat('en', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'UTC',
+      }).format(new Date(date)),
+    ),
+  ).toHaveAttribute('datetime', date)
   expect(within(table).getByText(actorID)).toBeVisible()
   expect(
     screen.queryByText('Raw safe snapshots and metadata'),
@@ -113,7 +130,9 @@ it('reads global history with exact references and no directory calls, raw metad
   expect(
     fetcher.mock.calls.every(
       ([url]) =>
-        url === '/api/v1/auth/session' || url.startsWith('/api/v1/audit-logs?'),
+        url === '/api/v1/auth/session' ||
+        url === '/api/v1/auth/preferences' ||
+        url.startsWith('/api/v1/audit-logs?'),
     ),
   ).toBe(true)
 })

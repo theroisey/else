@@ -69,6 +69,8 @@ function setup(
   const fetcher = vi.fn((url: string, init: RequestInit) => {
     const custom = override(url, init)
     if (custom) return Promise.resolve(custom)
+    if (url === '/api/v1/auth/preferences')
+      return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: identity }))
     if (init.method === 'GET') {
@@ -267,7 +269,10 @@ it('shows real history with view-only grants and no metadata or cost reads', asy
   ).not.toBeInTheDocument()
   expect(
     fetcher.mock.calls.every(
-      ([u]) => u.startsWith(base) || u === '/api/v1/auth/session',
+      ([u]) =>
+        u.startsWith(base) ||
+        u === '/api/v1/auth/session' ||
+        u === '/api/v1/auth/preferences',
     ),
   ).toBe(true)
 })

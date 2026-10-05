@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Button, Dialog, TextField } from '../../components/ui'
@@ -16,6 +17,7 @@ export function UserForm({
   onClose: () => void
   onSaved: () => void
 }) {
+  useLocale()
   const { run, read, pending, error, clearError } = useAdministration()
   const [email, setEmail] = useState(user?.email ?? '')
   const [name, setName] = useState(user?.display_name ?? '')
@@ -76,13 +78,23 @@ export function UserForm({
   return (
     <Dialog
       variant="drawer"
-      eyebrow="Account details"
+      eyebrow={copy('Account details', 'administration')}
       open
-      title={user ? 'Edit account' : 'Create account'}
+      title={
+        user
+          ? copy('Edit account', 'administration')
+          : copy('Create account', 'administration')
+      }
       description={
         user
-          ? 'Update this account’s profile. Its access and status are managed separately.'
-          : 'New accounts start without roles. Passwords are cleared after submission.'
+          ? copy(
+              'Update this account’s profile. Its access and status are managed separately.',
+              'administration',
+            )
+          : copy(
+              'New accounts start without roles. Passwords are cleared after submission.',
+              'administration',
+            )
       }
       onClose={() => {
         if (!busy) onClose()
@@ -97,50 +109,56 @@ export function UserForm({
         aria-busy={busy}
       >
         <TextField
-          label="Display name"
+          label={copy('Display name', 'administration')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
           maxLength={200}
-          error={errors.name ?? ''}
+          error={copy(errors.name, 'administration') ?? ''}
           disabled={busy}
         />
         <TextField
-          label="Email"
+          label={copy('Email', 'administration')}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
           maxLength={254}
-          error={errors.email ?? ''}
+          error={copy(errors.email, 'administration') ?? ''}
           disabled={busy}
         />
         {!user ? (
           <TextField
             ref={password}
-            label="Initial password"
+            label={copy('Initial password', 'administration')}
             type="password"
             autoComplete="new-password"
             required
-            description="12–128 bytes. Share through your approved secure channel."
-            error={errors.password ?? ''}
+            description={copy(
+              '12–128 bytes. Share through your approved secure channel.',
+              'administration',
+            )}
+            error={copy(errors.password, 'administration') ?? ''}
             disabled={busy}
           />
         ) : null}
         {error ? (
           <p className="text-danger-ink" role="alert">
-            {error}
+            {copy(error, 'administration')}
           </p>
         ) : null}
         {reloadError ? (
           <p className="text-danger-ink" role="alert">
-            {reloadError}
+            {copy(reloadError, 'administration')}
           </p>
         ) : null}
         {user && error ? (
           <div>
             <p className="mb-2 text-xs text-muted">
-              Reloading discards this draft and uses the account’s current profile.
+              {copy(
+                'Reloading discards this draft and uses the account’s current profile.',
+                'administration',
+              )}
             </p>
             <Button
               disabled={busy}
@@ -148,16 +166,23 @@ export function UserForm({
                 void reload()
               }}
             >
-              Reload current data
+              {copy('Reload current data', 'administration')}
             </Button>
           </div>
         ) : null}
         <div className="flex flex-wrap justify-end gap-2">
           <Button disabled={busy} onClick={onClose}>
-            Cancel
+            {copy('Cancel', 'administration')}
           </Button>
-          <Button type="submit" variant="primary" loading={busy} loadingLabel="Saving account">
-            {user ? 'Save account' : 'Create account'}
+          <Button
+            type="submit"
+            variant="primary"
+            loading={busy}
+            loadingLabel={copy('Saving account', 'administration')}
+          >
+            {user
+              ? copy('Save account', 'administration')
+              : copy('Create account', 'administration')}
           </Button>
         </div>
       </form>

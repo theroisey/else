@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { Button, Dialog, buttonStyles } from '../../components/ui'
@@ -18,6 +19,7 @@ export function TaskActions({
   onArchive: (task: Summary) => void
   onSuccess: (message: string) => void
 }) {
+  useLocale()
   const [next, setNext] = useState<TaskStatus | ''>('')
   if (task.archived_at || !operation.writable) return null
   const update = operation.permissions.update,
@@ -30,7 +32,7 @@ export function TaskActions({
           className={buttonStyles({ size: 'compact' })}
           to={`/app/clients/${task.client_id}/tasks/${task.id}/edit`}
         >
-          Edit task
+          {copy('Edit task', 'tasks')}
         </Link>
       ) : null}
       {update ? (
@@ -40,7 +42,9 @@ export function TaskActions({
             e.preventDefault()
             if (!next || busy) return
             void operation
-              .run(() => api.transition(task.client_id, task.id, next, task.revision))
+              .run(() =>
+                api.transition(task.client_id, task.id, next, task.revision),
+              )
               .then((result) => {
                 if (result) {
                   setNext('')
@@ -50,7 +54,9 @@ export function TaskActions({
           }}
         >
           <label className="sr-only" htmlFor={'status-' + task.id}>
-            Next status for {task.title}
+            {copy('Next status for {{value1}}', 'tasks', {
+              value1: task.title,
+            })}
           </label>
           <select
             id={'status-' + task.id}
@@ -60,11 +66,13 @@ export function TaskActions({
             onChange={(e) => setNext(e.target.value as TaskStatus | '')}
           >
             <option value="">
-              {['done', 'cancelled'].includes(task.status) ? 'Reopen as…' : 'Change to…'}
+              {['done', 'cancelled'].includes(task.status)
+                ? copy('Reopen as…', 'tasks')
+                : copy('Change to…', 'tasks')}
             </option>
             {transitions[task.status].map((s) => (
               <option key={s} value={s}>
-                {statusLabels[s]}
+                {copy(statusLabels[s], 'tasks')}
               </option>
             ))}
           </select>
@@ -72,9 +80,11 @@ export function TaskActions({
             size="compact"
             disabled={!next || busy}
             type="submit"
-            aria-label={`Change status of ${task.title}`}
+            aria-label={copy('Change status of {{value1}}', 'tasks', {
+              value1: task.title,
+            })}
           >
-            Apply status
+            {copy('Apply status', 'tasks')}
           </Button>
         </form>
       ) : null}
@@ -83,13 +93,15 @@ export function TaskActions({
           size="compact"
           variant="danger-ghost"
           disabled={busy}
-          aria-label={`Archive ${task.title}`}
+          aria-label={copy('Archive {{value1}}', 'tasks', {
+            value1: task.title,
+          })}
           onClick={() => {
             operation.clearError()
             onArchive(task)
           }}
         >
-          Archive
+          {copy('Archive', 'tasks')}
         </Button>
       ) : null}
     </div>
@@ -106,33 +118,40 @@ export function TaskArchive({
   onClose: () => void
   onSuccess: () => void
 }) {
+  useLocale()
   return (
     <Dialog
       open
-      title={`Archive ${task.title}?`}
-      description="The task, its status and its history will be retained. Further changes will be unavailable."
+      title={copy('Archive {{value1}}?', 'tasks', { value1: task.title })}
+      description={copy(
+        'The task, its status and its history will be retained. Further changes will be unavailable.',
+        'tasks',
+      )}
       onClose={() => {
         if (!operation.pending) onClose()
       }}
     >
-      {operation.error ? (
+      {copy(operation.error, 'tasks') ? (
         <div>
           <p role="alert" className="text-danger-ink">
-            {operation.error}
+            {copy(operation.error, 'tasks')}
           </p>
           <p className="mt-2 text-xs text-muted">
-            Cancel and refresh before reviewing another attempt.
+            {copy(
+              'Cancel and refresh before reviewing another attempt.',
+              'tasks',
+            )}
           </p>
         </div>
       ) : null}
       <div className="flex flex-wrap justify-end gap-2">
         <Button disabled={operation.pending} onClick={onClose}>
-          Cancel
+          {copy('Cancel', 'tasks')}
         </Button>
         <Button
           variant="danger"
           loading={operation.pending}
-          loadingLabel="Archiving task"
+          loadingLabel={copy('Archiving task', 'tasks')}
           disabled={!!operation.error}
           onClick={() => {
             void operation
@@ -142,7 +161,7 @@ export function TaskArchive({
               })
           }}
         >
-          Confirm archive
+          {copy('Confirm archive', 'tasks')}
         </Button>
       </div>
     </Dialog>

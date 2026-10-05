@@ -1,3 +1,5 @@
+import { formatCalendarDate } from '../../i18n/format'
+import { copy, useLocale } from '../../i18n/index'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { RefObject } from 'react'
@@ -23,6 +25,7 @@ interface Attempt {
 // Lives above routes: Back and other navigation cannot discard an unresolved command.
 // Identity/grant changes unmount the private command, just like the private query partition.
 export function PaymentRecoveryBoundary({ children }: { children: ReactNode }) {
+  useLocale()
   const auth = useAuth()
   const handler = useRef<((command: Command) => void) | null>(null)
   const [busy, setBusy] = useState(false)
@@ -50,6 +53,7 @@ function PaymentRecoveryController({
   handler: RefObject<((command: Command) => void) | null>
   onBusy: (busy: boolean) => void
 }) {
+  useLocale()
   const operation = useRecordOperations('billing'),
     navigate = useNavigate(),
     active = useRef(false),
@@ -97,7 +101,7 @@ function PaymentRecoveryController({
     setAttempt({
       command,
       state: 'sending',
-      message: 'Recording the original payment command…',
+      message: copy('Recording the original payment command…', 'billing'),
       uncertain: wasUncertain,
       cursor: '',
       checked: false,
@@ -120,8 +124,11 @@ function PaymentRecoveryController({
           command,
           state: 'confirmed',
           message: result.replayed
-            ? 'Previously recorded payment confirmed. No second payment was created.'
-            : 'Payment recorded.',
+            ? copy(
+                'Previously recorded payment confirmed. No second payment was created.',
+                'billing',
+              )
+            : copy('Payment recorded.', 'billing'),
           uncertain: false,
           cursor: '',
           checked: false,
@@ -137,10 +144,13 @@ function PaymentRecoveryController({
         command,
         state: uncertain ? 'uncertain' : 'rejected',
         message: uncertain
-          ? 'The payment outcome is unconfirmed. Keep this page open. Retry only this original command or check its recorded history before making another payment.'
+          ? copy(
+              'The payment outcome is unconfirmed. Keep this page open. Retry only this original command or check its recorded history before making another payment.',
+              'billing',
+            )
           : error instanceof APIError
             ? error.message
-            : 'Unable to record payment.',
+            : copy('Unable to record payment.', 'billing'),
         uncertain,
         cursor: '',
         checked: false,
@@ -177,8 +187,10 @@ function PaymentRecoveryController({
           setAttempt({
             ...attempt,
             state: 'confirmed',
-            message:
+            message: copy(
               'Previously recorded payment confirmed in history. No second payment was created.',
+              'billing',
+            ),
             uncertain: false,
           })
       } else
@@ -187,17 +199,28 @@ function PaymentRecoveryController({
           cursor: page.page.next_cursor ?? '',
           checked: true,
           message: found
-            ? 'This command conflicts with recorded history. Reconcile it with an authorized finance operator before recording another payment.'
+            ? copy(
+                'This command conflicts with recorded history. Reconcile it with an authorized finance operator before recording another payment.',
+                'billing',
+              )
             : page.page.next_cursor
-              ? 'Original command not found on this history page. Check the next page or retry the identical command.'
-              : 'Original command was not found in the checked history. Its outcome remains unconfirmed. Retry the identical command; if reconciliation remains blocked, contact an authorized finance operator. Do not create a replacement payment.',
+              ? copy(
+                  'Original command not found on this history page. Check the next page or retry the identical command.',
+                  'billing',
+                )
+              : copy(
+                  'Original command was not found in the checked history. Its outcome remains unconfirmed. Retry the identical command; if reconciliation remains blocked, contact an authorized finance operator. Do not create a replacement payment.',
+                  'billing',
+                ),
         })
     } catch {
       if (mounted.current)
         setAttempt({
           ...attempt,
-          message:
+          message: copy(
             'Unable to check payment history. The original command remains available for an identical retry.',
+            'billing',
+          ),
         })
     } finally {
       setChecking(false)
@@ -219,13 +242,13 @@ function PaymentRecoveryController({
           open
           title={
             attempt.state === 'confirmed'
-              ? 'Payment confirmed'
+              ? copy('Payment confirmed', 'billing')
               : attempt.state === 'rejected'
-                ? 'Payment not recorded'
-                : 'Confirming payment'
+                ? copy('Payment not recorded', 'billing')
+                : copy('Confirming payment', 'billing')
           }
-          eyebrow="Payment collection"
-          description={attempt.message}
+          eyebrow={copy('Payment collection', 'billing')}
+          description={copy(attempt.message, 'billing')}
           onClose={close}
         >
           <p className="mt-4 text-sm">
@@ -233,17 +256,18 @@ function PaymentRecoveryController({
               attempt.command.payment.amount_minor,
               attempt.command.payment.currency,
             )}{' '}
-            · {attempt.command.payment.paid_on}
+            · {formatCalendarDate(attempt.command.payment.paid_on)}
           </p>
           <p className="mt-2 text-xs text-muted">
-            References and notes are hidden. Financial drafts are kept only in
-            memory. Leaving or reloading discards this recovery command;
-            reconcile recorded history before any replacement payment.
+            {copy(
+              'References and notes are hidden. Financial drafts are kept only in memory. Leaving or reloading discards this recovery command; reconcile recorded history before any replacement payment.',
+              'billing',
+            )}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             {attempt.state === 'sending' ? (
               <p role="status" aria-busy="true">
-                Waiting for confirmation…
+                {copy('Waiting for confirmation…', 'billing')}
               </p>
             ) : attempt.state === 'uncertain' ? (
               <>
@@ -252,7 +276,7 @@ function PaymentRecoveryController({
                   disabled={checking}
                   onClick={() => void execute(attempt.command, true)}
                 >
-                  Retry original payment
+                  {copy('Retry original payment', 'billing')}
                 </Button>
                 <Button
                   disabled={checking}
@@ -260,15 +284,15 @@ function PaymentRecoveryController({
                   onClick={() => void checkHistory()}
                 >
                   {attempt.checked && attempt.cursor
-                    ? 'Check next history page'
-                    : 'Check recorded payments'}
+                    ? copy('Check next history page', 'billing')
+                    : copy('Check recorded payments', 'billing')}
                 </Button>
               </>
             ) : (
               <Button variant="primary" onClick={close}>
                 {attempt.state === 'confirmed'
-                  ? 'Return to collection'
-                  : 'Reload collection before retrying'}
+                  ? copy('Return to collection', 'billing')
+                  : copy('Reload collection before retrying', 'billing')}
               </Button>
             )}
           </div>

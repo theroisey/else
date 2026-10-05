@@ -1,5 +1,6 @@
 // Reminder wall clocks belong to an explicit zone, independent of the device zone.
-const wallPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,6}))?)?$/
+const wallPattern =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,6}))?)?$/
 const zonePattern = /^(UTC|[A-Za-z][A-Za-z0-9_+-]*(\/[A-Za-z0-9_+-]+)+)$/
 export function validZone(zone: string) {
   if (zone.length > 100 || !zonePattern.test(zone)) return false
@@ -12,24 +13,40 @@ export function validZone(zone: string) {
 }
 export function wallClock(value: string) {
   const match = wallPattern.exec(value)
-  if (!match) throw new Error('Enter a valid date and time, with up to six fractional digits.')
+  if (!match)
+    throw new Error(
+      'Enter a valid date and time, with up to six fractional digits.',
+    )
   const [, year, month, day, hour, minute, second = '00', fraction = ''] = match
   const d = new Date(0)
   d.setUTCFullYear(Number(year), Number(month) - 1, Number(day))
   d.setUTCHours(Number(hour), Number(minute), Number(second), 0)
   const base = `${year}-${month}-${day}T${hour}:${minute}:${second}`
-  if (Number(year) < 1 || Number(year) > 9999 || d.toISOString().slice(0, 19) !== base)
+  if (
+    Number(year) < 1 ||
+    Number(year) > 9999 ||
+    d.toISOString().slice(0, 19) !== base
+  )
     throw new Error('Enter a valid calendar date and time.')
   const tail = fraction.replace(/0+$/, '')
-  return { local: base + (tail ? '.' + tail : ''), seconds: d.getTime(), fraction: tail }
+  return {
+    local: base + (tail ? '.' + tail : ''),
+    seconds: d.getTime(),
+    fraction: tail,
+  }
 }
 export function utcFromWall(local: string, offset: number) {
-  if (!Number.isInteger(offset) || Math.abs(offset) >= 86400) throw new Error('Invalid offset.')
+  if (!Number.isInteger(offset) || Math.abs(offset) >= 86400)
+    throw new Error('Invalid offset.')
   const wall = wallClock(local),
     d = new Date(wall.seconds - offset * 1000)
   if (d.getUTCFullYear() < 1 || d.getUTCFullYear() > 9999)
     throw new Error('UTC year must be 0001–9999.')
-  return d.toISOString().slice(0, 19) + (wall.fraction ? '.' + wall.fraction : '') + 'Z'
+  return (
+    d.toISOString().slice(0, 19) +
+    (wall.fraction ? '.' + wall.fraction : '') +
+    'Z'
+  )
 }
 export interface Occurrence {
   offset: number
@@ -38,7 +55,9 @@ export interface Occurrence {
 export function occurrences(local: string, zone: string): Occurrence[] {
   const wall = wallClock(local)
   if (!validZone(zone))
-    throw new Error('Enter a named IANA timezone, such as Europe/Istanbul or UTC.')
+    throw new Error(
+      'Enter a named IANA timezone, such as Europe/Istanbul or UTC.',
+    )
   const format = new Intl.DateTimeFormat('en-GB', {
     timeZone: zone,
     calendar: 'iso8601',
@@ -52,7 +71,9 @@ export function occurrences(local: string, zone: string): Occurrence[] {
     second: '2-digit',
   })
   function zoned(ms: number) {
-    const parts = Object.fromEntries(format.formatToParts(ms).map((p) => [p.type, p.value]))
+    const parts = Object.fromEntries(
+      format.formatToParts(ms).map((p) => [p.type, p.value]),
+    )
     return `${parts.year!.padStart(4, '0')}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}`
   }
   const offsets = new Set<number>()

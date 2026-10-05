@@ -1,3 +1,6 @@
+import { statusLabel } from '../../i18n/labels'
+import { formatCalendarDate, formatDecimal } from '../../i18n/format'
+import { copy, useLocale } from '../../i18n/index'
 import { ClientNavigation } from '../clients/ClientNavigation'
 import type { ReactNode } from 'react'
 import { Button } from '../../components/ui'
@@ -16,15 +19,16 @@ export function PricingError({
   error: unknown
   retry: () => void
 }) {
+  useLocale()
   return (
     <div className="my-4 rounded-md border border-danger-line bg-danger-surface p-4">
       <p role="alert">
         {error instanceof APIError
-          ? error.message
-          : 'Unable to load pricing. Try again.'}
+          ? copy(error.message, 'pricing')
+          : copy('Unable to load pricing. Try again.', 'pricing')}
       </p>
       <Button className="mt-3" onClick={retry}>
-        Try again
+        {copy('Try again', 'pricing')}
       </Button>
     </div>
   )
@@ -38,6 +42,7 @@ export function PricingHeader({
   operation: Operation
   children?: ReactNode
 }) {
+  useLocale()
   const { clientID, permissions, client } = operation,
     context =
       permissions.clientView && !client.isError ? client.data : undefined
@@ -46,14 +51,16 @@ export function PricingHeader({
       <header className="page-header">
         <div className="min-w-0">
           <p className="eyebrow">
-            {context?.name ?? 'Client workspace'} · Pricing
+            {copy('{{value1}} · Pricing', 'pricing', {
+              value1: context?.name ?? copy('Client workspace', 'common'),
+            })}
           </p>
-          <h1 className="page-title">
-            {title}
-          </h1>
+          <h1 className="page-title">{title}</h1>
           <p className="mt-2 text-xs text-muted">
-            Exact line totals · Retained agreements · Dates use the UTC
-            calendar.
+            {copy(
+              'Exact line totals · Retained agreements · Dates use the UTC calendar.',
+              'pricing',
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">{children}</div>
@@ -61,8 +68,10 @@ export function PricingHeader({
       <ClientNavigation clientID={clientID} />
       {context?.status === 'archived' ? (
         <p role="status" className="mb-4">
-          This client is archived. Pricing history is retained; new changes are
-          unavailable.
+          {copy(
+            'This client is archived. Pricing history is retained; new changes are unavailable.',
+            'pricing',
+          )}
         </p>
       ) : null}
       {permissions.clientView && client.isError ? (
@@ -75,22 +84,36 @@ export function PricingHeader({
   )
 }
 export function Window({ version: v }: { version: Version }) {
+  useLocale()
   const state =
     v.window_until === v.effective_from
-      ? 'Superseded on its start date'
+      ? copy('Superseded on its start date', 'pricing')
       : effective(v, utcToday())
-        ? 'Effective today'
+        ? copy('Effective today', 'pricing')
         : v.effective_from > utcToday()
-          ? 'Future version'
-          : 'Historical version'
+          ? copy('Future version', 'pricing')
+          : copy('Historical version', 'pricing')
   return (
     <div className="text-xs leading-6 text-muted">
       <p>
-        {state} · Starts {v.effective_from}
+        {copy('{{value1}} · Starts {{value2}}', 'pricing', {
+          value1: state,
+          value2: formatCalendarDate(v.effective_from),
+        })}
       </p>
       <p>
-        Original end: {v.effective_until ?? 'Open ended'} · Effective window
-        ends: {v.window_until ?? 'Open ended'} (exclusive)
+        {copy(
+          'Original end: {{value1}} · Effective window ends: {{value2}} (exclusive)',
+          'pricing',
+          {
+            value1: v.effective_until
+              ? formatCalendarDate(v.effective_until)
+              : copy('Open ended', 'pricing'),
+            value2: v.window_until
+              ? formatCalendarDate(v.window_until)
+              : copy('Open ended', 'pricing'),
+          },
+        )}
       </p>
     </div>
   )
@@ -102,12 +125,15 @@ export function Terms({
   calculation: Calculation
   manage?: boolean
 }) {
+  useLocale()
   return (
     <section className="mt-4 form-section">
-      <h2 className="font-semibold">Pricing breakdown</h2>
+      <h2 className="font-semibold">{copy('Pricing breakdown', 'pricing')}</h2>
       <p className="mt-1 text-xs text-muted">
-        Discount precedes tax. Each line is rounded separately, then summed.
-        Frequency describes the agreement; it does not schedule invoices.
+        {copy(
+          'Discount precedes tax. Each line is rounded separately, then summed. Frequency describes the agreement; it does not schedule invoices.',
+          'pricing',
+        )}
       </p>
       <ol className="mt-4 grid gap-3">
         {c.lines.map((l) => (
@@ -119,9 +145,16 @@ export function Terms({
               {l.position}. {l.description}
             </h3>
             <p className="mt-1 text-xs text-muted">
-              {l.kind.replace('_', ' ')} · {l.frequency} · Quantity{' '}
-              {unscaled(l.quantity_micros, 6)} ×{' '}
-              {money(l.unit_price_minor, c.currency)}
+              {copy(
+                '{{kind}} · {{frequency}} · Quantity {{quantity}} × {{price}}',
+                'pricing',
+                {
+                  kind: statusLabel(l.kind),
+                  frequency: statusLabel(l.frequency),
+                  quantity: formatDecimal(unscaled(l.quantity_micros, 6)),
+                  price: money(l.unit_price_minor, c.currency),
+                },
+              )}
             </p>
             <dl className="mt-3 grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
               {(
@@ -137,11 +170,15 @@ export function Terms({
                   <dt className="text-xs text-muted">
                     {
                       [
-                        'Base',
-                        `Discount (${unscaled(l.discount_bps, 2)}%)`,
-                        'Net',
-                        `Tax (${unscaled(l.tax_bps, 2)}%)`,
-                        'Line total',
+                        copy('Base', 'pricing'),
+                        copy('Discount ({{value1}}%)', 'pricing', {
+                          value1: formatDecimal(unscaled(l.discount_bps, 2)),
+                        }),
+                        copy('Net', 'pricing'),
+                        copy('Tax ({{value1}}%)', 'pricing', {
+                          value1: formatDecimal(unscaled(l.tax_bps, 2)),
+                        }),
+                        copy('Line total', 'pricing'),
                       ][i]
                     }
                   </dt>
@@ -153,14 +190,23 @@ export function Terms({
             </dl>
             {manage ? (
               <p className="mt-3 text-xs text-muted">
-                Internal unit cost:{' '}
-                {l.unit_cost_minor === undefined
-                  ? 'Unknown'
-                  : money(l.unit_cost_minor, c.currency)}{' '}
-                · Line cost:{' '}
-                {l.cost_minor === undefined
-                  ? 'Unknown'
-                  : money(l.cost_minor, c.currency)}
+                {copy(
+                  'Internal unit cost:{{value1}} {{value2}}{{value3}} · Line cost:{{value4}} {{value5}}',
+                  'pricing',
+                  {
+                    value1: ' ',
+                    value2:
+                      l.unit_cost_minor === undefined
+                        ? copy('Unknown', 'pricing')
+                        : money(l.unit_cost_minor, c.currency),
+                    value3: ' ',
+                    value4: ' ',
+                    value5:
+                      l.cost_minor === undefined
+                        ? copy('Unknown', 'pricing')
+                        : money(l.cost_minor, c.currency),
+                  },
+                )}
               </p>
             ) : null}
           </li>
@@ -180,11 +226,11 @@ export function Terms({
             <dt className="text-xs text-muted">
               {
                 [
-                  'Total base',
-                  'Total discount',
-                  'Total net',
-                  'Total tax',
-                  'Agreement total',
+                  copy('Total base', 'pricing'),
+                  copy('Total discount', 'pricing'),
+                  copy('Total net', 'pricing'),
+                  copy('Total tax', 'pricing'),
+                  copy('Agreement total', 'pricing'),
                 ][i]
               }
             </dt>
@@ -196,10 +242,16 @@ export function Terms({
       </dl>
       {manage ? (
         <p className="mt-4 text-sm">
-          Internal aggregate cost:{' '}
-          {c.cost_minor === undefined
-            ? 'Unknown — one or more line costs are unspecified.'
-            : money(c.cost_minor, c.currency)}
+          {copy('Internal aggregate cost:{{value1}} {{value2}}', 'pricing', {
+            value1: ' ',
+            value2:
+              c.cost_minor === undefined
+                ? copy(
+                    'Unknown — one or more line costs are unspecified.',
+                    'pricing',
+                  )
+                : money(c.cost_minor, c.currency),
+          })}
         </p>
       ) : null}
     </section>

@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useForm, useWatch } from 'react-hook-form'
@@ -38,6 +39,7 @@ export function ReminderForm({
   operation: Operation
   checking?: boolean
 }) {
+  useLocale()
   const navigate = useNavigate(),
     actor = operation.auth.session!.user.id
   const [baseline, setBaseline] = useState(record),
@@ -76,7 +78,10 @@ export function ReminderForm({
         'This local time does not exist in the selected timezone, or falls outside the supported year bounds.'
   } catch (error) {
     if (date && time && !unchanged)
-      scheduleError = error instanceof Error ? error.message : 'Check the schedule.'
+      scheduleError =
+        error instanceof Error
+          ? error.message
+          : copy('Check the schedule.', 'reminders')
   }
   const offset =
     selection.signature === signature && selection.offset !== ''
@@ -86,7 +91,8 @@ export function ReminderForm({
         : choices.length === 1
           ? choices[0]!.offset
           : undefined
-  const preview = offset === undefined || scheduleError ? '' : utcFromWall(local, offset)
+  const preview =
+    offset === undefined || scheduleError ? '' : utcFromWall(local, offset)
   const busy = operation.pending || reloading,
     blocked = unavailable || (record && record.status !== 'pending'),
     disabled = busy || checking || !operation.writable || !!blocked
@@ -95,21 +101,28 @@ export function ReminderForm({
     clearErrors()
     if (
       draft.resource &&
-      JSON.stringify(draft.resource) !== JSON.stringify(baseline?.resource ?? null) &&
+      JSON.stringify(draft.resource) !==
+        JSON.stringify(baseline?.resource ?? null) &&
       !(draft.resource.kind === 'task'
         ? operation.permissions.taskView
         : operation.permissions.planningView)
     ) {
       setError('resource', {
-        message:
+        message: copy(
           'Clear the new reference or restore the recorded reference before saving without independent resource access.',
+          'reminders',
+        ),
       })
       return
     }
     if (scheduleError || offset === undefined || !preview) {
       setError(
         'time',
-        { message: scheduleError || 'Choose the intended occurrence of this repeated local time.' },
+        {
+          message:
+            scheduleError ||
+            'Choose the intended occurrence of this repeated local time.',
+        },
         { shouldFocus: true },
       )
       return
@@ -126,7 +139,9 @@ export function ReminderForm({
     if (!parsed.success) {
       for (const issue of parsed.error.issues)
         setError(
-          (issue.path[0] === 'scheduled_local' ? 'time' : issue.path[0]) as FieldPath<Draft>,
+          (issue.path[0] === 'scheduled_local'
+            ? 'time'
+            : issue.path[0]) as FieldPath<Draft>,
           { message: issue.message },
           { shouldFocus: true },
         )
@@ -148,8 +163,13 @@ export function ReminderForm({
     setReloading(true)
     setReloadError('')
     try {
-      const current = await operation.read(() => api.detail(operation.clientID, record.id))
-      operation.cache.setQueryData([...operation.key, 'detail', record.id], current)
+      const current = await operation.read(() =>
+        api.detail(operation.clientID, record.id),
+      )
+      operation.cache.setQueryData(
+        [...operation.key, 'detail', record.id],
+        current,
+      )
       if (current.status !== 'pending') {
         setUnavailable(true)
         return
@@ -176,24 +196,30 @@ export function ReminderForm({
       }}
     >
       {blocked ? (
-        <p role="status">This reminder is terminal and read only.</p>
+        <p role="status">
+          {copy('This reminder is terminal and read only.', 'reminders')}
+        </p>
       ) : !operation.writable ? (
-        <p role="status">Changes are unavailable while the client is archived or being checked.</p>
+        <p role="status">
+          {copy(
+            'Changes are unavailable while the client is archived or being checked.',
+            'reminders',
+          )}
+        </p>
       ) : null}
-      <fieldset
-        disabled={disabled}
-        className="grid min-w-0 gap-4 form-section"
-      >
-        <legend className="px-1 font-semibold">Reminder details</legend>
+      <fieldset disabled={disabled} className="grid min-w-0 gap-4 form-section">
+        <legend className="px-1 font-semibold">
+          {copy('Reminder details', 'reminders')}
+        </legend>
         <TextField
-          label="Reminder title"
+          label={copy('Reminder title', 'reminders')}
           required
           maxLength={400}
           {...register('title')}
-          error={errors.title?.message ?? ''}
+          error={copy(errors.title?.message, 'reminders') ?? ''}
         />
         <label className="grid gap-1.5 font-semibold">
-          Description
+          {copy('Description', 'reminders')}{' '}
           <textarea
             className="ui-input min-h-32 font-normal"
             maxLength={16000}
@@ -203,11 +229,14 @@ export function ReminderForm({
           />
         </label>
         <p id="reminder-description-help" className="text-xs text-muted">
-          Plain text, up to 8,000 characters. Line breaks are supported.
+          {copy(
+            'Plain text, up to 8,000 characters. Line breaks are supported.',
+            'reminders',
+          )}
         </p>
         {errors.description ? (
           <p role="alert" className="text-xs text-danger-ink">
-            {errors.description.message}
+            {copy(errors.description.message, 'reminders')}
           </p>
         ) : null}
         <OwnerPicker
@@ -215,46 +244,62 @@ export function ReminderForm({
           value={owner}
           onChange={(v) => setValue('owner_id', v)}
           disabled={disabled}
-          error={errors.owner_id?.message ?? ''}
+          error={copy(errors.owner_id?.message, 'reminders') ?? ''}
         />
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField
-            label="Scheduled date"
+            label={copy('Scheduled date', 'reminders')}
             type="date"
             required
-            {...register('date', { onChange: () => setSelection({ signature: '', offset: '' }) })}
-            error={errors.date?.message ?? ''}
+            {...register('date', {
+              onChange: () => setSelection({ signature: '', offset: '' }),
+            })}
+            error={copy(errors.date?.message, 'reminders') ?? ''}
           />
           <TextField
-            label="Local time"
-            placeholder="09:00:00"
+            label={copy('Local time', 'reminders')}
+            placeholder={'09:00:00'}
             required
-            {...register('time', { onChange: () => setSelection({ signature: '', offset: '' }) })}
-            error={errors.time?.message ?? ''}
+            {...register('time', {
+              onChange: () => setSelection({ signature: '', offset: '' }),
+            })}
+            error={copy(errors.time?.message, 'reminders') ?? ''}
           />
         </div>
         <p className="text-xs text-muted">
-          Time: HH:mm:ss, with up to six fractional digits. Past times are due immediately.
+          {copy(
+            'Time: HH:mm:ss, with up to six fractional digits. Past times are due immediately.',
+            'reminders',
+          )}
         </p>
         <TextField
-          label="Timezone"
+          label={copy('Timezone', 'reminders')}
           required
-          {...register('timezone', { onChange: () => setSelection({ signature: '', offset: '' }) })}
-          error={errors.timezone?.message ?? ''}
+          {...register('timezone', {
+            onChange: () => setSelection({ signature: '', offset: '' }),
+          })}
+          error={copy(errors.timezone?.message, 'reminders') ?? ''}
         />
         <p className="text-xs text-muted">
-          Use a named IANA timezone, such as Europe/Istanbul, America/New_York or UTC. Changing the
-          timezone keeps the typed local time; review the new UTC instant.
+          {copy(
+            'Use a named IANA timezone, such as Europe/Istanbul, America/New_York or UTC. Changing the timezone keeps the typed local time; review the new UTC instant.',
+            'reminders',
+          )}
         </p>
         {scheduleError ? (
           <p role="status" className="text-danger-ink">
-            {scheduleError}
+            {copy(scheduleError, 'reminders')}
           </p>
         ) : choices.length > 1 ? (
           <fieldset className="grid gap-2 rounded-md border border-line p-3">
-            <legend className="px-1 font-semibold">Repeated local time</legend>
+            <legend className="px-1 font-semibold">
+              {copy('Repeated local time', 'reminders')}
+            </legend>
             <p className="text-xs text-muted">
-              Choose the intended occurrence. Both represent the same wall clock.
+              {copy(
+                'Choose the intended occurrence. Both represent the same wall clock.',
+                'reminders',
+              )}
             </p>
             {choices.map((c, i) => (
               <label key={c.utc} className="flex items-start gap-2 text-sm">
@@ -269,7 +314,15 @@ export function ReminderForm({
                   }}
                 />
                 <span>
-                  {i === 0 ? 'Earlier' : 'Later'} occurrence · {offsetLabel(c.offset)} · {c.utc}
+                  {copy(
+                    '{{value1}} occurrence · {{value2}} · {{value3}}',
+                    'reminders',
+                    {
+                      value1: copy(i === 0 ? 'Earlier' : 'Later', 'reminders'),
+                      value2: offsetLabel(c.offset),
+                      value3: c.utc,
+                    },
+                  )}
                 </span>
               </label>
             ))}
@@ -277,22 +330,25 @@ export function ReminderForm({
         ) : null}
         {preview ? (
           <p className="break-all text-sm" role="status">
-            Scheduled UTC instant: <time dateTime={preview}>{preview}</time> ·{' '}
-            {offsetLabel(offset!)}
+            {copy('Scheduled UTC instant:', 'reminders')}{' '}
+            <time dateTime={preview}>{preview}</time> · {offsetLabel(offset!)}
           </p>
         ) : null}
         {unchanged && offset === baseline?.utc_offset_seconds ? (
           <p className="text-xs text-muted">
-            The recorded wall clock and selected offset are retained. The server checks current
-            rules when saving metadata.
+            {copy(
+              'The recorded wall clock and selected offset are retained. The server checks current rules when saving metadata.',
+              'reminders',
+            )}
           </p>
         ) : null}
         {errors.resource ? (
           <p role="alert" className="text-xs text-danger-ink">
-            {errors.resource.message}
+            {copy(errors.resource.message, 'reminders')}
           </p>
         ) : null}
-        {baseline?.resource && JSON.stringify(resource) !== JSON.stringify(baseline.resource) ? (
+        {baseline?.resource &&
+        JSON.stringify(resource) !== JSON.stringify(baseline.resource) ? (
           <Button
             size="compact"
             disabled={disabled}
@@ -301,7 +357,7 @@ export function ReminderForm({
               setValue('resource', baseline.resource)
             }}
           >
-            Restore recorded reference
+            {copy('Restore recorded reference', 'reminders')}
           </Button>
         ) : null}
         <ResourcePicker
@@ -314,13 +370,16 @@ export function ReminderForm({
           disabled={disabled}
         />
       </fieldset>
-      {operation.error ? (
+      {copy(operation.error, 'reminders') ? (
         <div className="rounded-md border border-danger-line bg-danger-surface p-4">
-          <p role="alert">{operation.error}</p>
+          <p role="alert">{copy(operation.error, 'reminders')}</p>
           {record && operation.errorCode === 'conflict' ? (
             <>
               <p className="mt-2 text-xs text-muted">
-                Your draft is preserved. Reloading discards it and uses the current record.
+                {copy(
+                  'Your draft is preserved. Reloading discards it and uses the current record.',
+                  'reminders',
+                )}
               </p>
               <Button
                 className="mt-3"
@@ -329,7 +388,7 @@ export function ReminderForm({
                   void reload()
                 }}
               >
-                Reload current data
+                {copy('Reload current data', 'reminders')}
               </Button>
             </>
           ) : null}
@@ -337,7 +396,7 @@ export function ReminderForm({
       ) : null}
       {reloadError ? (
         <p role="alert" className="text-danger-ink">
-          {reloadError}
+          {copy(reloadError, 'reminders')}
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
@@ -345,13 +404,18 @@ export function ReminderForm({
           type="submit"
           variant="primary"
           loading={busy}
-          loadingLabel="Saving reminder"
+          loadingLabel={copy('Saving reminder', 'reminders')}
           disabled={disabled || operation.errorCode === 'conflict'}
         >
-          {record ? 'Save reminder' : 'Create reminder'}
+          {record
+            ? copy('Save reminder', 'reminders')
+            : copy('Create reminder', 'reminders')}
         </Button>
-        <Link className={buttonStyles()} to={pagePath(operation.clientID, record?.id)}>
-          Cancel
+        <Link
+          className={buttonStyles()}
+          to={pagePath(operation.clientID, record?.id)}
+        >
+          {copy('Cancel', 'reminders')}
         </Link>
       </div>
     </form>

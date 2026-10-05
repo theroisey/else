@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -16,15 +17,31 @@ import {
 import { PlanningActions, PlanningArchive } from './PlanningActions'
 import { TaskLinks } from './TaskLinks'
 import * as api from './service'
-export function PlanningDetailPage({ milestone = false }: { milestone?: boolean }) {
+export function PlanningDetailPage({
+  milestone = false,
+}: {
+  milestone?: boolean
+}) {
+  useLocale()
   const { id = '', planID = '', milestoneID = '' } = useParams()
   const scope: Scope = { clientID: id, ...(milestone ? { planID } : {}) },
     recordID = milestone ? milestoneID : planID
   return (
-    <PlanningDetail key={id + ':' + planID + ':' + milestoneID} scope={scope} recordID={recordID} />
+    <PlanningDetail
+      key={id + ':' + planID + ':' + milestoneID}
+      scope={scope}
+      recordID={recordID}
+    />
   )
 }
-function PlanningDetail({ scope, recordID }: { scope: Scope; recordID: string }) {
+function PlanningDetail({
+  scope,
+  recordID,
+}: {
+  scope: Scope
+  recordID: string
+}) {
+  useLocale()
   const operation = usePlanning(scope),
     location = useLocation()
   const [confirm, setConfirm] = useState<Summary | null>(null),
@@ -32,16 +49,21 @@ function PlanningDetail({ scope, recordID }: { scope: Scope; recordID: string })
     [linksEditing, setLinksEditing] = useState(false)
   const query = useQuery({
     queryKey: [...operation.key, ...recordKey(scope, recordID)],
-    queryFn: ({ signal }) => operation.read(() => api.detail(scope, recordID, signal)),
+    queryFn: ({ signal }) =>
+      operation.read(() => api.detail(scope, recordID, signal)),
     enabled: operation.permissions.view,
     placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey[1] === operation.auth.session?.user.id ? previous : undefined,
+      previousQuery?.queryKey[1] === operation.auth.session?.user.id
+        ? previous
+        : undefined,
   })
   if (!operation.permissions.view) return <AccessDenied />
   if (query.isPending)
     return (
       <p role="status" aria-busy="true">
-        Loading {scope.planID ? 'milestone' : 'plan'}…
+        {copy('Loading {{value1}}…', 'planning', {
+          value1: copy(scope.planID ? 'milestone' : 'plan', 'planning'),
+        })}
       </p>
     )
   if (query.isError && !query.data)
@@ -63,22 +85,29 @@ function PlanningDetail({ scope, recordID }: { scope: Scope; recordID: string })
   return (
     <section>
       <PlanningHeader title={record.title} operation={operation}>
-        <Button disabled={query.isFetching || operation.pending} onClick={refresh}>
-          Refresh {scope.planID ? 'milestone' : 'plan'}
+        <Button
+          disabled={query.isFetching || operation.pending}
+          onClick={refresh}
+        >
+          {copy('Refresh {{value1}}', 'planning', {
+            value1: copy(scope.planID ? 'milestone' : 'plan', 'planning'),
+          })}
         </Button>
         {!scope.planID ? (
           <Link
             className={buttonStyles({ variant: 'primary' })}
             to={pagePath({ clientID: scope.clientID, planID: record.id })}
           >
-            Open milestones
+            {copy('Open milestones', 'planning')}
           </Link>
         ) : null}
       </PlanningHeader>
       {notice || location.state?.planningSaved ? (
         <p role="status" className="mb-4">
           {notice ||
-            (location.state.planningSaved === 'created' ? 'Record created.' : 'Record updated.')}
+            (location.state.planningSaved === 'created'
+              ? copy('Record created.', 'planning')
+              : copy('Record updated.', 'planning'))}
         </p>
       ) : null}
       {!confirm && !linksEditing ? (
@@ -97,26 +126,37 @@ function PlanningDetail({ scope, recordID }: { scope: Scope; recordID: string })
       </div>
       {record.archived_at ? (
         <p role="status" className="mb-4">
-          This {scope.planID ? 'milestone' : 'plan'} is archived. Its details and linked history are
-          retained.
+          {copy(
+            'This {{value1}} is archived. Its details and linked history are retained.',
+            'planning',
+            { value1: copy(scope.planID ? 'milestone' : 'plan', 'planning') },
+          )}
         </p>
       ) : null}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <section className="workspace-section">
-          <h2 className="font-semibold">Description</h2>
+          <h2 className="font-semibold">{copy('Description', 'planning')}</h2>
           <p className="mt-3 whitespace-pre-wrap break-words leading-6">
-            {record.description || 'No description provided.'}
+            {record.description || copy('No description provided.', 'planning')}
           </p>
           <dl className="mt-5 grid gap-4 sm:grid-cols-2">
             {(!scope.planID
               ? [
-                  ['Start', record.start_at],
-                  ['Due', record.due_at],
+                  [copy('Start', 'planning'), record.start_at],
+                  [copy('Due', 'planning'), record.due_at],
                 ]
-              : [['Due', record.due_at]]
+              : [[copy('Due', 'planning'), record.due_at]]
             )
-              .concat(record.completed_at ? [['Completed', record.completed_at]] : [])
-              .concat(record.cancelled_at ? [['Cancelled', record.cancelled_at]] : [])
+              .concat(
+                record.completed_at
+                  ? [[copy('Completed', 'planning'), record.completed_at]]
+                  : [],
+              )
+              .concat(
+                record.cancelled_at
+                  ? [[copy('Cancelled', 'planning'), record.cancelled_at]]
+                  : [],
+              )
               .map(([label, value]) => (
                 <div key={label}>
                   <dt className="text-xs text-muted">{label}</dt>
@@ -128,19 +168,26 @@ function PlanningDetail({ scope, recordID }: { scope: Scope; recordID: string })
           </dl>
           {!scope.planID ? (
             <p className="mt-5 text-xs text-muted">
-              Plan completion is a manual decision, independent of milestones and linked tasks.
+              {copy(
+                'Plan completion is a manual decision, independent of milestones and linked tasks.',
+                'planning',
+              )}
             </p>
           ) : null}
         </section>
         <aside className="context-rail">
-          <h2 className="font-semibold">Record context</h2>
+          <h2 className="font-semibold">
+            {copy('Record context', 'planning')}
+          </h2>
           <dl className="mt-4 grid gap-4">
             {[
-              ['Record ID', record.id],
-              ['Client ID', scope.clientID],
+              [copy('Record ID', 'planning'), record.id],
+              [copy('Client ID', 'planning'), scope.clientID],
               [
-                'Creator',
-                record.created_by === operation.auth.session?.user.id ? 'Me' : record.created_by,
+                copy('Creator', 'planning'),
+                record.created_by === operation.auth.session?.user.id
+                  ? copy('Me', 'planning')
+                  : record.created_by,
               ],
             ].map(([label, value]) => (
               <div key={label}>
@@ -149,7 +196,9 @@ function PlanningDetail({ scope, recordID }: { scope: Scope; recordID: string })
               </div>
             ))}
             <div>
-              <dt className="text-xs text-muted">Updated</dt>
+              <dt className="text-xs text-muted">
+                {copy('Updated', 'planning')}
+              </dt>
               <dd className="mt-1 text-xs">
                 <PlanningTime value={record.updated_at} />
               </dd>

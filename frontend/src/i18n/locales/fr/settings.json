@@ -1,0 +1,15 @@
+{
+  "Appearance": "Apparence",
+  "Choose the light or dark workspace, or follow your device. Your preference is saved in this browser.": "Choisissez un espace clair ou sombre, ou suivez les réglages de votre appareil. Votre préférence est enregistrée dans ce navigateur.",
+  "Choose your interface language. Your account preference follows you across devices. Financial currencies and your own content remain unchanged.": "Choisissez la langue de l’interface. La préférence de votre compte vous suit sur tous vos appareils. Les devises et votre contenu restent inchangés.",
+  "Dark": "Sombre",
+  "Following your device · {{value1}} theme": "Selon l’appareil · thème {{value1}}",
+  "Language": "Langue",
+  "Light": "Clair",
+  "Personal preferences": "Préférences personnelles",
+  "System": "Système",
+  "The language preference could not be saved to your account. Your browser selection is retained.": "La préférence de langue n’a pas pu être enregistrée dans votre compte. Votre choix dans le navigateur est conservé.",
+  "Workspace appearance": "Apparence de l’espace de travail",
+  "{{value1}} theme selected": "Thème {{value1}} sélectionné",
+  "Unable to load this language. Try again.": "Impossible de charger cette langue. Réessayez."
+}

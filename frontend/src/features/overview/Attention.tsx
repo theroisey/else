@@ -1,3 +1,5 @@
+import { statusLabel } from '../../i18n/labels'
+import { copy, useLocale } from '../../i18n/index'
 import { Link } from 'react-router'
 import { formatTime } from '../../lib/time'
 import { statusLabels } from '../tasks/models'
@@ -14,6 +16,7 @@ export function TaskQueue({
   client: string
   empty: string
 }) {
+  useLocale()
   return (
     <div className="mt-5">
       <h3 className="text-sm font-semibold">{heading}</h3>
@@ -31,7 +34,10 @@ export function TaskQueue({
                 {row.title}
               </Link>
               <p className="mt-1 text-xs leading-5 text-muted">
-                {statusLabels[row.status]} · {row.priority} priority · Due{' '}
+                {copy(statusLabels[row.status], 'overview')} ·{' '}
+                {copy('Priority: {{priority}} · Due', 'overview', {
+                  priority: statusLabel(row.priority),
+                })}{' '}
                 <time dateTime={row.due_at}>{formatTime(row.due_at)}</time>
               </p>
             </li>
@@ -45,7 +51,9 @@ export function TaskQueue({
           className="mt-3 inline-block text-xs underline underline-offset-4"
           to={`/app/clients/${client}/tasks`}
         >
-          More {heading.toLowerCase()} available · Open tasks
+          {copy('More {{value1}} available · Open tasks', 'overview', {
+            value1: heading.toLowerCase(),
+          })}
         </Link>
       ) : null}
     </div>
@@ -62,6 +70,7 @@ export function ReminderQueue({
   client: string
   empty: string
 }) {
+  useLocale()
   return (
     <div className="mt-5">
       <h3 className="text-sm font-semibold">{heading}</h3>
@@ -95,7 +104,9 @@ export function ReminderQueue({
           className="mt-3 inline-block text-xs underline underline-offset-4"
           to={`/app/clients/${client}/reminders`}
         >
-          More {heading.toLowerCase()} available · Open reminders
+          {copy('More {{value1}} available · Open reminders', 'overview', {
+            value1: heading.toLowerCase(),
+          })}
         </Link>
       ) : null}
     </div>

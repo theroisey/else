@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -5,7 +6,13 @@ import { faRotateRight } from '@fortawesome/free-solid-svg-icons'
 import { Button, Table, TextField, buttonStyles } from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { usePlanning } from './hooks'
-import { defaultFilter, labels, planStates, milestoneStates, pagePath } from './models'
+import {
+  defaultFilter,
+  labels,
+  planStates,
+  milestoneStates,
+  pagePath,
+} from './models'
 import type { Filter, Scope, Summary } from './models'
 import {
   PlanningHeader,
@@ -17,12 +24,18 @@ import {
 } from './Shared'
 import { PlanningActions, PlanningArchive } from './PlanningActions'
 import * as api from './service'
-export function PlanningListPage({ milestone = false }: { milestone?: boolean }) {
+export function PlanningListPage({
+  milestone = false,
+}: {
+  milestone?: boolean
+}) {
+  useLocale()
   const { id = '', planID = '' } = useParams()
   const scope: Scope = { clientID: id, ...(milestone ? { planID } : {}) }
   return <PlanningList key={id + ':' + scope.planID} scope={scope} />
 }
 function PlanningList({ scope }: { scope: Scope }) {
+  useLocale()
   const operation = usePlanning(scope)
   const [draft, setDraft] = useState<Filter>(defaultFilter),
     [filter, setFilter] = useState<Filter>(defaultFilter),
@@ -30,10 +43,13 @@ function PlanningList({ scope }: { scope: Scope }) {
     [confirm, setConfirm] = useState<Summary | null>(null),
     [notice, setNotice] = useState('')
   const cursor = history.at(-1) ?? '',
-    name = scope.planID ? 'Milestones' : 'Plans'
+    name = scope.planID
+      ? copy('Milestones', 'planning')
+      : copy('Plans', 'planning')
   const query = useQuery({
     queryKey: [...operation.key, 'list', scope.planID ?? '', filter, cursor],
-    queryFn: ({ signal }) => operation.read(() => api.list(scope, filter, cursor, signal)),
+    queryFn: ({ signal }) =>
+      operation.read(() => api.list(scope, filter, cursor, signal)),
     enabled: operation.permissions.view,
   })
   if (!operation.permissions.view) return <AccessDenied />
@@ -45,22 +61,38 @@ function PlanningList({ scope }: { scope: Scope }) {
   }
   return (
     <section>
-      <PlanningHeader title={scope.planID ? 'Milestones' : 'Planning'} operation={operation}>
+      <PlanningHeader
+        title={
+          scope.planID
+            ? copy('Milestones', 'planning')
+            : copy('Planning', 'planning')
+        }
+        operation={operation}
+      >
         <Button icon={faRotateRight} disabled={busy} onClick={refresh}>
-          Refresh {name.toLowerCase()}
+          {copy('Refresh {{value1}}', 'planning', {
+            value1: copy(scope.planID ? 'milestones' : 'plans', 'planning'),
+          })}
         </Button>
         {operation.permissions.create && operation.writable ? (
-          <Link className={buttonStyles({ variant: 'primary' })} to={pagePath(scope) + '/new'}>
-            Create {scope.planID ? 'milestone' : 'plan'}
+          <Link
+            className={buttonStyles({ variant: 'primary' })}
+            to={pagePath(scope) + '/new'}
+          >
+            {copy('Create {{value1}}', 'planning', {
+              value1: copy(scope.planID ? 'milestone' : 'plan', 'planning'),
+            })}
           </Link>
         ) : null}
       </PlanningHeader>
       {notice ? (
         <p role="status" className="mb-4">
-          {notice}
+          {copy(notice, 'planning')}
         </p>
       ) : null}
-      {!confirm ? <OperationNotice operation={operation} reload={refresh} /> : null}
+      {!confirm ? (
+        <OperationNotice operation={operation} reload={refresh} />
+      ) : null}
       <form
         className="mb-5 grid gap-3 filter-bar sm:grid-cols-2 xl:grid-cols-5"
         onSubmit={(e) => {
@@ -71,56 +103,69 @@ function PlanningList({ scope }: { scope: Scope }) {
         }}
       >
         <TextField
-          label={`Search ${name.toLowerCase()}`}
+          label={copy('Search {{value1}}', 'planning', {
+            value1: copy(scope.planID ? 'milestones' : 'plans', 'planning'),
+          })}
           maxLength={200}
           value={draft.q}
           onChange={(e) => setDraft({ ...draft, q: e.target.value })}
         />
         <label className="grid gap-1.5 text-sm font-semibold">
-          State
+          {copy('State', 'planning')}{' '}
           <select
             className="ui-input"
             value={draft.status}
-            onChange={(e) => setDraft({ ...draft, status: e.target.value as Filter['status'] })}
+            onChange={(e) =>
+              setDraft({ ...draft, status: e.target.value as Filter['status'] })
+            }
           >
-            <option value="all">All states</option>
+            <option value="all">{copy('All states', 'planning')}</option>
             {(scope.planID ? milestoneStates : planStates).map((s) => (
               <option key={s} value={s}>
-                {labels[s]}
+                {copy(labels[s], 'planning')}
               </option>
             ))}
           </select>
         </label>
         <label className="grid gap-1.5 text-sm font-semibold">
-          Archive
+          {copy('Archive', 'planning')}{' '}
           <select
             className="ui-input"
             value={draft.archived}
-            onChange={(e) => setDraft({ ...draft, archived: e.target.value as Filter['archived'] })}
+            onChange={(e) =>
+              setDraft({
+                ...draft,
+                archived: e.target.value as Filter['archived'],
+              })
+            }
           >
-            <option value="false">Current</option>
-            <option value="true">Archived</option>
-            <option value="all">All records</option>
+            <option value="false">{copy('Current', 'planning')}</option>
+            <option value="true">{copy('Archived', 'planning')}</option>
+            <option value="all">{copy('All records', 'planning')}</option>
           </select>
         </label>
         <label className="grid gap-1.5 text-sm font-semibold">
-          Order
+          {copy('Order', 'planning')}{' '}
           <select
             className="ui-input"
             value={draft.sort}
-            onChange={(e) => setDraft({ ...draft, sort: e.target.value as Filter['sort'] })}
+            onChange={(e) =>
+              setDraft({ ...draft, sort: e.target.value as Filter['sort'] })
+            }
           >
-            <option value="id">ID ascending</option>
-            <option value="-id">ID descending</option>
+            <option value="id">{copy('ID ascending', 'planning')}</option>
+            <option value="-id">{copy('ID descending', 'planning')}</option>
           </select>
         </label>
         <Button type="submit" className="self-end" disabled={busy}>
-          Apply filters
+          {copy('Apply filters', 'planning')}
         </Button>
       </form>
       {query.isPending ? (
         <p role="status" aria-busy="true">
-          Loading {name.toLowerCase()}…
+          {copy('Loading {{value1}}…', 'planning', {
+            value1: copy(scope.planID ? 'milestones' : 'plans', 'planning'),
+          })}
         </p>
       ) : query.isError ? (
         <PlanningError
@@ -131,22 +176,39 @@ function PlanningList({ scope }: { scope: Scope }) {
         />
       ) : !query.data.data.length ? (
         <div className="empty-state">
-          <h2 className="font-semibold">No {name.toLowerCase()} on this page</h2>
+          <h2 className="font-semibold">
+            {copy('No {{value1}} on this page', 'planning', {
+              value1: copy(scope.planID ? 'milestones' : 'plans', 'planning'),
+            })}
+          </h2>
           <p className="mt-2 text-muted">
-            Adjust the filters or create a record if you have access.
+            {copy(
+              'Adjust the filters or create a record if you have access.',
+              'planning',
+            )}
           </p>
         </div>
       ) : (
-        <Table caption={`Client ${name.toLowerCase()}`}>
+        <Table
+          caption={copy('Client {{value1}}', 'planning', {
+            value1: copy(scope.planID ? 'milestones' : 'plans', 'planning'),
+          })}
+        >
           <thead>
             <tr>
-              {[scope.planID ? 'Milestone' : 'Plan', 'State', 'Due', 'Updated', 'Actions'].map(
-                (s) => (
-                  <th key={s} scope="col">
-                    {s}
-                  </th>
-                ),
-              )}
+              {[
+                scope.planID
+                  ? copy('Milestone', 'planning')
+                  : copy('Plan', 'planning'),
+                copy('State', 'planning'),
+                copy('Due', 'planning'),
+                copy('Updated', 'planning'),
+                copy('Actions', 'planning'),
+              ].map((s) => (
+                <th key={s} scope="col">
+                  {s}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -155,7 +217,9 @@ function PlanningList({ scope }: { scope: Scope }) {
                 <td className="min-w-48 max-w-80">
                   <Link
                     className="break-words font-semibold underline underline-offset-4"
-                    aria-label={`Open ${r.title}`}
+                    aria-label={copy('Open {{value1}}', 'planning', {
+                      value1: r.title,
+                    })}
                     to={pagePath(scope, r.id)}
                   >
                     {r.title}
@@ -180,7 +244,9 @@ function PlanningList({ scope }: { scope: Scope }) {
                       onSuccess={setNotice}
                     />
                   ) : (
-                    <span className="text-xs text-muted">Updating…</span>
+                    <span className="text-xs text-muted">
+                      {copy('Updating…', 'planning')}
+                    </span>
                   )}
                 </td>
               </tr>

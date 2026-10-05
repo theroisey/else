@@ -1,5 +1,7 @@
 # Roisey Else interface redesign
 
+This document records the original visual redesign. The subsequent multi-website, localization and favicon phase is documented in [interface refinement](interface-refinement.md), including its new schema/API boundaries and current review evidence.
+
 The workspace uses architectural divisions, a warm neutral material palette and an editorial type hierarchy. Operational content stays compact: tables, forms and navigation use Manrope; page headings and selected financial values use Instrument Serif. Figures retain the existing exact decimal/currency formatting and tabular alignment. No business calculations, schema, API or authentication contract changes accompany this work.
 
 ## Source audit

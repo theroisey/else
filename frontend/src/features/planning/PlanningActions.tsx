@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { Button, Dialog, buttonStyles } from '../../components/ui'
@@ -24,6 +25,7 @@ export function PlanningActions({
   onArchive: (r: Summary) => void
   onSuccess: (message: string) => void
 }) {
+  useLocale()
   const [next, setNext] = useState<State | ''>('')
   if (record.archived_at || !operation.writable) return null
   const busy = operation.pending || !!operation.error
@@ -37,7 +39,9 @@ export function PlanningActions({
           className={buttonStyles({ size: 'compact' })}
           to={pagePath(operation.scope, record.id) + '/edit'}
         >
-          Edit {record.plan_id ? 'milestone' : 'plan'}
+          {copy('Edit {{value1}}', 'planning', {
+            value1: copy(record.plan_id ? 'milestone' : 'plan', 'planning'),
+          })}
         </Link>
       ) : null}
       {operation.permissions.update ? (
@@ -47,7 +51,14 @@ export function PlanningActions({
             e.preventDefault()
             if (!next || busy) return
             void operation
-              .run(() => api.transition(operation.scope, record.id, next, record.revision))
+              .run(() =>
+                api.transition(
+                  operation.scope,
+                  record.id,
+                  next,
+                  record.revision,
+                ),
+              )
               .then((result) => {
                 if (result) {
                   setNext('')
@@ -57,7 +68,9 @@ export function PlanningActions({
           }}
         >
           <label className="sr-only" htmlFor={'planning-status-' + record.id}>
-            Next status for {record.title}
+            {copy('Next status for {{value1}}', 'planning', {
+              value1: record.title,
+            })}
           </label>
           <select
             id={'planning-status-' + record.id}
@@ -66,10 +79,14 @@ export function PlanningActions({
             disabled={busy}
             onChange={(e) => setNext(e.target.value as State | '')}
           >
-            <option value="">{terminal(record.status) ? 'Reopen as…' : 'Change to…'}</option>
+            <option value="">
+              {terminal(record.status)
+                ? copy('Reopen as…', 'planning')
+                : copy('Change to…', 'planning')}
+            </option>
             {choices.map((s) => (
               <option key={s} value={s}>
-                {labels[s]}
+                {copy(labels[s], 'planning')}
               </option>
             ))}
           </select>
@@ -77,9 +94,11 @@ export function PlanningActions({
             size="compact"
             type="submit"
             disabled={!next || busy}
-            aria-label={`Change status of ${record.title}`}
+            aria-label={copy('Change status of {{value1}}', 'planning', {
+              value1: record.title,
+            })}
           >
-            Apply status
+            {copy('Apply status', 'planning')}
           </Button>
         </form>
       ) : null}
@@ -88,13 +107,15 @@ export function PlanningActions({
           size="compact"
           variant="danger-ghost"
           disabled={busy}
-          aria-label={`Archive ${record.title}`}
+          aria-label={copy('Archive {{value1}}', 'planning', {
+            value1: record.title,
+          })}
           onClick={() => {
             operation.clearError()
             onArchive(record)
           }}
         >
-          Archive
+          {copy('Archive', 'planning')}
         </Button>
       ) : null}
     </div>
@@ -111,47 +132,59 @@ export function PlanningArchive({
   onClose: () => void
   onSuccess: () => void
 }) {
+  useLocale()
   return (
     <Dialog
       open
-      title={`Archive ${record.title}?`}
+      title={copy('Archive {{value1}}?', 'planning', { value1: record.title })}
       description={
         record.plan_id
-          ? 'The milestone, linked references and history will be retained. Further changes will be unavailable.'
-          : 'The plan, milestones, linked references and history will be retained. Further changes will be unavailable.'
+          ? copy(
+              'The milestone, linked references and history will be retained. Further changes will be unavailable.',
+              'planning',
+            )
+          : copy(
+              'The plan, milestones, linked references and history will be retained. Further changes will be unavailable.',
+              'planning',
+            )
       }
       onClose={() => {
         if (!operation.pending) onClose()
       }}
     >
-      {operation.error ? (
+      {copy(operation.error, 'planning') ? (
         <div>
           <p role="alert" className="text-danger-ink">
-            {operation.error}
+            {copy(operation.error, 'planning')}
           </p>
           <p className="mt-2 text-xs text-muted">
-            Cancel and refresh before reviewing another attempt.
+            {copy(
+              'Cancel and refresh before reviewing another attempt.',
+              'planning',
+            )}
           </p>
         </div>
       ) : null}
       <div className="flex flex-wrap justify-end gap-2">
         <Button disabled={operation.pending} onClick={onClose}>
-          Cancel
+          {copy('Cancel', 'planning')}
         </Button>
         <Button
           variant="danger"
           loading={operation.pending}
-          loadingLabel="Archiving record"
+          loadingLabel={copy('Archiving record', 'planning')}
           disabled={!!operation.error}
           onClick={() => {
             void operation
-              .run(() => api.archive(operation.scope, record.id, record.revision))
+              .run(() =>
+                api.archive(operation.scope, record.id, record.revision),
+              )
               .then((r) => {
                 if (r) onSuccess()
               })
           }}
         >
-          Confirm archive
+          {copy('Confirm archive', 'planning')}
         </Button>
       </div>
     </Dialog>

@@ -31,18 +31,38 @@ it.each(['meta_ads', 'ga4', 'woocommerce'] as const)(
   async (provider) => {
     const label = providerLabels[provider]
     const { fetcher } = setup({
-      read: (url) => url.endsWith(record.id)
-        ? json({ data: { ...record, provider, state: 'revocation_failed', revision: '9007199254740994' } })
-        : json(page([{ ...record, provider, state: 'pending' }])),
+      read: (url) =>
+        url.endsWith(record.id)
+          ? json({
+              data: {
+                ...record,
+                provider,
+                state: 'revocation_failed',
+                revision: '9007199254740994',
+              },
+            })
+          : json(page([{ ...record, provider, state: 'pending' }])),
     })
-    const link = await screen.findByRole('link', { name: new RegExp(label) }, { timeout: 5000 })
+    const link = await screen.findByRole(
+      'link',
+      { name: new RegExp(label) },
+      { timeout: 5000 },
+    )
     expect(screen.getByText('Pending')).toBeInTheDocument()
     await userEvent.setup().click(link)
     await screen.findByRole('heading', { name: label })
-    await screen.findByRole('heading', { name: 'Remote revocation requires manual action' })
-    expect(screen.getByText(/Local credential use is disabled/).textContent).toContain(label)
-    expect(screen.queryByRole('button', { name: 'Disable local use' })).not.toBeInTheDocument()
-    expect(fetcher.mock.calls.some(([, init]) => init.method === 'POST')).toBe(false)
+    await screen.findByRole('heading', {
+      name: 'Remote revocation requires manual action',
+    })
+    expect(
+      screen.getByText(/Local credential use is disabled/).textContent,
+    ).toContain(label)
+    expect(
+      screen.queryByRole('button', { name: 'Disable local use' }),
+    ).not.toBeInTheDocument()
+    expect(fetcher.mock.calls.some(([, init]) => init.method === 'POST')).toBe(
+      false,
+    )
   },
 )
 function setup({
@@ -61,6 +81,8 @@ function setup({
   document.cookie = `else_csrf=${'a'.repeat(43)}; Path=/`
   let current = session
   const fetcher = vi.fn((url: string, init: RequestInit) => {
+    if (url === '/api/v1/auth/preferences')
+      return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: current }))
     if (url === base)
@@ -155,7 +177,9 @@ it('shows loading then honest empty data and an explicit pending GA4 setup actio
   expect(
     screen.queryByRole('button', { name: /Connect|Sync|Create/ }),
   ).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Add pending property' })).toBeDisabled()
+  expect(
+    screen.getByRole('button', { name: 'Add pending property' }),
+  ).toBeDisabled()
   expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
 })
 it('pages forward/backward and refreshes first page with only safe metadata', async () => {

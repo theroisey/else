@@ -7,7 +7,10 @@ const text = (max: number, required = false) =>
     .string()
     .trim()
     .refine(
-      (v) => [...v].length <= max && (!required || v.length > 0) && !/[\p{Cc}]/u.test(v),
+      (v) =>
+        [...v].length <= max &&
+        (!required || v.length > 0) &&
+        !/[\p{Cc}]/u.test(v),
       `Use ${required ? '1–' : 'up to '}${max} characters without control characters.`,
     )
 const email = text(254)
@@ -49,7 +52,10 @@ export const profileSchema = z.object({
   tags: z
     .array(text(40, true).transform((v) => v.toLowerCase()))
     .max(20, 'Use up to 20 tags.')
-    .refine((v) => new Set(v).size === v.length, 'Tags must be distinct after normalization.'),
+    .refine(
+      (v) => new Set(v).size === v.length,
+      'Tags must be distinct after normalization.',
+    ),
 })
 export type Profile = z.infer<typeof profileSchema>
 export const emptyProfile: Profile = {
@@ -78,7 +84,11 @@ const summarySchema = z
   .refine((v) => (v.status === 'archived') === (v.archived_at !== null))
 const clientSchema = summarySchema.and(
   z.object({
-    website: profileSchema.shape.website,
+    // Historical values are safe displayed text, not links or new URL input.
+    // Preserve them for the reviewed website backfill even when malformed.
+    website: z
+      .string()
+      .refine((value) => [...value].length <= 2048 && !/[\p{Cc}]/u.test(value)),
     notes: text(4000),
     contacts: z.array(contactSchema).max(20),
   }),
@@ -121,7 +131,9 @@ export function parsePage(body: unknown) {
   return result.data
 }
 export function parseMutation(body: unknown) {
-  const result = z.object({ data: z.object({ id: uuid, revision }) }).safeParse(body)
+  const result = z
+    .object({ data: z.object({ id: uuid, revision }) })
+    .safeParse(body)
   if (!result.success) throw new Error('Invalid client response.')
   return result.data.data
 }

@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { Button, Dialog } from '../../components/ui'
 import type { Collection } from './models'
 import type { Operation } from './Shared'
@@ -14,29 +15,42 @@ export function CancelCollection({
   onClose: () => void
   onSuccess: () => void
 }) {
+  useLocale()
   return (
     <Dialog
       open
-      title="Cancel collection?"
-      description="This permanently closes the remaining obligation. Original amounts and all payment history are retained. Collected payments are not refunded. A cancelled collection cannot reopen or receive new payments."
+      title={copy('Cancel collection?', 'billing')}
+      description={copy(
+        'This permanently closes the remaining obligation. Original amounts and all payment history are retained. Collected payments are not refunded. A cancelled collection cannot reopen or receive new payments.',
+        'billing',
+      )}
       onClose={() => {
         if (!operation.pending) onClose()
       }}
     >
       <p className="mt-4 break-words text-sm">{record.description}</p>
       <p className="mt-2 text-sm">
-        Outstanding obligation to close:{' '}
-        {money(record.outstanding_minor, record.currency)}
+        {copy(
+          'Outstanding obligation to close:{{value1}} {{value2}}',
+          'billing',
+          {
+            value1: ' ',
+            value2: money(record.outstanding_minor, record.currency),
+          },
+        )}
       </p>
-      {operation.error ? (
+      {copy(operation.error, 'billing') ? (
         <p role="alert" className="mt-3 text-danger-ink">
-          {operation.error} Close this dialog and reload the collection before
-          retrying.
+          {copy(
+            '{{value1}} Close this dialog and reload the collection before retrying.',
+            'billing',
+            { value1: operation.error },
+          )}
         </p>
       ) : null}
       <div className="mt-5 flex flex-wrap gap-2">
         <Button disabled={operation.pending} onClick={onClose}>
-          Keep collection
+          {copy('Keep collection', 'billing')}
         </Button>
         <Button
           variant="danger"
@@ -52,7 +66,7 @@ export function CancelCollection({
               })
           }
         >
-          Confirm cancellation
+          {copy('Confirm cancellation', 'billing')}
         </Button>
       </div>
     </Dialog>

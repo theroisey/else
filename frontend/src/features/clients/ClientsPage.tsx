@@ -1,9 +1,18 @@
+import { currentLocale } from '../../i18n'
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { faRotateRight } from '@fortawesome/free-solid-svg-icons'
-import { Button, Status, Table, TextField, buttonStyles, PageSkeleton } from '../../components/ui'
+import {
+  Button,
+  Status,
+  Table,
+  TextField,
+  buttonStyles,
+  PageSkeleton,
+} from '../../components/ui'
 import { hasPermission } from '../auth/permissions'
 import { canListClients, canOpenClients, defaultFilter } from './models'
 import type { Filter } from './models'
@@ -12,6 +21,7 @@ import { AccessDenied, ClientError, ClientHeader } from './Shared'
 import * as api from './service'
 
 export function ClientsPage() {
+  useLocale()
   const operation = useClients()
   const grants = operation.auth.session?.user.permissions ?? []
   const canRead = canListClients(grants)
@@ -26,11 +36,15 @@ export function ClientsPage() {
   const location = useLocation()
   const notice =
     location.state?.clientCreated === true
-      ? 'Client created. Access is assigned separately through roles.'
+      ? copy(
+          'Client created. Access is assigned separately through roles.',
+          'clients',
+        )
       : ''
   const query = useQuery({
     queryKey: [...operation.key, 'list', filter, cursor],
-    queryFn: ({ signal }) => operation.read(() => api.clients(filter, cursor, signal)),
+    queryFn: ({ signal }) =>
+      operation.read(() => api.clients(filter, cursor, signal)),
     enabled: canRead,
   })
   if (!canOpenClients(grants)) return <AccessDenied />
@@ -45,7 +59,13 @@ export function ClientsPage() {
   }
   return (
     <section>
-      <ClientHeader title="Clients" description="A private portfolio of client relationships. Open a record to review operations, finances and intelligence.">
+      <ClientHeader
+        title={copy('Clients', 'clients')}
+        description={copy(
+          'A private portfolio of client relationships. Open a record to review operations, finances and intelligence.',
+          'clients',
+        )}
+      >
         <div className="flex flex-wrap gap-2">
           {canRead ? (
             <Button
@@ -58,26 +78,34 @@ export function ClientsPage() {
                 })
               }}
             >
-              Refresh
+              {copy('Refresh', 'clients')}
             </Button>
           ) : null}
           {canCreate ? (
-            <Link className={buttonStyles({ variant: 'primary' })} to="/app/clients/new">
-              Create client
+            <Link
+              className={buttonStyles({ variant: 'primary' })}
+              to="/app/clients/new"
+            >
+              {copy('Create client', 'clients')}
             </Link>
           ) : null}
         </div>
       </ClientHeader>
       {notice ? (
         <p className="mb-4" role="status">
-          {notice}
+          {copy(notice, 'clients')}
         </p>
       ) : null}
       {!canRead ? (
         <div className="empty-state">
-          <h2 className="font-semibold">Client creation access</h2>
+          <h2 className="font-semibold">
+            {copy('Client creation access', 'clients')}
+          </h2>
           <p className="mt-2 text-muted">
-            You can create clients. Viewing their records requires separately assigned access.
+            {copy(
+              'You can create clients. Viewing their records requires separately assigned access.',
+              'clients',
+            )}
           </p>
         </div>
       ) : (
@@ -87,19 +115,19 @@ export function ClientsPage() {
             onSubmit={apply}
           >
             <TextField
-              label="Search by name"
+              label={copy('Search by name', 'clients')}
               value={draft.q}
               maxLength={100}
               onChange={(e) => setDraft({ ...draft, q: e.target.value })}
             />
             <TextField
-              label="Tag"
+              label={copy('Tag', 'clients')}
               value={draft.tag}
               maxLength={40}
               onChange={(e) => setDraft({ ...draft, tag: e.target.value })}
             />
             <label className="grid gap-1.5 font-semibold">
-              Status
+              {copy('Status', 'clients')}{' '}
               <select
                 className="ui-input font-normal"
                 value={draft.status}
@@ -110,26 +138,32 @@ export function ClientsPage() {
                   })
                 }
               >
-                <option value="active">Active</option>
-                <option value="archived">Archived</option>
-                <option value="all">All</option>
+                <option value="active">{copy('Active', 'clients')}</option>
+                <option value="archived">{copy('Archived', 'clients')}</option>
+                <option value="all">{copy('All', 'clients')}</option>
               </select>
             </label>
             <label className="grid gap-1.5 font-semibold">
-              Sort
+              {copy('Sort', 'clients')}{' '}
               <select
                 className="ui-input font-normal"
                 value={draft.sort}
-                onChange={(e) => setDraft({ ...draft, sort: e.target.value as Filter['sort'] })}
+                onChange={(e) =>
+                  setDraft({ ...draft, sort: e.target.value as Filter['sort'] })
+                }
               >
-                <option value="id">Client ID ascending</option>
-                <option value="-id">Client ID descending</option>
+                <option value="id">
+                  {copy('Client ID ascending', 'clients')}
+                </option>
+                <option value="-id">
+                  {copy('Client ID descending', 'clients')}
+                </option>
               </select>
             </label>
-            <Button type="submit">Apply filters</Button>
+            <Button type="submit">{copy('Apply filters', 'clients')}</Button>
           </form>
           {query.isPending ? (
-            <PageSkeleton label="Loading clients…" />
+            <PageSkeleton label={copy('Loading clients…', 'clients')} />
           ) : query.isError ? (
             <ClientError
               error={query.error}
@@ -139,54 +173,77 @@ export function ClientsPage() {
             />
           ) : query.data.data.length === 0 ? (
             <div className="empty-state">
-              <h2 className="font-semibold">No clients on this page</h2>
+              <h2 className="font-semibold">
+                {copy('No clients on this page', 'clients')}
+              </h2>
               <p className="mt-2 text-muted">
-                Adjust the filters, return to the previous page
-                {canCreate ? ', or create a client' : ''}.
+                {copy(
+                  canCreate ? 'Adjust the filters, return to the previous page, or create a client.' : 'Adjust the filters or return to the previous page.',
+                  'clients',
+                )}
               </p>
             </div>
           ) : (
-            <Table caption="Clients">
+            <Table caption={copy('Clients', 'clients')}>
               <thead>
                 <tr>
-                  <th scope="col">Client</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Tags</th>
-                  <th scope="col">Updated</th>
-                  <th scope="col">Workspace</th>
+                  <th scope="col">{copy('Client', 'clients')}</th>
+                  <th scope="col">{copy('Status', 'clients')}</th>
+                  <th scope="col">{copy('Tags', 'clients')}</th>
+                  <th scope="col">{copy('Updated', 'clients')}</th>
+                  <th scope="col">{copy('Workspace', 'clients')}</th>
                 </tr>
               </thead>
               <tbody>
                 {query.data.data.map((client) => (
                   <tr key={client.id}>
                     <td className="min-w-48">
-                      <p className="break-words font-medium"><Link to={`/app/clients/${client.id}`} className="hover:underline underline-offset-4">{client.name}</Link></p>
+                      <p className="break-words font-medium">
+                        <Link
+                          to={`/app/clients/${client.id}`}
+                          className="hover:underline underline-offset-4"
+                        >
+                          {client.name}
+                        </Link>
+                      </p>
                       {client.legal_name ? (
-                        <p className="mt-1 break-words text-xs text-muted">{client.legal_name}</p>
+                        <p className="mt-1 break-words text-xs text-muted">
+                          {client.legal_name}
+                        </p>
                       ) : null}
                     </td>
                     <td>
-                      <Status tone={client.status === 'active' ? 'success' : 'neutral'}>
-                        {client.status === 'active' ? 'Active' : 'Archived'}
+                      <Status
+                        tone={
+                          client.status === 'active' ? 'success' : 'neutral'
+                        }
+                      >
+                        {client.status === 'active'
+                          ? copy('Active', 'clients')
+                          : copy('Archived', 'clients')}
                       </Status>
                     </td>
                     <td className="min-w-32">
                       <span className="break-words text-xs text-muted">
-                        {client.tags.join(', ') || 'No tags'}
+                        {client.tags.join(', ') || copy('No tags', 'clients')}
                       </span>
                     </td>
                     <td className="whitespace-nowrap text-xs text-muted">
                       <time dateTime={client.updated_at}>
-                        {new Date(client.updated_at).toLocaleDateString()}
+                        {new Date(client.updated_at).toLocaleDateString(
+                          currentLocale(),
+                        )}
                       </time>
                     </td>
                     <td>
                       <Link
                         className={buttonStyles({ size: 'compact' })}
                         to={`/app/clients/${client.id}`}
-                        aria-label={`Open ${client.name}`}
+                        aria-label={copy('Open {{value1}}', 'clients', {
+                          value1: client.name,
+                        })}
                       >
-                        Open
+                        {copy('Open', 'clients')}
                       </Link>
                     </td>
                   </tr>
@@ -195,11 +252,14 @@ export function ClientsPage() {
             </Table>
           )}
           <nav
-            aria-label="Client pagination"
+            aria-label={copy('Client pagination', 'clients')}
             className="mt-4 flex flex-wrap items-center justify-between gap-3"
           >
             <p className="text-xs text-muted">
-              Up to 25 clients per page · Only records you can view
+              {copy(
+                'Up to 25 clients per page · Only records you can view',
+                'clients',
+              )}
             </p>
             <div className="flex gap-2">
               <Button
@@ -207,17 +267,21 @@ export function ClientsPage() {
                 disabled={history.length < 2 || query.isFetching}
                 onClick={() => setHistory((h) => h.slice(0, -1))}
               >
-                Previous
+                {copy('Previous', 'clients')}
               </Button>
               <Button
                 size="compact"
-                disabled={query.isError || !query.data?.page.next_cursor || query.isFetching}
+                disabled={
+                  query.isError ||
+                  !query.data?.page.next_cursor ||
+                  query.isFetching
+                }
                 onClick={() => {
                   const next = query.data?.page.next_cursor
                   if (next) setHistory((h) => [...h, next])
                 }}
               >
-                Next
+                {copy('Next', 'clients')}
               </Button>
             </div>
           </nav>

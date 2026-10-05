@@ -1,3 +1,5 @@
+import { formatCalendarDate } from '../../i18n/format'
+import { copy, useLocale } from '../../i18n/index'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import { useNavigate } from 'react-router'
@@ -18,6 +20,7 @@ interface Attempt {
   collection: string
 }
 export function CopyRecoveryBoundary({ children }: { children: ReactNode }) {
+  useLocale()
   const auth = useAuth(),
     handler = useRef<((c: CopyCommand) => void) | null>(null),
     [busy, setBusy] = useState(false)
@@ -43,6 +46,7 @@ function Controller({
   handler: RefObject<((c: CopyCommand) => void) | null>
   onBusy: (busy: boolean) => void
 }) {
+  useLocale()
   const op = useRecordOperations('pricing'),
     navigate = useNavigate(),
     active = useRef(false),
@@ -89,7 +93,7 @@ function Controller({
     setAttempt({
       command,
       state: 'sending',
-      message: 'Creating the original collection command…',
+      message: copy('Creating the original collection command…', 'pricing'),
       collection: '',
     })
     try {
@@ -116,8 +120,14 @@ function Controller({
           command,
           state: 'confirmed',
           message: r.replayed
-            ? 'Previously created collection confirmed. No duplicate collection was created.'
-            : 'Collection created with immutable pricing terms.',
+            ? copy(
+                'Previously created collection confirmed. No duplicate collection was created.',
+                'pricing',
+              )
+            : copy(
+                'Collection created with immutable pricing terms.',
+                'pricing',
+              ),
           collection: r.id,
         })
     } catch (e) {
@@ -131,10 +141,13 @@ function Controller({
         command,
         state: uncertain ? 'unknown' : 'rejected',
         message: uncertain
-          ? 'Collection outcome is unconfirmed. Retry only the identical original command. A conflict does not prove that the first attempt failed. Do not create a replacement; reconcile with an authorized finance operator if retry remains blocked.'
+          ? copy(
+              'Collection outcome is unconfirmed. Retry only the identical original command. A conflict does not prove that the first attempt failed. Do not create a replacement; reconcile with an authorized finance operator if retry remains blocked.',
+              'pricing',
+            )
           : e instanceof APIError
             ? e.message
-            : 'Unable to create collection.',
+            : copy('Unable to create collection.', 'pricing'),
         collection: '',
       })
     } finally {
@@ -157,41 +170,42 @@ function Controller({
       open
       title={
         attempt.state === 'confirmed'
-          ? 'Collection confirmed'
+          ? copy('Collection confirmed', 'pricing')
           : attempt.state === 'rejected'
-            ? 'Collection not created'
-            : 'Confirming collection'
+            ? copy('Collection not created', 'pricing')
+            : copy('Confirming collection', 'pricing')
       }
-      eyebrow="Immutable pricing copy"
-      description={attempt.message}
+      eyebrow={copy('Immutable pricing copy', 'pricing')}
+      description={copy(attempt.message, 'pricing')}
       onClose={close}
     >
       <p className="mt-4 text-sm">
         {money(attempt.command.total, attempt.command.currency)} ·{' '}
-        {attempt.command.input.billing_date}
+        {formatCalendarDate(attempt.command.input.billing_date)}
       </p>
       <p className="mt-3 text-xs text-muted">
-        Notes are hidden. Recovery is kept only in memory. Reload, sign out or
-        access changes discard the original command; reconcile retained history
-        before a replacement.
+        {copy(
+          'Notes are hidden. Recovery is kept only in memory. Reload, sign out or access changes discard the original command; reconcile retained history before a replacement.',
+          'pricing',
+        )}
       </p>
       <div className="mt-5 flex flex-wrap gap-2">
         {attempt.state === 'sending' ? (
           <p role="status" aria-busy="true">
-            Waiting for confirmation…
+            {copy('Waiting for confirmation…', 'pricing')}
           </p>
         ) : attempt.state === 'unknown' ? (
           <Button
             variant="primary"
             onClick={() => void execute(attempt.command, true)}
           >
-            Retry original collection
+            {copy('Retry original collection', 'pricing')}
           </Button>
         ) : (
           <Button variant="primary" onClick={close}>
             {attempt.state === 'confirmed'
-              ? 'Open collection'
-              : 'Review current pricing'}
+              ? copy('Open collection', 'pricing')
+              : copy('Review current pricing', 'pricing')}
           </Button>
         )}
       </div>

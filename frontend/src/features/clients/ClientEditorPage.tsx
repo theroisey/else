@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { PageSkeleton } from '../../components/ui'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -7,6 +8,7 @@ import { ClientHeader, ClientError, AccessDenied } from './Shared'
 import { ClientForm } from './ClientForm'
 import * as api from './service'
 export function ClientEditorPage({ create = false }: { create?: boolean }) {
+  useLocale()
   const { id = '' } = useParams()
   const operation = useClients()
   const grants = operation.auth.session?.user.permissions ?? []
@@ -29,9 +31,7 @@ export function ClientEditorPage({ create = false }: { create?: boolean }) {
   })
   if (!allowed) return <AccessDenied />
   if (!create && query.isPending)
-    return (
-      <PageSkeleton label="Loading client…" />
-    )
+    return <PageSkeleton label={copy('Loading client…', 'clients')} />
   if (!create && query.isError)
     return (
       <ClientError
@@ -45,25 +45,42 @@ export function ClientEditorPage({ create = false }: { create?: boolean }) {
     return (
       <section>
         <ClientHeader
-          title="Archived client"
-          description="This client is retained for history. Archived clients cannot be edited."
+          title={copy('Archived client', 'clients')}
+          description={copy(
+            'This client is retained for history. Archived clients cannot be edited.',
+            'clients',
+          )}
         />
-        <Link className="underline underline-offset-4" to={'/app/clients/' + id}>
-          Open client workspace
+        <Link
+          className="underline underline-offset-4"
+          to={'/app/clients/' + id}
+        >
+          {copy('Open client workspace', 'clients')}
         </Link>
       </section>
     )
   return (
     <section>
       <ClientHeader
-        title={create ? 'Create client' : 'Edit client'}
+        title={
+          create
+            ? copy('Create client', 'clients')
+            : copy('Edit client', 'clients')
+        }
         description={
           create
-            ? 'Create a profile. Access is assigned separately through roles.'
-            : 'Update the complete profile, contacts and tags.'
+            ? copy(
+                'Create a profile. Access is assigned separately through roles.',
+                'clients',
+              )
+            : copy('Update the complete profile, contacts and tags.', 'clients')
         }
       />
-      {create ? <ClientForm /> : query.data ? <ClientForm key={id} client={query.data} /> : null}
+      {create ? (
+        <ClientForm />
+      ) : query.data ? (
+        <ClientForm key={id} client={query.data} />
+      ) : null}
     </section>
   )
 }

@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { ClientNavigation } from '../clients/ClientNavigation'
 import type { ReactNode } from 'react'
 import { Button, Status } from '../../components/ui'
@@ -14,15 +15,16 @@ export function BillingError({
   error: unknown
   retry: () => void
 }) {
+  useLocale()
   return (
     <div className="my-4 rounded-md border border-danger-line bg-danger-surface p-4">
       <p role="alert">
         {error instanceof APIError
-          ? error.message
-          : 'Unable to load finance data. Try again.'}
+          ? copy(error.message, 'billing')
+          : copy('Unable to load finance data. Try again.', 'billing')}
       </p>
       <Button className="mt-3" onClick={retry}>
-        Try again
+        {copy('Try again', 'billing')}
       </Button>
     </div>
   )
@@ -36,6 +38,7 @@ export function BillingHeader({
   operation: Operation
   children?: ReactNode
 }) {
+  useLocale()
   const { clientID, permissions, client } = operation,
     context =
       permissions.clientView && !client.isError ? client.data : undefined
@@ -44,14 +47,16 @@ export function BillingHeader({
       <header className="page-header">
         <div className="min-w-0">
           <p className="eyebrow">
-            {context?.name ?? 'Client workspace'} · Finance
+            {copy('{{value1}} · Finance', 'billing', {
+              value1: context?.name ?? copy('Client workspace', 'common'),
+            })}
           </p>
-          <h1 className="page-title">
-            {title}
-          </h1>
+          <h1 className="page-title">{title}</h1>
           <p className="mt-2 text-xs text-muted">
-            Exact amounts · Separate currencies · Due dates use the UTC
-            calendar.
+            {copy(
+              'Exact amounts · Separate currencies · Due dates use the UTC calendar.',
+              'billing',
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">{children}</div>
@@ -59,8 +64,10 @@ export function BillingHeader({
       <ClientNavigation clientID={clientID} />
       {context?.status === 'archived' ? (
         <p role="status" className="mb-4">
-          This client is archived. Finance history remains available; new
-          changes are unavailable.
+          {copy(
+            'This client is archived. Finance history remains available; new changes are unavailable.',
+            'billing',
+          )}
         </p>
       ) : null}
       {permissions.clientView && client.isError ? (
@@ -73,6 +80,7 @@ export function BillingHeader({
   )
 }
 export function BillingState({ record }: { record: Collection }) {
+  useLocale()
   return (
     <Status
       tone={
@@ -83,7 +91,7 @@ export function BillingState({ record }: { record: Collection }) {
             : 'neutral'
       }
     >
-      {labels[record.status]}
+      {copy(labels[record.status], 'billing')}
     </Status>
   )
 }

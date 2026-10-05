@@ -8,4 +8,6 @@
   var dark = preference === 'dark' || (preference === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.classList.toggle('dark', dark);
   document.documentElement.dataset.appearance = preference;
+  var chrome = document.querySelector('meta[name="theme-color"]');
+  if (chrome) chrome.setAttribute('content', dark ? '#11110f' : '#f2f0ea');
 })();

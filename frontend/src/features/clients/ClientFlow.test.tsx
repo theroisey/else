@@ -20,7 +20,9 @@ const record: Client = {
   tags: ['fixture'],
   website: '',
   notes: '',
-  contacts: [{ name: 'Contact Fixture', email: 'contact@example.com', phone: '' }],
+  contacts: [
+    { name: 'Contact Fixture', email: 'contact@example.com', phone: '' },
+  ],
   created_at: date,
   updated_at: date,
   archived_at: null,
@@ -30,30 +32,67 @@ const identity: Session = {
     id: other,
     email: 'actor@example.com',
     display_name: 'Actor Fixture',
-    permissions: ['clients.create', 'clients.view', 'clients.update', 'clients.archive'].map(
-      (permission) => ({ permission, scope: 'global' }),
-    ),
+    permissions: [
+      'clients.create',
+      'clients.view',
+      'clients.update',
+      'clients.archive',
+    ].map((permission) => ({ permission, scope: 'global' })),
   },
   session: { expires_at: new Date(Date.now() + 43_200_000).toISOString() },
 }
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
-const page = (data: unknown[]) => ({ data, page: { limit: 25, next_cursor: null } })
-type Override = (path: string, init: RequestInit) => Response | Promise<Response> | undefined
-function setup(path = '/app/clients', session = identity, override: Override = () => undefined) {
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+const page = (data: unknown[]) => ({
+  data,
+  page: { limit: 25, next_cursor: null },
+})
+type Override = (
+  path: string,
+  init: RequestInit,
+) => Response | Promise<Response> | undefined
+function setup(
+  path = '/app/clients',
+  session = identity,
+  override: Override = () => undefined,
+) {
   document.cookie = `else_csrf=${'a'.repeat(43)}; Path=/`
   const fetcher = vi.fn((url: string, init: RequestInit = {}) => {
     const custom = override(url, init)
     if (custom) return Promise.resolve(custom)
-    if (url === '/api/v1/auth/session') return Promise.resolve(json({ data: session }))
-    if (url.startsWith('/api/v1/clients?')) return Promise.resolve(json(page([record])))
+    if (url === '/api/v1/auth/preferences')
+      return Promise.resolve(json({ data: { locale: null } }))
+    if (url === '/api/v1/auth/session')
+      return Promise.resolve(json({ data: session }))
+    if (url.startsWith('/api/v1/clients?'))
+      return Promise.resolve(json(page([record])))
     if (url === `/api/v1/clients/${id}` && init?.method === 'GET')
       return Promise.resolve(json({ data: record }))
     if (url === `/api/v1/clients/${id}/overview`)
-      return Promise.resolve(json({ data: { client: {id,name:record.name,status:'active',archived_at:null},as_of:date,horizon_end:'2026-10-08T00:00:00Z' } }))
+      return Promise.resolve(
+        json({
+          data: {
+            client: {
+              id,
+              name: record.name,
+              status: 'active',
+              archived_at: null,
+            },
+            as_of: date,
+            horizon_end: '2026-10-08T00:00:00Z',
+          },
+        }),
+      )
     return Promise.resolve(
       json({
-        data: { id, revision: init?.method === 'POST' && url === '/api/v1/clients' ? 1 : 2 },
+        data: {
+          id,
+          revision:
+            init?.method === 'POST' && url === '/api/v1/clients' ? 1 : 2,
+        },
       }),
     )
   })
@@ -77,16 +116,26 @@ it('denies wrong-client deep links before fetching with a scoped view grant', as
     ...identity,
     user: {
       ...identity.user,
-      permissions: [{ permission: 'clients.view', scope: 'client' as const, client_id: id }],
+      permissions: [
+        { permission: 'clients.view', scope: 'client' as const, client_id: id },
+      ],
     },
   }
   const { fetcher } = setup(`/app/clients/${other}`, session)
   await screen.findByRole('heading', { name: 'Access denied' })
-  expect(fetcher.mock.calls.every(([path]) => path === '/api/v1/auth/session')).toBe(true)
   expect(
-    within(screen.getByRole('navigation', { name: 'Application' })).getByRole('link', {
-      name: 'Clients',
-    }),
+    fetcher.mock.calls.every(
+      ([path]) =>
+        path === '/api/v1/auth/session' || path === '/api/v1/auth/preferences',
+    ),
+  ).toBe(true)
+  expect(
+    within(screen.getByRole('navigation', { name: 'Application' })).getByRole(
+      'link',
+      {
+        name: 'Clients',
+      },
+    ),
   ).toBeInTheDocument()
 })
 it('keeps create-only users out of collection/detail reads and confirms separately assigned access', async () => {
@@ -102,13 +151,18 @@ it('keeps create-only users out of collection/detail reads and confirms separate
   await u.click(await screen.findByRole('link', { name: 'Create client' }))
   await u.type(await screen.findByLabelText('Client name'), 'Created Fixture')
   await u.click(screen.getByRole('button', { name: 'Create client' }))
-  await screen.findByText('Client created. Access is assigned separately through roles.')
+  await screen.findByText(
+    'Client created. Access is assigned separately through roles.',
+  )
   expect(
     fetcher.mock.calls.some(
-      ([path, init]) => path.startsWith('/api/v1/clients') && init?.method === 'GET',
+      ([path, init]) =>
+        path.startsWith('/api/v1/clients') && init?.method === 'GET',
     ),
   ).toBe(false)
-  expect(screen.queryByRole('table', { name: 'Clients' })).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('table', { name: 'Clients' }),
+  ).not.toBeInTheDocument()
 })
 it('refreshes revoked grants after a denied read and removes all private client content', async () => {
   let identities = 0
@@ -124,7 +178,9 @@ it('refreshes revoked grants after a denied read and removes all private client 
       return json({ error: { code: 'permission_denied' } }, 403)
   })
   await screen.findByRole('heading', { name: 'Access denied' })
-  expect(screen.queryByRole('link', { name: 'Clients' })).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('link', { name: 'Clients' }),
+  ).not.toBeInTheDocument()
   expect(screen.queryByText('Client Fixture')).not.toBeInTheDocument()
 })
 it('handles loading, safe failure, retry and empty client pages', async () => {
@@ -134,12 +190,25 @@ it('handles loading, safe failure, retry and empty client pages', async () => {
   })
   let reads = 0
   setup('/app/clients', identity, (path) =>
-    path.startsWith('/api/v1/clients?') ? (++reads === 1 ? pending : json(page([]))) : undefined,
+    path.startsWith('/api/v1/clients?')
+      ? ++reads === 1
+        ? pending
+        : json(page([]))
+      : undefined,
   )
   await screen.findByText('Loading clients…')
-  release(json({ error: { code: 'internal_error', message: 'private contact' } }, 500))
-  expect(await screen.findByRole('alert')).not.toHaveTextContent('private contact')
-  await userEvent.setup().click(screen.getByRole('button', { name: 'Try again' }))
+  release(
+    json(
+      { error: { code: 'internal_error', message: 'private contact' } },
+      500,
+    ),
+  )
+  expect(await screen.findByRole('alert')).not.toHaveTextContent(
+    'private contact',
+  )
+  await userEvent
+    .setup()
+    .click(screen.getByRole('button', { name: 'Try again' }))
   await screen.findByRole('heading', { name: 'No clients on this page' })
   expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
 })
@@ -165,9 +234,13 @@ it('uses server cursors in both directions and resets them when applying API fil
   await u.selectOptions(screen.getByRole('combobox', { name: 'Status' }), 'all')
   await u.selectOptions(screen.getByRole('combobox', { name: 'Sort' }), '-id')
   await u.click(screen.getByRole('button', { name: 'Apply filters' }))
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled())
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled(),
+  )
   const query = new URL(
-    fetcher.mock.calls.filter(([p]) => p.startsWith('/api/v1/clients?')).at(-1)![0],
+    fetcher.mock.calls
+      .filter(([p]) => p.startsWith('/api/v1/clients?'))
+      .at(-1)![0],
     'http://localhost',
   ).searchParams
   expect(Object.fromEntries(query)).toEqual({
@@ -183,24 +256,40 @@ it('shows no mutation controls to a scoped viewer and keeps unavailable modules 
     ...identity,
     user: {
       ...identity.user,
-      permissions: [{ permission: 'clients.view', scope: 'client', client_id: id }],
+      permissions: [
+        { permission: 'clients.view', scope: 'client', client_id: id },
+      ],
     },
   })
   await screen.findByRole('heading', { name: 'Client Fixture' })
-  expect(screen.queryByRole('link', { name: 'Edit client' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'Archive client' })).not.toBeInTheDocument()
-  const modules = within(screen.getByRole('navigation', { name: 'Client modules' }))
-  expect(modules.queryByRole('link', { name: 'Marketing' })).not.toBeInTheDocument()
-  expect(modules.getByRole('link', {name:'Overview'})).toBeInTheDocument()
-  expect(modules.getByRole('link', { name: 'Profile' })).toHaveAttribute('aria-current', 'page')
-  expect(modules.queryAllByRole('link')).toHaveLength(2)
+  expect(
+    screen.queryByRole('link', { name: 'Edit client' }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: 'Archive client' }),
+  ).not.toBeInTheDocument()
+  const modules = within(
+    screen.getByRole('navigation', { name: 'Client modules' }),
+  )
+  expect(
+    modules.queryByRole('link', { name: 'Marketing' }),
+  ).not.toBeInTheDocument()
+  expect(modules.getByRole('link', { name: 'Overview' })).toBeInTheDocument()
+  expect(modules.getByRole('link', { name: 'Profile' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
+  expect(modules.getByRole('link', { name: 'Websites' })).toBeInTheDocument()
+  expect(modules.queryAllByRole('link')).toHaveLength(3)
 })
 it('validates form fields, contacts and tags before sending normalized creation', async () => {
   const { fetcher } = setup('/app/clients/new')
   const u = userEvent.setup()
   await u.click(await screen.findByRole('button', { name: 'Create client' }))
   await screen.findByText('Use 1–200 characters without control characters.')
-  expect(fetcher.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+  expect(fetcher.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(
+    false,
+  )
   await u.type(screen.getByLabelText('Client name'), ' New Fixture ')
   await u.type(screen.getByLabelText('Tags', { exact: true }), 'TAG\ntag')
   await u.click(screen.getByRole('button', { name: 'Add contact' }))
@@ -213,7 +302,9 @@ it('validates form fields, contacts and tags before sending normalized creation'
   await u.type(screen.getByLabelText('Contact 1 email'), 'MAIL@EXAMPLE.COM')
   await u.click(screen.getByRole('button', { name: 'Create client' }))
   await screen.findByText('Client created.')
-  const request = fetcher.mock.calls.find(([, init]) => init?.method === 'POST')!
+  const request = fetcher.mock.calls.find(
+    ([, init]) => init?.method === 'POST',
+  )!
   expect(JSON.parse(request[1]?.body as string)).toMatchObject({
     name: 'New Fixture',
     tags: ['tag'],
@@ -223,16 +314,23 @@ it('validates form fields, contacts and tags before sending normalized creation'
 it('preserves stale drafts until explicit reload and replaces contacts using the refreshed revision', async () => {
   let writes = 0
   let reads = 0
-  const { fetcher } = setup(`/app/clients/${id}/edit`, identity, (path, init) => {
-    if (path === `/api/v1/clients/${id}` && init?.method === 'GET')
-      return json({
-        data: ++reads === 1 ? record : { ...record, name: 'Current Fixture', revision: 2 },
-      })
-    if (init?.method === 'PUT')
-      return ++writes === 1
-        ? json({ error: { code: 'conflict' } }, 409)
-        : json({ data: { id, revision: 3 } })
-  })
+  const { fetcher } = setup(
+    `/app/clients/${id}/edit`,
+    identity,
+    (path, init) => {
+      if (path === `/api/v1/clients/${id}` && init?.method === 'GET')
+        return json({
+          data:
+            ++reads === 1
+              ? record
+              : { ...record, name: 'Current Fixture', revision: 2 },
+        })
+      if (init?.method === 'PUT')
+        return ++writes === 1
+          ? json({ error: { code: 'conflict' } }, 409)
+          : json({ data: { id, revision: 3 } })
+    },
+  )
   const u = userEvent.setup()
   await screen.findByDisplayValue('Client Fixture')
   await u.clear(screen.getByLabelText('Client name'))
@@ -245,7 +343,9 @@ it('preserves stale drafts until explicit reload and replaces contacts using the
   await u.click(screen.getByRole('button', { name: 'Remove contact 1' }))
   await u.click(screen.getByRole('button', { name: 'Save client' }))
   await screen.findByText('Client updated.')
-  const request = fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT').at(-1)!
+  const request = fetcher.mock.calls
+    .filter(([, init]) => init?.method === 'PUT')
+    .at(-1)!
   expect(JSON.parse(request[1]?.body as string)).toMatchObject({
     expected_revision: 2,
     contacts: [],
@@ -260,20 +360,33 @@ it('requires deliberate archive confirmation and retains archived readable histo
     }
     if (path === `/api/v1/clients/${id}`)
       return json({
-        data: archived ? { ...record, status: 'archived', revision: 2, archived_at: date } : record,
+        data: archived
+          ? { ...record, status: 'archived', revision: 2, archived_at: date }
+          : record,
       })
   })
   const u = userEvent.setup()
   await u.click(await screen.findByRole('button', { name: 'Archive client' }))
-  expect(fetcher.mock.calls.some(([path]) => path.endsWith('/archive'))).toBe(false)
+  expect(fetcher.mock.calls.some(([path]) => path.endsWith('/archive'))).toBe(
+    false,
+  )
   expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
   await u.click(screen.getByRole('button', { name: 'Confirm archive' }))
   await screen.findByText('Client archived.')
   expect(screen.getByText('Contact Fixture')).toBeInTheDocument()
-  expect(screen.queryByRole('link', { name: 'Edit client' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'Archive client' })).not.toBeInTheDocument()
-  const request = fetcher.mock.calls.find(([path]) => path.endsWith('/archive'))!
-  expect(JSON.parse(request[1]?.body as string)).toEqual({ expected_revision: 1, confirm: true })
+  expect(
+    screen.queryByRole('link', { name: 'Edit client' }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: 'Archive client' }),
+  ).not.toBeInTheDocument()
+  const request = fetcher.mock.calls.find(([path]) =>
+    path.endsWith('/archive'),
+  )!
+  expect(JSON.parse(request[1]?.body as string)).toEqual({
+    expected_revision: 1,
+    confirm: true,
+  })
 })
 
 it('clears client queries and returns to sign-in when the real session expires', async () => {
@@ -287,7 +400,9 @@ it('clears client queries and returns to sign-in when the real session expires',
       return json({ error: { code: 'authentication_required' } }, 401)
   })
   await screen.findByRole('heading', { name: 'Sign in' })
-  expect(screen.queryByRole('table', { name: 'Clients' })).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('table', { name: 'Clients' }),
+  ).not.toBeInTheDocument()
   expect(
     cache
       .getQueryCache()
@@ -307,7 +422,13 @@ it('does not reuse a cached client list after grants shrink within the same iden
               ...identity,
               user: {
                 ...identity.user,
-                permissions: [{ permission: 'clients.view', scope: 'client', client_id: id }],
+                permissions: [
+                  {
+                    permission: 'clients.view',
+                    scope: 'client',
+                    client_id: id,
+                  },
+                ],
               },
             }
           : identity,
@@ -316,7 +437,9 @@ it('does not reuse a cached client list after grants shrink within the same iden
       reads++
       return json(
         page(
-          reduced ? [record] : [record, { ...record, id: other, name: 'Other Private Fixture' }],
+          reduced
+            ? [record]
+            : [record, { ...record, id: other, name: 'Other Private Fixture' }],
         ),
       )
     }
@@ -324,26 +447,40 @@ it('does not reuse a cached client list after grants shrink within the same iden
   const u = userEvent.setup()
   await screen.findByRole('link', { name: 'Open Other Private Fixture' })
   await u.click(
-    within(screen.getByRole('navigation', { name: 'Application' })).getByRole('link', {
-      name: 'My access',
-    }),
+    within(screen.getByRole('navigation', { name: 'Application' })).getByRole(
+      'link',
+      {
+        name: 'My access',
+      },
+    ),
   )
   reduced = true
   await u.click(await screen.findByRole('button', { name: 'Refresh access' }))
-  await waitFor(() => expect(screen.getByRole('table', { name: 'Your effective permissions' })).toHaveTextContent(id))
+  await waitFor(() =>
+    expect(
+      screen.getByRole('table', { name: 'Your effective permissions' }),
+    ).toHaveTextContent(id),
+  )
   await u.click(
-    within(screen.getByRole('navigation', { name: 'Application' })).getByRole('link', {
-      name: 'Clients',
-    }),
+    within(screen.getByRole('navigation', { name: 'Application' })).getByRole(
+      'link',
+      {
+        name: 'Clients',
+      },
+    ),
   )
   await screen.findByRole('link', { name: 'Open Client Fixture' })
-  expect(screen.queryByRole('link', { name: 'Open Other Private Fixture' })).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('link', { name: 'Open Other Private Fixture' }),
+  ).not.toBeInTheDocument()
   expect(reads).toBe(2)
 })
 
 it('withholds archive success after conflict and requires cancellation before another review', async () => {
   setup('/app/clients/' + id + '/profile', identity, (path) =>
-    path.endsWith('/archive') ? json({ error: { code: 'conflict' } }, 409) : undefined,
+    path.endsWith('/archive')
+      ? json({ error: { code: 'conflict' } }, 409)
+      : undefined,
   )
   const u = userEvent.setup()
   await u.click(await screen.findByRole('button', { name: 'Archive client' }))

@@ -1,0 +1,15 @@
+{
+  "Appearance": "Görünüm",
+  "Choose the light or dark workspace, or follow your device. Your preference is saved in this browser.": "Açık veya koyu çalışma alanını seçin ya da cihaz ayarını izleyin. Tercihiniz bu tarayıcıda saklanır.",
+  "Choose your interface language. Your account preference follows you across devices. Financial currencies and your own content remain unchanged.": "Arayüz dilinizi seçin. Hesap tercihiniz diğer cihazlarda da geçerlidir. Para birimleri ve kendi içeriğiniz değişmez.",
+  "Dark": "Koyu",
+  "Following your device · {{value1}} theme": "Cihaz ayarı izleniyor · {{value1}} tema",
+  "Language": "Dil",
+  "Light": "Açık",
+  "Personal preferences": "Kişisel tercihler",
+  "System": "Sistem",
+  "The language preference could not be saved to your account. Your browser selection is retained.": "Dil tercihi hesabınıza kaydedilemedi. Tarayıcıdaki seçiminiz korunuyor.",
+  "Workspace appearance": "Çalışma alanı görünümü",
+  "{{value1}} theme selected": "{{value1}} tema seçildi",
+  "Unable to load this language. Try again.": "Bu dil yüklenemedi. Yeniden deneyin."
+}

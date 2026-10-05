@@ -1,3 +1,4 @@
+import { useLocale } from '../../i18n/index'
 import type { ReactNode, TableHTMLAttributes } from 'react'
 
 interface TableProps extends TableHTMLAttributes<HTMLTableElement> {
@@ -5,9 +6,20 @@ interface TableProps extends TableHTMLAttributes<HTMLTableElement> {
   children: ReactNode
 }
 
-export function Table({ caption, children, className = '', ...props }: TableProps) {
+export function Table({
+  caption,
+  children,
+  className = '',
+  ...props
+}: TableProps) {
+  useLocale()
   return (
-    <div className="table-region" role="region" aria-label={caption} tabIndex={0}>
+    <div
+      className="table-region"
+      role="region"
+      aria-label={caption}
+      tabIndex={0}
+    >
       <table {...props} className={`ui-table ${className}`.trim()}>
         <caption className="sr-only">{caption}</caption>
         {children}

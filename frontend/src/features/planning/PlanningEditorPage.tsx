@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { PageSkeleton } from '../../components/ui'
 import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -15,6 +16,7 @@ export function PlanningEditorPage({
   milestone?: boolean
   create?: boolean
 }) {
+  useLocale()
   const { id = '', planID = '', milestoneID = '' } = useParams()
   const scope: Scope = { clientID: id, ...(milestone ? { planID } : {}) },
     recordID = milestone ? milestoneID : planID
@@ -36,24 +38,32 @@ function PlanningEditor({
   recordID: string
   create: boolean
 }) {
+  useLocale()
   const operation = usePlanning(scope)
-  const allowed = create ? operation.permissions.create : operation.permissions.update
+  const allowed = create
+    ? operation.permissions.create
+    : operation.permissions.update
   const query = useQuery({
     queryKey: [...operation.key, ...recordKey(scope, recordID)],
-    queryFn: ({ signal }) => operation.read(() => api.detail(scope, recordID, signal)),
+    queryFn: ({ signal }) =>
+      operation.read(() => api.detail(scope, recordID, signal)),
     enabled: allowed && !create,
     placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey[1] === operation.auth.session?.user.id ? previous : undefined,
+      previousQuery?.queryKey[1] === operation.auth.session?.user.id
+        ? previous
+        : undefined,
   })
   if (!allowed) return <AccessDenied />
   return (
     <section>
       <PlanningHeader
-        title={(create ? 'Create ' : 'Edit ') + (scope.planID ? 'milestone' : 'plan')}
+        title={
+          copy(create ? 'Create {{value1}}' : 'Edit {{value1}}', 'planning', { value1: copy(scope.planID ? 'milestone' : 'plan', 'planning') })
+        }
         operation={operation}
       />
       {!create && query.isPending ? (
-        <PageSkeleton label="Loading record…" />
+        <PageSkeleton label={copy('Loading record…', 'planning')} />
       ) : !create && query.isError && !query.data ? (
         <PlanningError
           error={query.error}

@@ -1,13 +1,27 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useEffect, useId, useRef } from 'react'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 const focusableSelector = [
-  'a[href]', 'button:not([disabled])', 'input:not([disabled])',
-  'select:not([disabled])', 'textarea:not([disabled])', 'summary', '[tabindex]:not([tabindex="-1"])',
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  'summary',
+  '[tabindex]:not([tabindex="-1"])',
 ].join(',')
 
-export function Dialog({ open, title, description, children, onClose, eyebrow = 'Confirmation', variant = 'dialog' }: {
+export function Dialog({
+  open,
+  title,
+  description,
+  children,
+  onClose,
+  eyebrow = copy('Confirmation', 'common'),
+  variant = 'dialog',
+}: {
   variant?: 'dialog' | 'drawer'
   open: boolean
   title: string
@@ -16,6 +30,7 @@ export function Dialog({ open, title, description, children, onClose, eyebrow = 
   onClose: () => void
   eyebrow?: string
 }) {
+  useLocale()
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleID = useId()
   const descriptionID = useId()
@@ -24,7 +39,10 @@ export function Dialog({ open, title, description, children, onClose, eyebrow = 
     if (!open) return
     const dialog = dialogRef.current
     if (!dialog) return
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const previousFocus =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     if (!dialog.open) {
@@ -54,7 +72,9 @@ export function Dialog({ open, title, description, children, onClose, eyebrow = 
     if (event.key !== 'Tab') return
     const dialog = dialogRef.current
     if (!dialog) return
-    const focusable = [...dialog.querySelectorAll<HTMLElement>(focusableSelector)]
+    const focusable = [
+      ...dialog.querySelectorAll<HTMLElement>(focusableSelector),
+    ]
     if (focusable.length === 0) {
       event.preventDefault()
       dialog.focus()
@@ -81,7 +101,10 @@ export function Dialog({ open, title, description, children, onClose, eyebrow = 
       className={`ui-dialog ${variant === 'drawer' ? 'drawer' : ''}`}
       aria-labelledby={titleID}
       aria-describedby={descriptionID}
-      onCancel={(event) => { event.preventDefault(); onClose() }}
+      onCancel={(event) => {
+        event.preventDefault()
+        onClose()
+      }}
       onKeyDown={keepFocus}
       onMouseDown={dismissBackdrop}
       tabIndex={-1}
@@ -89,8 +112,12 @@ export function Dialog({ open, title, description, children, onClose, eyebrow = 
       <div className="ui-dialog-panel">
         <div>
           <p className="eyebrow">{eyebrow}</p>
-          <h2 className="mt-2" id={titleID}>{title}</h2>
-          <p className="mt-2 text-sm leading-6 text-muted" id={descriptionID}>{description}</p>
+          <h2 className="mt-2" id={titleID}>
+            {title}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-muted" id={descriptionID}>
+            {description}
+          </p>
         </div>
         {children}
       </div>

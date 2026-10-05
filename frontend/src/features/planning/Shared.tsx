@@ -1,3 +1,4 @@
+import { copy, currentLocale, useLocale } from '../../i18n/index'
 import { ClientNavigation } from '../clients/ClientNavigation'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
@@ -8,14 +9,23 @@ import { labels, pagePath } from './models'
 import type { Summary } from './models'
 import type { usePlanning } from './hooks'
 export type Operation = ReturnType<typeof usePlanning>
-export function PlanningError({ error, retry }: { error: unknown; retry: () => void }) {
+export function PlanningError({
+  error,
+  retry,
+}: {
+  error: unknown
+  retry: () => void
+}) {
+  useLocale()
   return (
     <div className="my-4 rounded-md border border-danger-line bg-danger-surface p-4">
       <p role="alert">
-        {error instanceof APIError ? error.message : 'Unable to load planning data. Try again.'}
+        {error instanceof APIError
+          ? copy(error.message, 'planning')
+          : copy('Unable to load planning data. Try again.', 'planning')}
       </p>
       <Button className="mt-3" onClick={retry}>
-        Try again
+        {copy('Try again', 'planning')}
       </Button>
     </div>
   )
@@ -29,27 +39,54 @@ export function PlanningHeader({
   operation: Operation
   children?: ReactNode
 }) {
+  useLocale()
   const { scope, permissions, client, parent } = operation
-  const context = permissions.clientView && !client.isError ? client.data : undefined
+  const context =
+    permissions.clientView && !client.isError ? client.data : undefined
   return (
     <>
       <header className="page-header">
         <div className="min-w-0">
           <p className="eyebrow">
-            {context?.name ?? 'Client workspace'} · {scope.planID ? 'Milestones' : 'Planning'}
+            {context?.name ?? copy('Client workspace', 'planning')} ·{' '}
+            {scope.planID
+              ? copy('Milestones', 'planning')
+              : copy('Planning', 'planning')}
           </p>
           <h1 className="page-title">{title}</h1>
           <p className="mt-2 text-xs text-muted">
-            Times shown in {deviceTimezone()} · Completion is manual.
+            {copy(
+              'Times shown in {{value1}} · Completion is manual.',
+              'planning',
+              { value1: deviceTimezone() },
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">{children}</div>
       </header>
       <ClientNavigation clientID={scope.clientID} />
-      {scope.planID ? <nav aria-label="Planning context" className="mb-5 flex gap-5 text-xs"><Link className="underline underline-offset-4" to={pagePath({ clientID: scope.clientID }, scope.planID)}>Parent plan</Link><Link className="underline underline-offset-4" to={pagePath(scope)}>Milestones</Link></nav> : null}
+      {scope.planID ? (
+        <nav
+          aria-label={copy('Planning context', 'planning')}
+          className="mb-5 flex gap-5 text-xs"
+        >
+          <Link
+            className="underline underline-offset-4"
+            to={pagePath({ clientID: scope.clientID }, scope.planID)}
+          >
+            {copy('Parent plan', 'planning')}
+          </Link>
+          <Link className="underline underline-offset-4" to={pagePath(scope)}>
+            {copy('Milestones', 'planning')}
+          </Link>
+        </nav>
+      ) : null}
       {context?.status === 'archived' ? (
         <p role="status" className="mb-4">
-          This client is archived. Planning history remains available; changes are unavailable.
+          {copy(
+            'This client is archived. Planning history remains available; changes are unavailable.',
+            'planning',
+          )}
         </p>
       ) : null}
       {permissions.clientView && client.isError ? (
@@ -70,31 +107,41 @@ export function PlanningHeader({
       ) : null}
       {scope.planID &&
       parent.data &&
-      (parent.data.archived_at || ['completed', 'cancelled'].includes(parent.data.status)) ? (
+      (parent.data.archived_at ||
+        ['completed', 'cancelled'].includes(parent.data.status)) ? (
         <p role="status" className="mb-4">
-          The parent plan is{' '}
-          {parent.data.archived_at ? 'archived' : labels[parent.data.status].toLowerCase()}.
-          Milestone history remains available. Reopen an unarchived plan before changing milestones.
+          {copy(
+            'The parent plan is{{value1}} {{value2}}. Milestone history remains available. Reopen an unarchived plan before changing milestones.',
+            'planning',
+            {
+              value1: ' ',
+              value2: copy(parent.data.archived_at ? 'Archived' : labels[parent.data.status], 'planning').toLocaleLowerCase(currentLocale()),
+            },
+          )}
         </p>
       ) : null}
     </>
   )
 }
 export function PlanningState({ record }: { record: Summary }) {
+  useLocale()
   return (
     <div className="flex flex-wrap gap-1.5">
       <Status tone={record.status === 'completed' ? 'success' : 'neutral'}>
-        {labels[record.status]}
+        {copy(labels[record.status], 'planning')}
       </Status>
-      {record.archived_at ? <Status>Archived</Status> : null}
+      {record.archived_at ? (
+        <Status>{copy('Archived', 'planning')}</Status>
+      ) : null}
     </div>
   )
 }
 export function PlanningTime({ value }: { value: string | null }) {
+  useLocale()
   return value ? (
     <time dateTime={value}>{formatTime(value)}</time>
   ) : (
-    <span className="text-muted">Not set</span>
+    <span className="text-muted">{copy('Not set', 'planning')}</span>
   )
 }
 export function Pager({
@@ -110,19 +157,22 @@ export function Pager({
   busy: boolean
   onChange: (history: string[]) => void
 }) {
+  useLocale()
   return (
     <nav
-      aria-label={`${name} pagination`}
+      aria-label={copy('{{name}} pagination', 'common', { name })}
       className="mt-4 flex flex-wrap items-center justify-between gap-3"
     >
-      <p className="text-xs text-muted">Up to 25 per page</p>
+      <p className="text-xs text-muted">
+        {copy('Up to 25 per page', 'planning')}
+      </p>
       <div className="flex gap-2">
         <Button
           size="compact"
           disabled={history.length < 2 || busy}
           onClick={() => onChange(history.slice(0, -1))}
         >
-          Previous
+          {copy('Previous', 'planning')}
         </Button>
         <Button
           size="compact"
@@ -131,7 +181,7 @@ export function Pager({
             if (next) onChange([...history, next])
           }}
         >
-          Next
+          {copy('Next', 'planning')}
         </Button>
       </div>
     </nav>
@@ -144,13 +194,14 @@ export function OperationNotice({
   operation: Operation
   reload: () => void
 }) {
+  useLocale()
   return operation.error ? (
     <div className="mb-4">
       <p role="alert" className="text-danger-ink">
-        {operation.error}
+        {copy(operation.error, 'planning')}
       </p>
       <Button className="mt-2" onClick={reload}>
-        Reload current data
+        {copy('Reload current data', 'planning')}
       </Button>
     </div>
   ) : null

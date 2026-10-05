@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Button, TextField } from '../../components/ui'
 import { emptyFilters, validateFilters } from './models'
@@ -11,22 +12,23 @@ export function AuditFilters({
   busy: boolean
   onApply: (f: Filters) => void
 }) {
+  useLocale()
   const [draft, setDraft] = useState({ ...emptyFilters })
   const [error, setError] = useState('')
   const labels = {
-    actor_id: 'Actor ID',
-    event_type: 'Event type',
-    client_id: 'Client ID',
-    resource_kind: 'Resource kind',
-    resource_id: 'Resource ID',
-    request_id: 'Request ID',
-    from: 'From (UTC, inclusive)',
-    to: 'To (UTC, exclusive)',
+    actor_id: copy('Actor ID', 'audit'),
+    event_type: copy('Event type', 'audit'),
+    client_id: copy('Client ID', 'audit'),
+    resource_kind: copy('Resource kind', 'audit'),
+    resource_id: copy('Resource ID', 'audit'),
+    request_id: copy('Request ID', 'audit'),
+    from: copy('From (UTC, inclusive)', 'audit'),
+    to: copy('To (UTC, exclusive)', 'audit'),
   }
   return (
     <form
       className="mb-5 filter-bar"
-      aria-label="Audit filters"
+      aria-label={copy('Audit filters', 'audit')}
       onSubmit={(e) => {
         e.preventDefault()
         try {
@@ -70,31 +72,33 @@ export function AuditFilters({
             />
           ))}
         <label className="grid content-start gap-1.5 text-sm font-semibold">
-          Actor kind
+          {copy('Actor kind', 'audit')}{' '}
           <select
             className="ui-input"
             value={draft.actor_kind}
             disabled={busy}
             onChange={(e) => setDraft({ ...draft, actor_kind: e.target.value })}
           >
-            <option value="">All actors</option>
-            <option value="user">User</option>
-            <option value="system">System</option>
+            <option value="">{copy('All actors', 'audit')}</option>
+            <option value="user">{copy('User', 'audit')}</option>
+            <option value="system">{copy('System', 'audit')}</option>
           </select>
         </label>
       </div>
       <p className="mt-3 text-xs text-muted">
-        Exact filters. Dates use UTC with up to six fractional digits. Leave a
-        field empty to include all visible matches.
+        {copy(
+          'Exact filters. Dates use UTC with up to six fractional digits. Leave a field empty to include all visible matches.',
+          'audit',
+        )}
       </p>
       {error ? (
         <p role="alert" className="mt-3 text-sm text-danger-ink">
-          {error}
+          {copy(error, 'audit')}
         </p>
       ) : null}
       <div className="mt-4 flex gap-2">
         <Button type="submit" disabled={busy}>
-          Apply filters
+          {copy('Apply filters', 'audit')}
         </Button>
         <Button
           type="button"
@@ -105,7 +109,7 @@ export function AuditFilters({
             onApply({ ...emptyFilters })
           }}
         >
-          Clear filters
+          {copy('Clear filters', 'audit')}
         </Button>
       </div>
     </form>

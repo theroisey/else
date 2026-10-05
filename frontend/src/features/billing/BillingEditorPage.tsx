@@ -1,9 +1,15 @@
+import { copy, useLocale } from '../../i18n/index'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import type { FieldPath } from 'react-hook-form'
-import { Button, TextField, buttonStyles, PageSkeleton } from '../../components/ui'
+import {
+  Button,
+  TextField,
+  buttonStyles,
+  PageSkeleton,
+} from '../../components/ui'
 import { AccessDenied } from '../clients/Shared'
 import { useBilling } from './hooks'
 import { BillingHeader, BillingError } from './Shared'
@@ -29,6 +35,7 @@ const draftOf = (r?: Collection): Draft => ({
   due_date: r?.due_date ?? '',
 })
 export function BillingEditorPage({ create = false }: { create?: boolean }) {
+  useLocale()
   const { id = '', collectionID = '' } = useParams()
   return (
     <Editor
@@ -48,6 +55,7 @@ function Editor({
   recordID: string
   create: boolean
 }) {
+  useLocale()
   const operation = useBilling(clientID),
     allowed = create
       ? operation.permissions.create
@@ -58,18 +66,34 @@ function Editor({
       operation.read(() => api.detail(clientID, recordID, signal)),
     enabled: allowed && !create,
   })
-  const snapshot = useBillingSnapshot(operation, create || query.isError ? undefined : query.data)
+  const snapshot = useBillingSnapshot(
+    operation,
+    create || query.isError ? undefined : query.data,
+  )
   if (!allowed) return <AccessDenied />
   return (
     <section>
       <BillingHeader
-        title={create ? 'Create collection' : 'Edit collection'}
+        title={
+          create
+            ? copy('Create collection', 'billing')
+            : copy('Edit collection', 'billing')
+        }
         operation={operation}
       />
-      {!create && query.data && snapshot.isPending ? <p role="status">Checking collection price origin…</p> : null}
-      {!create && snapshot.isError ? <BillingError error={snapshot.error} retry={() => void snapshot.refetch()} /> : null}
+      {!create && query.data && snapshot.isPending ? (
+        <p role="status">
+          {copy('Checking collection price origin…', 'billing')}
+        </p>
+      ) : null}
+      {!create && snapshot.isError ? (
+        <BillingError
+          error={snapshot.error}
+          retry={() => void snapshot.refetch()}
+        />
+      ) : null}
       {!create && query.isPending ? (
-        <PageSkeleton label="Loading collection…" />
+        <PageSkeleton label={copy('Loading collection…', 'billing')} />
       ) : !create && query.isError ? (
         <BillingError error={query.error} retry={() => void query.refetch()} />
       ) : create || query.data ? (
@@ -82,7 +106,9 @@ function Editor({
           operation={operation}
           record={create ? undefined : query.data}
           checking={!create && query.isFetching}
-          copied={snapshot.data !== null || snapshot.isError || snapshot.isFetching}
+          copied={
+            snapshot.data !== null || snapshot.isError || snapshot.isFetching
+          }
         />
       ) : null}
     </section>
@@ -99,6 +125,7 @@ function CollectionForm({
   checking: boolean
   copied: boolean
 }) {
+  useLocale()
   const navigate = useNavigate(),
     [localError, setLocalError] = useState(''),
     [requiresReload, setRequiresReload] = useState(false)
@@ -128,7 +155,7 @@ function CollectionForm({
     if (!draft.currency) {
       setError(
         'currency',
-        { message: 'Choose a currency.' },
+        { message: copy('Choose a currency.', 'billing') },
         { shouldFocus: true },
       )
       return
@@ -139,7 +166,10 @@ function CollectionForm({
     } catch (e) {
       setError(
         'amount',
-        { message: e instanceof Error ? e.message : 'Check amount.' },
+        {
+          message:
+            e instanceof Error ? e.message : copy('Check amount.', 'billing'),
+        },
         { shouldFocus: true },
       )
       return
@@ -181,8 +211,14 @@ function CollectionForm({
       setRequiresReload(true)
       setLocalError(
         returned
-          ? 'The collection was saved, but access changed. Refresh your session before continuing.'
-          : 'Reload current finance data before retrying. If confirmation was lost, check the collection list for an existing creation before creating another.',
+          ? copy(
+              'The collection was saved, but access changed. Refresh your session before continuing.',
+              'billing',
+            )
+          : copy(
+              'Reload current finance data before retrying. If confirmation was lost, check the collection list for an existing creation before creating another.',
+              'billing',
+            ),
       )
     }
   }
@@ -193,10 +229,14 @@ function CollectionForm({
       className="grid max-w-3xl gap-4 form-section"
     >
       {record?.status === 'cancelled' ? (
-        <p role="status">Cancelled collections are read only.</p>
+        <p role="status">
+          {copy('Cancelled collections are read only.', 'billing')}
+        </p>
       ) : null}
       {catalog.isPending ? (
-        <PageSkeleton label="Loading supported currencies…" />
+        <PageSkeleton
+          label={copy('Loading supported currencies…', 'billing')}
+        />
       ) : catalog.isError ? (
         <BillingError
           error={catalog.error}
@@ -205,7 +245,7 @@ function CollectionForm({
       ) : null}
       <fieldset disabled={disabled} className="grid gap-4">
         <label className="grid gap-1.5 text-sm font-semibold">
-          Collection description
+          {copy('Collection description', 'billing')}{' '}
           <textarea
             className="ui-input min-h-24"
             maxLength={2000}
@@ -213,47 +253,53 @@ function CollectionForm({
           />
           {errors.description ? (
             <span role="alert" className="text-xs text-danger-ink">
-              {errors.description.message}
+              {copy(errors.description.message, 'billing')}
             </span>
           ) : null}
         </label>
         <label className="grid gap-1.5 text-sm font-semibold">
-          Currency
+          {copy('Currency', 'billing')}{' '}
           <select
             className="ui-input"
             {...register('currency')}
             disabled={!!record}
           >
-            <option value="">Choose currency</option>
+            <option value="">{copy('Choose currency', 'billing')}</option>
             {catalog.data?.map((c) => (
               <option key={c.code} value={c.code}>
-                {c.code} · {c.exponent} decimal places
+                {copy('{{value1}} · {{value2}} decimal places', 'billing', {
+                  value1: c.code,
+                  value2: c.exponent,
+                })}
               </option>
             ))}
           </select>
           {errors.currency ? (
             <span role="alert" className="text-xs text-danger-ink">
-              {errors.currency.message}
+              {copy(errors.currency.message, 'billing')}
             </span>
           ) : null}
         </label>
         <TextField
-          label="Collection amount"
-          description="Plain decimal major units. No rounding. Amount is fixed for copied pricing and after the first payment; origin checks keep it read only until confirmed."
+          label={copy('Collection amount', 'billing')}
+          description={copy(
+            'Plain decimal major units. No rounding. Amount is fixed for copied pricing and after the first payment; origin checks keep it read only until confirmed.',
+            'billing',
+          )}
           inputMode="decimal"
           maxLength={24}
           {...register('amount')}
           readOnly={!!record && (record.paid_minor !== '0' || copied)}
-          error={errors.amount?.message ?? ''}
+          error={copy(errors.amount?.message, 'billing') ?? ''}
         />
         <TextField
-          label="Due date (UTC calendar)"
+          label={copy('Due date (UTC calendar)', 'billing')}
           type="date"
           {...register('due_date')}
-          error={errors.due_date?.message ?? ''}
+          error={copy(errors.due_date?.message, 'billing') ?? ''}
         />
         <label className="grid gap-1.5 text-sm font-semibold">
-          Internal note
+          {copy('Internal note', 'billing')}{' '}
           <textarea
             className="ui-input min-h-32"
             maxLength={8000}
@@ -261,17 +307,17 @@ function CollectionForm({
           />
           {errors.internal_note ? (
             <span role="alert" className="text-xs text-danger-ink">
-              {errors.internal_note.message}
+              {copy(errors.internal_note.message, 'billing')}
             </span>
           ) : null}
         </label>
       </fieldset>
-      {operation.error ? (
+      {copy(operation.error, 'billing') ? (
         <p role="alert" className="text-danger-ink">
-          {operation.error}
+          {copy(operation.error, 'billing')}
         </p>
       ) : null}
-      {localError ? <p role="alert">{localError}</p> : null}
+      {localError ? <p role="alert">{copy(localError, 'billing')}</p> : null}
       <div className="flex flex-wrap gap-2">
         <Button
           type="submit"
@@ -279,7 +325,9 @@ function CollectionForm({
           loading={operation.pending}
           disabled={disabled}
         >
-          {record ? 'Save collection' : 'Create collection'}
+          {record
+            ? copy('Save collection', 'billing')
+            : copy('Create collection', 'billing')}
         </Button>
         {requiresReload ? (
           <Button
@@ -289,14 +337,14 @@ function CollectionForm({
               })
             }
           >
-            Review current finance data
+            {copy('Review current finance data', 'billing')}
           </Button>
         ) : null}
         <Link
           className={buttonStyles()}
           to={pagePath(operation.clientID, record?.id)}
         >
-          Cancel
+          {copy('Cancel', 'billing')}
         </Link>
       </div>
     </form>

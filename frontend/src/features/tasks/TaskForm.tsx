@@ -1,9 +1,16 @@
+import { statusLabel } from '../../i18n/labels'
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useForm, useWatch } from 'react-hook-form'
 import type { FieldPath } from 'react-hook-form'
 import { Button, TextField, buttonStyles } from '../../components/ui'
-import { emptyMetadata, metadataSchema, priorities, statusLabels } from './models'
+import {
+  emptyMetadata,
+  metadataSchema,
+  priorities,
+  statusLabels,
+} from './models'
 import type { Metadata, Task } from './models'
 import type { useTasks } from './hooks'
 import { AssigneePicker } from './AssigneePicker'
@@ -40,6 +47,7 @@ export function TaskForm({
   operation: ReturnType<typeof useTasks>
   onUnavailable: (message: string) => void
 }) {
+  useLocale()
   const navigate = useNavigate(),
     [revision, setRevision] = useState(task?.revision ?? 1),
     [baseline, setBaseline] = useState<Metadata>(task ?? emptyMetadata)
@@ -56,7 +64,11 @@ export function TaskForm({
     setValue,
     formState: { errors },
   } = useForm<Draft>({ defaultValues: draftOf(baseline) })
-  const assignee = useWatch({ control, name: 'assignee', defaultValue: baseline.assignee_id ?? '' })
+  const assignee = useWatch({
+    control,
+    name: 'assignee',
+    defaultValue: baseline.assignee_id ?? '',
+  })
   async function submit(draft: Draft) {
     if (busy || !operation.writable) return
     clearErrors()
@@ -66,7 +78,7 @@ export function TaskForm({
     } catch {
       setError(
         'start_local',
-        { message: 'Choose a valid local start time.' },
+        { message: copy('Choose a valid local start time.', 'tasks') },
         { shouldFocus: true },
       )
       return
@@ -74,7 +86,11 @@ export function TaskForm({
     try {
       due = localTimestamp(draft.due_local, baseline.due_at)
     } catch {
-      setError('due_local', { message: 'Choose a valid local due time.' }, { shouldFocus: true })
+      setError(
+        'due_local',
+        { message: copy('Choose a valid local due time.', 'tasks') },
+        { shouldFocus: true },
+      )
       return
     }
     const parsed = metadataSchema.safeParse({
@@ -123,15 +139,21 @@ export function TaskForm({
     setReloadError('')
     try {
       const current = await operation.read(() => api.detail(clientID, task.id))
-      if (current.archived_at || ['done', 'cancelled'].includes(current.status)) {
+      if (
+        current.archived_at ||
+        ['done', 'cancelled'].includes(current.status)
+      ) {
         onUnavailable(
           current.archived_at
-            ? 'This task is archived. Its history is retained.'
-            : 'Reopen this task before editing its metadata.',
+            ? copy('This task is archived. Its history is retained.', 'tasks')
+            : copy('Reopen this task before editing its metadata.', 'tasks'),
         )
         return
       }
-      operation.cache.setQueryData([...operation.key, 'detail', task.id], current)
+      operation.cache.setQueryData(
+        [...operation.key, 'detail', task.id],
+        current,
+      )
       setRevision(current.revision)
       setBaseline(current)
       reset(draftOf(current))
@@ -156,20 +178,25 @@ export function TaskForm({
         disabled={busy || !operation.writable}
         className="grid gap-4 form-section"
       >
-        <legend className="px-1 font-semibold">Task details</legend>
+        <legend className="px-1 font-semibold">
+          {copy('Task details', 'tasks')}
+        </legend>
         <TextField
-          label="Task title"
+          label={copy('Task title', 'tasks')}
           required
           maxLength={400}
           {...register('title')}
-          error={errors.title?.message ?? ''}
+          error={copy(errors.title?.message, 'tasks') ?? ''}
         />
         <div className="grid gap-1.5">
           <label className="font-semibold" htmlFor="task-description">
-            Description
+            {copy('Description', 'tasks')}
           </label>
           <p className="text-xs text-muted" id="task-description-help">
-            Plain text, up to 8,000 characters. Line breaks are supported.
+            {copy(
+              'Plain text, up to 8,000 characters. Line breaks are supported.',
+              'tasks',
+            )}
           </p>
           <textarea
             id="task-description"
@@ -180,29 +207,33 @@ export function TaskForm({
             aria-describedby="task-description-help task-description-error"
           />
           {errors.description ? (
-            <p id="task-description-error" role="alert" className="text-xs text-danger-ink">
-              {errors.description.message}
+            <p
+              id="task-description-error"
+              role="alert"
+              className="text-xs text-danger-ink"
+            >
+              {copy(errors.description.message, 'tasks')}
             </p>
           ) : null}
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1.5 font-semibold">
-            Priority
+            {copy('Priority', 'tasks')}{' '}
             <select className="ui-input font-normal" {...register('priority')}>
               {priorities.map((p) => (
                 <option key={p} value={p}>
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                  {statusLabel(p)}
                 </option>
               ))}
             </select>
           </label>
           {!task ? (
             <label className="grid gap-1.5 font-semibold">
-              Initial status
+              {copy('Initial status', 'tasks')}{' '}
               <select className="ui-input font-normal" {...register('status')}>
                 {(['todo', 'backlog'] as const).map((s) => (
                   <option key={s} value={s}>
-                    {statusLabels[s]}
+                    {copy(statusLabels[s], 'tasks')}
                   </option>
                 ))}
               </select>
@@ -213,36 +244,44 @@ export function TaskForm({
           clientID={clientID}
           operation={operation}
           value={assignee}
-          onChange={(value) => setValue('assignee', value, { shouldDirty: true })}
+          onChange={(value) =>
+            setValue('assignee', value, { shouldDirty: true })
+          }
           disabled={busy}
-          error={errors.assignee?.message ?? ''}
+          error={copy(errors.assignee?.message, 'tasks') ?? ''}
         />
         <p className="text-xs text-muted">
-          Enter dates in {deviceTimezone()}. During a repeated daylight-saving hour, a changed time
-          uses its first occurrence.
+          {copy(
+            'Enter dates in {{value1}}. During a repeated daylight-saving hour, a changed time uses its first occurrence.',
+            'tasks',
+            { value1: deviceTimezone() },
+          )}
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField
-            label="Start time"
+            label={copy('Start time', 'tasks')}
             type="datetime-local"
             step={1}
             {...register('start_local')}
-            error={errors.start_local?.message ?? ''}
+            error={copy(errors.start_local?.message, 'tasks') ?? ''}
           />
           <TextField
-            label="Due time"
+            label={copy('Due time', 'tasks')}
             type="datetime-local"
             step={1}
             {...register('due_local')}
-            error={errors.due_local?.message ?? ''}
+            error={copy(errors.due_local?.message, 'tasks') ?? ''}
           />
         </div>
         <div className="grid gap-1.5">
           <label className="font-semibold" htmlFor="task-tags">
-            Tags
+            {copy('Tags', 'tasks')}
           </label>
           <p className="text-xs text-muted" id="task-tags-help">
-            One tag per line, up to 20 distinct labels of 40 characters. Saved in lowercase.
+            {copy(
+              'One tag per line, up to 20 distinct labels of 40 characters. Saved in lowercase.',
+              'tasks',
+            )}
           </p>
           <textarea
             id="task-tags"
@@ -253,20 +292,26 @@ export function TaskForm({
             aria-describedby="task-tags-help task-tags-error"
           />
           {errors.tags_text ? (
-            <p role="alert" id="task-tags-error" className="text-xs text-danger-ink">
-              {errors.tags_text.message}
+            <p
+              role="alert"
+              id="task-tags-error"
+              className="text-xs text-danger-ink"
+            >
+              {copy(errors.tags_text.message, 'tasks')}
             </p>
           ) : null}
         </div>
       </fieldset>
-      {operation.error ? (
+      {copy(operation.error, 'tasks') ? (
         <div className="rounded-md border border-danger-line bg-danger-surface p-4">
-          <p role="alert">{operation.error}</p>
+          <p role="alert">{copy(operation.error, 'tasks')}</p>
           {task && operation.errorCode === 'conflict' ? (
             <>
               <p className="mt-2 text-xs text-muted">
-                Your draft is preserved. Reloading discards the draft and uses the current task
-                revision.
+                {copy(
+                  'Your draft is preserved. Reloading discards the draft and uses the current task revision.',
+                  'tasks',
+                )}
               </p>
               <Button
                 className="mt-3"
@@ -275,7 +320,7 @@ export function TaskForm({
                   void reload()
                 }}
               >
-                Reload current data
+                {copy('Reload current data', 'tasks')}
               </Button>
             </>
           ) : null}
@@ -283,7 +328,7 @@ export function TaskForm({
       ) : null}
       {reloadError ? (
         <p role="alert" className="text-danger-ink">
-          {reloadError}
+          {copy(reloadError, 'tasks')}
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
@@ -291,16 +336,20 @@ export function TaskForm({
           type="submit"
           variant="primary"
           loading={busy}
-          loadingLabel="Saving task"
+          loadingLabel={copy('Saving task', 'tasks')}
           disabled={!operation.writable || operation.errorCode === 'conflict'}
         >
-          {task ? 'Save task' : 'Create task'}
+          {task ? copy('Save task', 'tasks') : copy('Create task', 'tasks')}
         </Button>
         <Link
           className={buttonStyles()}
-          to={task ? `/app/clients/${clientID}/tasks/${task.id}` : `/app/clients/${clientID}/tasks`}
+          to={
+            task
+              ? `/app/clients/${clientID}/tasks/${task.id}`
+              : `/app/clients/${clientID}/tasks`
+          }
         >
-          Cancel
+          {copy('Cancel', 'tasks')}
         </Link>
       </div>
     </form>

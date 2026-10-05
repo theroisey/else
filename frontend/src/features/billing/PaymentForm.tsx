@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import type { FieldPath } from 'react-hook-form'
@@ -23,6 +24,7 @@ export function PaymentForm({
   operation: Operation
   checking: boolean
 }) {
+  useLocale()
   const recovery = usePaymentRecovery(),
     [message, setMessage] = useState('')
   const {
@@ -49,7 +51,12 @@ export function PaymentForm({
     } catch (e) {
       setError(
         'amount',
-        { message: e instanceof Error ? e.message : 'Check the amount.' },
+        {
+          message:
+            e instanceof Error
+              ? e.message
+              : copy('Check the amount.', 'billing'),
+        },
         { shouldFocus: true },
       )
       return
@@ -58,8 +65,10 @@ export function PaymentForm({
       setError(
         'amount',
         {
-          message:
+          message: copy(
             'Amount exceeds the current outstanding balance. Reload if the balance changed.',
+            'billing',
+          ),
         },
         { shouldFocus: true },
       )
@@ -87,7 +96,12 @@ export function PaymentForm({
     if (result.data.paid_on > new Date().toISOString().slice(0, 10)) {
       setError(
         'paid_on',
-        { message: 'Payment date cannot be later than today in UTC.' },
+        {
+          message: copy(
+            'Payment date cannot be later than today in UTC.',
+            'billing',
+          ),
+        },
         { shouldFocus: true },
       )
       return
@@ -106,45 +120,53 @@ export function PaymentForm({
       onSubmit={handleSubmit(submit)}
       className="mt-6 grid max-w-3xl gap-4 form-section"
     >
-      <h2 className="font-semibold">Record payment</h2>
+      <h2 className="font-semibold">{copy('Record payment', 'billing')}</h2>
       <p className="text-sm text-muted">
-        Outstanding: {money(record.outstanding_minor, record.currency)}. Records
-        are permanent; verify the amount and payment date before submitting.
+        {copy(
+          'Outstanding: {{value1}}. Records are permanent; verify the amount and payment date before submitting.',
+          'billing',
+          { value1: money(record.outstanding_minor, record.currency) },
+        )}
       </p>
       <fieldset disabled={disabled} className="grid gap-4 sm:grid-cols-2">
         <TextField
-          label={`Payment amount (${record.currency})`}
+          label={copy('Payment amount ({{value1}})', 'billing', {
+            value1: record.currency,
+          })}
           inputMode="decimal"
           maxLength={24}
           {...register('amount')}
-          error={errors.amount?.message ?? ''}
+          error={copy(errors.amount?.message, 'billing') ?? ''}
         />
         <TextField
-          label="Payment date (UTC calendar)"
+          label={copy('Payment date (UTC calendar)', 'billing')}
           type="date"
           {...register('paid_on')}
-          error={errors.paid_on?.message ?? ''}
+          error={copy(errors.paid_on?.message, 'billing') ?? ''}
         />
         <label className="grid gap-1.5 text-sm font-semibold">
-          Payment method
+          {copy('Payment method', 'billing')}{' '}
           <select className="ui-input" {...register('method')}>
             {methods.map((m) => (
               <option key={m} value={m}>
-                {methodLabels[m]}
+                {copy(methodLabels[m], 'billing')}
               </option>
             ))}
           </select>
         </label>
         <TextField
-          label="Payment reference"
-          description="Optional. Use a short reference, never credentials or full card/account details."
+          label={copy('Payment reference', 'billing')}
+          description={copy(
+            'Optional. Use a short reference, never credentials or full card/account details.',
+            'billing',
+          )}
           maxLength={200}
           autoComplete="off"
           {...register('reference')}
-          error={errors.reference?.message ?? ''}
+          error={copy(errors.reference?.message, 'billing') ?? ''}
         />
         <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">
-          Payment note
+          {copy('Payment note', 'billing')}{' '}
           <textarea
             className="ui-input min-h-24"
             maxLength={2000}
@@ -152,19 +174,21 @@ export function PaymentForm({
           />
           {errors.note ? (
             <span role="alert" className="text-xs text-danger-ink">
-              {errors.note.message}
+              {copy(errors.note.message, 'billing')}
             </span>
           ) : null}
         </label>
       </fieldset>
-      {message && recovery.busy ? <p role="status">{message}</p> : null}
+      {message && recovery.busy ? (
+        <p role="status">{copy(message, 'billing')}</p>
+      ) : null}
       <Button
         type="submit"
         variant="primary"
         className="justify-self-start"
         disabled={disabled}
       >
-        Record payment
+        {copy('Record payment', 'billing')}
       </Button>
     </form>
   )

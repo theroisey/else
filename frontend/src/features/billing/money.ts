@@ -1,3 +1,4 @@
+import { formatCurrency } from '../../i18n/format'
 export const exponents = {
   USD: 2,
   EUR: 2,
@@ -43,6 +44,5 @@ export function money(
 ) {
   if (exponent !== exponents[currency])
     throw new Error('Invalid currency scale.')
-  const [whole = '', fraction] = decimal(minor, exponent).split('.')
-  return `${currency} ${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${fraction === undefined ? '' : '.' + fraction}`
+  return formatCurrency(decimal(minor, exponent), currency, exponent)
 }

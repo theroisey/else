@@ -48,29 +48,61 @@ const identity: Session = {
   session: { expires_at: new Date(Date.now() + 43_200_000).toISOString() },
 }
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
-const page = (data: unknown[]) => ({ data, page: { limit: 25, next_cursor: null } })
-type Override = (path: string, init: RequestInit) => Response | Promise<Response> | undefined
-function setup(path = '/app/users', session = identity, override: Override = () => undefined) {
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+const page = (data: unknown[]) => ({
+  data,
+  page: { limit: 25, next_cursor: null },
+})
+type Override = (
+  path: string,
+  init: RequestInit,
+) => Response | Promise<Response> | undefined
+function setup(
+  path = '/app/users',
+  session = identity,
+  override: Override = () => undefined,
+) {
   document.cookie = `else_csrf=${'a'.repeat(43)}; Path=/`
   const fetcher = vi.fn((url: string, init: RequestInit = {}) => {
     const custom = override(url, init)
     if (custom) return Promise.resolve(custom)
-    if (url === '/api/v1/auth/session') return Promise.resolve(json({ data: session }))
-    if (url.startsWith('/api/v1/users?')) return Promise.resolve(json(page([user])))
-    if (url.startsWith('/api/v1/roles?')) return Promise.resolve(json(page([role])))
+    if (url === '/api/v1/auth/preferences')
+      return Promise.resolve(json({ data: { locale: null } }))
+    if (url === '/api/v1/auth/session')
+      return Promise.resolve(json({ data: session }))
+    if (url.startsWith('/api/v1/users?'))
+      return Promise.resolve(json(page([user])))
+    if (url.startsWith('/api/v1/roles?'))
+      return Promise.resolve(json(page([role])))
     if (url === '/api/v1/permissions')
       return Promise.resolve(
         json({
           data: [
-            { permission: 'clients.view', scope: 'client', description: 'View clients' },
-            { permission: 'tasks.view', scope: 'client', description: 'View tasks' },
-            { permission: 'users.manage', scope: 'global', description: 'Manage users' },
+            {
+              permission: 'clients.view',
+              scope: 'client',
+              description: 'View clients',
+            },
+            {
+              permission: 'tasks.view',
+              scope: 'client',
+              description: 'View tasks',
+            },
+            {
+              permission: 'users.manage',
+              scope: 'global',
+              description: 'Manage users',
+            },
           ],
         }),
       )
-    if (url === `/api/v1/users/${target}/roles?limit=25`) return Promise.resolve(json(page([])))
-    if (url === `/api/v1/roles/${roleID}`) return Promise.resolve(json({ data: role }))
+    if (url === `/api/v1/users/${target}/roles?limit=25`)
+      return Promise.resolve(json(page([])))
+    if (url === `/api/v1/roles/${roleID}`)
+      return Promise.resolve(json({ data: role }))
     return Promise.resolve(json({ data: { id: target, revision: 2 } }))
   })
   vi.stubGlobal('fetch', fetcher)
@@ -91,8 +123,15 @@ afterEach(() => {
 it('denies deep links and avoids administration requests without the exact view permission', async () => {
   const session = { ...identity, user: { ...identity.user, permissions: [] } }
   const { fetcher } = setup('/app/users', session)
-  expect(await screen.findByRole('heading', { name: 'Access denied' })).toBeInTheDocument()
-  expect(fetcher.mock.calls.every(([path]) => path === '/api/v1/auth/session')).toBe(true)
+  expect(
+    await screen.findByRole('heading', { name: 'Access denied' }),
+  ).toBeInTheDocument()
+  expect(
+    fetcher.mock.calls.every(
+      ([path]) =>
+        path === '/api/v1/auth/session' || path === '/api/v1/auth/preferences',
+    ),
+  ).toBe(true)
   expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument()
 })
 
@@ -111,10 +150,16 @@ it('refreshes revoked access after a denied administration read and removes the 
     if (path.startsWith('/api/v1/users?'))
       return json({ error: { code: 'permission_denied' } }, 403)
   })
-  expect(await screen.findByRole('heading', { name: 'Access denied' })).toBeInTheDocument()
+  expect(
+    await screen.findByRole('heading', { name: 'Access denied' }),
+  ).toBeInTheDocument()
   expect(identities).toBe(2)
-  expect(screen.queryByRole('button', { name: 'Create account' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('table', { name: 'User accounts' })).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: 'Create account' }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('table', { name: 'User accounts' }),
+  ).not.toBeInTheDocument()
 })
 
 it('offers no writes to view-only users', async () => {
@@ -127,9 +172,15 @@ it('offers no writes to view-only users', async () => {
   }
   setup('/app/users', session)
   await screen.findByRole('table', { name: 'User accounts' })
-  expect(screen.queryByRole('button', { name: 'Create account' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /Disable Target/ })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /Roles for/ })).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: 'Create account' }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: /Disable Target/ }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: /Roles for/ }),
+  ).not.toBeInTheDocument()
 })
 
 it('shows loading, safe errors, retry and an empty page without leaking response details', async () => {
@@ -145,10 +196,21 @@ it('shows loading, safe errors, retry and an empty page without leaking response
     }
   })
   expect(await screen.findByText('Loading users…')).toBeInTheDocument()
-  release(json({ error: { code: 'internal_error', message: 'private database detail' } }, 500))
-  expect(await screen.findByRole('alert')).not.toHaveTextContent('private database detail')
-  await userEvent.setup().click(screen.getByRole('button', { name: 'Try again' }))
-  expect(await screen.findByRole('heading', { name: 'No users on this page' })).toBeInTheDocument()
+  release(
+    json(
+      { error: { code: 'internal_error', message: 'private database detail' } },
+      500,
+    ),
+  )
+  expect(await screen.findByRole('alert')).not.toHaveTextContent(
+    'private database detail',
+  )
+  await userEvent
+    .setup()
+    .click(screen.getByRole('button', { name: 'Try again' }))
+  expect(
+    await screen.findByRole('heading', { name: 'No users on this page' }),
+  ).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
 })
 
@@ -164,16 +226,23 @@ it('moves between bounded pages using the server cursor and restores the previou
   await u.click(screen.getByRole('button', { name: 'Next' }))
   await screen.findByRole('button', { name: 'Edit Next Fixture' })
   expect(
-    fetcher.mock.calls.some(([path]) => path === `/api/v1/users?limit=25&cursor=${target}`),
+    fetcher.mock.calls.some(
+      ([path]) => path === `/api/v1/users?limit=25&cursor=${target}`,
+    ),
   ).toBe(true)
   await u.click(screen.getByRole('button', { name: 'Previous' }))
-  expect(await screen.findByRole('button', { name: 'Edit Target Fixture' })).toBeInTheDocument()
+  expect(
+    await screen.findByRole('button', { name: 'Edit Target Fixture' }),
+  ).toBeInTheDocument()
 })
 
 it('validates creation and clears the password after a failed request without caching it', async () => {
   const { client, fetcher } = setup('/app/users', identity, (path, init) =>
     path === '/api/v1/users' && init?.method === 'POST'
-      ? json({ error: { code: 'conflict', message: 'unsafe fixture detail' } }, 409)
+      ? json(
+          { error: { code: 'conflict', message: 'unsafe fixture detail' } },
+          409,
+        )
       : undefined,
   )
   const u = userEvent.setup()
@@ -181,10 +250,15 @@ it('validates creation and clears the password after a failed request without ca
   const dialog = within(screen.getByRole('dialog'))
   await u.click(dialog.getByRole('button', { name: 'Create account' }))
   expect(dialog.getByText('Enter a valid email address.')).toBeInTheDocument()
-  expect(fetcher.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+  expect(fetcher.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(
+    false,
+  )
   await u.type(dialog.getByLabelText('Display name'), 'Created Fixture')
   await u.type(dialog.getByLabelText('Email'), 'created@example.com')
-  await u.type(dialog.getByLabelText('Initial password'), 'clearly synthetic test password')
+  await u.type(
+    dialog.getByLabelText('Initial password'),
+    'clearly synthetic test password',
+  )
   await u.click(dialog.getByRole('button', { name: 'Create account' }))
   expect(await dialog.findByRole('alert')).toHaveTextContent('record changed')
   expect(dialog.getByLabelText('Initial password')).toHaveValue('')
@@ -207,13 +281,22 @@ it('requires confirmation for disablement and preserves the safe last-administra
       : undefined,
   )
   const u = userEvent.setup()
-  await u.click(await screen.findByRole('button', { name: 'Disable Target Fixture' }))
-  expect(fetcher.mock.calls.some(([path]) => path.endsWith('/disable'))).toBe(false)
+  await u.click(
+    await screen.findByRole('button', { name: 'Disable Target Fixture' }),
+  )
+  expect(fetcher.mock.calls.some(([path]) => path.endsWith('/disable'))).toBe(
+    false,
+  )
   expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
   await u.click(screen.getByRole('button', { name: 'Disable account' }))
-  expect(await screen.findByRole('alert')).toHaveTextContent('At least one active administrator')
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'At least one active administrator',
+  )
   const request = fetcher.mock.calls.find(([path]) => path.endsWith('/disable'))
-  expect(JSON.parse(request?.[1]?.body as string)).toEqual({ expected_revision: 1, confirm: true })
+  expect(JSON.parse(request?.[1]?.body as string)).toEqual({
+    expected_revision: 1,
+    confirm: true,
+  })
 })
 
 it('reloads a stale profile explicitly and submits the new revision', async () => {
@@ -226,27 +309,43 @@ it('reloads a stale profile explicitly and submits the new revision', async () =
         : json({ data: { id: target, revision: 3 } })
     }
     if (path === `/api/v1/users/${target}` && init?.method === 'GET')
-      return json({ data: { ...user, revision: 2, display_name: 'Current Fixture' } })
+      return json({
+        data: { ...user, revision: 2, display_name: 'Current Fixture' },
+      })
   })
   const u = userEvent.setup()
-  await u.click(await screen.findByRole('button', { name: 'Edit Target Fixture' }))
+  await u.click(
+    await screen.findByRole('button', { name: 'Edit Target Fixture' }),
+  )
   await u.click(screen.getByRole('button', { name: 'Save account' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('record changed')
   await u.click(screen.getByRole('button', { name: 'Reload current data' }))
-  await waitFor(() => expect(screen.getByLabelText('Display name')).toHaveValue('Current Fixture'))
+  await waitFor(() =>
+    expect(screen.getByLabelText('Display name')).toHaveValue(
+      'Current Fixture',
+    ),
+  )
   await u.click(screen.getByRole('button', { name: 'Save account' }))
   await screen.findByText('Account updated.')
-  const patches = fetcher.mock.calls.filter(([, init]) => init?.method === 'PATCH')
+  const patches = fetcher.mock.calls.filter(
+    ([, init]) => init?.method === 'PATCH',
+  )
   expect(JSON.parse(patches[1]?.[1]?.body as string).expected_revision).toBe(2)
 })
 
 it('confirms custom permission replacement before changing all holders', async () => {
   const { fetcher } = setup('/app/roles')
   const u = userEvent.setup()
-  await u.click(await screen.findByRole('button', { name: 'Edit permissions for Custom Viewer' }))
+  await u.click(
+    await screen.findByRole('button', {
+      name: 'Edit permissions for Custom Viewer',
+    }),
+  )
   await u.click(await screen.findByRole('checkbox', { name: /tasks.view/ }))
   await u.click(screen.getByRole('button', { name: 'Review changes' }))
-  expect(fetcher.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
+  expect(fetcher.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(
+    false,
+  )
   await u.click(screen.getByRole('button', { name: 'Replace permissions' }))
   await screen.findByText('Role permissions updated.')
   const put = fetcher.mock.calls.find(([, init]) => init?.method === 'PUT')
@@ -259,15 +358,25 @@ it('confirms custom permission replacement before changing all holders', async (
 
 it('keeps built-in role definitions read only even for a role administrator', async () => {
   const { fetcher } = setup('/app/roles', identity, (path) =>
-    path.startsWith('/api/v1/roles?') ? json(page([{ ...role, system_role: true }])) : undefined,
+    path.startsWith('/api/v1/roles?')
+      ? json(page([{ ...role, system_role: true }]))
+      : undefined,
   )
   await userEvent
     .setup()
-    .click(await screen.findByRole('button', { name: 'View permissions for Custom Viewer' }))
+    .click(
+      await screen.findByRole('button', {
+        name: 'View permissions for Custom Viewer',
+      }),
+    )
   const checkbox = await screen.findByRole('checkbox', { name: /clients.view/ })
   expect(checkbox).toBeDisabled()
-  expect(screen.queryByRole('button', { name: 'Review changes' })).not.toBeInTheDocument()
-  expect(fetcher.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
+  expect(
+    screen.queryByRole('button', { name: 'Review changes' }),
+  ).not.toBeInTheDocument()
+  expect(fetcher.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(
+    false,
+  )
 })
 
 it('reads and edits an expanded billing role through the existing confirmed administration flow', async () => {
@@ -367,16 +476,27 @@ it('assigns a role at a confirmed client scope and revokes only the selected ass
     }
   })
   const u = userEvent.setup()
-  await u.click(await screen.findByRole('button', { name: 'Roles for Target Fixture' }))
-  await u.selectOptions(await screen.findByRole('combobox', { name: 'Scope' }), 'client')
+  await u.click(
+    await screen.findByRole('button', { name: 'Roles for Target Fixture' }),
+  )
+  await u.selectOptions(
+    await screen.findByRole('combobox', { name: 'Scope' }),
+    'client',
+  )
   await u.type(screen.getByLabelText('Client ID'), roleID)
   await u.selectOptions(screen.getByRole('combobox', { name: 'Role' }), roleID)
   await u.click(screen.getByRole('button', { name: 'Review assignment' }))
-  expect(fetcher.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+  expect(fetcher.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(
+    false,
+  )
   await u.click(screen.getByRole('button', { name: 'Assign role' }))
-  await u.click(await screen.findByRole('button', { name: 'Remove Custom Viewer' }))
+  await u.click(
+    await screen.findByRole('button', { name: 'Remove Custom Viewer' }),
+  )
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Remove assignment' })).toBeEnabled(),
+    expect(
+      screen.getByRole('button', { name: 'Remove assignment' }),
+    ).toBeEnabled(),
   )
   await u.click(screen.getByRole('button', { name: 'Remove assignment' }))
   await screen.findByText('Role assignment removed.')
@@ -387,7 +507,7 @@ it('assigns a role at a confirmed client scope and revokes only the selected ass
     client_id: roleID,
     confirm: true,
   })
-  expect(fetcher.mock.calls.find(([, init]) => init?.method === 'DELETE')?.[0]).toBe(
-    `/api/v1/users/${target}/roles/${assignment}`,
-  )
+  expect(
+    fetcher.mock.calls.find(([, init]) => init?.method === 'DELETE')?.[0],
+  ).toBe(`/api/v1/users/${target}/roles/${assignment}`)
 })

@@ -8,26 +8,61 @@ import { createQueryClient } from './query-client'
 
 function renderApp(path = '/service-status') {
   const client = createQueryClient()
-  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><App /></MemoryRouter></QueryClientProvider>)
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <App />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
   return client
 }
 
 function respondingBackend(input: string | URL | Request) {
-  return Promise.resolve(new Response(JSON.stringify(input === '/health' ? { status: 'ok' } : {
-    error: { code: 'not_ready', message: 'Service is not ready.', request_id: 'demo-test-id' },
-  }), { status: input === '/health' ? 200 : 503, headers: { 'Content-Type': 'application/json' } }))
+  return Promise.resolve(
+    new Response(
+      JSON.stringify(
+        input === '/health'
+          ? { status: 'ok' }
+          : {
+              error: {
+                code: 'not_ready',
+                message: 'Service is not ready.',
+                request_id: 'demo-test-id',
+              },
+            },
+      ),
+      {
+        status: input === '/health' ? 200 : 503,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    ),
+  )
 }
 
 describe('foundation application', () => {
   it('shows loading without fabricated availability or client metrics', () => {
-    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => {})),
+    )
     renderApp()
-    expect(screen.getByRole('heading', { name: 'Service status' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Checking services' })).toBeDisabled()
+    expect(
+      screen.getByRole('heading', { name: 'Service status' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Checking services' }),
+    ).toBeDisabled()
     expect(screen.getAllByText('Checking')).toHaveLength(2)
-    expect(screen.getByRole('region', { name: 'Service checks' })).toHaveAttribute('aria-busy', 'true')
+    expect(
+      screen.getByRole('region', { name: 'Service checks' }),
+    ).toHaveAttribute('aria-busy', 'true')
     expect(screen.queryByText('Available')).not.toBeInTheDocument()
-    expect(screen.getByText(/These public availability checks contain no client data/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /These public availability checks contain no client data/,
+      ),
+    ).toBeInTheDocument()
   })
 
   it('shows real health and readiness independently, then supports keyboard retry', async () => {
@@ -60,7 +95,9 @@ describe('foundation application', () => {
     expect(await screen.findAllByText('Check failed')).toHaveLength(2)
     expect(screen.queryByText('secret-test-value')).not.toBeInTheDocument()
     fetchMock.mockImplementation(respondingBackend)
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Check again' }))
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Check again' }))
     expect(await screen.findByText('Available')).toBeInTheDocument()
     expect(await screen.findByText('Not ready')).toBeInTheDocument()
   })
@@ -70,9 +107,13 @@ describe('foundation application', () => {
     vi.stubGlobal('fetch', fetchMock)
     renderApp()
     await screen.findByText('Available')
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Check again' })).toBeEnabled())
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Check again' })).toBeEnabled(),
+    )
     fetchMock.mockRejectedValue(new Error('secret-test-value'))
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Check again' }))
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Check again' }))
     expect(await screen.findAllByText('Check failed')).toHaveLength(2)
     expect(screen.queryByText('Available')).not.toBeInTheDocument()
   })
@@ -82,10 +123,16 @@ describe('foundation application', () => {
     vi.stubGlobal('fetch', fetchMock)
     renderApp('/clients')
     const main = screen.getByRole('main')
-    expect(within(main).getByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+    expect(
+      within(main).getByRole('heading', { name: 'Page not found' }),
+    ).toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()
-    await userEvent.setup().click(screen.getByRole('link', { name: 'Open service status' }))
-    expect(await screen.findByRole('heading', { name: 'Service status' })).toBeInTheDocument()
+    await userEvent
+      .setup()
+      .click(screen.getByRole('link', { name: 'Open service status' }))
+    expect(
+      await screen.findByRole('heading', { name: 'Service status' }),
+    ).toBeInTheDocument()
     await screen.findByText('Available')
   })
 })

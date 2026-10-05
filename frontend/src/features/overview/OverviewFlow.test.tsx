@@ -31,6 +31,8 @@ function setup(
 ) {
   let current = session
   const fetcher = vi.fn((url: string) => {
+    if (url === '/api/v1/auth/preferences')
+      return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: current }))
     if (url === base) return Promise.resolve(read())
@@ -41,7 +43,9 @@ function setup(
   render(
     <QueryClientProvider client={cache}>
       <MemoryRouter initialEntries={[path]}>
-        <StrictMode><App /></StrictMode>
+        <StrictMode>
+          <App />
+        </StrictMode>
       </MemoryRouter>
     </QueryClientProvider>,
   )
@@ -61,7 +65,11 @@ function setup(
 }
 it('shows exact finance, prioritized attention, real activity and honest integrations with one aggregate read', async () => {
   const { fetcher } = setup()
-  await screen.findByRole('heading', { name: 'Synthetic overview client' }, {timeout:5000})
+  await screen.findByRole(
+    'heading',
+    { name: 'Synthetic overview client' },
+    { timeout: 5000 },
+  )
   expect(
     screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent),
   ).toEqual([
@@ -74,7 +82,13 @@ it('shows exact finance, prioritized attention, real activity and honest integra
   expect(
     screen.getByRole('link', { name: 'Synthetic task 1' }),
   ).toHaveAttribute('href', `/app/clients/${clientID}/tasks/${task().id}`)
-  expect(screen.getAllByText('USD 7.50', { exact: true })).toHaveLength(2)
+  expect(
+    screen.getAllByText(
+      (_, element) =>
+        ['P', 'DD'].includes(element?.tagName ?? '') &&
+        element?.textContent === 'USD 7.50',
+    ),
+  ).toHaveLength(2)
   expect(screen.getByText('Client created.')).toBeVisible()
   expect(screen.getAllByText(/Europe\/Istanbul/)).toHaveLength(2)
   expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute(
@@ -87,7 +101,10 @@ it('shows exact finance, prioritized attention, real activity and honest integra
   expect(fetcher.mock.calls.filter(([url]) => url === base)).toHaveLength(1)
   expect(
     fetcher.mock.calls.every(
-      ([url]) => url === base || url === '/api/v1/auth/session',
+      ([url]) =>
+        url === base ||
+        url === '/api/v1/auth/session' ||
+        url === '/api/v1/auth/preferences',
     ),
   ).toBe(true)
 })
@@ -158,7 +175,10 @@ it.each(['no profile access', 'foreign scope', 'invalid route'])(
         scenario === 'invalid route' ? 'Overview not found' : 'Access denied',
     })
     expect(
-      fetcher.mock.calls.every(([url]) => url === '/api/v1/auth/session'),
+      fetcher.mock.calls.every(
+        ([url]) =>
+          url === '/api/v1/auth/session' || url === '/api/v1/auth/preferences',
+      ),
     ).toBe(true)
   },
 )

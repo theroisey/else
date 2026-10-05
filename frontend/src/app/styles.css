@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "@fontsource-variable/manrope/index.css";
 @import "@fontsource/instrument-serif/latin-400.css";
+@import "@fontsource/instrument-serif/latin-ext-400.css";
 
 /* Material, text and state values are semantic. Both themes are deliberately composed. */
 :root {
@@ -198,7 +199,9 @@
   .appearance-sample span { border: 1px solid #858174; background: rgb(133 129 116 / 14%); }
   .appearance-sample span:first-child { grid-row: span 2; }
   .login-page { @apply grid min-h-dvh grid-rows-[auto_1fr_auto]; }
-  .login-header { @apply flex items-center justify-between gap-6 border-b border-line px-6 py-5 sm:px-12; }
+  .login-header { @apply grid grid-cols-2 items-center gap-x-4 gap-y-3 border-b border-line px-6 py-5 sm:flex sm:justify-between sm:gap-6 sm:px-12; }
+  .login-header .brand { @apply col-span-2 sm:mr-auto; }
+  .login-header .appearance-control select { @apply min-w-0 w-full sm:w-auto; }
   .login-header .brand-mark { height: 2.5rem; }
   .login-main { @apply mx-auto grid w-full max-w-[74rem] items-center gap-12 px-6 py-14 md:grid-cols-[minmax(0,1fr)_24rem] md:gap-20 md:px-12 md:py-20; }
   .login-editorial { @apply border-l border-line-strong pl-6 md:pl-8; }
@@ -228,8 +231,8 @@
 }
 @layer components {
   .financial-position { @apply mb-8 border-y border-line bg-surface px-5 py-6 sm:px-7; }
-  .financial-currency { @apply grid gap-6 py-5 lg:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]; }
-  .financial-value { @apply break-words font-display text-[2.5rem] leading-tight tracking-tight tabular-nums; }
+  .financial-currency { @apply grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 py-5 lg:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]; }
+  .financial-value { overflow-wrap: anywhere; @apply break-words font-display text-[2.5rem] leading-tight tracking-tight tabular-nums; }
   .financial-details { @apply grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3; }
   .financial-details dd { @apply tabular-nums; }
   .overview-workspace { @apply grid gap-9 xl:grid-cols-[minmax(0,1.6fr)_minmax(16rem,1fr)]; }
@@ -266,3 +269,12 @@
 
 /* Row operations stay on one line inside a scrollable ledger. Detail actions can wrap. */
 .ui-table .record-actions { flex-wrap: nowrap; white-space: nowrap; }
+
+/* Website dossier follows the client portfolio's architectural rhythm. */
+.website-context { margin-block: 1.25rem 1.75rem; padding: 1rem 1.25rem; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-md); }
+.website-switcher { min-width: 0; width: min(20rem, 100%); max-width: 100%; }
+.website-switcher select { max-width: 100%; min-height: 2rem; padding: .25rem 1.5rem .25rem .5rem; border-bottom: 1px solid var(--border-strong); background: transparent; }
+.website-portfolio { border-top: 1px solid var(--border-strong); }
+.website-portfolio-link { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; padding: 1.5rem .5rem; border-bottom: 1px solid var(--border); transition: background-color var(--motion-fast, 140ms) ease; }
+.website-portfolio-link:hover { background: var(--surface); }
+.website-portfolio-link > div:first-child { flex: 1 1 18rem; }

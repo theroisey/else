@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { PageSkeleton } from '../../components/ui'
 import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -7,6 +8,7 @@ import { ReminderError, ReminderHeader } from './Shared'
 import { ReminderForm } from './ReminderForm'
 import * as api from './service'
 export function ReminderEditorPage({ create = false }: { create?: boolean }) {
+  useLocale()
   const { id = '', reminderID = '' } = useParams()
   return (
     <Editor
@@ -26,21 +28,34 @@ function Editor({
   recordID: string
   create: boolean
 }) {
+  useLocale()
   const operation = useReminders(clientID),
-    allowed = create ? operation.permissions.create : operation.permissions.update
+    allowed = create
+      ? operation.permissions.create
+      : operation.permissions.update
   const query = useQuery({
     queryKey: [...operation.key, 'detail', recordID],
-    queryFn: ({ signal }) => operation.read(() => api.detail(clientID, recordID, signal)),
+    queryFn: ({ signal }) =>
+      operation.read(() => api.detail(clientID, recordID, signal)),
     enabled: allowed && !create,
     placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey[1] === operation.auth.session?.user.id ? previous : undefined,
+      previousQuery?.queryKey[1] === operation.auth.session?.user.id
+        ? previous
+        : undefined,
   })
   if (!allowed) return <AccessDenied />
   return (
     <section>
-      <ReminderHeader title={create ? 'Create reminder' : 'Edit reminder'} operation={operation} />
+      <ReminderHeader
+        title={
+          create
+            ? copy('Create reminder', 'reminders')
+            : copy('Edit reminder', 'reminders')
+        }
+        operation={operation}
+      />
       {!create && query.isPending ? (
-        <PageSkeleton label="Loading reminder…" />
+        <PageSkeleton label={copy('Loading reminder…', 'reminders')} />
       ) : !create && query.isError && !query.data ? (
         <ReminderError
           error={query.error}

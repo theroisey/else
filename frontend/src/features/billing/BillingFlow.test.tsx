@@ -56,10 +56,18 @@ function setup(
   const fetcher = vi.fn((url: string, init: RequestInit) => {
     const custom = override(url, init)
     if (custom) return Promise.resolve(custom)
+    if (url === '/api/v1/auth/preferences')
+      return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: session }))
     if (init.method === 'GET') {
-      if (url.endsWith('/pricing-snapshot')) return Promise.resolve(json({ error: { code: 'not_found', message: 'No copied terms.' } }, 404))
+      if (url.endsWith('/pricing-snapshot'))
+        return Promise.resolve(
+          json(
+            { error: { code: 'not_found', message: 'No copied terms.' } },
+            404,
+          ),
+        )
       if (url === base + '/summary')
         return Promise.resolve(
           json({
@@ -196,7 +204,10 @@ it('shows server totals separately and opens billing-only routes without unrelat
   ).not.toBeInTheDocument()
   expect(
     fetcher.mock.calls.every(
-      ([url]) => url === '/api/v1/auth/session' || url.startsWith(base),
+      ([url]) =>
+        url === '/api/v1/auth/session' ||
+        url === '/api/v1/auth/preferences' ||
+        url.startsWith(base),
     ),
   ).toBe(true)
   expect(
@@ -240,7 +251,10 @@ it('denies the wrong client without a private request and validates safe return 
   const { fetcher } = setup(route.replace(clientID, otherID))
   await screen.findByRole('heading', { name: 'Access denied' })
   expect(
-    fetcher.mock.calls.every(([url]) => url === '/api/v1/auth/session'),
+    fetcher.mock.calls.every(
+      ([url]) =>
+        url === '/api/v1/auth/session' || url === '/api/v1/auth/preferences',
+    ),
   ).toBe(true)
   expect(safeReturnTo(detail + '/edit')).toBe(detail + '/edit')
   expect(safeReturnTo(route + '/new/edit')).toBe('/app')

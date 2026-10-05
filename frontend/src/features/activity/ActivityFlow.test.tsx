@@ -7,20 +7,35 @@ import { App } from '../../app/App'
 import { createQueryClient } from '../../app/query-client'
 import { sessionKey } from '../auth/session'
 import type { Session } from '../auth/session'
-import { event, page, clientID, identity, otherID, date } from './fixtures.test-data'
+import {
+  event,
+  page,
+  clientID,
+  identity,
+  otherID,
+  date,
+} from './fixtures.test-data'
 const base = `/api/v1/clients/${clientID}/activity`
 const route = `/app/clients/${clientID}/activity`
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
 function setup(
   session: Session = identity,
-  read: (url: string) => Response | Promise<Response> = () => json(page([event()])),
+  read: (url: string) => Response | Promise<Response> = () =>
+    json(page([event()])),
   path = route,
 ) {
   let current = session
   const fetcher = vi.fn((url: string, init: RequestInit) => {
-    if (url === '/api/v1/auth/session') return Promise.resolve(json({ data: current }))
-    if (url.startsWith(base + '?') && init.method === 'GET') return Promise.resolve(read(url))
+    if (url === '/api/v1/auth/preferences')
+      return Promise.resolve(json({ data: { locale: null } }))
+    if (url === '/api/v1/auth/session')
+      return Promise.resolve(json({ data: current }))
+    if (url.startsWith(base + '?') && init.method === 'GET')
+      return Promise.resolve(read(url))
     throw new Error('Unexpected private request: ' + url)
   })
   vi.stubGlobal('fetch', fetcher)
@@ -40,7 +55,9 @@ function setup(
     },
     setSession: (next: Session) => {
       current = next
-      act(() => cache.setQueryData(sessionKey, { session: current, expired: false }))
+      act(() =>
+        cache.setQueryData(sessionKey, { session: current, expired: false }),
+      )
     },
   }
 }
@@ -54,12 +71,28 @@ const root = {
   },
 }
 it('renders persisted client events with exact UTC time and no detail/directory reads or write controls', async () => {
-  const { fetcher } = setup(root, () => json(page([event(1, 'client.archived')])))
-  await screen.findByRole('list', { name: 'Client activity' }, { timeout: 5000 })
+  const { fetcher } = setup(root, () =>
+    json(page([event(1, 'client.archived')])),
+  )
+  await screen.findByRole(
+    'list',
+    { name: 'Client activity' },
+    { timeout: 5000 },
+  )
   expect(screen.getByText('Client archived.')).toBeVisible()
-  expect(screen.getByText(date)).toHaveAttribute('datetime', date)
   expect(
-    within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Activity'),
+    screen.getByText(
+      new Intl.DateTimeFormat('en', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'UTC',
+      }).format(new Date(date)),
+    ),
+  ).toHaveAttribute('datetime', date)
+  expect(
+    within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText(
+      'Activity',
+    ),
   ).toBeVisible()
   expect(screen.queryByRole('link', { name: 'Tasks' })).not.toBeInTheDocument()
   expect(
@@ -67,7 +100,10 @@ it('renders persisted client events with exact UTC time and no detail/directory 
   ).not.toBeInTheDocument()
   expect(
     fetcher.mock.calls.every(
-      ([url]) => url === '/api/v1/auth/session' || url.startsWith(base + '?'),
+      ([url]) =>
+        url === '/api/v1/auth/session' ||
+        url === '/api/v1/auth/preferences' ||
+        url.startsWith(base + '?'),
     ),
   ).toBe(true)
 })
@@ -78,7 +114,9 @@ it.each(['clients.view', 'activity.view'])(
       ...identity,
       user: {
         ...identity.user,
-        permissions: identity.user.permissions.filter((g) => g.permission !== permission),
+        permissions: identity.user.permissions.filter(
+          (g) => g.permission !== permission,
+        ),
       },
     })
     await screen.findByRole('heading', { name: 'Access denied' })
@@ -90,7 +128,10 @@ it('denies foreign-client grants before private reads', async () => {
     ...identity,
     user: {
       ...identity.user,
-      permissions: identity.user.permissions.map((g) => ({ ...g, client_id: otherID })),
+      permissions: identity.user.permissions.map((g) => ({
+        ...g,
+        client_id: otherID,
+      })),
     },
   })
   await screen.findByRole('heading', { name: 'Access denied' })
@@ -106,7 +147,9 @@ it('shows pending then permitted empty state without inventing events', async ()
       }),
   )
   await screen.findByText('Loading activity…')
-  expect(screen.queryByRole('list', { name: 'Client activity' })).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('list', { name: 'Client activity' }),
+  ).not.toBeInTheDocument()
   await act(async () => resolve(json(page([]))))
   await screen.findByRole('heading', { name: 'No activity on this page' })
   expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
@@ -133,7 +176,9 @@ it('pages with opaque cursors, goes back and refreshes the newest first page', a
   await u.click(screen.getByRole('button', { name: 'Previous' }))
   await waitFor(() =>
     expect(
-      within(screen.getByRole('list', { name: 'Client activity' })).getAllByRole('listitem'),
+      within(
+        screen.getByRole('list', { name: 'Client activity' }),
+      ).getAllByRole('listitem'),
     ).toHaveLength(25),
   )
   await u.click(screen.getByRole('button', { name: 'Next' }))
@@ -147,20 +192,32 @@ it('pages with opaque cursors, goes back and refreshes the newest first page', a
 it('rejects expanded responses and permits retry without rendering private metadata', async () => {
   let malformed = true
   setup(identity, () =>
-    json(page([{ ...event(), ...(malformed ? { metadata: 'Synthetic private title' } : {}) }])),
+    json(
+      page([
+        {
+          ...event(),
+          ...(malformed ? { metadata: 'Synthetic private title' } : {}),
+        },
+      ]),
+    ),
   )
   await screen.findByRole('alert')
   expect(screen.queryByText('Task updated.')).not.toBeInTheDocument()
   expect(screen.queryByText(/Synthetic private title/)).not.toBeInTheDocument()
   malformed = false
-  await userEvent.setup().click(screen.getByRole('button', { name: 'Try again' }))
+  await userEvent
+    .setup()
+    .click(screen.getByRole('button', { name: 'Try again' }))
   await screen.findByText('Task updated.')
 })
 it('suppresses cached rows when a background read fails and restores only confirmed reads', async () => {
   let failed = false
   const { cache } = setup(identity, () =>
     failed
-      ? json({ error: { code: 'internal_error', message: 'Synthetic secret' } }, 500)
+      ? json(
+          { error: { code: 'internal_error', message: 'Synthetic secret' } },
+          500,
+        )
       : json(page([event()])),
   )
   await screen.findByText('Task updated.')
@@ -172,7 +229,9 @@ it('suppresses cached rows when a background read fails and restores only confir
   expect(screen.queryByText('Task updated.')).not.toBeInTheDocument()
   expect(screen.queryByText('Synthetic secret')).not.toBeInTheDocument()
   failed = false
-  await userEvent.setup().click(screen.getByRole('button', { name: 'Try again' }))
+  await userEvent
+    .setup()
+    .click(screen.getByRole('button', { name: 'Try again' }))
   await screen.findByText('Task updated.')
 })
 it('immediately partitions grant changes and suppresses a late domain result', async () => {
@@ -207,16 +266,22 @@ it('immediately partitions grant changes and suppresses a late domain result', a
 it('removes rows immediately when root access is revoked without another private read', async () => {
   const { fetcher, setSession } = setup()
   await screen.findByText('Task updated.')
-  const before = fetcher.mock.calls.filter(([url]) => url.startsWith(base)).length
+  const before = fetcher.mock.calls.filter(([url]) =>
+    url.startsWith(base),
+  ).length
   setSession({ ...identity, user: { ...identity.user, permissions: [] } })
   await screen.findByRole('heading', { name: 'Access denied' })
   expect(screen.queryByText('Task updated.')).not.toBeInTheDocument()
-  expect(fetcher.mock.calls.filter(([url]) => url.startsWith(base))).toHaveLength(before)
+  expect(
+    fetcher.mock.calls.filter(([url]) => url.startsWith(base)),
+  ).toHaveLength(before)
 })
 it('rechecks session on server-side denial and hides revoked root access', async () => {
   let denied = false
   const context = setup(identity, () =>
-    denied ? json({ error: { code: 'not_found' } }, 404) : json(page([event()])),
+    denied
+      ? json({ error: { code: 'not_found' } }, 404)
+      : json(page([event()])),
   )
   await screen.findByText('Task updated.')
   denied = true
@@ -224,10 +289,14 @@ it('rechecks session on server-side denial and hides revoked root access', async
     ...identity,
     user: {
       ...identity.user,
-      permissions: identity.user.permissions.filter((g) => g.permission !== 'activity.view'),
+      permissions: identity.user.permissions.filter(
+        (g) => g.permission !== 'activity.view',
+      ),
     },
   })
-  await userEvent.setup().click(screen.getByRole('button', { name: 'Refresh activity' }))
+  await userEvent
+    .setup()
+    .click(screen.getByRole('button', { name: 'Refresh activity' }))
   await screen.findByRole('heading', { name: 'Access denied' })
   expect(screen.queryByText('Task updated.')).not.toBeInTheDocument()
 })
@@ -238,12 +307,21 @@ it('partitions a replacement actor and never carries the previous timeline forwa
   )
   await screen.findByText('Task updated.')
   next = true
-  setSession({ ...root, user: { ...root.user, id: otherID, display_name: 'Replacement Actor' } })
+  setSession({
+    ...root,
+    user: { ...root.user, id: otherID, display_name: 'Replacement Actor' },
+  })
   await screen.findByText('Client created.')
   expect(screen.queryByText('Task updated.')).not.toBeInTheDocument()
 })
 it('rejects a malformed client route before issuing a private request', async () => {
-  const { fetcher } = setup(identity, () => json(page([event()])), '/app/clients/invalid/activity')
+  const { fetcher } = setup(
+    identity,
+    () => json(page([event()])),
+    '/app/clients/invalid/activity',
+  )
   await screen.findByRole('heading', { name: 'Activity not found' })
-  expect(fetcher.mock.calls.some(([url]) => url.startsWith('/api/v1/clients'))).toBe(false)
+  expect(
+    fetcher.mock.calls.some(([url]) => url.startsWith('/api/v1/clients')),
+  ).toBe(false)
 })

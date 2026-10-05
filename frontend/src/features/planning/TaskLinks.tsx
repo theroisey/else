@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '../../components/ui'
@@ -19,6 +20,7 @@ export function TaskLinks({
   checking?: boolean
   onEditingChange: (editing: boolean) => void
 }) {
+  useLocale()
   const { scope, permissions } = operation
   const [editing, setEditing] = useState(false),
     [selected, setSelected] = useState(record.task_ids ?? []),
@@ -32,7 +34,9 @@ export function TaskLinks({
     !checking &&
     !record.archived_at &&
     !terminal(record.status)
-  const conflict = editing && (record.revision !== revision || operation.errorCode === 'conflict')
+  const conflict =
+    editing &&
+    (record.revision !== revision || operation.errorCode === 'conflict')
   const busy = operation.pending || reloading
   const retained = selected.filter((id) => record.task_ids?.includes(id))
   const added = selected.filter((id) => !record.task_ids?.includes(id))
@@ -43,7 +47,10 @@ export function TaskLinks({
     setReloadError('')
     try {
       const current = await operation.read(() => api.detail(scope, record.id))
-      operation.cache.setQueryData([...operation.key, ...recordKey(scope, record.id)], current)
+      operation.cache.setQueryData(
+        [...operation.key, ...recordKey(scope, record.id)],
+        current,
+      )
       setSelected(current.task_ids ?? [])
       setRevision(current.revision)
       operation.clearError()
@@ -58,10 +65,12 @@ export function TaskLinks({
     <section className="mt-6 min-w-0 form-section">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-semibold">Linked tasks</h2>
+          <h2 className="font-semibold">{copy('Linked tasks', 'planning')}</h2>
           <p className="mt-2 text-xs text-muted">
-            References preserve history and never change task status. Task details require separate
-            access.
+            {copy(
+              'References preserve history and never change task status. Task details require separate access.',
+              'planning',
+            )}
           </p>
         </div>
         {editable && !editing ? (
@@ -75,26 +84,33 @@ export function TaskLinks({
               onEditingChange(true)
             }}
           >
-            Edit task links
+            {copy('Edit task links', 'planning')}
           </Button>
         ) : null}
       </div>
       {notice ? (
         <p role="status" className="mt-3">
-          {notice}
+          {copy(notice, 'planning')}
         </p>
       ) : null}
       {!editing ? (
         <ReferenceList ids={record.task_ids ?? []} operation={operation} />
       ) : (
         <>
-          <fieldset disabled={!editable || busy} className="mt-4 grid min-w-0 gap-3">
+          <fieldset
+            disabled={!editable || busy}
+            className="mt-4 grid min-w-0 gap-3"
+          >
             <legend className="font-semibold">
-              Selected task references · {selected.length}/50
+              {copy('Selected task references · {{value1}}/50', 'planning', {
+                value1: selected.length,
+              })}
             </legend>
             <p className="text-xs text-muted">
-              Keep unavailable existing references or remove them explicitly. Saving replaces the
-              complete selection.
+              {copy(
+                'Keep unavailable existing references or remove them explicitly. Saving replaces the complete selection.',
+                'planning',
+              )}
             </p>
             <ReferenceList
               ids={selected}
@@ -110,32 +126,41 @@ export function TaskLinks({
               />
             ) : (
               <p role="status" className="text-sm text-muted">
-                Task access is unavailable. You can retain or remove existing references; new tasks
-                cannot be selected.
+                {copy(
+                  'Task access is unavailable. You can retain or remove existing references; new tasks cannot be selected.',
+                  'planning',
+                )}
               </p>
             )}
           </fieldset>
           {!editable ? (
             <p role="status" className="mt-3">
-              Link changes are unavailable for this record or its parent. Your selection is
-              preserved.
+              {copy(
+                'Link changes are unavailable for this record or its parent. Your selection is preserved.',
+                'planning',
+              )}
             </p>
           ) : null}
           {cannotAdd ? (
             <p role="alert" className="mt-3">
-              Task access changed. Remove new selections before saving retained references.
+              {copy(
+                'Task access changed. Remove new selections before saving retained references.',
+                'planning',
+              )}
             </p>
           ) : null}
-          {operation.error ? (
+          {copy(operation.error, 'planning') ? (
             <p role="alert" className="mt-3 text-danger-ink">
-              {operation.error}
+              {copy(operation.error, 'planning')}
             </p>
           ) : null}
           {conflict ? (
             <div className="mt-3">
               <p role="alert">
-                The milestone changed. Your selection is preserved. Reloading discards it and uses
-                current references.
+                {copy(
+                  'The milestone changed. Your selection is preserved. Reloading discards it and uses current references.',
+                  'planning',
+                )}
               </p>
               <Button
                 className="mt-2"
@@ -144,24 +169,26 @@ export function TaskLinks({
                   void reload()
                 }}
               >
-                Reload task references
+                {copy('Reload task references', 'planning')}
               </Button>
             </div>
           ) : null}
           {reloadError ? (
             <p role="alert" className="mt-3 text-danger-ink">
-              {reloadError}
+              {copy(reloadError, 'planning')}
             </p>
           ) : null}
           <div className="mt-4 flex flex-wrap gap-2">
             <Button
               variant="primary"
               loading={busy}
-              loadingLabel="Saving task links"
+              loadingLabel={copy('Saving task links', 'planning')}
               disabled={!editable || conflict || cannotAdd}
               onClick={() => {
                 void operation
-                  .run(() => api.replaceLinks(scope, record.id, selected, revision))
+                  .run(() =>
+                    api.replaceLinks(scope, record.id, selected, revision),
+                  )
                   .then((result) => {
                     if (result) {
                       setEditing(false)
@@ -171,7 +198,7 @@ export function TaskLinks({
                   })
               }}
             >
-              Save task links
+              {copy('Save task links', 'planning')}
             </Button>
             <Button
               disabled={busy}
@@ -182,7 +209,7 @@ export function TaskLinks({
                 operation.clearError()
               }}
             >
-              Cancel link editing
+              {copy('Cancel link editing', 'planning')}
             </Button>
           </div>
         </>
@@ -200,8 +227,12 @@ function ReferenceList({
   operation: Operation
   remove?: (id: string) => void
 }) {
+  useLocale()
   return ids.length ? (
-    <ul aria-label="Task references" className="mt-3 grid gap-2">
+    <ul
+      aria-label={copy('Task references', 'planning')}
+      className="mt-3 grid gap-2"
+    >
       {ids.map((id) => (
         <li
           key={id}
@@ -213,25 +244,31 @@ function ReferenceList({
                 className="underline underline-offset-4"
                 to={`/app/clients/${operation.scope.clientID}/tasks/${id}`}
               >
-                Task {id}
+                {copy('Task {{value1}}', 'planning', { value1: id })}
               </Link>
             ) : (
-              <>Task reference {id}</>
+              <>
+                {copy('Task reference {{value1}}', 'planning', { value1: id })}
+              </>
             )}
           </span>
           {remove ? (
             <Button
               size="compact"
-              aria-label={`Remove task reference ${id}`}
+              aria-label={copy('Remove task reference {{value1}}', 'planning', {
+                value1: id,
+              })}
               onClick={() => remove(id)}
             >
-              Remove
+              {copy('Remove', 'planning')}
             </Button>
           ) : null}
         </li>
       ))}
     </ul>
   ) : (
-    <p className="mt-3 text-sm text-muted">No task references selected.</p>
+    <p className="mt-3 text-sm text-muted">
+      {copy('No task references selected.', 'planning')}
+    </p>
   )
 }

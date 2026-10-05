@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Table } from '../../components/ui'
@@ -6,22 +7,40 @@ import type { Operation } from './Shared'
 import type { Filter } from './models'
 import * as api from './service'
 
-export function LinkHistory({ operation, recordID }: { operation: Operation; recordID: string }) {
+export function LinkHistory({
+  operation,
+  recordID,
+}: {
+  operation: Operation
+  recordID: string
+}) {
+  useLocale()
   const [filter, setFilter] = useState<Filter['archived']>('all'),
     [history, setHistory] = useState([''])
   const cursor = history.at(-1) ?? ''
   const query = useQuery({
-    queryKey: [...operation.key, 'task-links', operation.scope.planID, recordID, filter, cursor],
+    queryKey: [
+      ...operation.key,
+      'task-links',
+      operation.scope.planID,
+      recordID,
+      filter,
+      cursor,
+    ],
     queryFn: ({ signal }) =>
-      operation.read(() => api.links(operation.scope, recordID, cursor, filter, signal)),
+      operation.read(() =>
+        api.links(operation.scope, recordID, cursor, filter, signal),
+      ),
     enabled: operation.permissions.view,
   })
   return (
     <section className="mt-6 min-w-0 border-t border-line pt-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h3 className="font-semibold">Task link history</h3>
+        <h3 className="font-semibold">
+          {copy('Task link history', 'planning')}
+        </h3>
         <label className="grid gap-1.5 text-xs font-semibold">
-          Reference history
+          {copy('Reference history', 'planning')}{' '}
           <select
             className="ui-input"
             value={filter}
@@ -30,15 +49,15 @@ export function LinkHistory({ operation, recordID }: { operation: Operation; rec
               setHistory([''])
             }}
           >
-            <option value="all">All links</option>
-            <option value="false">Current links</option>
-            <option value="true">Removed links</option>
+            <option value="all">{copy('All links', 'planning')}</option>
+            <option value="false">{copy('Current links', 'planning')}</option>
+            <option value="true">{copy('Removed links', 'planning')}</option>
           </select>
         </label>
       </div>
       {query.isPending ? (
         <p role="status" className="mt-3" aria-busy="true">
-          Loading link history…
+          {copy('Loading link history…', 'planning')}
         </p>
       ) : query.isError ? (
         <PlanningError
@@ -49,14 +68,18 @@ export function LinkHistory({ operation, recordID }: { operation: Operation; rec
         />
       ) : !query.data.data.length ? (
         <p role="status" className="mt-3">
-          No link history on this page.
+          {copy('No link history on this page.', 'planning')}
         </p>
       ) : (
         <div className="mt-4">
-          <Table caption="Milestone task link history">
+          <Table caption={copy('Milestone task link history', 'planning')}>
             <thead>
               <tr>
-                {['Task reference', 'Linked', 'Removed'].map((s) => (
+                {[
+                  copy('Task reference', 'planning'),
+                  copy('Linked', 'planning'),
+                  copy('Removed', 'planning'),
+                ].map((s) => (
                   <th key={s} scope="col">
                     {s}
                   </th>
@@ -74,7 +97,7 @@ export function LinkHistory({ operation, recordID }: { operation: Operation; rec
                     {l.unlinked_at ? (
                       <PlanningTime value={l.unlinked_at} />
                     ) : (
-                      <span>Current link</span>
+                      <span>{copy('Current link', 'planning')}</span>
                     )}
                   </td>
                 </tr>
@@ -84,7 +107,7 @@ export function LinkHistory({ operation, recordID }: { operation: Operation; rec
         </div>
       )}
       <Pager
-        name="Task link history"
+        name={copy('Task link history', 'planning')}
         history={history}
         next={!query.isError ? query.data?.page.next_cursor : null}
         busy={query.isFetching || operation.pending}

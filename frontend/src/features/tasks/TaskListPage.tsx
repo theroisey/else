@@ -1,3 +1,5 @@
+import { statusLabel } from '../../i18n/labels'
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -13,10 +15,12 @@ import { TaskFilters } from './TaskFilters'
 import * as api from './service'
 
 export function TaskListPage() {
+  useLocale()
   const { id = '' } = useParams()
   return <TaskList key={id} clientID={id} />
 }
 function TaskList({ clientID }: { clientID: string }) {
+  useLocale()
   const operation = useTasks(clientID),
     now = useDueClock()
   const [draft, setDraft] = useState<Filter>(defaultFilter),
@@ -28,7 +32,8 @@ function TaskList({ clientID }: { clientID: string }) {
     cursor = history.at(-1) ?? ''
   const query = useQuery({
     queryKey: [...operation.key, 'list', filter, cursor],
-    queryFn: ({ signal }) => operation.read(() => api.list(clientID, filter, cursor, signal)),
+    queryFn: ({ signal }) =>
+      operation.read(() => api.list(clientID, filter, cursor, signal)),
     enabled: operation.permissions.view,
   })
   if (!operation.permissions.view) return <AccessDenied />
@@ -40,31 +45,38 @@ function TaskList({ clientID }: { clientID: string }) {
   const busy = query.isFetching || operation.pending
   return (
     <section>
-      <TaskHeader title="Tasks" clientID={clientID} operation={operation}>
+      <TaskHeader
+        title={copy('Tasks', 'tasks')}
+        clientID={clientID}
+        operation={operation}
+      >
         <Button icon={faRotateRight} disabled={busy} onClick={refresh}>
-          Refresh tasks
+          {copy('Refresh tasks', 'tasks')}
         </Button>
         {operation.permissions.create && operation.writable ? (
           <Link
             className={buttonStyles({ variant: 'primary' })}
             to={`/app/clients/${clientID}/tasks/new`}
           >
-            Create task
+            {copy('Create task', 'tasks')}
           </Link>
         ) : null}
       </TaskHeader>
       {notice || location.state?.taskSaved ? (
         <p className="mb-4" role="status">
-          {notice || (location.state.taskSaved === 'created' ? 'Task created.' : 'Task updated.')}
+          {notice ||
+            (location.state.taskSaved === 'created'
+              ? copy('Task created.', 'tasks')
+              : copy('Task updated.', 'tasks'))}
         </p>
       ) : null}
-      {operation.error && !confirm ? (
+      {copy(operation.error, 'tasks') && !confirm ? (
         <div className="mb-4">
           <p role="alert" className="text-danger-ink">
-            {operation.error}
+            {copy(operation.error, 'tasks')}
           </p>
           <Button className="mt-2" onClick={refresh}>
-            Reload current tasks
+            {copy('Reload current tasks', 'tasks')}
           </Button>
         </div>
       ) : null}
@@ -85,7 +97,7 @@ function TaskList({ clientID }: { clientID: string }) {
         }}
       />
       {query.isPending ? (
-        <PageSkeleton label="Loading tasks…" />
+        <PageSkeleton label={copy('Loading tasks…', 'tasks')} />
       ) : query.isError ? (
         <TaskError
           error={query.error}
@@ -95,14 +107,28 @@ function TaskList({ clientID }: { clientID: string }) {
         />
       ) : !query.data.data.length ? (
         <div className="empty-state">
-          <h2 className="font-semibold">No tasks on this page</h2>
-          <p className="mt-2 text-muted">Adjust the filters or create a task if you have access.</p>
+          <h2 className="font-semibold">
+            {copy('No tasks on this page', 'tasks')}
+          </h2>
+          <p className="mt-2 text-muted">
+            {copy(
+              'Adjust the filters or create a task if you have access.',
+              'tasks',
+            )}
+          </p>
         </div>
       ) : (
-        <Table caption="Client tasks">
+        <Table caption={copy('Client tasks', 'tasks')}>
           <thead>
             <tr>
-              {['Task', 'State', 'Priority', 'Due', 'Assignee', 'Actions'].map((s) => (
+              {[
+                copy('Task', 'tasks'),
+                copy('State', 'tasks'),
+                copy('Priority', 'tasks'),
+                copy('Due', 'tasks'),
+                copy('Assignee', 'tasks'),
+                copy('Actions', 'tasks'),
+              ].map((s) => (
                 <th key={s} scope="col">
                   {s}
                 </th>
@@ -115,28 +141,32 @@ function TaskList({ clientID }: { clientID: string }) {
                 <td className="min-w-48 max-w-80">
                   <Link
                     className="break-words font-semibold underline underline-offset-4"
-                    aria-label={`Open ${task.title}`}
+                    aria-label={copy('Open {{value1}}', 'tasks', {
+                      value1: task.title,
+                    })}
                     to={`/app/clients/${clientID}/tasks/${task.id}`}
                   >
                     {task.title}
                   </Link>
                   <p className="mt-1 break-words text-xs text-muted">
-                    {task.tags.join(' · ') || 'No tags'}
+                    {task.tags.join(' · ') || copy('No tags', 'tasks')}
                   </p>
                 </td>
                 <td>
                   <TaskState task={task} />
                 </td>
-                <td className="capitalize">{task.priority}</td>
+                <td className="capitalize">{statusLabel(task.priority)}</td>
                 <td className="min-w-40 text-xs">
                   <TaskDue task={task} now={now} />
                 </td>
                 <td className="text-xs">
                   {task.assignee_id === operation.auth.session?.user.id
-                    ? 'Me'
+                    ? copy('Me', 'tasks')
                     : task.assignee_id
-                      ? 'Assigned · ' + task.assignee_id.slice(0, 8)
-                      : 'Unassigned'}
+                      ? copy('Assigned · {{id}}', 'tasks', {
+                          id: task.assignee_id.slice(0, 8),
+                        })
+                      : copy('Unassigned', 'tasks')}
                 </td>
                 <td>
                   {!busy ? (
@@ -148,7 +178,9 @@ function TaskList({ clientID }: { clientID: string }) {
                       onSuccess={setNotice}
                     />
                   ) : (
-                    <span className="text-xs text-muted">Updating…</span>
+                    <span className="text-xs text-muted">
+                      {copy('Updating…', 'tasks')}
+                    </span>
                   )}
                 </td>
               </tr>
@@ -157,17 +189,19 @@ function TaskList({ clientID }: { clientID: string }) {
         </Table>
       )}
       <nav
-        aria-label="Task pagination"
+        aria-label={copy('Task pagination', 'tasks')}
         className="mt-4 flex flex-wrap items-center justify-between gap-3"
       >
-        <p className="text-xs text-muted">Up to 25 tasks per page · Only this client’s tasks</p>
+        <p className="text-xs text-muted">
+          {copy('Up to 25 tasks per page · Only this client’s tasks', 'tasks')}
+        </p>
         <div className="flex gap-2">
           <Button
             size="compact"
             disabled={history.length < 2 || busy}
             onClick={() => setHistory((h) => h.slice(0, -1))}
           >
-            Previous
+            {copy('Previous', 'tasks')}
           </Button>
           <Button
             size="compact"
@@ -177,7 +211,7 @@ function TaskList({ clientID }: { clientID: string }) {
                 setHistory((h) => [...h, query.data.page.next_cursor!])
             }}
           >
-            Next
+            {copy('Next', 'tasks')}
           </Button>
         </div>
       </nav>

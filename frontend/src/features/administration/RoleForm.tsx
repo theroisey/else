@@ -1,3 +1,4 @@
+import { copy, useLocale } from '../../i18n/index'
 import { useState } from 'react'
 import { Button, Dialog, TextField } from '../../components/ui'
 import { useAdministration, useCatalog } from './hooks'
@@ -17,6 +18,7 @@ export function RoleForm({
   onClose: () => void
   onSaved: () => void
 }) {
+  useLocale()
   const operation = useAdministration()
   const catalog = useCatalog()
   const [name, setName] = useState(role?.display_name ?? '')
@@ -30,7 +32,11 @@ export function RoleForm({
       role
         ? request(`/roles/${role.id}/permissions`, {
             method: 'PUT',
-            body: { permissions: selected, expected_revision: role.revision, confirm: true },
+            body: {
+              permissions: selected,
+              expected_revision: role.revision,
+              confirm: true,
+            },
           })
         : request('/roles', {
             method: 'POST',
@@ -42,12 +48,17 @@ export function RoleForm({
   if (confirm && role)
     return (
       <Confirmation
-        title={`Change permissions for ${role.display_name}?`}
-        description="This replaces the role’s permissions for all current and future holders. At least one active administrator must remain. Close this editor and refresh to recover from a revision conflict."
+        title={copy('Change permissions for {{value1}}?', 'administration', {
+          value1: role.display_name,
+        })}
+        description={copy(
+          'This replaces the role’s permissions for all current and future holders. At least one active administrator must remain. Close this editor and refresh to recover from a revision conflict.',
+          'administration',
+        )}
         pending={operation.pending}
         disabled={!editable || selected.some((key) => !allowed(key))}
-        error={operation.error}
-        label="Replace permissions"
+        error={copy(operation.error, 'administration')}
+        label={copy('Replace permissions', 'administration')}
         onCancel={() => setConfirm(false)}
         onConfirm={() => {
           if (editable && selected.every(allowed)) void save()
@@ -57,11 +68,22 @@ export function RoleForm({
   return (
     <Dialog
       variant="drawer"
-      eyebrow="Role definition"
+      eyebrow={copy('Role definition', 'administration')}
       open
-      title={role ? (editable ? 'Edit permissions' : 'Role permissions') : 'Create role'}
+      title={
+        role
+          ? editable
+            ? copy('Edit permissions', 'administration')
+            : copy('Role permissions', 'administration')
+          : copy('Create role', 'administration')
+      }
       description={
-        role ? role.display_name : 'Create a custom role from permissions you control globally.'
+        role
+          ? role.display_name
+          : copy(
+              'Create a custom role from permissions you control globally.',
+              'administration',
+            )
       }
       onClose={() => {
         if (!operation.pending) onClose()
@@ -69,7 +91,7 @@ export function RoleForm({
     >
       {catalog.isPending ? (
         <p className="mt-4" role="status">
-          Loading permissions…
+          {copy('Loading permissions…', 'administration')}
         </p>
       ) : catalog.isError ? (
         <ErrorState
@@ -104,7 +126,7 @@ export function RoleForm({
         >
           {!role ? (
             <TextField
-              label="Role name"
+              label={copy('Role name', 'administration')}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -114,8 +136,11 @@ export function RoleForm({
           {!editable ? (
             <p className="text-xs text-muted">
               {role?.system_role
-                ? 'Built-in definitions are read only.'
-                : 'Editing requires global roles.manage and control of all existing permissions.'}
+                ? copy('Built-in definitions are read only.', 'administration')
+                : copy(
+                    'Editing requires global roles.manage and control of all existing permissions.',
+                    'administration',
+                  )}
             </p>
           ) : null}
           <PermissionChoices
@@ -127,26 +152,30 @@ export function RoleForm({
           />
           {validation ? (
             <p role="alert" className="text-danger-ink">
-              {validation}
+              {copy(validation, 'administration')}
             </p>
           ) : null}
-          {operation.error ? (
+          {copy(operation.error, 'administration') ? (
             <p role="alert" className="text-danger-ink">
-              {operation.error}
+              {copy(operation.error, 'administration')}
             </p>
           ) : null}
           <div className="flex flex-wrap justify-end gap-2">
             <Button disabled={operation.pending} onClick={onClose}>
-              {editable ? 'Cancel' : 'Close'}
+              {editable
+                ? copy('Cancel', 'administration')
+                : copy('Close', 'administration')}
             </Button>
             {editable ? (
               <Button
                 type="submit"
                 variant="primary"
                 loading={operation.pending}
-                loadingLabel="Saving role"
+                loadingLabel={copy('Saving role', 'administration')}
               >
-                {role ? 'Review changes' : 'Create role'}
+                {role
+                  ? copy('Review changes', 'administration')
+                  : copy('Create role', 'administration')}
               </Button>
             ) : null}
           </div>
