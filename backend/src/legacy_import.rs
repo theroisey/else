@@ -79,6 +79,9 @@ pub fn import(bundle: &Path, database: &Path, key_file: &Path) -> Result<Importe
     files::path(key_file)?;
     let parent = database.parent().ok_or(Error::Internal)?;
     files::directory(parent, true)?;
+    if db::legacy_present(parent) {
+        return Err(Error::Conflict("import_requires_empty_storage"));
+    }
     let _lease = files::RuntimeLease::acquire(database)?;
     for path in [
         database.to_path_buf(),
@@ -91,6 +94,14 @@ pub fn import(bundle: &Path, database: &Path, key_file: &Path) -> Result<Importe
             return Err(Error::Conflict("import_requires_empty_storage"));
         }
     }
+    let marker = parent.join(".control/restore-pending.json");
+    files::write(
+        &marker,
+        b"{\"operation\":\"import\",\"state\":\"pending\"}",
+        0o600,
+    )?;
+    files::sync_directory(marker.parent().ok_or(Error::Internal)?)?;
+    files::sync_directory(parent)?;
     let manifest: Manifest =
         validation::json(&files::read(&bundle.join("manifest.json"), 16_384)?)?;
     if manifest.format != 1
@@ -288,13 +299,6 @@ pub fn import(bundle: &Path, database: &Path, key_file: &Path) -> Result<Importe
     {
         return Err(Error::Invalid("import_source_changed"));
     }
-    let marker = parent.join(".control/restore-pending.json");
-    files::write(
-        &marker,
-        b"{\"operation\":\"import\",\"state\":\"pending\"}",
-        0o600,
-    )?;
-    files::sync_directory(marker.parent().ok_or(Error::Internal)?)?;
     let key_parent = key_file.parent().ok_or(Error::Internal)?;
     files::directory(key_parent, true)?;
     let staged_key = key_parent.join(format!(".import-key-{}", validation::new_id()));

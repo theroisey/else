@@ -175,6 +175,30 @@ pub fn connection(path: &Path) -> Result<Connection> {
         Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => (),
         Err(_) => return Err(Error::Internal),
     }
+    existing_private_file(path)?;
+    configure_connection(Connection::open_with_flags(
+        path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE
+            | OpenFlags::SQLITE_OPEN_NO_MUTEX
+            | OpenFlags::SQLITE_OPEN_NOFOLLOW,
+    )?)
+}
+
+/// Verified recovery sources are immutable and may be mounted read-only. Never
+/// attempt file creation or acquire SQLite write access to the source bundle.
+pub(crate) fn readonly_connection(path: &Path) -> Result<Connection> {
+    existing_private_file(path)?;
+    let connection = configure_connection(Connection::open_with_flags(
+        path,
+        OpenFlags::SQLITE_OPEN_READ_ONLY
+            | OpenFlags::SQLITE_OPEN_NO_MUTEX
+            | OpenFlags::SQLITE_OPEN_NOFOLLOW,
+    )?)?;
+    connection.pragma_update(None, "query_only", "ON")?;
+    Ok(connection)
+}
+
+fn existing_private_file(path: &Path) -> Result<()> {
     let metadata = path.symlink_metadata().map_err(|_| Error::Internal)?;
     if !metadata.is_file()
         || metadata.file_type().is_symlink()
@@ -183,12 +207,10 @@ pub fn connection(path: &Path) -> Result<Connection> {
     {
         return Err(Error::Internal);
     }
-    let connection = Connection::open_with_flags(
-        path,
-        OpenFlags::SQLITE_OPEN_READ_WRITE
-            | OpenFlags::SQLITE_OPEN_NO_MUTEX
-            | OpenFlags::SQLITE_OPEN_NOFOLLOW,
-    )?;
+    Ok(())
+}
+
+fn configure_connection(connection: Connection) -> Result<Connection> {
     connection.busy_timeout(Duration::from_secs(2))?;
     connection.pragma_update(None, "foreign_keys", "ON")?;
     connection.pragma_update(None, "synchronous", "FULL")?;
@@ -346,7 +368,7 @@ fn guard_legacy(connection: &Connection, directory: &Path) -> Result<()> {
     Ok(())
 }
 
-fn legacy_present(directory: &Path) -> bool {
+pub(crate) fn legacy_present(directory: &Path) -> bool {
     ["18/docker/PG_VERSION", "postgres/PG_VERSION", "PG_VERSION"]
         .iter()
         .any(|p| directory.join(p).exists())

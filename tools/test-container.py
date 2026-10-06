@@ -29,7 +29,7 @@ def output(*args):
 
 def run(args):
     prefix = "else-image-test-" + uuid.uuid4().hex
-    volumes, containers = [], []
+    volumes, containers, operator_containers, operator_logs = [], [], [], []
     with tempfile.TemporaryDirectory(prefix=prefix) as temporary:
         directory = Path(temporary)
         with socket.socket() as selected:
@@ -75,9 +75,25 @@ def run(args):
             return name
 
         def operator(storage, command, extra=(), payload=None, expected=0):
-            result = docker("run", "--rm", "-i", *common, "--mount", f"type=volume,src={storage},dst={DATA}",
-                            *extra, args.image, command, input=payload, capture_output=True, text=True, check=False)
-            assert (result.returncode == 0 if expected == 0 else result.returncode != 0), f"operator {command} returned {result.returncode}"
+            name = prefix + "-operator-" + uuid.uuid4().hex
+            operator_containers.append(name)
+            result = docker("run", "--rm", "--name", name, "-i", *common, "--mount", f"type=volume,src={storage},dst={DATA}",
+                            *extra, args.image, command, input=payload, capture_output=True, text=True, check=False, timeout=60)
+            operator_logs.append(result.stdout + result.stderr)
+            succeeded = result.returncode == 0 if expected == 0 else result.returncode != 0
+            if not succeeded:
+                # Native diagnostics are fixed redacted codes, not raw SQL or
+                # provider data. Keep only the final recognized failure code.
+                code = "operator_failure"
+                for line in result.stderr.splitlines():
+                    try:
+                        diagnostic = json.loads(line)
+                        candidate = diagnostic.get("fields", {}).get("error_code", "")
+                        if candidate and len(candidate) <= 80 and all(c in "abcdefghijklmnopqrstuvwxyz_" for c in candidate):
+                            code = candidate
+                    except (ValueError, AttributeError, TypeError):
+                        continue
+                raise AssertionError(f"operator {command} returned {result.returncode}: {code}")
             return result
 
         def ready(name):
@@ -126,6 +142,8 @@ def run(args):
             docker("export", "--output", str(archive), name, stdout=subprocess.DEVNULL)
             with tarfile.open(archive) as files:
                 assert all(member.mode & 0o111 for member in files if member.isdir()), "runtime directories must permit traversal"
+                data_directory = files.getmember(DATA.lstrip("/"))
+                assert data_directory.isdir() and data_directory.mode == 0o700 and data_directory.uid == data_directory.gid == 65532, "image data directory must be privately owned"
                 paths = {member.name.lstrip("/") for member in files}
                 forbidden = ("bin/sh", "usr/bin/node", "usr/bin/npm", "usr/bin/cargo", "usr/bin/rustc", "usr/bin/postgres", "app/frontend/src", "app/frontend/node_modules")
                 assert all(not any(p == key or p.startswith(key + "/") for p in paths) for key in forbidden)
@@ -154,6 +172,8 @@ def run(args):
             docker("exec", "-e", f"BACKUP_DIRECTORY={DATA}/backups/verified", name, "/roisey-else", "backup", stdout=subprocess.DEVNULL)
             operator(original, "backup", ("-e", f"BACKUP_DIRECTORY={DATA}/backups/verified"), expected=1)
             key_before = json.loads(copied(name, DATA + "/.control/integration-keyring.json", directory / "key-before.json").read_text())
+            data_directory = copied(name, DATA, directory / "data-directory-metadata-only")
+            assert data_directory.stat().st_mode & 0o777 == 0o700, "mounted data directory must preserve private permissions"
             db_file = copied(name, DATA + "/else.sqlite3", directory / "database-metadata-only.sqlite3")
             assert db_file.stat().st_mode & 0o777 == 0o600
             assert (directory / "key-before.json").stat().st_mode & 0o777 == 0o400
@@ -166,6 +186,11 @@ def run(args):
             restored = volume("-restored")
             restore_mounts = ("--mount", f"type=volume,src={original},dst=/backup-source,readonly", "-e", "BACKUP_DIRECTORY=/backup-source/backups/verified")
             operator(original, "restore", restore_mounts, expected=1)
+            blocked = volume("-blocked")
+            invalid_source = ("--mount", f"type=volume,src={original},dst=/backup-source,readonly", "-e", "BACKUP_DIRECTORY=/backup-source/backups/not-present")
+            operator(blocked, "restore", invalid_source, expected=1)
+            refused = operator(blocked, "serve", expected=1)
+            assert "restore_incomplete" in refused.stderr, "failed recovery must never become a fresh installation"
             operator(restored, "restore", restore_mounts)
             recovered = start(restored, "-recovered")
             # Sessions, immutable exact amounts and histories survive supported backup/restore.
@@ -184,8 +209,10 @@ def run(args):
                 result = docker("logs", container, capture_output=True, text=True)
                 logs = result.stdout + result.stderr
                 assert all(value not in logs for value in private), "private input appeared in runtime logs"
+            for logs in operator_logs:
+                assert all(value not in logs for value in private), "private input appeared in operator output"
             evidence = {"image_id": config["Id"], "size_bytes": config["Size"], "pid1": "roisey-else", "runtime_uid": 65532,
-                        "checks": "HTTP/static/gzip/auth/exact-finance/cache-outage/readonly/persistence/ownership/TERM/INT/online-backup/fresh-key-restore"}
+                        "checks": "HTTP/static/gzip/auth/exact-finance/cache-outage/readonly/persistence/ownership/TERM/INT/online-backup/fresh-key-restore/failed-recovery-startup-refusal"}
             print(json.dumps(evidence, sort_keys=True))
             if args.evidence:
                 args.evidence.parent.mkdir(parents=True, exist_ok=True)
@@ -193,7 +220,7 @@ def run(args):
             if args.archive:
                 docker("save", "--output", str(args.archive), args.image)
         finally:
-            for container in reversed(containers):
+            for container in reversed(containers + operator_containers):
                 docker("rm", "--force", container, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             for storage in reversed(volumes):
                 docker("volume", "rm", storage, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

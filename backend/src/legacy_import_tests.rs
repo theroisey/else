@@ -516,6 +516,22 @@ async fn actual_postgresql_export_import_retains_guarded_domain_records() {
 #[tokio::test]
 async fn incomplete_counts_schema_ledger_and_missing_keys_refuse_publication() {
     let f = populated().await;
+    let legacy_parent = f.directory.path().join("legacy-target");
+    files::directory(&legacy_parent.join("18/docker"), true).unwrap();
+    let legacy = legacy_parent.join("18/docker/PG_VERSION");
+    files::write(&legacy, b"18\n", 0o600).unwrap();
+    let bundle = f.directory.path().join("legacy-target-export");
+    export_fixture(&f, &bundle);
+    let legacy_database = legacy_parent.join("else.sqlite3");
+    let legacy_key = legacy_parent.join(".control/keyring.json");
+    assert!(matches!(
+        import(&bundle, &legacy_database, &legacy_key),
+        Err(crate::error::Error::Conflict(
+            "import_requires_empty_storage"
+        ))
+    ));
+    assert!(!legacy_database.exists() && !legacy_key.exists());
+    assert_eq!(&*files::read(&legacy, 16).unwrap(), b"18\n");
     for mutation in ["truncated", "counts", "schema", "ledger", "missing_keys"] {
         let bundle = f.directory.path().join(format!("export-{mutation}"));
         export_fixture(&f, &bundle);
@@ -557,5 +573,12 @@ async fn incomplete_counts_schema_ledger_and_missing_keys_refuse_publication() {
         let key = database.parent().unwrap().join(".control/keyring.json");
         assert!(import(&bundle, &database, &key).is_err(), "{mutation}");
         assert!(!database.exists() && !key.exists(), "{mutation}");
+        assert!(
+            matches!(
+                db::Database::open(&database, true),
+                Err(crate::error::Error::Conflict("restore_incomplete"))
+            ),
+            "failed import cannot become a fresh installation: {mutation}"
+        );
     }
 }

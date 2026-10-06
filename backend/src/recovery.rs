@@ -142,6 +142,9 @@ pub fn restore(bundle: &Path, database: &Path, key_file: &Path) -> Result<()> {
     files::path(key_file)?;
     let parent = database.parent().ok_or(Error::Internal)?;
     files::directory(parent, true)?;
+    if db::legacy_present(parent) {
+        return Err(Error::Conflict("restore_requires_empty_storage"));
+    }
     let _lease = files::RuntimeLease::acquire(database)?;
     let marker = parent.join(".control/restore-pending.json");
     if marker.symlink_metadata().is_ok() {
@@ -158,8 +161,14 @@ pub fn restore(bundle: &Path, database: &Path, key_file: &Path) -> Result<()> {
             return Err(Error::Conflict("restore_requires_empty_storage"));
         }
     }
+    // Fence fresh startup before expensive verification or staged copying.
+    // A rejected/interrupted operation leaves this durable marker in place;
+    // preserve that target and choose another explicitly empty volume.
+    files::write(&marker, b"{\"state\":\"pending\"}", 0o600)?;
+    files::sync_directory(marker.parent().ok_or(Error::Internal)?)?;
+    files::sync_directory(parent)?;
     let (manifest, raw, source_path) = verify_bundle(bundle)?;
-    let mut source = db::connection(&source_path)?;
+    let mut source = db::readonly_connection(&source_path)?;
     let ring = Keyring::parse(&raw)?;
     let counts = verify(&mut source, &ring)?;
     if counts != manifest.row_counts {
@@ -184,8 +193,6 @@ pub fn restore(bundle: &Path, database: &Path, key_file: &Path) -> Result<()> {
     let key_parent = key_file.parent().ok_or(Error::Internal)?;
     files::directory(key_parent, true)?;
     let staged_key = key_parent.join(format!(".restore-key-{}", validation::new_id()));
-    files::write(&marker, b"{\"state\":\"pending\"}", 0o600)?;
-    files::sync_directory(marker.parent().ok_or(Error::Internal)?)?;
     files::write(&staged_key, &fresh, 0o400)?;
     if let Err(error) = files::publish(&staged_key, key_file) {
         let _ = fs::remove_file(staged_key);

@@ -8,7 +8,7 @@ use crate::{
     vault::{Operation, Scope, Vault},
 };
 use serde_json::json;
-use std::fs;
+use std::{fs, os::unix::fs::PermissionsExt};
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn online_backup_and_fresh_key_restore_preserve_finance_identity_history_and_ciphertext() {
     let f = Fixture::new().await;
@@ -86,6 +86,12 @@ async fn online_backup_and_fresh_key_restore_preserve_finance_identity_history_a
     writes.await.unwrap();
     let original_db = hash_file(&bundle.join("database.sqlite3")).unwrap();
     let original_key = files::read(&bundle.join("keyring.json"), 8192).unwrap();
+    fs::set_permissions(
+        bundle.join("database.sqlite3"),
+        fs::Permissions::from_mode(0o400),
+    )
+    .unwrap();
+    fs::set_permissions(&bundle, fs::Permissions::from_mode(0o500)).unwrap();
     let target = f.directory.path().join("restored/else.sqlite3");
     let restored_key = f
         .directory
@@ -103,7 +109,8 @@ async fn online_backup_and_fresh_key_restore_preserve_finance_identity_history_a
     assert!(restore(&bundle, &target, &restored_key).is_err());
     let restored_ring = Keyring::load(&restored_key).unwrap();
     assert_ne!(restored_ring.active(), ring.active());
-    let mut captured = db::connection(&bundle.join("database.sqlite3")).unwrap();
+    let mut captured = db::readonly_connection(&bundle.join("database.sqlite3")).unwrap();
+    assert!(captured.execute("DELETE FROM sessions", []).is_err());
     let counts = verify(&mut captured, &ring).unwrap();
     let mut restored = db::connection(&target).unwrap();
     assert_eq!(verify(&mut restored, &restored_ring).unwrap(), counts);
@@ -167,6 +174,8 @@ async fn online_backup_and_fresh_key_restore_preserve_finance_identity_history_a
         Err(crate::error::Error::Conflict("application_is_running"))
     ));
     drop(live);
+    // Let the explicitly owned fixture destructor remove its read-only source.
+    fs::set_permissions(&bundle, fs::Permissions::from_mode(0o700)).unwrap();
 }
 #[tokio::test]
 async fn damaged_missing_or_linked_artifacts_never_install_data_or_keys() {
@@ -177,23 +186,59 @@ async fn damaged_missing_or_linked_artifacts_never_install_data_or_keys() {
     crate::credentials::provision(&key, &f.connection()).unwrap();
     let bundle = f.directory.path().join("backups/bundle");
     backup(&source, &key, &bundle).unwrap();
+    let legacy_parent = f.directory.path().join("legacy-target");
+    files::directory(&legacy_parent.join("18/docker"), true).unwrap();
+    let legacy = legacy_parent.join("18/docker/PG_VERSION");
+    files::write(&legacy, b"18\n", 0o600).unwrap();
+    let legacy_database = legacy_parent.join("else.sqlite3");
+    let legacy_key = legacy_parent.join(".control/keyring.json");
+    assert!(matches!(
+        restore(&bundle, &legacy_database, &legacy_key),
+        Err(crate::error::Error::Conflict(
+            "restore_requires_empty_storage"
+        ))
+    ));
+    assert!(!legacy_database.exists() && !legacy_key.exists());
+    assert_eq!(&*files::read(&legacy, 16).unwrap(), b"18\n");
     let target = f.directory.path().join("target/else.sqlite3");
     let target_key = f.directory.path().join("target/.control/keyring.json");
     let source_key = bundle.join("keyring.json");
     fs::rename(&source_key, bundle.join("missing.json")).unwrap();
     assert!(restore(&bundle, &target, &target_key).is_err());
     assert!(!target.exists() && !target_key.exists());
+    assert!(matches!(
+        db::Database::open(&target, true),
+        Err(crate::error::Error::Conflict("restore_incomplete"))
+    ));
     fs::rename(bundle.join("missing.json"), &source_key).unwrap();
+    let target = f.directory.path().join("linked-target/else.sqlite3");
+    let target_key = f
+        .directory
+        .path()
+        .join("linked-target/.control/keyring.json");
     let linked = f.directory.path().join("linked");
     symlink(&bundle, &linked).unwrap();
     assert!(restore(&linked, &target, &target_key).is_err());
     assert!(!target.exists() && !target_key.exists());
+    assert!(matches!(
+        db::Database::open(&target, true),
+        Err(crate::error::Error::Conflict("restore_incomplete"))
+    ));
+    let target = f.directory.path().join("corrupt-target/else.sqlite3");
+    let target_key = f
+        .directory
+        .path()
+        .join("corrupt-target/.control/keyring.json");
     let artifact = bundle.join("database.sqlite3");
     let mut corrupted = files::read(&artifact, 4_194_304).unwrap();
     corrupted[100] ^= 1;
     fs::write(&artifact, &*corrupted).unwrap();
     assert!(restore(&bundle, &target, &target_key).is_err());
     assert!(!target.exists() && !target_key.exists());
+    assert!(matches!(
+        db::Database::open(&target, true),
+        Err(crate::error::Error::Conflict("restore_incomplete"))
+    ));
     let missing = f.directory.path().join("missing.sqlite3");
     assert!(backup(&missing, &key, &f.directory.path().join("not-published")).is_err());
     assert!(!missing.exists());

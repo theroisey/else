@@ -109,7 +109,7 @@ make restore BACKUP_NAME=checkpoint-20261006 \
 ELSE_DATA_VOLUME=roisey-else-restored make up
 ```
 
-Replace `SOURCE_VOLUME` if your installation uses another volume. Do not start the recovery volume before restoring it. Restore verifies the database, exact histories, and retained keys, and generates a fresh active encryption key before permitting startup. It refuses populated targets and preserves the source. After accepting the recovered installation, set `ELSE_DATA_VOLUME=roisey-else-restored` in `.env` for future commands.
+Replace `SOURCE_VOLUME` if your installation uses another volume. Do not start the recovery volume before restoring it. Restore verifies the database, exact histories, and retained keys, and generates a fresh active encryption key before permitting startup. It refuses populated targets and preserves the source. Failed verification keeps the intended recovery volume blocked; preserve it and select another empty target. After accepting the recovered installation, set `ELSE_DATA_VOLUME=roisey-else-restored` in `.env` for future commands.
 
 The [operations guide](notes/operations.md) covers off-host bundle staging, migration, recovery reconciliation, and key retention.
 
