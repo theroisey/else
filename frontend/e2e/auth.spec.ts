@@ -1378,6 +1378,7 @@ test('GA4 rejects invalid credentials, clears private input and reads independen
   await expect(page.getByRole('button', { name: 'Install key and queue sync', exact: true })).toBeDisabled()
   expect(database(`SELECT count(*) FROM analytics_sync_jobs WHERE connection_id='${connection}'`)).toBe('0')
   await page.getByRole('link', { name: 'View GA4 reports', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'GA4 reports', exact: true })).toBeVisible()
   await page.getByLabel('Start date', { exact: true }).fill('2026-10-01')
   await page.getByLabel('End date', { exact: true }).fill('2026-10-03')
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
@@ -1443,6 +1444,9 @@ test('WooCommerce creates audited pending setup, clears keys and reads separate 
   await expect(page.getByRole('button', { name: 'Replace Read key and queue sync', exact: true })).toBeDisabled()
   expect(database(`SELECT count(*) FROM analytics_sync_jobs WHERE connection_id='${connection}'`)).toBe('1')
   await page.getByRole('link', { name: 'View WooCommerce reports', exact: true }).click()
+  // Setup and reports share date labels. Wait for the destination before filling
+  // them, so a concurrent route transition cannot target the outgoing form.
+  await expect(page.getByRole('heading', { name: 'WooCommerce reports', exact: true })).toBeVisible()
   await page.getByLabel('Start date (UTC)', { exact: true }).fill('2026-10-01')
   await page.getByLabel('End date (UTC, exclusive)', { exact: true }).fill('2026-10-04')
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
@@ -1509,6 +1513,7 @@ test('Meta creates audited pending setup, clears its token and reads exact store
   await expect(page.getByRole('button', { name: 'Replace read token and queue sync', exact: true })).toBeDisabled()
   expect(database(`SELECT count(*) FROM analytics_sync_jobs WHERE connection_id='${connection}'`)).toBe('1')
   await page.getByRole('link', { name: 'View Meta reports', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Meta Ads reports', exact: true })).toBeVisible()
   await page.getByLabel('Start date', { exact: true }).fill('2026-10-01')
   await page.getByLabel('End date', { exact: true }).fill('2026-10-03')
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
