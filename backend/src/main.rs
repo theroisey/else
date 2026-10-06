@@ -4,7 +4,8 @@ use pingora_core::{
     services::listening::Service,
 };
 use roisey_else::{
-    api::Api, auth::Auth, config::Config, db::Database, server::Application, static_files::Assets,
+    api::Api, auth::Auth, config::Config, db::Database, embedded_redis::EmbeddedRedis,
+    server::Application, startup::Failure, static_files::Assets,
 };
 use serde::Deserialize;
 use std::{
@@ -25,40 +26,44 @@ fn main() {
         .with_target(false)
         .with_writer(std::io::stderr)
         .init();
-    if let Err(code) = run() {
-        tracing::error!(error_code = code, "application_failed");
+    if let Err(error) = run() {
+        tracing::error!(
+            stage = error.stage,
+            error_code = error.code,
+            operation = error.operation,
+            error_kind = error.error_kind,
+            errno = error.errno,
+            owner_uid = error.owner_uid,
+            runtime_uid = error.runtime_uid,
+            directory_mode = error.directory_mode,
+            message = if error.stage == "runtime" {
+                "application_failed"
+            } else {
+                "application_startup_failed"
+            }
+        );
         std::process::exit(1);
     }
 }
 
-fn run() -> Result<(), &'static str> {
+fn run() -> Result<(), Failure> {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
     let command = arguments.first().map(String::as_str).unwrap_or("serve");
     if arguments.len() > 1 {
-        return Err("invalid_command");
+        return Err(Failure::new("configuration", "invalid_command"));
     }
     if command == "health" {
-        return health();
+        return health().map_err(Failure::from);
     }
     if command == "help" {
         println!(
-            "Roisey Else: serve | health | migrate | bootstrap | backup | restore | import-postgres | key-inventory | rotate-credentials\nBootstrap and key operations read bounded JSON from stdin. Backup/restore use BACKUP_DIRECTORY; import uses IMPORT_DIRECTORY."
+            "Roisey Else: serve | health | migrate | bootstrap | backup | restore | key-inventory | rotate-credentials\nBootstrap and key operations read bounded JSON from stdin. Backup/restore use BACKUP_DIRECTORY."
         );
         return Ok(());
     }
-    let config = Config::load()?;
-    if command == "import-postgres" {
-        let bundle = std::path::PathBuf::from(
-            std::env::var_os("IMPORT_DIRECTORY").ok_or("import_directory_required")?,
-        );
-        let result =
-            roisey_else::legacy_import::import(&bundle, &config.database, &config.key_file)
-                .map_err(|e| e.code())?;
-        println!(
-            "{}",
-            serde_json::to_string(&result).map_err(|_| "import_summary_failed")?
-        );
-        return Ok(());
+    let config = Config::load().map_err(|code| Failure::new("configuration", code))?;
+    if command == "serve" {
+        return serve(config);
     }
     if command == "restore" {
         let bundle = std::path::PathBuf::from(
@@ -73,19 +78,11 @@ fn run() -> Result<(), &'static str> {
         command,
         "serve" | "migrate" | "bootstrap" | "backup" | "key-inventory" | "rotate-credentials"
     ) {
-        return Err("invalid_command");
+        return Err(Failure::new("configuration", "invalid_command"));
     }
-    let _runtime_lease = if command == "serve" {
-        Some(
-            roisey_else::private_files::RuntimeLease::acquire(&config.database)
-                .map_err(|e| e.code())?,
-        )
-    } else {
-        None
-    };
     if command == "backup" {
         if config.database.symlink_metadata().is_err() {
-            return Err("database_unavailable");
+            return Err(Failure::from("database_unavailable"));
         }
         let connection = roisey_else::db::connection(&config.database).map_err(|e| e.code())?;
         if config.key_provision {
@@ -104,14 +101,11 @@ fn run() -> Result<(), &'static str> {
     if matches!(command, "key-inventory" | "rotate-credentials")
         && config.database.symlink_metadata().is_err()
     {
-        return Err("database_unavailable");
+        return Err(Failure::from("database_unavailable"));
     }
     let db = Database::open(&config.database, true).map_err(|e| e.code())?;
-    if command == "serve" {
-        tracing::info!(schema_version = 1, "database_ready_migrations_verified");
-    }
     if matches!(command, "key-inventory" | "rotate-credentials") {
-        return key_operation(command, &config, db);
+        return key_operation(command, &config, db).map_err(Failure::from);
     }
     if command == "migrate" {
         println!("Database migrations verified.");
@@ -131,7 +125,7 @@ fn run() -> Result<(), &'static str> {
             .read_to_end(&mut data)
             .map_err(|_| "bootstrap_input_unavailable")?;
         if data.len() > 4096 {
-            return Err("invalid_bootstrap_input");
+            return Err(Failure::from("invalid_bootstrap_input"));
         }
         let input: Input =
             roisey_else::validation::json(&data).map_err(|_| "invalid_bootstrap_input")?;
@@ -147,29 +141,69 @@ fn run() -> Result<(), &'static str> {
         println!("Initial administrator created.");
         return Ok(());
     }
-    if command != "serve" {
-        return Err("invalid_command");
-    }
-    let auth = Auth::new(db.clone()).map_err(|e| e.code())?;
+    Err(Failure::new("configuration", "invalid_command"))
+}
+
+fn serve(config: Config) -> Result<(), Failure> {
+    tracing::info!("application_starting");
+    let directory = config
+        .database
+        .parent()
+        .ok_or_else(|| Failure::new("storage", "data_directory_unavailable"))?;
+    roisey_else::startup::directory(directory, "storage", "data_directory_unavailable")?;
+    tracing::info!("data_directory_ready");
+    roisey_else::startup::directory(
+        &directory.join(".control"),
+        "control",
+        "control_directory_unavailable",
+    )?;
+    let _runtime_lease = roisey_else::private_files::RuntimeLease::acquire(&config.database)
+        .map_err(|e| Failure::domain("runtime_lock", "runtime_lock_failed", e))?;
+    // Report a conflicting listener before starting any dependent processes.
+    let port = std::net::TcpListener::bind(config.address).map_err(|e| {
+        Failure::io(
+            "http_listener",
+            "http_listener_unavailable",
+            "bind_http_listener",
+            e,
+        )
+    })?;
+    drop(port);
+    let redis = EmbeddedRedis::start()?;
+    let db = Database::initialize(&config.database, true)
+        .map_err(|e| Failure::domain(e.stage, e.code, e.source))?;
+    tracing::info!("database_ready");
+    tracing::info!(
+        schema_version = roisey_else::db::SCHEMA_VERSION,
+        "migrations_ready"
+    );
+    let auth = Auth::new(db.clone()).map_err(|e| {
+        Failure::domain("authentication", "authentication_initialization_failed", e)
+    })?;
     let key_connection = roisey_else::db::connection(&config.database)
-        .map_err(|_| "integration_key_startup_failed")?;
+        .map_err(|e| Failure::domain("keyring", "keyring_initialization_failed", e))?;
     if config.key_provision {
         roisey_else::credentials::provision(&config.key_file, &key_connection)
-            .map_err(|_| "integration_key_startup_failed")?;
+            .map_err(|e| Failure::domain("keyring", "keyring_initialization_failed", e))?;
     }
     let ring = roisey_else::credentials::Keyring::load(&config.key_file)
-        .map_err(|_| "integration_key_startup_failed")?;
+        .map_err(|e| Failure::domain("keyring", "keyring_initialization_failed", e))?;
     ring.preflight(&key_connection, config.key_restored, true)
-        .map_err(|_| "integration_key_startup_failed")?;
+        .map_err(|e| Failure::domain("keyring", "keyring_initialization_failed", e))?;
     drop(key_connection);
+    tracing::info!("keyring_ready");
     let vault = roisey_else::vault::Vault::new(db.clone(), ring.clone());
     let synchronization =
         roisey_else::synchronization::Synchronization::new(db.clone(), vault.clone(), ring);
-    let worker = roisey_else::provider_worker::Worker::new(synchronization.clone())
-        .map_err(|_| "provider_trust_startup_failed")?;
-    let assets = Assets::load(&config.frontend).map_err(|_| "frontend_artifact_invalid")?;
-    let report_cache = roisey_else::cache::ReportCache::new(config.redis_url.as_deref())
-        .map_err(|_| "invalid_cache_configuration")?;
+    let worker =
+        roisey_else::provider_worker::Worker::new(synchronization.clone()).map_err(|e| {
+            Failure::domain("provider_trust", "provider_trust_initialization_failed", e)
+        })?;
+    let assets = Assets::load(&config.frontend)
+        .map_err(|e| Failure::domain("frontend", "frontend_assets_invalid", e))?;
+    tracing::info!("frontend_ready");
+    let report_cache = roisey_else::cache::ReportCache::new()
+        .map_err(|e| Failure::domain("cache", "embedded_cache_initialization_failed", e))?;
     let draining = Arc::new(AtomicBool::new(false));
     let mut listener = Service::new(
         "roisey_else_http".into(),
@@ -184,6 +218,7 @@ fn run() -> Result<(), &'static str> {
             },
             assets,
             draining.clone(),
+            redis.clone(),
         ),
     );
     listener.add_tcp(&config.address.to_string());
@@ -201,10 +236,23 @@ fn run() -> Result<(), &'static str> {
         "provider_sync",
         worker,
     ));
-    tracing::info!(listen_address = %config.address, cache_configured = config.redis_url.is_some(), "application_starting");
+    server.add_service(pingora_core::services::background::background_service(
+        "embedded_redis",
+        roisey_else::embedded_redis::Monitor {
+            redis: redis.clone(),
+            listen: config.address,
+        },
+    ));
     server.run(RunArgs {
-        shutdown_signal: Box::new(GracefulShutdown { draining }),
+        shutdown_signal: Box::new(GracefulShutdown {
+            draining,
+            redis: redis.clone(),
+        }),
     });
+    redis.stop();
+    if redis.has_failed() {
+        return Err(Failure::new("runtime", "embedded_redis_exited"));
+    }
     tracing::info!("application_stopped");
     Ok(())
 }
@@ -285,6 +333,7 @@ fn key_operation(command: &str, config: &Config, db: Database) -> Result<(), &'s
 }
 struct GracefulShutdown {
     draining: Arc<AtomicBool>,
+    redis: Arc<EmbeddedRedis>,
 }
 
 #[async_trait]
@@ -295,7 +344,7 @@ impl ShutdownSignalWatch for GracefulShutdown {
         let mut interrupt =
             tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
                 .expect("SIGINT handler");
-        tokio::select! {_ = term.recv()=>{},_ = interrupt.recv()=>{}}
+        tokio::select! {_ = term.recv()=>{},_ = interrupt.recv()=>{}, _ = self.redis.failed()=>{}}
         self.draining.store(true, Ordering::Release);
         ShutdownSignal::GracefulTerminate
     }

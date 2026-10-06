@@ -4,14 +4,14 @@ Roisey Else is a client operations platform. Preserve real behavior, private dat
 
 ## Read before changing
 
-Read the relevant current notes: [architecture](notes/architecture.md), [domain contracts](notes/domains.md), [provider boundaries](notes/providers.md), [operations and migration](notes/operations.md), and [frontend](notes/frontend.md). Inspect the implemented consumer and its tests before changing a contract. Issues are the scope/evidence record; reference the existing issue for follow-up work. Create an issue only when the owner permits it. Record significant financial, authorization, encryption, import, and recovery policy before implementation.
+Read the relevant current notes: [architecture](notes/architecture.md), [domain contracts](notes/domains.md), [provider boundaries](notes/providers.md), [operations and migration](notes/operations.md), and [frontend](notes/frontend.md). Inspect the implemented consumer and its tests before changing a contract. Issues are the scope/evidence record; reference the existing issue for follow-up work. Create an issue only when the owner permits it. Record significant financial, authorization, encryption, and recovery policy before implementation.
 
 ## Architecture
 
 - One custom application image. Rust/Pingora is the sole HTTP process and PID 1, serving built React assets, `/api/v1`, and health endpoints. Background provider tasks run within this process.
 - SQLite is the durable relational authority. Use STRICT tables, foreign keys, WAL, FULL durability, indexed bounded reads, and admitted transactions. Each data volume has one serving process; do not bypass its filesystem lease or promise horizontal SQLite replicas.
-- Redis is optional official infrastructure for disposable report caching. It never owns sessions, permissions, jobs, leases, finance, audit, or encryption budgets. Outage falls back to SQLite.
-- Compile/check frontend assets and the static Rust binary before Docker. Runtime has no source, toolchain, Node, database server, shell, supervisor, or updater. Keep fonts and third-party notices.
+- One production Compose service/container `else`, image `ghcr.io/theroisey/else:latest`, fixed volume `roisey-else-data`. Rust PID 1 owns one embedded Redis child, private loopback only. Readiness requires Redis plus SQLite; unexpected child exit fences readiness, drains Rust, and exits nonzero for whole-container restart. Redis remains transient and never owns sessions, permissions, jobs, leases, finance, audit, or encryption budgets. Bounded cache read failure falls back to SQLite while the process is running.
+- Compile/check frontend assets and the static Rust binary and pinned Redis executable/library closure before Docker. Scratch runtime has no source, toolchain, Node, shell, external supervisor, or updater. Keep fonts and third-party notices.
 - Registry updates stay in external Make/Compose operations. Preserve exact tested-image promotion and attestation; do not add app release/version polling.
 
 ## Backend boundaries
@@ -34,14 +34,14 @@ Strictly validate bounded DTOs, client/parent/period binding, ordered pages, and
 
 ## Data and operations
 
-New SQLite migrations are additive and checksum-verified; never edit an applied migration on a deployed installation. No automatic downgrade or history deletion. Original PostgreSQL v28 is retained only as an import catalog and compressed test oracle. Export from a stopped-application isolated clone, verify counts/histories/ciphertext, import into empty replacement storage, and preserve original data for rollback.
+New SQLite migrations are additive and checksum-verified; never edit an applied migration on a deployed installation. No automatic downgrade or business-history deletion. Deployment and configuration describe only the current SQLite/embedded-cache architecture.
 
-Use supported online backups. Restore/import must refuse populated targets, fail closed on interrupted verification, retain every required decryptor, and introduce independent fresh active material before encryption. A live inventory does not authorize key retirement. Protect operator input/output; actor IDs are audit attribution, not operator authentication.
+Use supported online backups. Restore must refuse populated targets, fail closed on interrupted verification, retain every required decryptor, and introduce independent fresh active material before encryption. A live inventory does not authorize key retirement. Protect operator input/output; actor IDs are audit attribution, not operator authentication.
 
 ## Verification and delivery
 
-Run checks appropriate to the change and keep failures visible. Normal gates are `make check`; important system changes also require actual HTTP, browser, import/cache, image/recovery, capacity, and Compose checks. Use only explicitly owned disposable fixtures/volumes and free loopback ports. Never use customer credentials/data or disturb unrelated developer servers.
+Run checks appropriate to the change and keep failures visible. Normal gates are `make check`; important system changes also require actual HTTP, browser, embedded-cache, image/recovery, capacity, and Compose checks. Use only explicitly owned disposable fixtures/volumes and free loopback ports. Never use customer credentials/data or disturb unrelated developer servers.
 
-CI keeps six required contexts: Frontend checks, Backend checks, Browser authentication, Dependency security, PostgreSQL integration, and Container integration. PostgreSQL integration is now the conserved import compatibility oracle. Frontend/runtime artifacts feed one image build; actual image/browser/recovery/capacity checks precede publication. Publication promotes the saved exact image, verifies immutable aliases/current-main policy, and signs/verifies its registry digest without rebuilding. Keep full pinned Action/toolchain/container references and genuine dependency scanner failures. The narrowly reviewed Pingora compile-macro maintenance advisory remains visible; new findings or changed scope fail.
+CI keeps six required contexts: Frontend checks, Backend checks, Browser authentication, Dependency security, Embedded runtime artifacts, and Container integration. Frontend/runtime artifacts feed one image build; actual image/browser/recovery/capacity checks precede publication. Publication promotes the saved exact image, verifies immutable aliases/current-main policy, and signs/verifies its registry digest without rebuilding. Keep full pinned Action/toolchain/container references and genuine dependency scanner failures. The narrowly reviewed Pingora compile-macro maintenance advisory remains visible; new findings or changed scope fail.
 
 Use reviewable conventional commits. Update the affected concise notes and customer README when behavior changes. Report executed results and their limits, exact source/image evidence, and anything still blocked. Never call a worktree test a published artifact, synthetic provider data live access, a short load rehearsal an SLA, or publication a production rollout.

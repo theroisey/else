@@ -10,10 +10,8 @@
 /docker/dev/.prepare.*/
 /private-backups/
 /backups/
-/imports/
 **/keyring.json
 **/integration-keyring.json
-**/postgres.jsonl
 *.dump
 
 # Frontend dependencies and generated output.

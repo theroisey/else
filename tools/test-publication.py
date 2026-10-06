@@ -20,7 +20,7 @@ class PublicationTests(unittest.TestCase):
         needs = re.search(r"^    needs: \[([^\]\n]+)\]$", publication, re.MULTILINE)
         self.assertIsNotNone(needs, "publication prerequisite contract changed")
         self.assertEqual({part.strip() for part in needs.group(1).split(",")},
-                         {"frontend", "browser-auth", "backend", "dependencies", "migrations", "containers"})
+                         {"frontend", "browser-auth", "backend", "dependencies", "runtime-artifacts", "containers"})
 
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()

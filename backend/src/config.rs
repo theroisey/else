@@ -7,7 +7,6 @@ pub struct Config {
     pub frontend: PathBuf,
     pub origin: String,
     pub secure_cookie: bool,
-    pub redis_url: Option<String>,
     pub key_file: PathBuf,
     pub key_provision: bool,
     pub key_restored: bool,
@@ -18,7 +17,7 @@ impl Config {
         let address = env::var("HTTP_ADDRESS")
             .unwrap_or_else(|_| "127.0.0.1:8080".into())
             .parse()
-            .map_err(|_| "HTTP_ADDRESS must be a numeric socket address")?;
+            .map_err(|_| "invalid_http_address")?;
         let database = PathBuf::from(
             env::var("DATABASE_PATH")
                 .unwrap_or_else(|_| "/var/lib/roisey-else/else.sqlite3".into()),
@@ -27,21 +26,16 @@ impl Config {
             env::var("FRONTEND_DIRECTORY").unwrap_or_else(|_| "/app/frontend".into()),
         );
         if !database.is_absolute() || !frontend.is_absolute() {
-            return Err("DATABASE_PATH and FRONTEND_DIRECTORY must be absolute paths");
-        }
-        if env::var_os("DATABASE_URL").is_some() {
-            return Err(
-                "DATABASE_URL is obsolete; explicitly migrate the legacy database before starting this application",
-            );
+            return Err("invalid_runtime_paths");
         }
         let origin =
             env::var("AUTH_PUBLIC_ORIGIN").unwrap_or_else(|_| "http://localhost:8080".into());
-        let parsed = url::Url::parse(&origin).map_err(|_| "AUTH_PUBLIC_ORIGIN is invalid")?;
+        let parsed = url::Url::parse(&origin).map_err(|_| "invalid_public_origin")?;
         let secure_cookie = match env::var("AUTH_COOKIE_SECURE").as_deref() {
             Ok("true") => true,
             Ok("false") => false,
             Err(_) => true,
-            _ => return Err("AUTH_COOKIE_SECURE must be true or false"),
+            _ => return Err("invalid_cookie_configuration"),
         };
         let local = matches!(parsed.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"));
         if parsed.origin().ascii_serialization() != origin
@@ -53,22 +47,13 @@ impl Config {
                 || (parsed.scheme() == "http" && local && !secure_cookie))
             || (secure_cookie && parsed.scheme() != "https")
         {
-            return Err(
-                "AUTH_PUBLIC_ORIGIN must be an exact HTTPS origin; insecure cookies are limited to loopback development",
-            );
-        }
-        let redis_url = env::var("REDIS_URL").ok().filter(|s| !s.is_empty());
-        if let Some(value) = &redis_url {
-            let parsed = url::Url::parse(value).map_err(|_| "REDIS_URL is invalid")?;
-            if !matches!(parsed.scheme(), "redis" | "rediss") || parsed.host_str().is_none() {
-                return Err("REDIS_URL must use redis or rediss");
-            }
+            return Err("invalid_public_origin");
         }
         let key_provision = env::var_os("INTEGRATION_KEYRING_FILE").is_none();
         let key_file = if key_provision {
             database
                 .parent()
-                .ok_or("DATABASE_PATH is invalid")?
+                .ok_or("invalid_database_path")?
                 .join(".control/integration-keyring.json")
         } else {
             PathBuf::from(
@@ -96,7 +81,6 @@ impl Config {
             frontend,
             origin,
             secure_cookie,
-            redis_url,
             key_file,
             key_provision,
             key_restored,

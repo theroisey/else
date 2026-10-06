@@ -13,8 +13,23 @@ use std::{
 use tokio::sync::Semaphore;
 
 pub(crate) const SCHEMA: &str = include_str!("../migrations/sqlite/000001_initial.sql");
+pub const SCHEMA_VERSION: u16 = 2;
+const SECOND_SCHEMA: &str = include_str!("../migrations/sqlite/000002_runtime_cleanup.sql");
+pub(crate) fn migration_records() -> Vec<(i64, String)> {
+    [SCHEMA, SECOND_SCHEMA]
+        .iter()
+        .enumerate()
+        .map(|(i, text)| ((i + 1) as i64, format!("{:x}", Sha256::digest(text))))
+        .collect()
+}
 pub const ADMIN_ROLE: &str = "00000000-0000-4000-8000-000000000001";
 const CONNECTIONS: usize = 8;
+
+pub struct InitializationError {
+    pub stage: &'static str,
+    pub code: &'static str,
+    pub source: Error,
+}
 
 #[derive(Clone)]
 pub struct Database(Arc<Pool>);
@@ -43,36 +58,52 @@ impl Drop for Checkout {
 impl Database {
     /// Startup is synchronous before the Pingora runtimes accept requests.
     pub fn open(path: &Path, seed: bool) -> Result<Self> {
-        let parent = path.parent().ok_or(Error::Internal)?;
+        Self::initialize(path, seed).map_err(|error| error.source)
+    }
+    pub fn initialize(path: &Path, seed: bool) -> std::result::Result<Self, InitializationError> {
+        let failure = |stage, code, source| InitializationError {
+            stage,
+            code,
+            source,
+        };
+        let parent = path
+            .parent()
+            .ok_or_else(|| failure("database", "database_open_failed", Error::Internal))?;
         if parent
             .join(".control/restore-pending.json")
             .symlink_metadata()
             .is_ok()
         {
-            return Err(Error::Conflict("restore_incomplete"));
-        }
-        if seed && !path.exists() && legacy_present(parent) {
-            return legacy_error();
+            return Err(failure(
+                "recovery",
+                "restore_incomplete",
+                Error::Conflict("restore_incomplete"),
+            ));
         }
         std::fs::DirBuilder::new()
             .recursive(true)
             .mode(0o700)
             .create(parent)
-            .map_err(|_| Error::Internal)?;
-        let mut first = connection(path)?;
-        first.pragma_update(None, "journal_mode", "WAL")?;
-        migrate(&mut first)?;
+            .map_err(|_| failure("storage", "data_directory_unavailable", Error::Internal))?;
+        let mut first =
+            connection(path).map_err(|e| failure("database", "database_open_failed", e))?;
+        first
+            .pragma_update(None, "journal_mode", "WAL")
+            .map_err(|e| failure("database", "database_wal_failed", e.into()))?;
+        migrate(&mut first).map_err(|e| failure("migrations", "database_migration_failed", e))?;
         if seed {
-            guard_legacy(&first, parent)?;
-            seed_catalog(&mut first)?;
+            seed_catalog(&mut first)
+                .map_err(|e| failure("catalog", "database_catalog_failed", e))?;
         }
         let mut connections = vec![first];
         for _ in 1..CONNECTIONS {
-            connections.push(connection(path)?);
+            connections.push(
+                connection(path).map_err(|e| failure("database", "database_pool_failed", e))?,
+            );
         }
         Ok(Self(Arc::new(Pool {
             connections: Mutex::new(connections),
-            slots: Arc::new(Semaphore::new(CONNECTIONS)),
+            slots: Arc::new(Semaphore::new(CONNECTIONS - 1)),
             writer: Arc::new(Semaphore::new(1)),
         })))
     }
@@ -111,11 +142,18 @@ impl Database {
         } else {
             None
         };
-        let slot =
-            tokio::time::timeout(Duration::from_secs(2), self.0.slots.clone().acquire_owned())
-                .await
-                .map_err(|_| Error::Busy)?
-                .map_err(|_| Error::Busy)?;
+        // Seven read permits leave one connection available to the single
+        // admitted writer. Reads cannot place it behind a saturated read queue.
+        let slot = if write {
+            None
+        } else {
+            Some(
+                tokio::time::timeout(Duration::from_secs(2), self.0.slots.clone().acquire_owned())
+                    .await
+                    .map_err(|_| Error::Busy)?
+                    .map_err(|_| Error::Busy)?,
+            )
+        };
         let pool = self.0.clone();
         tokio::task::spawn_blocking(move || {
             // Permits belong to actual work, including when the HTTP future is cancelled.
@@ -315,70 +353,38 @@ pub(crate) fn validate_history(tx: &Transaction<'_>, new_only: bool) -> Result<(
 fn migrate(connection: &mut Connection) -> Result<()> {
     let tx = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
     tx.execute_batch("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, sha256 TEXT NOT NULL, applied_at TEXT NOT NULL) STRICT;")?;
-    let version: i64 = tx.query_row(
-        "SELECT coalesce(max(version),0) FROM schema_migrations",
-        [],
-        |r| r.get(0),
-    )?;
-    let digest = format!("{:x}", Sha256::digest(SCHEMA));
-    match version {
-        0 => {
-            tx.execute_batch(SCHEMA)?;
+    let records = migration_records();
+    let stored: Vec<(i64, String)> = tx
+        .prepare("SELECT version,sha256 FROM schema_migrations ORDER BY version")?
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<std::result::Result<_, _>>()?;
+    if stored.len() > records.len()
+        || stored
+            .iter()
+            .zip(&records)
+            .any(|(actual, expected)| actual != expected)
+    {
+        return Err(Error::Internal);
+    }
+    for (version, digest) in records.iter().skip(stored.len()) {
+        tx.execute_batch(if *version == 1 { SCHEMA } else { SECOND_SCHEMA })?;
+        if *version == 1 {
             for table in [
                 "pricing_versions",
                 "pricing_lines",
                 "pricing_snapshots",
                 "pricing_snapshot_lines",
             ] {
-                // Identifiers are compile-time allowlisted, never request input.
                 tx.execute_batch(&format!("CREATE TRIGGER {table}_no_update BEFORE UPDATE ON {table} BEGIN SELECT RAISE(ABORT,'immutable history'); END; CREATE TRIGGER {table}_no_delete BEFORE DELETE ON {table} BEGIN SELECT RAISE(ABORT,'immutable history'); END;"))?;
             }
-            tx.execute(
-                "INSERT INTO schema_migrations VALUES (1,?1,?2)",
-                params![digest, validation::now()],
-            )?;
         }
-        1 => {
-            let stored: String = tx.query_row(
-                "SELECT sha256 FROM schema_migrations WHERE version=1",
-                [],
-                |r| r.get(0),
-            )?;
-            if stored != digest {
-                return Err(Error::Internal);
-            }
-        }
-        _ => return Err(Error::Internal),
+        tx.execute(
+            "INSERT INTO schema_migrations VALUES (?1,?2,?3)",
+            params![version, digest, validation::now()],
+        )?;
     }
     tx.commit()?;
     Ok(())
-}
-
-fn guard_legacy(connection: &Connection, directory: &Path) -> Result<()> {
-    if legacy_present(directory) {
-        let imported: bool = connection.query_row(
-            "SELECT EXISTS(SELECT 1 FROM import_receipts WHERE source='postgresql')",
-            [],
-            |r| r.get(0),
-        )?;
-        if !imported {
-            return legacy_error();
-        }
-    }
-    Ok(())
-}
-
-pub(crate) fn legacy_present(directory: &Path) -> bool {
-    ["18/docker/PG_VERSION", "postgres/PG_VERSION", "PG_VERSION"]
-        .iter()
-        .any(|p| directory.join(p).exists())
-}
-fn legacy_error<T>() -> Result<T> {
-    tracing::error!(
-        code = "legacy_import_required",
-        "Legacy database detected; follow the explicit data migration procedure."
-    );
-    Err(Error::Conflict("legacy_import_required"))
 }
 
 fn seed_catalog(connection: &mut Connection) -> Result<()> {
@@ -504,6 +510,115 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn saturated_readers_cannot_starve_the_admitted_writer() {
+        let directory = tempfile::tempdir().unwrap();
+        let database = Database::open(&directory.path().join("else.sqlite3"), true).unwrap();
+        let release = Arc::new((Mutex::new(false), std::sync::Condvar::new()));
+        let (entered, mut receiving) = tokio::sync::mpsc::unbounded_channel();
+        let mut readers = Vec::new();
+        for _ in 0..8 {
+            let db = database.clone();
+            let release = release.clone();
+            let entered = entered.clone();
+            readers.push(tokio::spawn(async move {
+                db.read(move |tx| {
+                    tx.query_row("SELECT count(*) FROM roles", [], |row| row.get::<_, i64>(0))?;
+                    entered.send(()).unwrap();
+                    let (lock, condition) = &*release;
+                    let mut allowed = lock.lock().unwrap();
+                    while !*allowed {
+                        allowed = condition.wait(allowed).unwrap();
+                    }
+                    Ok(())
+                })
+                .await
+            }));
+        }
+        for _ in 0..7 {
+            receiving.recv().await.unwrap();
+        }
+        let eighth_is_queued = tokio::time::timeout(Duration::from_millis(100), receiving.recv())
+            .await
+            .is_err();
+        let committed = tokio::time::timeout(
+            Duration::from_millis(500),
+            database.write(|tx| {
+                tx.execute(
+                    "INSERT INTO client_scopes(id) VALUES ('99999999-9999-4999-8999-999999999999')",
+                    [],
+                )?;
+                Ok(())
+            }),
+        )
+        .await;
+        // Always release blocking readers before asserting, even on failure.
+        let (lock, condition) = &*release;
+        *lock.lock().unwrap() = true;
+        condition.notify_all();
+        for reader in readers {
+            reader.await.unwrap().unwrap();
+        }
+        assert!(eighth_is_queued);
+        committed.unwrap().unwrap();
+        assert!(database.read(|tx| tx.query_row("SELECT EXISTS(SELECT 1 FROM client_scopes WHERE id='99999999-9999-4999-8999-999999999999')", [], |r| r.get::<_, bool>(0)).map_err(Error::from)).await.unwrap());
+    }
+
+    #[test]
+    fn additive_upgrade_preserves_rows_and_rejects_modified_or_future_migrations() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("else.sqlite3");
+        let conn = connection(&path).unwrap();
+        conn.execute_batch("CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, sha256 TEXT NOT NULL, applied_at TEXT NOT NULL) STRICT;").unwrap();
+        conn.execute_batch(SCHEMA).unwrap();
+        conn.execute(
+            "INSERT INTO schema_migrations VALUES (1,?1,?2)",
+            params![migration_records()[0].1, validation::now()],
+        )
+        .unwrap();
+        conn.execute("INSERT INTO audit_events VALUES ('a','2026',1,'system',NULL,'client.created','client','c',NULL,?1,'null','{}','{\"source\":\"cli\"}')",["A".repeat(26)]).unwrap();
+        drop(conn);
+        drop(Database::open(&path, true).unwrap());
+        let conn = connection(&path).unwrap();
+        assert_eq!(
+            conn.query_row::<i64, _, _>("SELECT count(*) FROM audit_events", [], |r| r.get(0))
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            conn.query_row::<i64, _, _>("SELECT max(version) FROM schema_migrations", [], |r| r
+                .get(0))
+                .unwrap(),
+            i64::from(SCHEMA_VERSION)
+        );
+        conn.execute(
+            "UPDATE schema_migrations SET sha256='invalid' WHERE version=1",
+            [],
+        )
+        .unwrap();
+        let failure = Database::initialize(&path, true).err().unwrap();
+        assert_eq!(
+            (failure.stage, failure.code),
+            ("migrations", "database_migration_failed")
+        );
+        conn.execute(
+            "UPDATE schema_migrations SET sha256=?1 WHERE version=1",
+            [migration_records()[0].1.clone()],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO schema_migrations VALUES (3,'future',?1)",
+            [validation::now()],
+        )
+        .unwrap();
+        assert!(Database::open(&path, true).is_err());
+        assert_eq!(
+            conn.query_row::<i64, _, _>("SELECT count(*) FROM audit_events", [], |r| r.get(0))
+                .unwrap(),
+            1
+        );
+    }
+
+    #[tokio::test]
     async fn migrations_are_repeatable_and_enforce_history_constraints() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("else.sqlite3");
@@ -539,14 +654,5 @@ mod tests {
                 .execute("UPDATE audit_events SET event_name='client.updated'", [])
                 .is_err()
         );
-    }
-
-    #[test]
-    fn legacy_data_never_becomes_a_silent_fresh_installation() {
-        let directory = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(directory.path().join("18/docker")).unwrap();
-        std::fs::write(directory.path().join("18/docker/PG_VERSION"), "18").unwrap();
-        assert!(Database::open(&directory.path().join("else.sqlite3"), true).is_err());
-        assert!(!directory.path().join("else.sqlite3").exists());
     }
 }

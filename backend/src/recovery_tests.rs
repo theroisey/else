@@ -186,20 +186,6 @@ async fn damaged_missing_or_linked_artifacts_never_install_data_or_keys() {
     crate::credentials::provision(&key, &f.connection()).unwrap();
     let bundle = f.directory.path().join("backups/bundle");
     backup(&source, &key, &bundle).unwrap();
-    let legacy_parent = f.directory.path().join("legacy-target");
-    files::directory(&legacy_parent.join("18/docker"), true).unwrap();
-    let legacy = legacy_parent.join("18/docker/PG_VERSION");
-    files::write(&legacy, b"18\n", 0o600).unwrap();
-    let legacy_database = legacy_parent.join("else.sqlite3");
-    let legacy_key = legacy_parent.join(".control/keyring.json");
-    assert!(matches!(
-        restore(&bundle, &legacy_database, &legacy_key),
-        Err(crate::error::Error::Conflict(
-            "restore_requires_empty_storage"
-        ))
-    ));
-    assert!(!legacy_database.exists() && !legacy_key.exists());
-    assert_eq!(&*files::read(&legacy, 16).unwrap(), b"18\n");
     let target = f.directory.path().join("target/else.sqlite3");
     let target_key = f.directory.path().join("target/.control/keyring.json");
     let source_key = bundle.join("keyring.json");

@@ -100,7 +100,7 @@ fn verify_password(hash: &str, password: &str) -> bool {
     {
         return false;
     }
-    // Imported passwords use exactly these reviewed bounds. Never run attacker-controlled cost parameters.
+    // Stored password hashes use exactly these reviewed bounds. Never run attacker-controlled cost parameters.
     if parsed.algorithm.as_str() != "argon2id"
         || parsed.version != Some(19)
         || parsed.params.get_decimal("m") != Some(19 * 1024)
@@ -466,7 +466,7 @@ mod tests {
     }
 
     #[test]
-    fn imported_hash_and_bounded_cost_policy() {
+    fn retained_password_hash_and_bounded_cost_policy() {
         let hash = hash_password("synthetic-password").unwrap();
         assert!(verify_password(&hash, "synthetic-password"));
         assert!(!verify_password(&hash, "different-password"));

@@ -1,6 +1,9 @@
 **
 !build/
 !build/roisey-else
+!build/redis-server
+!build/redis-runtime/
+!build/redis-runtime/**
 !build/ca-certificates.crt
 !build/licenses/
 !build/licenses/**

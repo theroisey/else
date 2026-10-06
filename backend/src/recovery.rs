@@ -57,7 +57,6 @@ pub(crate) const TABLES: &[&str] = &[
     "client_websites",
     "website_integrations",
     "user_locale_preferences",
-    "import_receipts",
 ];
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -119,7 +118,7 @@ pub fn backup(database: &Path, key_file: &Path, destination: &Path) -> Result<()
     files::write(&pending.0.join("keyring.json"), &raw, 0o400)?;
     let manifest = Manifest {
         format: 1,
-        schema: 1,
+        schema: db::SCHEMA_VERSION as u8,
         created_at: validation::now(),
         database_sha256: hash_file(&artifact)?,
         keyring_sha256: format!("{:x}", Sha256::digest(&raw)),
@@ -142,15 +141,12 @@ pub fn restore(bundle: &Path, database: &Path, key_file: &Path) -> Result<()> {
     files::path(key_file)?;
     let parent = database.parent().ok_or(Error::Internal)?;
     files::directory(parent, true)?;
-    if db::legacy_present(parent) {
-        return Err(Error::Conflict("restore_requires_empty_storage"));
-    }
     let _lease = files::RuntimeLease::acquire(database)?;
     let marker = parent.join(".control/restore-pending.json");
     if marker.symlink_metadata().is_ok() {
         return Err(Error::Conflict("restore_incomplete"));
     }
-    // Switch to a new volume. Retain the previous volume for rollback.
+    // Recovery storage must be empty. Preserve the original installation.
     for path in [
         database.to_path_buf(),
         PathBuf::from(format!("{}-wal", database.display())),
@@ -163,7 +159,7 @@ pub fn restore(bundle: &Path, database: &Path, key_file: &Path) -> Result<()> {
     }
     // Fence fresh startup before expensive verification or staged copying.
     // A rejected/interrupted operation leaves this durable marker in place;
-    // preserve that target and choose another explicitly empty volume.
+    // preserve that target and prepare fresh recovery storage explicitly.
     files::write(&marker, b"{\"state\":\"pending\"}", 0o600)?;
     files::sync_directory(marker.parent().ok_or(Error::Internal)?)?;
     files::sync_directory(parent)?;
@@ -212,7 +208,7 @@ fn verify_bundle(bundle: &Path) -> Result<(Manifest, zeroize::Zeroizing<Vec<u8>>
     let raw = files::read(&bundle.join("manifest.json"), 16_384)?;
     let manifest: Manifest = validation::json(&raw)?;
     if manifest.format != 1
-        || manifest.schema != 1
+        || manifest.schema != db::SCHEMA_VERSION as u8
         || validation::instant(&manifest.created_at).is_err()
     {
         return Err(Error::Internal);
@@ -305,7 +301,7 @@ pub(crate) fn verify(connection: &mut Connection, ring: &Keyring) -> Result<BTre
         .prepare("SELECT version,sha256 FROM schema_migrations ORDER BY version")?
         .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
         .collect::<std::result::Result<_, _>>()?;
-    if versions != vec![(1, format!("{:x}", Sha256::digest(db::SCHEMA)))] {
+    if versions != db::migration_records() {
         return Err(Error::Internal);
     }
     db::validate_history(&tx, false)?;

@@ -1,4 +1,4 @@
-//! Private AES-GCM boundary compatible with retained Go envelopes. Encryption
+//! Private versioned AES-GCM credential envelope boundary. Encryption
 //! producers must reserve durable capacity before calling seal; this primitive
 //! deliberately has no API serialization or connection authorization behavior.
 use crate::{
@@ -417,9 +417,9 @@ mod tests {
         }
     }
     #[test]
-    fn retained_go_envelope_is_authenticated_and_every_byte_is_bound() {
+    fn credential_envelope_is_authenticated_and_every_byte_is_bound() {
         let ring = synthetic("synthetic-one", 0x6b);
-        // Deterministic synthetic fixture from standard-library Go AES-GCM,
+        // Deterministic synthetic AES-256-GCM envelope fixture,
         // using the exact retained header/AAD and an explicit test-only nonce.
         let hex = "010d73796e7468657469632d6f6e65111111111111111111111111690c5d03fbf78b772b68cb83e7bab335d52b7105b5843868fd9136e00883f3d9c899b781";
         let raw: Vec<_> = (0..hex.len())

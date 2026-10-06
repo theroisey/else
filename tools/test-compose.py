@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rehearse the real one-image Compose file on explicitly owned empty storage."""
+"""Test the production Compose file using internal, isolated fixture overrides."""
 import argparse
 import http.cookiejar
 import json
@@ -9,40 +9,48 @@ import shlex
 import socket
 import subprocess
 import tempfile
+import time
+import urllib.error
 import urllib.request
 import uuid
+import runtime_fixture
 
 ROOT = Path(__file__).resolve().parent.parent
+DATA = "/var/lib/roisey-else"
 
 
-def main(image):
+def main(image, evidence):
     identity = "else-compose-test-" + uuid.uuid4().hex
+    recovered = identity + "-restored"
     environment = {key: value for key, value in os.environ.items() if not key.startswith("COMPOSE_")}
     with socket.socket() as selected:
         selected.bind(("127.0.0.1", 0))
         port = selected.getsockname()[1]
     origin = f"http://127.0.0.1:{port}"
-    environment.update(ELSE_IMAGE=image, ELSE_DATA_VOLUME=identity, APP_PORT=str(port),
-                       AUTH_PUBLIC_ORIGIN=origin, AUTH_COOKIE_SECURE="false", REDIS_URL="")
+    environment.update(APP_PORT=str(port), AUTH_PUBLIC_ORIGIN=origin, AUTH_COOKIE_SECURE="false")
     docker = os.environ.get("DOCKER", "docker")
     created = False
-    recovered = identity + "-restored"
     with tempfile.TemporaryDirectory(prefix=identity) as temporary:
         env_file = Path(temporary) / "empty.env"
         env_file.write_text("")
-        command = [docker, "compose", "--env-file", str(env_file), "--file", str(ROOT / "docker-compose.yml"), "--project-name", identity]
+        override = Path(temporary) / "fixture.json"
+        base = [docker, "compose", "--env-file", str(env_file), "--file", str(ROOT / "docker-compose.yml"), "--project-name", identity]
+        command = [*base, "--file", str(override)]
+
+        def isolated(volume, container):
+            # Fixture-only names/image; the production file has no selection knobs.
+            override.write_text(json.dumps({"services": {"else": {"image": image, "container_name": container}}, "volumes": {"else_data": {"name": volume}}}))
 
         def compose(*arguments, **kwargs):
             return subprocess.run([*command, *arguments], cwd=ROOT, env=environment, check=True, **kwargs)
 
         def workflow(target, *variables, **kwargs):
-            return subprocess.run(["make", "COMPOSE=" + shlex.join(command), target, *variables],
-                                  cwd=ROOT, env=environment, check=True, **kwargs)
+            return subprocess.run(["make", "COMPOSE=" + shlex.join(command), target, *variables], cwd=ROOT, env=environment, check=True, **kwargs)
 
         cookies = http.cookiejar.CookieJar()
         opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookies), urllib.request.ProxyHandler({}))
 
-        def request(path, payload=None):
+        def request(path, payload=None, expected=200):
             headers = {}
             body = None
             if payload is not None:
@@ -51,56 +59,104 @@ def main(image):
                 csrf = next((cookie.value for cookie in cookies if cookie.name == "else_csrf"), None)
                 if csrf:
                     headers["X-CSRF-Token"] = csrf
-            with opener.open(urllib.request.Request(origin + path, body, headers), timeout=5) as response:
-                assert response.status in (200, 201)
-                return json.loads(response.read())
+            try:
+                response = opener.open(urllib.request.Request(origin + path, body, headers), timeout=5)
+            except urllib.error.HTTPError as error:
+                response = error
+            with response:
+                assert response.status == expected, f"Compose {path}: {response.status}"
+                raw = response.read()
+                return json.loads(raw) if response.headers.get("Content-Type", "").startswith("application/json") else raw
+
+        def details():
+            return json.loads(subprocess.run([docker, "inspect", identity], check=True, capture_output=True, text=True).stdout)[0]
+
+        def healthy(restart_count=None):
+            deadline = time.monotonic() + 60
+            while time.monotonic() < deadline:
+                state = details()
+                if state["State"].get("Health", {}).get("Status") == "healthy" and (restart_count is None or state["RestartCount"] > restart_count):
+                    request("/ready")
+                    return state
+                time.sleep(0.1)
+            raise AssertionError("Isolated Compose container did not become healthy")
 
         try:
-            config = json.loads(compose("config", "--format", "json", capture_output=True, text=True).stdout)
-            assert set(config["services"]) == {"else"}, "default deployment must contain one service"
-            assert "build" not in config["services"]["else"] and config["services"]["else"]["read_only"]
-            login = {"email": "compose.synthetic@example.com", "display_name": "Synthetic operator", "password": "synthetic compose password"}
-            # This command initializes only the explicitly named test volume.
+            config = json.loads(subprocess.run([*base, "config", "--format", "json"], cwd=ROOT, env=environment, check=True, capture_output=True, text=True).stdout)
+            assert set(config["services"]) == {"else"}
+            service = config["services"]["else"]
+            assert service["image"] == "ghcr.io/theroisey/else:latest" and service["container_name"] == "else"
+            assert config["volumes"]["else_data"]["name"] == "roisey-else-data"
+            assert "build" not in service and service["read_only"] and service["cap_drop"] == ["ALL"]
+            assert len(service["ports"]) == 1 and service["ports"][0]["target"] == 8080 and service["ports"][0]["host_ip"] == "127.0.0.1"
+            assert service["tmpfs"] and "profiles" not in service
+            isolated(identity, identity)
             created = True
-            workflow("bootstrap", input=json.dumps(login), text=True, stdout=subprocess.DEVNULL)
             workflow("up", stdout=subprocess.DEVNULL)
-            request("/ready")
+            healthy()
+            request("/health")
+            assert b'<html' in request("/app/clients")
+            subprocess.run([docker, "cp", identity + ":" + DATA + "/else.sqlite3", str(Path(temporary) / "fresh.sqlite3")], check=True, stdout=subprocess.DEVNULL)
+            runtime_fixture.install(identity)
+            runtime = runtime_fixture.inspect(identity)
+            login = {"email": "compose.synthetic@example.com", "display_name": "Synthetic operator", "password": "synthetic compose password"}
+            workflow("bootstrap", input=json.dumps(login), text=True, stdout=subprocess.DEVNULL)
             actor = request("/api/v1/auth/login", {key: login[key] for key in ("email", "password")})["data"]["user"]["id"]
-            client = request("/api/v1/clients", {"name": "Synthetic retained Compose account"})["data"]["id"]
+            client = request("/api/v1/clients", {"name": "Synthetic retained Compose account"}, 201)["data"]["id"]
             inventory = workflow("key-inventory", input=json.dumps({"actor_id": actor}), text=True, capture_output=True)
             counts = json.loads(inventory.stdout.splitlines()[-1])
             assert len(counts) == 1 and counts[0]["active"] and counts[0]["stored_rows"] == "0"
             rotation = workflow("rotate-credentials", input=json.dumps({"actor_id": actor, "client_id": client, "limit": 1, "confirmed": True}), text=True, capture_output=True)
             assert json.loads(rotation.stdout.splitlines()[-1])["rewrapped"] == 0
+            # Liveness remains distinct from required-cache readiness.
+            runtime_fixture.action(identity, "pause")
+            try:
+                request("/ready", expected=503)
+                request("/health")
+                assert subprocess.run([docker, "exec", identity, "/roisey-else", "health"], capture_output=True).returncode != 0
+            finally:
+                runtime_fixture.action(identity, "resume")
+            request("/ready")
+            workflow("restart", stdout=subprocess.DEVNULL)
+            healthy()
+            assert request("/api/v1/clients/" + client)["data"]["name"] == "Synthetic retained Compose account"
+            before = details()["RestartCount"]
+            runtime_fixture.action(identity, "kill")
+            state = healthy(before)
+            assert request("/api/v1/clients/" + client)["data"]["name"] == "Synthetic retained Compose account"
+            assert runtime_fixture.inspect(identity)["redis_parent"] == 1
+            logs = subprocess.run([docker, "logs", identity], check=True, capture_output=True, text=True)
+            fields = [json.loads(line)["fields"] for line in (logs.stdout + logs.stderr).splitlines() if line.startswith('{')]
+            assert any(row.get("error_code") == "embedded_redis_exited" and row.get("stage") == "runtime" for row in fields)
+            sequence = [row["message"] for row in fields]
+            expected_sequence = ["application_starting", "data_directory_ready", "embedded_redis_starting", "embedded_redis_ready", "database_ready", "migrations_ready", "keyring_ready", "frontend_ready", "server_listening"]
+            assert sequence[:len(expected_sequence)] == expected_sequence
+            assert all(value not in (logs.stdout + logs.stderr) for value in (login["password"], "Synthetic retained Compose account", "key_base64"))
+            compose("up", "--detach", "--force-recreate", "--wait", "--wait-timeout", "60", stdout=subprocess.DEVNULL)
+            assert request("/api/v1/clients/" + client)["data"]["name"] == "Synthetic retained Compose account"
             workflow("backup", "BACKUP_NAME=verified", stdout=subprocess.DEVNULL)
+            bundle = Path(temporary) / "bundle"
+            subprocess.run([docker, "cp", identity + ":" + DATA + "/backups/verified", str(bundle)], check=True, stdout=subprocess.DEVNULL)
             workflow("down", stdout=subprocess.DEVNULL)
             subprocess.run([docker, "volume", "inspect", identity], check=True, stdout=subprocess.DEVNULL)
-            workflow("restore", "BACKUP_NAME=verified", "SOURCE_VOLUME=" + identity,
-                     "RESTORE_VOLUME=" + recovered, stdout=subprocess.DEVNULL)
-            environment["ELSE_DATA_VOLUME"] = recovered
+            isolated(recovered, identity)
+            workflow("restore", "BACKUP_SOURCE=" + str(bundle), stdout=subprocess.DEVNULL)
             workflow("up", stdout=subprocess.DEVNULL)
+            healthy()
             assert request("/api/v1/clients/" + client)["data"]["name"] == "Synthetic retained Compose account"
-            workflow("down", stdout=subprocess.DEVNULL)
-            environment["ELSE_DATA_VOLUME"] = identity
-            # Recreate with the optional official Redis service and same storage.
-            environment["REDIS_URL"] = "redis://redis:6379/0"
-            compose("--profile", "cache", "up", "--detach", "--wait", "--wait-timeout", "60", stdout=subprocess.DEVNULL)
-            request("/ready")
-            assert request("/api/v1/clients/" + client)["data"]["name"] == "Synthetic retained Compose account"
-            assert compose("--profile", "cache", "exec", "-T", "redis", "redis-cli", "ping", capture_output=True, text=True).stdout.strip() == "PONG"
-            redis_id = compose("--profile", "cache", "ps", "--quiet", "redis", capture_output=True, text=True).stdout.strip()
-            details = json.loads(subprocess.run([docker, "inspect", redis_id], check=True, capture_output=True, text=True).stdout)[0]
-            assert details["Config"]["User"] == "999:999" and details["HostConfig"]["ReadonlyRootfs"]
-            print("Actual Make/Compose: private bootstrap, inventory, bounded rotation, online backup, empty-target restore, one default image, retained storage and optional nonroot read-only Redis passed.")
+            result = {"checks": "fresh-single-service/health/UI/API/SQLite/owned-loopback-Redis/readiness-pause/restart/child-failure-whole-restart/recreate/online-backup/off-host-empty-target-restore", "source_image": image, "redis": runtime, "restart_count_after_failure": state["RestartCount"], "startup_sequence": expected_sequence}
+            print(json.dumps(result, sort_keys=True))
+            if evidence:
+                evidence.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
         finally:
             if created:
-                # --volumes is limited to this random disposable project. The
-                # named application volume is externally named and removed below.
-                compose("--profile", "cache", "down", "--volumes", stdout=subprocess.DEVNULL)
+                compose("down", "--remove-orphans", "--volumes", stdout=subprocess.DEVNULL)
                 subprocess.run([docker, "volume", "rm", identity, recovered], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", default="else-application:ci")
-    main(parser.parse_args().image)
+    parser.add_argument("--evidence", type=Path)
+    args = parser.parse_args()
+    main(args.image, args.evidence)

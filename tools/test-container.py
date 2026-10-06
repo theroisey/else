@@ -14,6 +14,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+import runtime_fixture
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = "/var/lib/roisey-else"
@@ -36,8 +37,8 @@ def run(args):
             selected.bind(("127.0.0.1", 0))
             port = selected.getsockname()[1]
         origin = f"http://127.0.0.1:{port}"
-        common = ["--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--memory=256m", "--cpus=2",
-                  "-e", "AUTH_PUBLIC_ORIGIN=" + origin, "-e", "AUTH_COOKIE_SECURE=false", "-e", "REDIS_URL=redis://127.0.0.1:1/0"]
+        common = ["--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--memory=256m", "--cpus=2",
+                  "-e", "AUTH_PUBLIC_ORIGIN=" + origin, "-e", "AUTH_COOKIE_SECURE=false"]
         config = json.loads(output("image", "inspect", args.image))[0]
         assert config["Config"]["User"] == "65532:65532", "runtime must default to non-root"
         assert config["Config"]["Entrypoint"] == ["/roisey-else"]
@@ -132,9 +133,9 @@ def run(args):
             login = {"email": "image.synthetic@example.com", "display_name": "Synthetic image operator", "password": "synthetic image test password"}
             operator(original, "bootstrap", payload=json.dumps(login))
             name = start(original, "-app")
-            # Docker top lists processes (not Rust worker threads). PID 1 is the sole application.
+            # Docker top lists processes; Rust owns the one private Redis child.
             processes = output("top", name, "-eo", "pid,comm").splitlines()
-            assert len(processes) == 2 and processes[1].split()[-1] == "roisey-else"
+            assert len(processes) == 3 and {line.split()[-1] for line in processes[1:]} == {"roisey-else", "redis-server"}
             docker("exec", name, "/roisey-else", "health", stdout=subprocess.DEVNULL)
             settings = json.loads(output("inspect", name))[0]["HostConfig"]
             assert settings["ReadonlyRootfs"] and settings["CapDrop"] == ["ALL"]
@@ -145,10 +146,13 @@ def run(args):
                 data_directory = files.getmember(DATA.lstrip("/"))
                 assert data_directory.isdir() and data_directory.mode == 0o700 and data_directory.uid == data_directory.gid == 65532, f"image data directory must be private: mode={data_directory.mode:o}, uid={data_directory.uid}, gid={data_directory.gid}"
                 paths = {member.name.lstrip("/") for member in files}
-                forbidden = ("bin/sh", "usr/bin/node", "usr/bin/npm", "usr/bin/cargo", "usr/bin/rustc", "usr/bin/postgres", "app/frontend/src", "app/frontend/node_modules")
+                forbidden = ("bin/sh", "usr/bin/node", "usr/bin/npm", "usr/bin/cargo", "usr/bin/rustc", "app/frontend/src", "app/frontend/node_modules")
                 assert all(not any(p == key or p.startswith(key + "/") for p in paths) for key in forbidden)
-                assert "roisey-else" in paths and "app/frontend/index.html" in paths
+                assert {"roisey-else", "redis-server", "lib/ld-musl-x86_64.so.1", "licenses/Redis-notices.txt", "app/frontend/index.html"} <= paths
+                assert not any("runtime-fixture" in path for path in paths)
             archive.unlink()
+            runtime_fixture.install(name)
+            runtime = runtime_fixture.inspect(name)
             index, _ = request("/app/clients")
             assert index == (ROOT / "frontend/dist/index.html").read_bytes()
             asset = next((ROOT / "frontend/dist/assets").glob("*.js.gz"))
@@ -212,7 +216,7 @@ def run(args):
             for logs in operator_logs:
                 assert all(value not in logs for value in private), "private input appeared in operator output"
             evidence = {"image_id": config["Id"], "size_bytes": config["Size"], "pid1": "roisey-else", "runtime_uid": 65532,
-                        "checks": "HTTP/static/gzip/auth/exact-finance/cache-outage/readonly/persistence/ownership/TERM/INT/online-backup/fresh-key-restore/failed-recovery-startup-refusal"}
+                        "redis": runtime, "checks": "HTTP/static/gzip/auth/exact-finance/embedded-cache/readonly/persistence/ownership/TERM/INT/online-backup/fresh-key-restore/failed-recovery-startup-refusal"}
             print(json.dumps(evidence, sort_keys=True))
             if args.evidence:
                 args.evidence.parent.mkdir(parents=True, exist_ok=True)

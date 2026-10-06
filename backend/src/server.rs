@@ -25,12 +25,18 @@ pub struct Application {
     pub api: Api,
     pub assets: Assets,
     pub draining: Arc<AtomicBool>,
+    redis: Arc<crate::embedded_redis::EmbeddedRedis>,
     requests: Semaphore,
     options: HttpServerOptions,
 }
 
 impl Application {
-    pub fn new(api: Api, assets: Assets, draining: Arc<AtomicBool>) -> Self {
+    pub fn new(
+        api: Api,
+        assets: Assets,
+        draining: Arc<AtomicBool>,
+        redis: Arc<crate::embedded_redis::EmbeddedRedis>,
+    ) -> Self {
         let mut options = HttpServerOptions::default();
         options.keepalive_request_limit = Some(1000);
         options.h2_idle_timeout = Some(Duration::from_secs(60));
@@ -38,6 +44,7 @@ impl Application {
             api,
             assets,
             draining,
+            redis,
             requests: Semaphore::new(128),
             options,
         }
@@ -100,6 +107,13 @@ impl Application {
                 return Err(Error::Invalid("invalid_request"));
             }
             if path == "/ready" {
+                if !self.redis.ready().await {
+                    return Err(Error::Response(
+                        StatusCode::SERVICE_UNAVAILABLE,
+                        "not_ready",
+                        "Service is not ready.",
+                    ));
+                }
                 self.api.db.ready().await.map_err(|_| {
                     Error::Response(
                         StatusCode::SERVICE_UNAVAILABLE,

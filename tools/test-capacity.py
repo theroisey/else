@@ -84,10 +84,10 @@ def run(args):
         origin = f"http://127.0.0.1:{port}"
         created = False
         try:
-            docker("run", "--detach", "--name", name, "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges",
+            docker("run", "--detach", "--name", name, "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777", "--cap-drop=ALL", "--security-opt=no-new-privileges",
                    "--memory=256m", "--cpus=2", "--user", f"{os.getuid()}:{os.getgid()}", "--publish", f"127.0.0.1:{port}:8080",
                    "--mount", f"type=bind,src={directory},dst=/testdata", "-e", "DATABASE_PATH=/testdata/else.sqlite3",
-                   "-e", "AUTH_PUBLIC_ORIGIN=" + origin, "-e", "AUTH_COOKIE_SECURE=false", "-e", "REDIS_URL=redis://127.0.0.1:1/0", args.image, stdout=subprocess.DEVNULL)
+                   "-e", "AUTH_PUBLIC_ORIGIN=" + origin, "-e", "AUTH_COOKIE_SECURE=false", args.image, stdout=subprocess.DEVNULL)
             created = True
             deadline = time.monotonic() + 30
             while True:
@@ -136,7 +136,9 @@ def run(args):
                     connection.request("POST" if write else "GET", path, payload, headers)
                     response = connection.getresponse()
                     body = json.loads(response.read())
-                    assert response.status == (201 if write else 200), f"capacity {path}: HTTP {response.status}"
+                    if response.status != (201 if write else 200):
+                        diagnostic = body.get("error", {}).get("code", "invalid_response")
+                        raise AssertionError(f"capacity {path}: HTTP {response.status}, code={diagnostic}")
                     elapsed = time.monotonic() - start
                     (writes if write else timings).append(elapsed)
                     if not write and path.endswith("/overview"):
@@ -161,13 +163,21 @@ def run(args):
             evidence = {"clients": 500, "concurrent_users": 100, "requests": 3000, "writes": 100, "cpu_limit": 2, "memory_limit_mib": 256,
                         "image_id": json.loads(docker("image", "inspect", args.image, capture_output=True, text=True).stdout)[0]["Id"],
                         "duration_seconds": round(elapsed, 2), "read_p95_ms": percentile(reads, .95), "write_p95_ms": percentile(writes, .95),
-                        "mixed_p99_ms": percentile(reads + writes, .99), "observed_memory": stats["MemUsage"], "cache": "unavailable; SQLite fallback verified"}
+                        "mixed_p99_ms": percentile(reads + writes, .99), "observed_memory": stats["MemUsage"], "cache": "embedded loopback; bounded SQLite fallback"}
             print(json.dumps(evidence, sort_keys=True))
             if args.evidence:
                 args.evidence.parent.mkdir(parents=True, exist_ok=True)
                 args.evidence.write_text(json.dumps(evidence, sort_keys=True, indent=2) + "\n")
             docker("kill", "--signal=TERM", name, stdout=subprocess.DEVNULL)
             assert docker("wait", name, capture_output=True, text=True, timeout=15).stdout.strip() == "0"
+        except Exception:
+            if created:
+                logs = docker("logs", "--tail", "1000", name, capture_output=True, text=True)
+                fields = [json.loads(line)["fields"] for line in (logs.stdout + logs.stderr).splitlines() if line.startswith('{')]
+                errors = [row for row in fields if row.get("error_code")]
+                state = json.loads(docker("inspect", name, capture_output=True, text=True).stdout)[0]["State"]
+                print(json.dumps({"capacity_failure": {"errors": errors[-10:], "oom_killed": state["OOMKilled"], "exit_code": state["ExitCode"], "running": state["Running"]}}, sort_keys=True))
+            raise
         finally:
             if created:
                 docker("rm", "--force", name, stdout=subprocess.DEVNULL)

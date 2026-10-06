@@ -8,7 +8,7 @@ export function formatTime(value: string, timezone = deviceTimezone()) {
     timeZone: timezone,
   }).format(new Date(value))
 }
-// PostgreSQL responses have microsecond precision; retain it when comparing instants.
+// Timestamp responses have microsecond precision; retain it when comparing instants.
 export function instant(value: string) {
   const tail = /\.(\d+)/.exec(value)?.[1] ?? ''
   return (

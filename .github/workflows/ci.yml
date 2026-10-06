@@ -56,7 +56,7 @@ jobs:
 
   backend:
     name: Backend checks
-    needs: frontend
+    needs: [frontend, runtime-artifacts]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -66,6 +66,11 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: checked-frontend
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: checked-redis
+      - name: Restore checked Redis runtime modes and loader alias
+        run: python3 tools/prepare-redis-modes.py
       - name: Install pinned Rust and static native build tools
         run: |
           sudo apt-get update
@@ -79,7 +84,8 @@ jobs:
         env:
           CC_x86_64_unknown_linux_musl: musl-gcc
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
-        run: cargo build --locked --release --target x86_64-unknown-linux-musl --bin roisey-else
+        run: cargo build --locked --release --target x86_64-unknown-linux-musl --bin roisey-else --example runtime-fixture
+      - run: cp target/x86_64-unknown-linux-musl/release/examples/runtime-fixture build/runtime-fixture
       - run: python3 tools/prepare-artifacts.py runtime --binary target/x86_64-unknown-linux-musl/release/roisey-else
       - name: Production Pingora HTTP, permissions, privacy and both stop signals
         run: |
@@ -94,6 +100,7 @@ jobs:
           name: checked-runtime
           path: |
             build/roisey-else
+            build/runtime-fixture
             build/ca-certificates.crt
             build/licenses/Rust-dependencies.txt
             target/debug/examples/browser-fixture
@@ -128,28 +135,32 @@ jobs:
           python3 tools/test-rust-advisories.py
           python3 tools/check-rust-advisories.py
 
-  migrations:
-    # Keep the existing required-check name; PostgreSQL is an import oracle only.
-    name: PostgreSQL integration
+  runtime-artifacts:
+    name: Embedded runtime artifacts
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Install pinned Rust and native test tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends cmake build-essential pkg-config libssl-dev
-          rustup toolchain install 1.99.0 --profile minimal
-      - name: Conserved populated PostgreSQL v28 import and fresh-key recovery
-        run: python3 tools/test-infrastructure.py import
-      - name: Real Redis versioned cache, privacy and outage fallback
-        run: python3 tools/test-infrastructure.py cache
+      - name: Prepare pinned Redis executable, ELF closure and dependency notices
+        run: python3 tools/prepare-redis.py
+      - name: Repeat preparation to verify the workflow is idempotent
+        run: python3 tools/prepare-redis.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: checked-redis
+          path: |
+            build/redis-server
+            build/redis-runtime/
+            build/redis-artifact.json
+            build/licenses/
+          if-no-files-found: error
+          retention-days: 1
 
   containers:
     name: Container integration
-    needs: [frontend, backend]
+    needs: [frontend, backend, runtime-artifacts]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -162,6 +173,10 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: checked-runtime
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: checked-redis
+      - run: python3 tools/prepare-redis-modes.py
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Package already checked artifacts in one tiny application image
         run: |
@@ -171,12 +186,14 @@ jobs:
           chmod 0755 target/debug/examples/browser-fixture
           chmod 0444 build/ca-certificates.crt
           docker build --network=none --build-arg BUILD_REVISION="$GITHUB_SHA" --build-arg BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --tag else-application:ci .
+      - name: Real-image storage, control, database, keyring and frontend startup refusals
+        run: python3 tools/test-startup.py
       - name: Actual nonroot PID 1, HTTP, persistence, backup and fresh-key restore
         run: python3 tools/test-container.py --evidence "$RUNNER_TEMP/runtime.json"
       - name: Exact-image 500-client and 100-concurrent-user CRUD rehearsal
         run: python3 tools/test-capacity.py --evidence "$RUNNER_TEMP/capacity.json"
-      - name: Actual Compose configuration and optional read-only Redis
-        run: python3 tools/test-compose.py
+      - name: Actual single-service Compose, embedded child failure and durable recovery
+        run: python3 tools/test-compose.py --evidence "$RUNNER_TEMP/compose.json"
       - name: Archive this exact tested image for browser verification and promotion
         run: docker save --output "$RUNNER_TEMP/runtime-images.tar" else-application:ci
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -192,6 +209,7 @@ jobs:
           path: |
             ${{ runner.temp }}/runtime.json
             ${{ runner.temp }}/capacity.json
+            ${{ runner.temp }}/compose.json
           if-no-files-found: error
           retention-days: 7
 
@@ -236,7 +254,7 @@ jobs:
 
   publish:
     name: Publish tested main application image
-    needs: [frontend, browser-auth, backend, dependencies, migrations, containers]
+    needs: [frontend, browser-auth, backend, dependencies, runtime-artifacts, containers]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -263,6 +281,9 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: checked-frontend
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: checked-runtime
       - run: docker load --input "$RUNNER_TEMP/tested-images/runtime-images.tar"
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:

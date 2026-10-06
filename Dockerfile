@@ -8,6 +8,8 @@ LABEL org.opencontainers.image.source="https://github.com/theroisey/else" \
       org.opencontainers.image.revision=$BUILD_REVISION \
       org.opencontainers.image.created=$BUILD_TIME
 COPY --chmod=0555 build/roisey-else /roisey-else
+COPY --chmod=0555 build/redis-server /redis-server
+COPY build/redis-runtime/ /
 COPY build/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY build/licenses/ /licenses/
 COPY frontend/dist/ /app/frontend/

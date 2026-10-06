@@ -22,7 +22,7 @@ def run(binary: Path, frontend: Path, stop_signal: int) -> None:
             port = selection.getsockname()[1]
         origin = f"http://127.0.0.1:{port}"
         environment = os.environ.copy()
-        for key in ("DATABASE_URL", "REDIS_URL", "INTEGRATION_KEYRING_FILE", "INTEGRATION_KEYRING_MODE"):
+        for key in ("INTEGRATION_KEYRING_FILE", "INTEGRATION_KEYRING_MODE"):
             environment.pop(key, None)
         environment.update(HTTP_ADDRESS=f"127.0.0.1:{port}", DATABASE_PATH=str(directory / "else.sqlite3"), FRONTEND_DIRECTORY=str(frontend), AUTH_PUBLIC_ORIGIN=origin, AUTH_COOKIE_SECURE="false")
         bootstrap = {"email": "smoke@example.com", "display_name": "Synthetic operator", "password": "synthetic-smoke-password"}

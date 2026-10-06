@@ -20,7 +20,7 @@ pub fn now() -> String {
 }
 
 pub fn instant(value: &str) -> Result<String> {
-    // PostgreSQL and the durable transport retain at most microsecond precision.
+    // The durable timestamp transport retains at most microsecond precision.
     // Reject excess precision even when its final digits happen to be zero.
     if value.len() > 32
         || value.as_bytes().get(10) != Some(&b'T')

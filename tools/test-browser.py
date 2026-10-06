@@ -23,7 +23,7 @@ def docker(*args, **kwargs):
 def run(args):
     if not args.no_build:
         subprocess.run([os.environ.get("CARGO", "cargo"), "build", "--locked", "--bin", "roisey-else", "--example", "browser-fixture"], cwd=ROOT, check=True)
-        subprocess.run(["make", "frontend-build"], cwd=ROOT, check=True)
+        subprocess.run(["make", "frontend-build", "redis-artifacts"], cwd=ROOT, check=True)
     binary = args.binary.resolve()
     fixture = args.fixture_binary.resolve()
     with tempfile.TemporaryDirectory(prefix="else-browser-") as temporary:
@@ -37,7 +37,7 @@ def run(args):
             port = selected.getsockname()[1]
         origin = f"http://127.0.0.1:{port}"
         env = os.environ.copy()
-        for key in ("DATABASE_URL", "REDIS_URL", "INTEGRATION_KEYRING_FILE", "INTEGRATION_KEYRING_MODE"):
+        for key in ("INTEGRATION_KEYRING_FILE", "INTEGRATION_KEYRING_MODE"):
             env.pop(key, None)
         env.update(AUTH_TEST_DIRECTORY=temporary, AUTH_TEST_FIXTURE_BINARY=str(fixture), AUTH_TEST_ORIGIN=origin,
                    DATABASE_PATH=str(directory / "else.sqlite3"), FRONTEND_DIRECTORY=str(directory / "frontend"),
@@ -49,11 +49,11 @@ def run(args):
                 # The disposable SQL helper and server share the invoking non-root
                 # UID and private bind mount. The production UID is checked by the
                 # independent image/recovery gate; this uses the EXACT same image.
-                docker("run", "--detach", "--name", container, "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges",
+                docker("run", "--detach", "--name", container, "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777", "--cap-drop=ALL", "--security-opt=no-new-privileges",
                        "--user", f"{os.getuid()}:{os.getgid()}", "--memory=256m", "--cpus=2",
                        "--publish", f"127.0.0.1:{port}:8080", "--mount", f"type=bind,src={directory},dst=/testdata",
                        "-e", "DATABASE_PATH=/testdata/else.sqlite3", "-e", "AUTH_PUBLIC_ORIGIN=" + origin,
-                       "-e", "AUTH_COOKIE_SECURE=false", "-e", "REDIS_URL=", args.image, stdout=subprocess.DEVNULL)
+                       "-e", "AUTH_COOKIE_SECURE=false", args.image, stdout=subprocess.DEVNULL)
                 process = None
             else:
                 process = subprocess.Popen([str(binary), "serve"], env=env, stdout=log, stderr=subprocess.STDOUT)

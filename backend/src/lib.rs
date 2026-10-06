@@ -10,6 +10,7 @@ pub mod clients;
 pub mod config;
 pub mod credentials;
 pub mod db;
+pub mod embedded_redis;
 pub mod error;
 mod history_cursor;
 pub mod integration_catalog;
@@ -17,9 +18,6 @@ pub mod integrations;
 #[cfg(test)]
 mod integrations_tests;
 pub mod key_operations;
-pub mod legacy_import;
-#[cfg(test)]
-mod legacy_import_tests;
 #[cfg(test)]
 mod operations_tests;
 pub mod overview;
@@ -41,6 +39,7 @@ pub mod reminders;
 pub mod reports;
 pub mod security;
 pub mod server;
+pub mod startup;
 pub mod static_files;
 pub mod sync_period;
 pub mod synchronization;

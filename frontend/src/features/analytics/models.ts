@@ -171,7 +171,7 @@ export function parseView(
           /[?#@\\]/.test(row.dimensions[0]!))
       )
         throw new APIError(0, 'invalid_response')
-      // Match Go's UTF-8 tuple order (locale collation varies by browser).
+      // Match the transport UTF-8 tuple order (locale collation varies by browser).
       if (previous && compareTuple(previous, row.dimensions) >= 0)
         throw new APIError(0, 'invalid_response')
       previous = row.dimensions

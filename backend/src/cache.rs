@@ -1,4 +1,4 @@
-//! Optional, bounded cache of immutable report bytes. SQLite selects the current
+//! Local, bounded cache of immutable report bytes. SQLite selects the current
 //! revision, digest and authority; neither permissions nor job state enter Redis.
 use crate::error::{Error, Result};
 use redis::{AsyncConnectionConfig, Client, aio::MultiplexedConnection};
@@ -20,10 +20,10 @@ struct Inner {
     retry_at: AtomicU64,
 }
 impl ReportCache {
-    pub fn new(url: Option<&str>) -> Result<Self> {
-        let Some(url) = url else {
-            return Ok(Self::default());
-        };
+    pub fn new() -> Result<Self> {
+        Self::connect(crate::embedded_redis::ENDPOINT)
+    }
+    pub(crate) fn connect(url: &str) -> Result<Self> {
         let client =
             Client::open(url).map_err(|_| Error::Invalid("invalid_cache_configuration"))?;
         Ok(Self(Some(Arc::new(Inner {

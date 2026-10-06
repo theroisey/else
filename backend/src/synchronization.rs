@@ -463,12 +463,14 @@ mod tests {
         }))
     }
     #[tokio::test]
-    #[ignore = "requires the disposable official Redis service from make test-cache"]
-    async fn redis_reports_are_versioned_authenticated_and_optional_under_failure() {
+    async fn embedded_reports_are_versioned_authenticated_and_bounded_under_failure() {
         use crate::{cache::ReportCache, reports};
-        let url = std::env::var("ELSE_TEST_REDIS_URL")
-            .expect("ELSE_TEST_REDIS_URL must point to a disposable Redis database");
-        let cache = ReportCache::new(Some(&url)).unwrap();
+        let listener = std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        drop(listener);
+        let _owned = crate::embedded_redis::EmbeddedRedis::start_port(port).unwrap();
+        let url = format!("redis://127.0.0.1:{port}/0");
+        let cache = ReportCache::connect(&url).unwrap();
         let (f, s) = fixture().await;
         let scope = connection(&f, "6001").await;
         s.enqueue(f.actor.clone(), scope.clone(), 1, period(), token())
