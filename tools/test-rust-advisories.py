@@ -1,6 +1,8 @@
 """Guard dependency publication against vulnerabilities and changed dispositions."""
 import copy
 import importlib.util
+import io
+import json
 from pathlib import Path
 import subprocess
 import unittest
@@ -85,6 +87,20 @@ class AdvisoryGateTests(unittest.TestCase):
             with self.subTest(result=result.returncode), patch.object(gate.subprocess, "run", return_value=result):
                 with self.assertRaises(ValueError):
                     gate.main()
+
+    def test_nonzero_vulnerability_report_remains_visible_without_registry_secrets(self):
+        report = copy.deepcopy(self.report)
+        report["vulnerabilities"] = {"found": True, "count": 1, "list": [{
+            "advisory": {"id": "RUSTSEC-2099-0001", "title": "Synthetic vulnerability"},
+            "package": {"name": "synthetic-package", "version": "1.0.0"},
+        }]}
+        result = subprocess.CompletedProcess([], 1, json.dumps(report), "private-registry-secret")
+        output = io.StringIO()
+        with patch.object(gate.subprocess, "run", return_value=result), patch("sys.stdout", output):
+            with self.assertRaises(ValueError):
+                gate.main()
+        self.assertIn("RUSTSEC-2099-0001: synthetic-package 1.0.0", output.getvalue())
+        self.assertNotIn("private-registry-secret", output.getvalue())
 
 
 if __name__ == "__main__":

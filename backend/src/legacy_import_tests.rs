@@ -458,7 +458,19 @@ async fn actual_postgresql_export_import_retains_guarded_domain_records() {
         .arg(&export)
         .output()
         .unwrap();
-    assert!(status.status.success(), "actual exporter failed");
+    let diagnostic = String::from_utf8_lossy(&status.stderr);
+    let safe_code = match diagnostic.trim() {
+        "private_export_directory_required" => "private_export_directory_required",
+        "private_key_source_required" => "private_key_source_required",
+        "isolated_offline_clone_required" => "isolated_offline_clone_required",
+        "source_export_failed" => "source_export_failed",
+        "unsupported_source_schema" => "unsupported_source_schema",
+        _ => "exporter_failure",
+    };
+    assert!(
+        status.status.success(),
+        "actual_exporter_failed: {safe_code}"
+    );
     let target = f.directory.path().join("actual-import/else.sqlite3");
     let keys = f
         .directory

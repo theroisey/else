@@ -9,6 +9,18 @@ import sys
 CHECKSUM = "fcc3dd5e9e9c0b295d6e1e4d811fb6f157d5ffd784b8d202fc62eac8035a770b"
 
 
+def findings(report):
+    print(f"RustSec database {report['database']['last-commit']}: {report['database']['advisory-count']} advisories; {report['vulnerabilities']['count']} vulnerabilities.")
+    entries = list(report["vulnerabilities"]["list"])
+    for warnings in report["warnings"].values():
+        entries.extend(warnings)
+    for entry in entries:
+        advisory = entry.get("advisory") or {}
+        package = entry["package"]
+        message = f"{advisory.get('id', entry.get('kind', 'registry finding'))}: {package['name']} {package['version']} — {advisory.get('title', 'Registry finding')}"
+        print("".join(character for character in message if character.isprintable()))
+
+
 def assess(report, metadata):
     if report["database"]["advisory-count"] < 1 or not report["database"]["last-commit"]:
         raise ValueError("empty advisory database")
@@ -46,12 +58,17 @@ def main():
         command += ["--db", os.environ["ELSE_ADVISORY_DATABASE"]]
     scanned = subprocess.run(command, cwd=root, capture_output=True, text=True)
     if scanned.returncode or scanned.stderr.strip():
+        # A vulnerability makes the real scanner exit nonzero. Preserve its
+        # public advisory findings while never printing raw registry diagnostics
+        # that could contain host credentials or private registry addresses.
+        try:
+            findings(json.loads(scanned.stdout))
+        except (ValueError, KeyError, TypeError):
+            print("Scanner returned no valid advisory report.")
+        print(f"Scanner exit status: {scanned.returncode}; registry diagnostics present: {bool(scanned.stderr.strip())}.")
         raise ValueError("advisory scanner or registry failed")
     report = json.loads(scanned.stdout)
-    print(f"RustSec database {report['database']['last-commit']}: {report['database']['advisory-count']} advisories; {report['vulnerabilities']['count']} vulnerabilities.")
-    for warnings in report["warnings"].values():
-        for warning in warnings:
-            print(f"{warning['advisory']['id']}: {warning['package']['name']} {warning['package']['version']} — {warning['advisory']['title']}")
+    findings(report)
     metadata = json.loads(subprocess.run([cargo, "metadata", "--locked", "--format-version", "1"], cwd=root, check=True, capture_output=True, text=True).stdout)
     assess(report, metadata)
     print("Rust advisory gate passed; the exact Pingora build-macro maintenance disposition remains visible.")

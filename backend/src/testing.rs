@@ -7,6 +7,7 @@ use crate::{
     security::Actor,
     validation,
 };
+use std::os::unix::fs::PermissionsExt;
 
 pub struct Fixture {
     pub directory: tempfile::TempDir,
@@ -19,6 +20,9 @@ pub struct Fixture {
 impl Fixture {
     pub async fn new() -> Self {
         let directory = tempfile::tempdir().unwrap();
+        // Operator recovery/export requires private storage, independent of the
+        // invoking host's umask (GitHub runners normally use 022).
+        std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
         let db = Database::open(&directory.path().join("else.sqlite3"), true).unwrap();
         let auth = Auth::new(db.clone()).unwrap();
         auth.bootstrap(
