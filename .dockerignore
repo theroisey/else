@@ -5,6 +5,7 @@
 !build/licenses/
 !build/licenses/**
 !build/data/
+!build/data/roisey-else/
 !frontend/
 !frontend/dist/
 !frontend/dist/**

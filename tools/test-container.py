@@ -143,7 +143,7 @@ def run(args):
             with tarfile.open(archive) as files:
                 assert all(member.mode & 0o111 for member in files if member.isdir()), "runtime directories must permit traversal"
                 data_directory = files.getmember(DATA.lstrip("/"))
-                assert data_directory.isdir() and data_directory.mode == 0o700 and data_directory.uid == data_directory.gid == 65532, "image data directory must be privately owned"
+                assert data_directory.isdir() and data_directory.mode == 0o700 and data_directory.uid == data_directory.gid == 65532, f"image data directory must be private: mode={data_directory.mode:o}, uid={data_directory.uid}, gid={data_directory.gid}"
                 paths = {member.name.lstrip("/") for member in files}
                 forbidden = ("bin/sh", "usr/bin/node", "usr/bin/npm", "usr/bin/cargo", "usr/bin/rustc", "usr/bin/postgres", "app/frontend/src", "app/frontend/node_modules")
                 assert all(not any(p == key or p.startswith(key + "/") for p in paths) for key in forbidden)

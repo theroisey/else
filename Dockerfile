@@ -11,7 +11,9 @@ COPY --chmod=0555 build/roisey-else /roisey-else
 COPY build/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY build/licenses/ /licenses/
 COPY frontend/dist/ /app/frontend/
-COPY --chown=65532:65532 --chmod=0700 build/data/ /var/lib/roisey-else/
+# Copy a named directory entry. COPY of an empty directory's contents does not
+# consistently preserve its destination metadata across Docker builders.
+COPY --chown=65532:65532 build/data/ /var/lib/
 USER 65532:65532
 ENV HTTP_ADDRESS=0.0.0.0:8080 \
     DATABASE_PATH=/var/lib/roisey-else/else.sqlite3 \

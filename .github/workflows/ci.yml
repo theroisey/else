@@ -165,8 +165,9 @@ jobs:
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Package already checked artifacts in one tiny application image
         run: |
-          mkdir -p build/data
-          chmod 0700 build/data
+          mkdir -p build/data/roisey-else
+          chmod 0755 build/data
+          chmod 0700 build/data/roisey-else
           chmod 0755 target/debug/examples/browser-fixture
           chmod 0444 build/ca-certificates.crt
           docker build --network=none --build-arg BUILD_REVISION="$GITHUB_SHA" --build-arg BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --tag else-application:ci .

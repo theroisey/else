@@ -87,9 +87,17 @@ def runtime(binary, ca_directory):
         if source.is_symlink() or not source.is_file():
             raise SystemExit("Prepare frontend artifacts and their licenses first.")
     rust_notices()
-    # Docker's initial named-volume copy creates privately owned writable storage.
-    (build / "data").mkdir(exist_ok=True, mode=0o700)
-    (build / "data").chmod(0o700)
+    # Copy an explicit child directory's metadata, rather than relying on the
+    # destination metadata of an empty-directory COPY. New named volumes must
+    # inherit this private mode with the Dockerfile's fixed runtime ownership.
+    data_root = build / "data"
+    data_root.mkdir(exist_ok=True, mode=0o755)
+    data_root.chmod(0o755)
+    storage = data_root / "roisey-else"
+    storage.mkdir(exist_ok=True, mode=0o700)
+    if storage.is_symlink() or any(storage.iterdir()):
+        raise SystemExit("Runtime data artifacts must be empty private storage.")
+    storage.chmod(0o700)
 
 
 if __name__ == "__main__":
