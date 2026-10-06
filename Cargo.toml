@@ -1,0 +1,15 @@
+[workspace]
+members = ["backend"]
+resolver = "3"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"
+panic = "unwind"
+
+[profile.dev]
+debug = 0
+
+[profile.test]
+debug = 0

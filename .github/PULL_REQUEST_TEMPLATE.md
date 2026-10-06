@@ -43,7 +43,7 @@ Describe configuration, migration order, image/runtime changes, rollout, and rol
 Check only verified items. Explain non-applicable items in the relevant sections.
 
 - [ ] Issue acceptance criteria satisfied
-- [ ] Appropriate development branch used
+- [ ] Changes remain on `main`; no extra branch or force-push
 - [ ] Tests pass
 - [ ] Lint and typecheck pass where applicable
 - [ ] Build passes

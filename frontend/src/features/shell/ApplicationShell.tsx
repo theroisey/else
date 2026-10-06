@@ -8,7 +8,6 @@ import { visibleDestinations } from './navigation'
 import { AccountMenu } from './AccountMenu'
 import { Brand } from '../../components/brand/Brand'
 import { CommandSearch } from './CommandSearch'
-import { ReleaseIndicator } from '../releases/ReleaseIndicator'
 
 export function ApplicationShell() {
   useLocale()
@@ -264,7 +263,6 @@ export function ApplicationShell() {
               <p className="eyebrow mb-4">
                 {copy('Workspace edition', 'common')}
               </p>
-              <ReleaseIndicator />
               <p className="mt-3 text-[0.625rem] leading-5 text-muted">
                 Roisey Else
                 <br />

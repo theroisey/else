@@ -8,8 +8,6 @@ const permissionScopes: Record<string, 'global' | 'client'> = {
   'roles.view': 'global',
   'roles.manage': 'global',
   'audit.view': 'global',
-  'releases.view': 'global',
-  'releases.manage': 'global',
   'clients.create': 'global',
   'clients.view': 'client',
   'clients.update': 'client',

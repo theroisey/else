@@ -3,21 +3,39 @@ services:
   else:
     image: ${ELSE_IMAGE:-ghcr.io/theroisey/else:latest}
     restart: unless-stopped
-    env_file: [.env]
+    environment:
+      HTTP_ADDRESS: 0.0.0.0:8080
+      DATABASE_PATH: /var/lib/roisey-else/else.sqlite3
+      AUTH_PUBLIC_ORIGIN: ${AUTH_PUBLIC_ORIGIN:-http://localhost:8080}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      REDIS_URL: ${REDIS_URL:-}
     ports:
       - '127.0.0.1:${APP_PORT:-8080}:8080'
     volumes:
       - else_data:/var/lib/roisey-else
     read_only: true
-    tmpfs:
-      - /run:rw,nosuid,noexec,size=32m
-      - /tmp:rw,nosuid,noexec,size=32m
     cap_drop: [ALL]
-    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID, KILL]
     security_opt: [no-new-privileges:true]
-    stop_grace_period: 60s
+    stop_grace_period: 20s
+
+  # Optional acceleration. No durable records, host ports, or readiness dependency.
+  redis:
+    profiles: [cache]
+    image: redis:8.2.3-alpine@sha256:08ad0b1d280850169a790dba1393ff7a90aef951fc19632cf4d3ce4f78e679ba
+    restart: unless-stopped
+    command: [redis-server, --save, '', --appendonly, 'no', --maxmemory, 64mb, --maxmemory-policy, allkeys-lru]
+    read_only: true
+    user: '999:999'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 30s
+      timeout: 3s
+      retries: 3
 
 volumes:
   else_data:
-    # Retain the former Compose volume name and PostgreSQL 18 directory layout.
+    # Preserve the original selection: unconverted PostgreSQL fails closed.
+    # Import/restore explicitly selects EMPTY replacement storage for rollback.
     name: ${ELSE_DATA_VOLUME:-roisey-else_postgres-data}

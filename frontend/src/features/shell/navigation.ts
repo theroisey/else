@@ -5,7 +5,6 @@ import {
   faUserShield,
   faBuilding,
   faClockRotateLeft,
-  faCodeBranch,
 } from '@fortawesome/free-solid-svg-icons'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { hasPermission } from '../auth/permissions'
@@ -49,12 +48,6 @@ export const destinations: readonly Destination[] = [
     label: 'Audit history',
     icon: faClockRotateLeft,
     required: { permission: 'audit.view', scope: 'global' },
-  },
-  {
-    path: '/app/releases',
-    label: 'Release Center',
-    icon: faCodeBranch,
-    required: { permission: 'releases.view', scope: 'global' },
   },
 ]
 

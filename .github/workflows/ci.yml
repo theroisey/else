@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+env:
+  CARGO_INCREMENTAL: '0'
+  CARGO_BUILD_JOBS: '2'
+
 jobs:
   frontend:
     name: Frontend checks
@@ -38,11 +42,68 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Prepare public static artifacts and font licenses
+        run: python3 tools/prepare-artifacts.py frontend
+        working-directory: .
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: checked-frontend
+          path: |
+            frontend/dist/
+            build/licenses/
+          if-no-files-found: error
+          retention-days: 1
 
-  browser-auth:
-    name: Browser authentication
+  backend:
+    name: Backend checks
+    needs: frontend
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: checked-frontend
+      - name: Install pinned Rust and static native build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends musl-tools cmake build-essential pkg-config libssl-dev ca-certificates
+          rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy --target x86_64-unknown-linux-musl
+      - run: cargo fmt --all --check
+      - run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - run: cargo test --locked --workspace
+      - run: cargo build --locked --example browser-fixture
+      - name: Compile the production static binary before Docker
+        env:
+          CC_x86_64_unknown_linux_musl: musl-gcc
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+        run: cargo build --locked --release --target x86_64-unknown-linux-musl --bin roisey-else
+      - run: python3 tools/prepare-artifacts.py runtime --binary target/x86_64-unknown-linux-musl/release/roisey-else
+      - name: Production Pingora HTTP, permissions, privacy and both stop signals
+        run: |
+          python3 backend/tests/http_smoke.py --binary build/roisey-else --frontend frontend/dist --signal TERM
+          python3 backend/tests/http_smoke.py --binary build/roisey-else --frontend frontend/dist --signal INT
+      - name: Publication boundaries and pinned workflow validation
+        run: |
+          python3 tools/test-publication.py
+          python3 tools/check-workflow.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: checked-runtime
+          path: |
+            build/roisey-else
+            build/ca-certificates.crt
+            build/licenses/Rust-dependencies.txt
+            target/debug/examples/browser-fixture
+          if-no-files-found: error
+          retention-days: 1
+
+  dependencies:
+    name: Dependency security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -52,18 +113,118 @@ jobs:
           node-version: 24.21.0
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - run: npm install --global npm@11.19.0
+      - run: npm ci
+        working-directory: frontend
+      - name: Audit every locked frontend dependency, including development tools
+        run: npm audit --include=dev --audit-level=info
+        working-directory: frontend
+      - name: Install pinned Rust advisory scanner
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          cargo install cargo-audit --version 0.22.2 --locked
+      - name: Reject vulnerabilities and undispositioned advisories or scanner failures
+        run: |
+          python3 tools/test-rust-advisories.py
+          python3 tools/check-rust-advisories.py
+
+  migrations:
+    # Keep the existing required-check name; PostgreSQL is an import oracle only.
+    name: PostgreSQL integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          go-version: 1.27.1
-          cache-dependency-path: backend/go.sum
+          persist-credentials: false
+      - name: Install pinned Rust and native test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends cmake build-essential pkg-config libssl-dev
+          rustup toolchain install 1.99.0 --profile minimal
+      - name: Conserved populated PostgreSQL v28 import and fresh-key recovery
+        run: python3 tools/test-infrastructure.py import
+      - name: Real Redis versioned cache, privacy and outage fallback
+        run: python3 tools/test-infrastructure.py cache
+
+  containers:
+    name: Container integration
+    needs: [frontend, backend]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: checked-frontend
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: checked-runtime
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Package already checked artifacts in one tiny application image
+        run: |
+          mkdir -p build/data
+          chmod 0700 build/data
+          chmod 0755 target/debug/examples/browser-fixture
+          chmod 0444 build/ca-certificates.crt
+          docker build --network=none --build-arg BUILD_REVISION="$GITHUB_SHA" --build-arg BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --tag else-application:ci .
+      - name: Actual nonroot PID 1, HTTP, persistence, backup and fresh-key restore
+        run: python3 tools/test-container.py --evidence "$RUNNER_TEMP/runtime.json"
+      - name: Exact-image 500-client and 100-concurrent-user CRUD rehearsal
+        run: python3 tools/test-capacity.py --evidence "$RUNNER_TEMP/capacity.json"
+      - name: Actual Compose configuration and optional read-only Redis
+        run: python3 tools/test-compose.py
+      - name: Archive this exact tested image for browser verification and promotion
+        run: docker save --output "$RUNNER_TEMP/runtime-images.tar" else-application:ci
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: tested-runtime-images
+          path: ${{ runner.temp }}/runtime-images.tar
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: synthetic-runtime-measurements
+          path: |
+            ${{ runner.temp }}/runtime.json
+            ${{ runner.temp }}/capacity.json
+          if-no-files-found: error
+          retention-days: 7
+
+  browser-auth:
+    name: Browser authentication
+    needs: [frontend, backend, containers]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.21.0
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - run: npm install --global npm@11.19.0
       - run: npm ci
         working-directory: frontend
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
-      - name: Real API cookie-session browser flows
-        run: sh frontend/scripts/test-auth-browser.sh
-      - name: Retain safe synthetic browser screenshots
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: checked-runtime
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: tested-runtime-images
+          path: ${{ runner.temp }}/tested-images
+      - run: docker load --input "$RUNNER_TEMP/tested-images/runtime-images.tar"
+      - run: chmod 0755 target/debug/examples/browser-fixture
+      - name: All actual-image cookie, domain, theme and CSP browser workflows
+        run: python3 tools/test-browser.py --no-build --image else-application:ci
+      - name: Retain only labelled synthetic screenshots
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -71,117 +232,6 @@ jobs:
           path: frontend/test-results/**/*.png
           if-no-files-found: ignore
           retention-days: 7
-
-  backend:
-    name: Backend checks
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version: 1.27.1
-          cache-dependency-path: backend/go.sum
-      - name: Check formatting
-        run: |
-          files=$(gofmt -l .)
-          if [ -n "$files" ]; then printf '%s\n' "$files"; exit 1; fi
-      - run: go vet ./...
-      - run: go test -race -count=1 ./...
-      - run: CGO_ENABLED=0 go build -mod=readonly -trimpath ./cmd/api ./cmd/migrate ./cmd/healthcheck ./cmd/bootstrap-admin ./cmd/rotate-integration-credentials ./cmd/analytics-worker ./cmd/container-preflight
-      - name: Publication permission and tag boundaries
-        run: python3 scripts/test-publication.py
-      - name: Dependency scan failure boundaries
-        run: python3 scripts/test-dependency-gate.py
-      - name: Immutable build metadata input boundaries
-        run: python3 scripts/test-build-metadata.py
-      - name: Stopped application recovery boundaries
-        run: python3 scripts/test-compose-recovery.py
-      - name: Workflow syntax and expressions
-        run: |
-          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
-          "$(go env GOPATH)/bin/actionlint" ../.github/workflows/ci.yml
-
-  dependencies:
-    name: Dependency security
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    env:
-      GOTOOLCHAIN: local
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 24.21.0
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version: 1.27.1
-          cache-dependency-path: backend/go.sum
-      - run: npm install --global npm@11.19.0
-      - run: npm ci
-        working-directory: frontend
-      - name: Audit complete frontend dependency lock
-        run: npm audit --include=dev --audit-level=info
-        working-directory: frontend
-      - name: Install pinned official Go vulnerability scanner
-        run: go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
-      - name: Scan source and integration-tagged tests
-        run: |
-          PATH="$(go env GOPATH)/bin:$PATH"
-          export PATH
-          sh backend/scripts/check-go-vulnerabilities.sh
-
-  migrations:
-    name: PostgreSQL integration
-    runs-on: ubuntu-24.04
-    # Includes setup plus the explicitly bounded 15-minute real-database suite.
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-          # The recovery rehearsal builds a pinned previously integrated API.
-          fetch-depth: 0
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version: 1.27.1
-          cache-dependency-path: backend/go.sum
-      - name: Disposable migration and permission tests
-        run: sh backend/scripts/test-integration.sh
-
-  containers:
-    name: Container integration
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-      - name: Single-container image verification
-        env:
-          IMAGE_ARCHIVE_PATH: ${{ runner.temp }}/runtime-images.tar
-        run: sh backend/scripts/test-compose.sh
-      - name: Retain the tested application image for main publication
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: tested-runtime-images
-          path: ${{ runner.temp }}/runtime-images.tar
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 1
 
   publish:
     name: Publish tested main application image
@@ -201,26 +251,29 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Validate publication context and version
+      - name: Validate publication context and immutable alias input
         env:
           IMAGE_VERSION: ${{ inputs.version }}
-        run: bash backend/scripts/publish-images.sh --print-tags
+        run: bash tools/publish-image.sh --print-tags
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: tested-runtime-images
           path: ${{ runner.temp }}/tested-images
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: checked-frontend
       - run: docker load --input "$RUNNER_TEMP/tested-images/runtime-images.tar"
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Promote verified application image
+      - name: Promote the checked image without rebuilding
         id: publication
         env:
           IMAGE_VERSION: ${{ inputs.version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bash backend/scripts/publish-images.sh
+        run: bash tools/publish-image.sh
       - name: Attest the promoted tested image
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
@@ -228,7 +281,7 @@ jobs:
           subject-digest: ${{ steps.publication.outputs.digest }}
           push-to-registry: true
           create-storage-record: false
-      - name: Verify promoted image provenance
+      - name: Verify signature, workflow, main source and exact commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TESTED_IMAGE: ${{ steps.publication.outputs.image }}
@@ -239,7 +292,10 @@ jobs:
           --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/ci.yml"
           --source-ref refs/heads/main
           --source-digest "$GITHUB_SHA"
-      - name: Published image pull and persistent upgrade rehearsal
+      - name: Pull immutable published artifact and recheck real recovery
         env:
-          ELSE_TEST_DISTRIBUTION_IMAGE: ghcr.io/theroisey/else:sha-${{ github.sha }}
-        run: sh backend/scripts/test-distribution-upgrade.sh
+          PUBLISHED_IMAGE: ${{ steps.publication.outputs.image }}@${{ steps.publication.outputs.digest }}
+        run: |
+          docker pull "$PUBLISHED_IMAGE"
+          test "$(docker image inspect --format '{{.Id}}' "$PUBLISHED_IMAGE")" = "$(docker image inspect --format '{{.Id}}' else-application:ci)"
+          python3 tools/test-container.py --image "$PUBLISHED_IMAGE"

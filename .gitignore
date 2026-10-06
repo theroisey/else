@@ -8,6 +8,13 @@
 *.pfx
 /docker/dev/tls/
 /docker/dev/.prepare.*/
+/private-backups/
+/backups/
+/imports/
+**/keyring.json
+**/integration-keyring.json
+**/postgres.jsonl
+*.dump
 
 # Frontend dependencies and generated output.
 node_modules
@@ -19,9 +26,8 @@ playwright-report/
 *.tsbuildinfo
 
 # Backend and test output.
-/backend/bin/
-/backend/api
-*.test
+__pycache__/
+*.pyc
 *.out
 
 # Local logs, editor state, and operating-system files.
@@ -33,3 +39,9 @@ playwright-report/
 # Obsidian UI state is local; Markdown notes remain versioned.
 /notes/.obsidian/
 /notes/.trash/
+target/
+/build/
+/.local/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm

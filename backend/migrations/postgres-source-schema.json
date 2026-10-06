@@ -1,0 +1,1772 @@
+[
+  {
+    "table": "analytics_snapshots",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "connection_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "generation",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "since",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "name": "until",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "name": "workspace",
+        "type": "jsonb",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "synced_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "provider",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "start_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "end_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "currency",
+        "type": "text",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "table": "analytics_sync_jobs",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "connection_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "requested_by",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "since",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "name": "until",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "name": "connection_revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "generation",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "credential_revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "reason",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "attempts",
+        "type": "int4",
+        "nullable": false
+      },
+      {
+        "name": "lease_token",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "lease_until",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "finished_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "provider",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "start_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "end_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "currency",
+        "type": "text",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "table": "audit_events",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "occurred_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "schema_version",
+        "type": "int2",
+        "nullable": false
+      },
+      {
+        "name": "actor_kind",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "actor_user_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "event_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "resource_kind",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "resource_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "request_id",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "before_state",
+        "type": "jsonb",
+        "nullable": false
+      },
+      {
+        "name": "after_state",
+        "type": "jsonb",
+        "nullable": false
+      },
+      {
+        "name": "metadata",
+        "type": "jsonb",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "billing_currencies",
+    "columns": [
+      {
+        "name": "code",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "exponent",
+        "type": "int2",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "client_contacts",
+    "columns": [
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "position",
+        "type": "int4",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "email",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "phone",
+        "type": "text",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "client_scopes",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "client_tags",
+    "columns": [
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "tag",
+        "type": "text",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "client_websites",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "url",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "domain",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "is_primary",
+        "type": "bool",
+        "nullable": false
+      },
+      {
+        "name": "needs_review",
+        "type": "bool",
+        "nullable": false
+      },
+      {
+        "name": "legacy_source",
+        "type": "bool",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "archived_at",
+        "type": "timestamptz",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "table": "clients",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "legal_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "website",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "notes",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "archived_at",
+        "type": "timestamptz",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "table": "collections",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "created_by",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "internal_note",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "amount_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "paid_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "currency",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "currency_exponent",
+        "type": "int2",
+        "nullable": false
+      },
+      {
+        "name": "due_date",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "name": "cancelled_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "integration_connections",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "provider",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "provider_account_id",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "generation",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "integration_credentials",
+    "columns": [
+      {
+        "name": "connection_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "purpose",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "key_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "envelope",
+        "type": "bytea",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "generation",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "integration_encryption_keys",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "key_label",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "fingerprint",
+        "type": "bytea",
+        "nullable": false
+      },
+      {
+        "name": "reservations",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "milestone_task_links",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "milestone_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "plan_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "task_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "linked_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "unlinked_at",
+        "type": "timestamptz",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "table": "milestones",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "plan_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "created_by",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "due_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "completed_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "cancelled_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "archived_at",
+        "type": "timestamptz",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "table": "payments",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "collection_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "currency",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "recorded_by",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "amount_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "paid_on",
+        "type": "date",
+        "nullable": false
+      },
+      {
+        "name": "method",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "reference",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "note",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "command_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "expected_revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "collection_revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "recorded_at",
+        "type": "timestamptz",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "permissions",
+    "columns": [
+      {
+        "name": "permission_key",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "scope_kind",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "plans",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "created_by",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "start_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "due_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "completed_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "cancelled_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "archived_at",
+        "type": "timestamptz",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "table": "pricing_lines",
+    "columns": [
+      {
+        "name": "version_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "position",
+        "type": "int4",
+        "nullable": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "kind",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "frequency",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "quantity_micros",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "unit_price_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "discount_bps",
+        "type": "int4",
+        "nullable": false
+      },
+      {
+        "name": "tax_bps",
+        "type": "int4",
+        "nullable": false
+      },
+      {
+        "name": "unit_cost_minor",
+        "type": "int8",
+        "nullable": true
+      },
+      {
+        "name": "base_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "discount_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "net_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "tax_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "total_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "cost_minor",
+        "type": "int8",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "table": "pricing_sheets",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "currency",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "currency_exponent",
+        "type": "int2",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "pricing_snapshot_lines",
+    "columns": [
+      {
+        "name": "collection_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "position",
+        "type": "int4",
+        "nullable": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "kind",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "frequency",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "quantity_micros",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "unit_price_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "discount_bps",
+        "type": "int4",
+        "nullable": false
+      },
+      {
+        "name": "tax_bps",
+        "type": "int4",
+        "nullable": false
+      },
+      {
+        "name": "base_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "discount_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "net_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "tax_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "total_minor",
+        "type": "int8",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "pricing_snapshots",
+    "columns": [
+      {
+        "name": "collection_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "sheet_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "version_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "currency",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "command_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "expected_revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "created_by",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "billing_date",
+        "type": "date",
+        "nullable": false
+      },
+      {
+        "name": "original_due_date",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "name": "original_internal_note",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "base_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "discount_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "net_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "tax_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "total_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "creation_xid",
+        "type": "xid8",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "pricing_versions",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "sheet_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "currency",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "note",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "effective_from",
+        "type": "date",
+        "nullable": false
+      },
+      {
+        "name": "effective_until",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "name": "created_by",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "base_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "discount_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "net_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "tax_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "total_minor",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "cost_minor",
+        "type": "int8",
+        "nullable": true
+      },
+      {
+        "name": "creation_xid",
+        "type": "xid8",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "reminders",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "created_by",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "owner_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "scheduled_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "scheduled_local",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "timezone",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "utc_offset_seconds",
+        "type": "int4",
+        "nullable": false
+      },
+      {
+        "name": "task_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "plan_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "milestone_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "milestone_plan_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "completed_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "dismissed_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "role_permissions",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "role_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "permission_key",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "seeded",
+        "type": "bool",
+        "nullable": false
+      },
+      {
+        "name": "assigned_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "revoked_at",
+        "type": "timestamptz",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "table": "roles",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "role_key",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "display_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "system_role",
+        "type": "bool",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "sessions",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "user_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "token_hash",
+        "type": "bytea",
+        "nullable": false
+      },
+      {
+        "name": "csrf_hash",
+        "type": "bytea",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "expires_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "revoked_at",
+        "type": "timestamptz",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "table": "task_tags",
+    "columns": [
+      {
+        "name": "task_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "tag",
+        "type": "text",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "tasks",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "created_by",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "assignee_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "priority",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "start_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "due_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "completed_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "cancelled_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "archived_at",
+        "type": "timestamptz",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "table": "user_locale_preferences",
+    "columns": [
+      {
+        "name": "user_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "locale",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "user_roles",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "user_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "role_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "scope_kind",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "assigned_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "revoked_at",
+        "type": "timestamptz",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "table": "users",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "email",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "display_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "password_hash",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "bootstrap_admin",
+        "type": "bool",
+        "nullable": false
+      },
+      {
+        "name": "last_login_at",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "int8",
+        "nullable": false
+      }
+    ]
+  },
+  {
+    "table": "website_integrations",
+    "columns": [
+      {
+        "name": "connection_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "website_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "client_id",
+        "type": "uuid",
+        "nullable": false
+      }
+    ]
+  }
+]

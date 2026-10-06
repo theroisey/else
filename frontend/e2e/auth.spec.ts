@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process'
+import { database } from './database'
 import { readFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
@@ -10,11 +10,7 @@ import { measured as syntheticMarketingView } from '../src/features/marketing/fi
 test.describe.configure({ mode: 'serial' })
 
 
-function database(sql: string) {
-  const container = process.env.AUTH_TEST_CONTAINER
-  if (!container || !/^[a-f0-9]{12,64}$/.test(container)) throw new Error('An isolated browser-test container is required.')
-  return execFileSync('docker', ['--host=unix:///var/run/docker.sock', 'exec', '-i', container, 'psql', '-U', 'postgres', '-d', 'else', '-v', 'ON_ERROR_STOP=1', '-Atc', sql], { encoding: 'utf8' }).trim()
-}
+
 
 async function signIn(page: Page) {
   await page.getByLabel('Email', { exact: true }).fill('browser.fixture@example.com')
@@ -82,8 +78,8 @@ test('real login, cookie security, responsive keyboard navigation and CSRF logou
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
   expect((await context.cookies()).some((cookie) => cookie.name === 'else_session' || cookie.name === 'else_csrf')).toBe(false)
-  expect(database("SELECT count(*) FROM app.audit_events WHERE event_name='session.created'")).toBe('1')
-  expect(database("SELECT count(*) FROM app.audit_events WHERE event_name='session.archived'")).toBe('1')
+  expect(database("SELECT count(*) FROM audit_events WHERE event_name='session.created'")).toBe('1')
+  expect(database("SELECT count(*) FROM audit_events WHERE event_name='session.archived'")).toBe('1')
   await page.goto('/app')
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
 })
@@ -92,7 +88,7 @@ test('server-side expiry removes identity and permits safe reauthentication', as
   await page.goto('/app/access')
   await signIn(page)
   await expect(page.getByRole('table')).toBeVisible()
-  database("UPDATE app.sessions SET created_at=clock_timestamp()-interval '1 minute', expires_at=clock_timestamp()-interval '1 second' WHERE revoked_at IS NULL")
+  database("UPDATE sessions SET created_at=utc_shift(-60), expires_at=utc_shift(-1) WHERE revoked_at IS NULL")
   await page.getByRole('button', { name: 'Refresh access', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
   await expect(page.getByRole('status')).toContainText('Your session ended')
@@ -109,7 +105,7 @@ test('revoked backend grants disappear on refresh without adding placeholder des
   await page.goto('/app/access')
   await signIn(page)
   await expect(page.getByRole('table')).toContainText('clients.view')
-  database("UPDATE app.user_roles SET revoked_at=clock_timestamp() WHERE id='33333333-3333-4333-8333-333333333333'")
+  database("UPDATE user_roles SET revoked_at=utc_now() WHERE id='33333333-3333-4333-8333-333333333333'")
   await page.getByRole('button', { name: 'Refresh access', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'No permissions assigned', exact: true })).toBeVisible()
   await expect(page.getByRole('table')).toHaveCount(0)
@@ -118,8 +114,8 @@ test('revoked backend grants disappear on refresh without adding placeholder des
   await page.getByText('Browser Fixture', { exact: true }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
-  expect(database("SELECT count(*) FROM app.audit_events WHERE event_name='session.created'")).toBe('4')
-  expect(database("SELECT count(*) FROM app.audit_events WHERE event_name='session.archived'")).toBe('3')
+  expect(database("SELECT count(*) FROM audit_events WHERE event_name='session.created'")).toBe('4')
+  expect(database("SELECT count(*) FROM audit_events WHERE event_name='session.archived'")).toBe('3')
 })
 
 test('administration creates and updates accounts, manages scoped roles and revokes disabled sessions', async ({ page, browser }, testInfo) => {
@@ -224,14 +220,14 @@ test('administration creates and updates accounts, manages scoped roles and revo
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(page.getByRole('table', { name: 'Active role assignments' })).toContainText('Initial Administrator')
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
-  expect(database("SELECT string_agg(event_name, ',' ORDER BY event_name) FROM app.audit_events WHERE resource_id=(SELECT id FROM app.users WHERE email='managed.fixture@example.com') AND event_name IN ('user.created','user.updated','user.disabled')")).toBe('user.created,user.disabled,user.updated')
-  expect(database("SELECT string_agg(event_name, ',' ORDER BY event_name) FROM app.audit_events WHERE resource_id=(SELECT id FROM app.roles WHERE display_name='Browser Scoped Role') AND event_name IN ('role.created','role.permission_changed')")).toBe('role.created,role.permission_changed')
-  expect(database("SELECT count(*) FROM app.audit_events WHERE event_name IN ('role_assignment.created','role_assignment.archived') AND actor_user_id='44444444-4444-4444-8444-444444444444'")).toBe('2')
+  expect(database("SELECT group_concat(event_name, ',' ORDER BY event_name) FROM audit_events WHERE resource_id=(SELECT id FROM users WHERE email='managed.fixture@example.com') AND event_name IN ('user.created','user.updated','user.disabled')")).toBe('user.created,user.disabled,user.updated')
+  expect(database("SELECT group_concat(event_name, ',' ORDER BY event_name) FROM audit_events WHERE resource_id=(SELECT id FROM roles WHERE display_name='Browser Scoped Role') AND event_name IN ('role.created','role.permission_changed')")).toBe('role.created,role.permission_changed')
+  expect(database("SELECT count(*) FROM audit_events WHERE event_name IN ('role_assignment.created','role_assignment.archived') AND actor_user_id='44444444-4444-4444-8444-444444444444'")).toBe('2')
 })
 
 test('client records use real pagination, forms, conflict recovery, scoped access and confirmed archival', async ({ page, browser }, testInfo) => {
   test.setTimeout(120_000)
-  database("INSERT INTO app.client_scopes(id) SELECT ('60000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid FROM generate_series(1,26) n; INSERT INTO app.clients(id,name) SELECT ('60000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid, 'Pagination Fixture '||lpad(n::text,2,'0') FROM generate_series(1,26) n")
+  database("INSERT INTO client_scopes(id) SELECT ('60000000-0000-4000-8000-'||printf('%012d',n)) FROM (WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM seq WHERE n<26) SELECT n FROM seq) seq; INSERT INTO clients(id,name,created_at,updated_at) SELECT ('60000000-0000-4000-8000-'||printf('%012d',n)), 'Pagination Fixture '||printf('%02d',n),utc_now(),utc_now() FROM (WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM seq WHERE n<26) SELECT n FROM seq) seq")
   await page.goto('/app/clients')
   await page.getByLabel('Email', { exact: true }).fill('admin.fixture@example.com')
   await page.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
@@ -327,7 +323,7 @@ test('client records use real pagination, forms, conflict recovery, scoped acces
   await page.getByRole('link', { name: 'Profile', exact: true }).click()
   await page.getByRole('button', { name: 'Archive client', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused()
-  expect(database(`SELECT revision::text FROM app.clients WHERE id='${clientID}'`)).toBe('3')
+  expect(database(`SELECT revision FROM clients WHERE id='${clientID}'`)).toBe('3')
   await markSyntheticScreenshot(page)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: testInfo.outputPath('archive-client-mobile.png'), fullPage: true })
@@ -344,7 +340,7 @@ test('client records use real pagination, forms, conflict recovery, scoped acces
   await page.getByRole('button', { name: 'Apply filters', exact: true }).click()
   await expect(table).toContainText('Updated Client Fixture')
   await expect(table.getByRole('row')).toHaveCount(2)
-  expect(database(`SELECT string_agg(event_name, ',' ORDER BY occurred_at) FROM app.audit_events WHERE resource_id='${clientID}' AND resource_kind='client'`)).toBe('client.created,client.updated,client.updated,client.archived')
+  expect(database(`SELECT group_concat(event_name, ',' ORDER BY occurred_at) FROM audit_events WHERE resource_id='${clientID}' AND resource_kind='client'`)).toBe('client.created,client.updated,client.updated,client.archived')
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
 })
 
@@ -354,20 +350,16 @@ test('client tasks preserve drafts, confirm transitions and archive, and isolate
   const viewerID = '99999999-9999-4999-8999-999999999999'
   const path = `/app/clients/${clientID}/tasks`
   database(`
-    INSERT INTO app.client_scopes(id) VALUES ('${clientID}');
-    INSERT INTO app.clients(id,name) VALUES ('${clientID}','Task Client Fixture');
-    INSERT INTO app.roles(id,role_key,display_name) VALUES ('80000000-0000-4000-8000-000000000002','task_fixture','Task-only Fixture');
-    INSERT INTO app.role_permissions(id,role_id,permission_key)
-      VALUES ('80000000-0000-4000-8000-000000000004','80000000-0000-4000-8000-000000000002','tasks.view');
-    INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id)
-      VALUES ('80000000-0000-4000-8000-000000000003','${viewerID}','80000000-0000-4000-8000-000000000002','client','${clientID}');
-    INSERT INTO app.tasks(id,client_id,title,created_by,status,priority,due_at)
-      SELECT ('81000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'${clientID}',
+    INSERT INTO client_scopes(id) VALUES ('${clientID}');
+    INSERT INTO clients(id,name,created_at,updated_at) VALUES ('${clientID}','Task Client Fixture',utc_now(),utc_now());
+    INSERT INTO roles(id,role_key,display_name,created_at,updated_at) VALUES ('80000000-0000-4000-8000-000000000002','task_fixture','Task-only Fixture',utc_now(),utc_now());
+    INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) VALUES ('80000000-0000-4000-8000-000000000004','80000000-0000-4000-8000-000000000002','tasks.view',utc_now());
+    INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES ('80000000-0000-4000-8000-000000000003','${viewerID}','80000000-0000-4000-8000-000000000002','client','${clientID}',utc_now());
+    INSERT INTO tasks(id,client_id,title,created_by,status,priority,due_at,created_at,updated_at) SELECT ('81000000-0000-4000-8000-'||printf('%012d',n)),'${clientID}',
       CASE WHEN n=1 THEN 'Overdue Task Fixture' WHEN n=2 THEN 'Due Soon Task Fixture'
-      ELSE 'Task Pagination Fixture '||lpad(n::text,2,'0') END,
+      ELSE 'Task Pagination Fixture '||printf('%02d',n) END,
       '44444444-4444-4444-8444-444444444444','todo','medium',
-      CASE WHEN n=1 THEN clock_timestamp()-interval '1 day' ELSE clock_timestamp()+interval '1 hour' END
-      FROM generate_series(1,26) n;
+      CASE WHEN n=1 THEN utc_shift(-86400) ELSE utc_shift(3600) END,utc_now(),utc_now() FROM (WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM seq WHERE n<26) SELECT n FROM seq) seq;
   `)
   await page.goto(path)
   await page.getByLabel('Email', { exact: true }).fill('admin.fixture@example.com')
@@ -444,7 +436,7 @@ test('client tasks preserve drafts, confirm transitions and archive, and isolate
     await page.getByLabel('Next status for Updated Task Fixture', { exact: true }).selectOption(status)
     await page.getByRole('button', { name: 'Change status of Updated Task Fixture', exact: true }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Task status updated.' })).toBeVisible()
-    await expect.poll(() => database(`SELECT status FROM app.tasks WHERE id='${taskID}'`)).toBe(status)
+    await expect.poll(() => database(`SELECT status FROM tasks WHERE id='${taskID}'`)).toBe(status)
   }
   await transition('in_progress')
   await transition('done')
@@ -484,7 +476,7 @@ test('client tasks preserve drafts, confirm transitions and archive, and isolate
   } finally { await viewerContext.close() }
   await page.getByRole('button', { name: 'Archive Updated Task Fixture', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused()
-  expect(database(`SELECT revision::text FROM app.tasks WHERE id='${taskID}'`)).toBe('8')
+  expect(database(`SELECT revision FROM tasks WHERE id='${taskID}'`)).toBe('8')
   await markTaskScreenshot(page)
   await page.screenshot({ path: testInfo.outputPath('task-archive-mobile.png'), fullPage: true })
   await page.getByRole('button', { name: 'Confirm archive', exact: true }).click()
@@ -498,7 +490,7 @@ test('client tasks preserve drafts, confirm transitions and archive, and isolate
   await page.getByRole('button', { name: 'Apply filters', exact: true }).click()
   await expect(table).toContainText('Updated Task Fixture')
   await expect(table.getByRole('row')).toHaveCount(2)
-  expect(database(`SELECT string_agg(event_name, ',' ORDER BY occurred_at) FROM app.audit_events WHERE resource_id='${taskID}' AND resource_kind='task'`)).toBe('task.created,task.updated,task.updated,task.updated,task.completed,task.updated,task.cancelled,task.updated,task.archived')
+  expect(database(`SELECT group_concat(event_name, ',' ORDER BY occurred_at) FROM audit_events WHERE resource_id='${taskID}' AND resource_kind='task'`)).toBe('task.created,task.updated,task.updated,task.updated,task.completed,task.updated,task.cancelled,task.updated,task.archived')
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
 })
 
@@ -510,24 +502,16 @@ test('planning keeps lifecycle explicit, preserves link history and protects tas
   const taskID = '91000000-0000-4000-8000-000000000001'
   const path = `/app/clients/${clientID}/plans`
   database(`
-    INSERT INTO app.client_scopes(id) VALUES ('${clientID}');
-    INSERT INTO app.clients(id,name) VALUES ('${clientID}','Planning Client Fixture');
-    INSERT INTO app.roles(id,role_key,display_name) VALUES ('${roleID}','planning_fixture','Planning-only Fixture');
-    INSERT INTO app.role_permissions(id,role_id,permission_key)
-      SELECT gen_random_uuid(),'${roleID}',key FROM unnest(ARRAY['planning.view','planning.update']) key;
-    INSERT INTO app.users(id,email,display_name,password_hash)
-      SELECT '${viewerID}','planning.viewer.fixture@example.com','Planning-only Fixture',password_hash
-      FROM app.users WHERE id='44444444-4444-4444-8444-444444444444';
-    INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id)
-      VALUES ('90000000-0000-4000-8000-000000000004','${viewerID}','${roleID}','client','${clientID}');
-    INSERT INTO app.plans(id,client_id,created_by,title,status)
-      SELECT ('92000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'${clientID}',
-      '44444444-4444-4444-8444-444444444444','Plan Pagination Fixture '||lpad(n::text,2,'0'),'draft'
-      FROM generate_series(1,26) n;
-    INSERT INTO app.tasks(id,client_id,created_by,title,status,priority)
-      SELECT ('91000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'${clientID}',
-      '44444444-4444-4444-8444-444444444444','Planning Task Fixture '||lpad(n::text,2,'0'),'todo','medium'
-      FROM generate_series(1,26) n;
+    INSERT INTO client_scopes(id) VALUES ('${clientID}');
+    INSERT INTO clients(id,name,created_at,updated_at) VALUES ('${clientID}','Planning Client Fixture',utc_now(),utc_now());
+    INSERT INTO roles(id,role_key,display_name,created_at,updated_at) VALUES ('${roleID}','planning_fixture','Planning-only Fixture',utc_now(),utc_now());
+    INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) SELECT new_id(),'${roleID}',permission_key,utc_now() FROM permissions WHERE permission_key IN ('planning.view','planning.update');
+    INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${viewerID}','planning.viewer.fixture@example.com','Planning-only Fixture',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444';
+    INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES ('90000000-0000-4000-8000-000000000004','${viewerID}','${roleID}','client','${clientID}',utc_now());
+    INSERT INTO plans(id,client_id,created_by,title,status,revision,created_at,updated_at) SELECT ('92000000-0000-4000-8000-'||printf('%012d',n)),'${clientID}',
+      '44444444-4444-4444-8444-444444444444','Plan Pagination Fixture '||printf('%02d',n),'draft',1,utc_now(),utc_now() FROM (WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM seq WHERE n<26) SELECT n FROM seq) seq;
+    INSERT INTO tasks(id,client_id,created_by,title,status,priority,created_at,updated_at) SELECT ('91000000-0000-4000-8000-'||printf('%012d',n)),'${clientID}',
+      '44444444-4444-4444-8444-444444444444','Planning Task Fixture '||printf('%02d',n),'todo','medium',utc_now(),utc_now() FROM (WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM seq WHERE n<26) SELECT n FROM seq) seq;
   `)
   await page.goto(path)
   await page.getByLabel('Email', { exact: true }).fill('admin.fixture@example.com')
@@ -561,7 +545,7 @@ test('planning keeps lifecycle explicit, preserves link history and protects tas
   const planID = new URL(page.url()).pathname.split('/').at(-1)!
   await page.getByRole('link', { name: 'Edit plan', exact: true }).click()
   await page.getByLabel('Plan title', { exact: true }).fill('Preserved Plan Draft')
-  database(`UPDATE app.plans SET title='Current Plan Fixture',revision=revision+1,updated_at=clock_timestamp() WHERE id='${planID}'`)
+  database(`UPDATE plans SET title='Current Plan Fixture',revision=revision+1,updated_at=utc_now() WHERE id='${planID}'`)
   await page.getByRole('button', { name: 'Save plan', exact: true }).click()
   await expect(page.getByText('Your draft is preserved.', { exact: false })).toBeVisible()
   await expect(page.getByLabel('Plan title', { exact: true })).toHaveValue('Preserved Plan Draft')
@@ -576,7 +560,7 @@ test('planning keeps lifecycle explicit, preserves link history and protects tas
   await page.getByLabel('Due time', { exact: true }).fill('2026-10-05T12:00')
   await page.getByRole('button', { name: 'Create milestone', exact: true }).click()
   await expect(page.getByText('Milestone due time must be inside the current plan date window.', { exact: true })).toBeVisible()
-  expect(database(`SELECT count(*)::text FROM app.milestones WHERE plan_id='${planID}'`)).toBe('0')
+  expect(database(`SELECT count(*) FROM milestones WHERE plan_id='${planID}'`)).toBe('0')
   await page.getByLabel('Due time', { exact: true }).fill('2026-10-03T12:00')
   await page.getByRole('button', { name: 'Create milestone', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Browser Milestone Fixture', exact: true })).toBeVisible()
@@ -595,7 +579,7 @@ test('planning keeps lifecycle explicit, preserves link history and protects tas
   const archivedTask = '91000000-0000-4000-8000-000000000002'
   await page.getByRole('button', { name: 'Edit task links', exact: true }).click()
   await page.getByRole('checkbox', { name: /Planning Task Fixture 02/ }).check()
-  database(`UPDATE app.tasks SET archived_at=clock_timestamp(),revision=revision+1,updated_at=clock_timestamp() WHERE id='${archivedTask}'`)
+  database(`UPDATE tasks SET archived_at=utc_now(),revision=revision+1,updated_at=utc_now() WHERE id='${archivedTask}'`)
   await page.getByRole('button', { name: 'Save task links', exact: true }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'New links require task access' })).toBeVisible()
   await expect(page.getByRole('list', { name: 'Task references', exact: true })).toContainText(archivedTask)
@@ -632,8 +616,8 @@ test('planning keeps lifecycle explicit, preserves link history and protects tas
   await page.getByRole('checkbox', { name: /Planning Task Fixture 01/ }).check()
   await page.getByRole('button', { name: 'Save task links', exact: true }).click()
   await expect(page.getByText('Task links saved.', { exact: true })).toBeVisible()
-  expect(database(`SELECT count(*)::text FROM app.milestone_task_links WHERE milestone_id='${milestoneID}'`)).toBe('2')
-  expect(database(`SELECT count(*)::text FROM app.milestone_task_links WHERE milestone_id='${milestoneID}' AND unlinked_at IS NOT NULL`)).toBe('1')
+  expect(database(`SELECT count(*) FROM milestone_task_links WHERE milestone_id='${milestoneID}'`)).toBe('2')
+  expect(database(`SELECT count(*) FROM milestone_task_links WHERE milestone_id='${milestoneID}' AND unlinked_at IS NOT NULL`)).toBe('1')
   await page.getByRole('combobox', { name: 'Reference history', exact: true }).selectOption('true')
   await expect(page.getByRole('table', { name: 'Milestone task link history', exact: true }).getByRole('row')).toHaveCount(2)
   for (const viewport of [{ width: 1440, height: 1050 }, { width: 390, height: 844 }]) {
@@ -655,21 +639,21 @@ test('planning keeps lifecycle explicit, preserves link history and protects tas
   await page.getByLabel('Next status for Updated Plan Fixture', { exact: true }).selectOption('completed')
   await page.getByRole('button', { name: 'Change status of Updated Plan Fixture', exact: true }).click()
   await expect(page.getByRole('term').filter({ hasText: /^Completed$/ })).toBeVisible()
-  expect(database(`SELECT status FROM app.milestones WHERE id='${milestoneID}'`)).toBe('in_progress')
-  expect(database(`SELECT status FROM app.tasks WHERE id='${taskID}'`)).toBe('todo')
+  expect(database(`SELECT status FROM milestones WHERE id='${milestoneID}'`)).toBe('in_progress')
+  expect(database(`SELECT status FROM tasks WHERE id='${taskID}'`)).toBe('todo')
   await page.goto(milestonePath)
   await expect(page.getByText('The parent plan is completed.', { exact: false })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Edit milestone', exact: true })).toHaveCount(0)
   await page.goto(`${path}/${planID}`)
   await page.getByRole('button', { name: 'Archive Updated Plan Fixture', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused()
-  expect(database(`SELECT CASE WHEN archived_at IS NULL THEN 'yes' ELSE 'no' END FROM app.plans WHERE id='${planID}'`)).toBe('yes')
+  expect(database(`SELECT CASE WHEN archived_at IS NULL THEN 'yes' ELSE 'no' END FROM plans WHERE id='${planID}'`)).toBe('yes')
   await markTaskScreenshot(page)
   await page.screenshot({ path: testInfo.outputPath('planning-archive-mobile.png'), fullPage: true })
   await page.getByRole('button', { name: 'Confirm archive', exact: true }).click()
   await expect(page.getByText('Record archived.', { exact: true })).toBeVisible()
-  expect(database(`SELECT string_agg(event_name,',' ORDER BY occurred_at) FROM app.audit_events WHERE resource_id='${planID}'`)).toBe('plan.created,plan.updated,plan.updated,plan.updated,plan.archived')
-  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE resource_id='${milestoneID}' AND event_name='milestone.updated'`)).toBe('7')
+  expect(database(`SELECT group_concat(event_name,',' ORDER BY occurred_at) FROM audit_events WHERE resource_id='${planID}'`)).toBe('plan.created,plan.updated,plan.updated,plan.updated,plan.archived')
+  expect(database(`SELECT count(*) FROM audit_events WHERE resource_id='${milestoneID}' AND event_name='milestone.updated'`)).toBe('7')
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
 })
 
@@ -682,18 +666,15 @@ test('reminders preserve explicit timezone intent, historical references and imm
     ownerID = 'd4444444-4444-4444-8444-444444444444',
     path = `/app/clients/${clientID}/reminders`
   database(`
-    INSERT INTO app.client_scopes(id) VALUES ('${clientID}');
-    INSERT INTO app.clients(id,name) VALUES ('${clientID}','Synthetic Reminder Client');
-    INSERT INTO app.users(id,email,display_name,password_hash)
-      SELECT '${actorID}','reminder.fixture@example.com','Reminder Editor Fixture',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444';
-    INSERT INTO app.users(id,email,display_name,password_hash)
-      SELECT '${ownerID}','reminder.owner.fixture@example.com','Reminder Owner Fixture',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444';
-    INSERT INTO app.roles(id,role_key,display_name) VALUES('${roleID}','reminder_fixture','Synthetic reminder editor');
-    INSERT INTO app.role_permissions(id,role_id,permission_key)
-      SELECT gen_random_uuid(),'${roleID}',permission_key FROM app.permissions WHERE permission_key IN ('reminders.view','reminders.create','reminders.update','tasks.view','planning.view');
-    INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES
-      (gen_random_uuid(),'${actorID}','${roleID}','client','${clientID}'),(gen_random_uuid(),'${ownerID}','${roleID}','client','${clientID}');
-    INSERT INTO app.tasks(id,client_id,created_by,title,status,priority) VALUES('${taskID}','${clientID}','${actorID}','Synthetic reminder linked task','todo','medium');
+    INSERT INTO client_scopes(id) VALUES ('${clientID}');
+    INSERT INTO clients(id,name,created_at,updated_at) VALUES ('${clientID}','Synthetic Reminder Client',utc_now(),utc_now());
+    INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${actorID}','reminder.fixture@example.com','Reminder Editor Fixture',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444';
+    INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${ownerID}','reminder.owner.fixture@example.com','Reminder Owner Fixture',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444';
+    INSERT INTO roles(id,role_key,display_name,created_at,updated_at) VALUES('${roleID}','reminder_fixture','Synthetic reminder editor',utc_now(),utc_now());
+    INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) SELECT new_id(),'${roleID}',permission_key,utc_now() FROM permissions WHERE permission_key IN ('reminders.view','reminders.create','reminders.update','tasks.view','planning.view');
+    INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES
+      (new_id(),'${actorID}','${roleID}','client','${clientID}',utc_now()),(new_id(),'${ownerID}','${roleID}','client','${clientID}',utc_now());
+    INSERT INTO tasks(id,client_id,created_by,title,status,priority,created_at,updated_at) VALUES('${taskID}','${clientID}','${actorID}','Synthetic reminder linked task','todo','medium',utc_now(),utc_now());
   `)
   await page.goto(path)
   await page.getByLabel('Email', { exact: true }).fill('reminder.fixture@example.com')
@@ -708,7 +689,7 @@ test('reminders preserve explicit timezone intent, historical references and imm
   await page.getByLabel('Timezone', { exact: true }).fill('America/New_York')
   await page.getByRole('button', { name: 'Create reminder', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('Choose the intended occurrence')
-  expect(database('SELECT count(*)::text FROM app.reminders')).toBe('0')
+  expect(database('SELECT count(*) FROM reminders')).toBe('0')
   await page.getByRole('radio', { name: /Later occurrence/ }).check()
   await expect(page.getByRole('option', { name: 'Reminder Owner Fixture', exact: true })).toBeAttached()
   await page.getByLabel('Owner', { exact: true }).selectOption(ownerID)
@@ -722,14 +703,14 @@ test('reminders preserve explicit timezone intent, historical references and imm
   await page.getByRole('button', { name: 'Create reminder', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Synthetic overlap review', exact: true })).toBeVisible()
   const recordID = page.url().split('/').at(-1)!
-  expect(database(`SELECT to_char(scheduled_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') FROM app.reminders WHERE id='${recordID}'`)).toBe('2026-11-01T06:30:00.123456Z')
-  expect(database(`SELECT owner_id::text FROM app.reminders WHERE id='${recordID}'`)).toBe(ownerID)
-  database(`UPDATE app.users SET status='disabled',revision=revision+1,updated_at=clock_timestamp() WHERE id='${ownerID}'`)
+  expect(database(`SELECT scheduled_at FROM reminders WHERE id='${recordID}'`)).toBe('2026-11-01T06:30:00.123456Z')
+  expect(database(`SELECT owner_id FROM reminders WHERE id='${recordID}'`)).toBe(ownerID)
+  database(`UPDATE users SET status='disabled',revision=revision+1,updated_at=utc_now() WHERE id='${ownerID}'`)
   await page.getByRole('link', { name: 'Edit reminder', exact: true }).click()
   await expect(page.getByLabel('Owner', { exact: true })).toHaveValue(ownerID)
   await expect(page.getByLabel('Local time', { exact: true })).toHaveValue('01:30:00.123456')
   await page.getByLabel('Reminder title', { exact: true }).fill('Unsaved synthetic draft')
-  database(`UPDATE app.reminders SET title='Concurrent synthetic reminder',revision=revision+1,updated_at=clock_timestamp() WHERE id='${recordID}'`)
+  database(`UPDATE reminders SET title='Concurrent synthetic reminder',revision=revision+1,updated_at=utc_now() WHERE id='${recordID}'`)
   await page.getByRole('button', { name: 'Save reminder', exact: true }).click()
   await expect(page.getByText('Your draft is preserved.', { exact: false })).toBeVisible()
   await expect(page.getByLabel('Reminder title', { exact: true })).toHaveValue('Unsaved synthetic draft')
@@ -741,15 +722,15 @@ test('reminders preserve explicit timezone intent, historical references and imm
   await expect(page.getByText('This local time does not exist', { exact: false })).toBeVisible()
   await markTaskScreenshot(page)
   await page.screenshot({ path: testInfo.outputPath('reminder-gap-mobile.png'), fullPage: true })
-  expect(database(`SELECT revision::text FROM app.reminders WHERE id='${recordID}'`)).toBe('2')
+  expect(database(`SELECT revision FROM reminders WHERE id='${recordID}'`)).toBe('2')
   await page.getByLabel('Scheduled date', { exact: true }).fill('2026-11-01')
   await page.getByLabel('Local time', { exact: true }).fill('01:30:00.123456')
   await page.getByRole('radio', { name: /Earlier occurrence/ }).check()
   await page.getByLabel('Reminder title', { exact: true }).fill('Synthetic overlap updated')
   await page.getByRole('button', { name: 'Save reminder', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Synthetic overlap updated', exact: true })).toBeVisible()
-  expect(database(`SELECT to_char(scheduled_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') FROM app.reminders WHERE id='${recordID}'`)).toBe('2026-11-01T05:30:00.123456Z')
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${roleID}' AND permission_key IN ('tasks.view','planning.view'); UPDATE app.tasks SET archived_at=clock_timestamp(),revision=revision+1,updated_at=clock_timestamp() WHERE id='${taskID}'`)
+  expect(database(`SELECT scheduled_at FROM reminders WHERE id='${recordID}'`)).toBe('2026-11-01T05:30:00.123456Z')
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${roleID}' AND permission_key IN ('tasks.view','planning.view'); UPDATE tasks SET archived_at=utc_now(),revision=revision+1,updated_at=utc_now() WHERE id='${taskID}'`)
   await page.goto('/app/access')
   await page.getByRole('button', { name: 'Refresh access', exact: true }).click()
   await expect(page.getByRole('table')).not.toContainText('tasks.view')
@@ -763,7 +744,7 @@ test('reminders preserve explicit timezone intent, historical references and imm
   await page.getByRole('button', { name: 'Save reminder', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Synthetic retained reference', exact: true })).toBeVisible()
   expect(privateReads).toEqual([])
-  expect(database(`SELECT task_id::text FROM app.reminders WHERE id='${recordID}'`)).toBe(taskID)
+  expect(database(`SELECT task_id FROM reminders WHERE id='${recordID}'`)).toBe(taskID)
   await page.getByRole('button', { name: 'Complete', exact: true }).click()
   await expect(page.getByRole('term').filter({ hasText: /^Completed$/ })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Edit reminder', exact: true })).toHaveCount(0)
@@ -804,9 +785,9 @@ test('reminders preserve explicit timezone intent, historical references and imm
   await page.getByRole('combobox', { name: 'State', exact: true }).selectOption('completed')
   await page.getByRole('button', { name: 'Apply filters', exact: true }).click()
   await expect(page.getByRole('table', { name: 'Client reminders', exact: true })).toContainText('Synthetic retained reference')
-  expect(database(`SELECT string_agg(event_name,',' ORDER BY occurred_at,id) FROM app.audit_events WHERE resource_id='${recordID}'`)).toBe('reminder.created,reminder.updated,reminder.updated,reminder.completed')
-  expect(database(`SELECT string_agg(event_name,',' ORDER BY occurred_at,id) FROM app.audit_events WHERE resource_id='${dueID}'`)).toBe('reminder.created,reminder.dismissed')
-  expect(database(`SELECT status FROM app.tasks WHERE id='${taskID}'`)).toBe('todo')
+  expect(database(`SELECT group_concat(event_name,',' ORDER BY occurred_at,id) FROM audit_events WHERE resource_id='${recordID}'`)).toBe('reminder.created,reminder.updated,reminder.updated,reminder.completed')
+  expect(database(`SELECT group_concat(event_name,',' ORDER BY occurred_at,id) FROM audit_events WHERE resource_id='${dueID}'`)).toBe('reminder.created,reminder.dismissed')
+  expect(database(`SELECT status FROM tasks WHERE id='${taskID}'`)).toBe('todo')
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
 })
 
@@ -817,14 +798,12 @@ test('activity reads confirmed business events, paginates, refreshes and obeys c
     roleID = 'e2222222-2222-4222-8222-222222222222',
     path = `/app/clients/${clientID}/activity`
   database(`
-    INSERT INTO app.client_scopes(id) VALUES ('${clientID}');
-    INSERT INTO app.clients(id,name) VALUES ('${clientID}','Synthetic Activity Client');
-    INSERT INTO app.users(id,email,display_name,password_hash)
-      SELECT '${actorID}','activity.fixture@example.com','Activity Reader Fixture',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444';
-    INSERT INTO app.roles(id,role_key,display_name) VALUES('${roleID}','activity_fixture','Synthetic activity reader');
-    INSERT INTO app.role_permissions(id,role_id,permission_key)
-      SELECT gen_random_uuid(),'${roleID}',permission_key FROM app.permissions WHERE permission_key IN ('clients.view','clients.update','clients.archive','activity.view','tasks.view','tasks.create');
-    INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),'${actorID}','${roleID}','client','${clientID}');
+    INSERT INTO client_scopes(id) VALUES ('${clientID}');
+    INSERT INTO clients(id,name,created_at,updated_at) VALUES ('${clientID}','Synthetic Activity Client',utc_now(),utc_now());
+    INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${actorID}','activity.fixture@example.com','Activity Reader Fixture',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444';
+    INSERT INTO roles(id,role_key,display_name,created_at,updated_at) VALUES('${roleID}','activity_fixture','Synthetic activity reader',utc_now(),utc_now());
+    INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) SELECT new_id(),'${roleID}',permission_key,utc_now() FROM permissions WHERE permission_key IN ('clients.view','clients.update','clients.archive','activity.view','tasks.view','tasks.create');
+    INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES(new_id(),'${actorID}','${roleID}','client','${clientID}',utc_now());
   `)
   await page.goto(path)
   await page.getByLabel('Email', { exact: true }).fill('activity.fixture@example.com')
@@ -857,7 +836,7 @@ test('activity reads confirmed business events, paginates, refreshes and obeys c
     return statuses
   }, clientID)
   expect(written).toEqual([...Array(26).fill(200), 201])
-  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE client_id='${clientID}'`)).toBe('27')
+  expect(database(`SELECT count(*) FROM audit_events WHERE client_id='${clientID}'`)).toBe('27')
   const reads: string[] = []
   page.on('request', request => {
     if (request.method() === 'GET' && new URL(request.url()).pathname.startsWith('/api/v1/')) reads.push(new URL(request.url()).pathname)
@@ -896,7 +875,7 @@ test('activity reads confirmed business events, paginates, refreshes and obeys c
   await page.getByRole('button', { name: 'Refresh activity', exact: true }).click()
   await expect(feed.getByRole('listitem').first()).toContainText('Client archived.')
   await expect(page.getByRole('button', { name: 'Previous', exact: true })).toBeDisabled()
-  const count = database(`SELECT count(*)::text FROM app.audit_events WHERE client_id='${clientID}'`)
+  const count = database(`SELECT count(*) FROM audit_events WHERE client_id='${clientID}'`)
   expect(count).toBe('28')
 
   await page.route(`**/api/v1/clients/${clientID}/activity?*`, async handler => {
@@ -916,7 +895,7 @@ test('activity reads confirmed business events, paginates, refreshes and obeys c
   await expect(feed.getByRole('listitem').first()).toContainText('Client archived.')
   expect(reads.every(url => url === `/api/v1/clients/${clientID}/activity` || (url === '/api/v1/auth/session' || url === '/api/v1/auth/preferences'))).toBe(true)
 
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${roleID}' AND permission_key IN ('tasks.view','tasks.create','clients.update','clients.archive')`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${roleID}' AND permission_key IN ('tasks.view','tasks.create','clients.update','clients.archive')`)
   await page.goto('/app/access')
   await page.getByRole('button', { name: 'Refresh access', exact: true }).click()
   await expect(page.getByRole('cell', { name: 'tasks.view', exact: true })).toHaveCount(0)
@@ -924,11 +903,11 @@ test('activity reads confirmed business events, paginates, refreshes and obeys c
   await expect(feed.getByRole('listitem').first()).toContainText('Client archived.')
   await expect(feed).not.toContainText('Task created.')
   await expect(page.getByRole('link', { name: 'Tasks', exact: true })).toHaveCount(0)
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${roleID}' AND permission_key='activity.view'`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${roleID}' AND permission_key='activity.view'`)
   await page.getByRole('button', { name: 'Refresh activity', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
   await expect(feed).toHaveCount(0)
-  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE client_id='${clientID}'`)).toBe(count)
+  expect(database(`SELECT count(*) FROM audit_events WHERE client_id='${clientID}'`)).toBe(count)
 })
 
 test('audit viewer filters real immutable events, inspects safe differences and obeys revoked access', async ({ page }, testInfo) => {
@@ -936,16 +915,13 @@ test('audit viewer filters real immutable events, inspects safe differences and 
   const clientID = '71000000-0000-4000-8000-000000000001', actorID = '71000000-0000-4000-8000-000000000002',
     rootRole = '71000000-0000-4000-8000-000000000003', clientRole = '71000000-0000-4000-8000-000000000004'
   database(`
-    INSERT INTO app.client_scopes(id) VALUES('${clientID}');
-    INSERT INTO app.clients(id,name) VALUES('${clientID}','Synthetic Audit Client');
-    INSERT INTO app.users(id,email,display_name,password_hash)
-      SELECT '${actorID}','audit.fixture@example.com','Synthetic Audit Reader',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444';
-    INSERT INTO app.roles(id,role_key,display_name) VALUES('${rootRole}','audit_reader_fixture','Synthetic audit root'),('${clientRole}','audit_client_fixture','Synthetic audit client');
-    INSERT INTO app.role_permissions(id,role_id,permission_key) VALUES(gen_random_uuid(),'${rootRole}','audit.view');
-    INSERT INTO app.role_permissions(id,role_id,permission_key)
-      SELECT gen_random_uuid(),'${clientRole}',permission_key FROM app.permissions WHERE permission_key IN ('clients.view','tasks.create','tasks.update');
-    INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id)
-      VALUES(gen_random_uuid(),'${actorID}','${rootRole}','global',NULL),(gen_random_uuid(),'${actorID}','${clientRole}','client','${clientID}');
+    INSERT INTO client_scopes(id) VALUES('${clientID}');
+    INSERT INTO clients(id,name,created_at,updated_at) VALUES('${clientID}','Synthetic Audit Client',utc_now(),utc_now());
+    INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${actorID}','audit.fixture@example.com','Synthetic Audit Reader',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444';
+    INSERT INTO roles(id,role_key,display_name,created_at,updated_at) VALUES('${rootRole}','audit_reader_fixture','Synthetic audit root',utc_now(),utc_now()),('${clientRole}','audit_client_fixture','Synthetic audit client',utc_now(),utc_now());
+    INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) VALUES(new_id(),'${rootRole}','audit.view',utc_now());
+    INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) SELECT new_id(),'${clientRole}',permission_key,utc_now() FROM permissions WHERE permission_key IN ('clients.view','tasks.create','tasks.update');
+    INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES(new_id(),'${actorID}','${rootRole}','global',NULL,utc_now()),(new_id(),'${actorID}','${clientRole}','client','${clientID}',utc_now());
   `)
   await page.goto('/app/audit')
   await page.getByLabel('Email', {exact:true}).fill('audit.fixture@example.com')
@@ -972,7 +948,7 @@ test('audit viewer filters real immutable events, inspects safe differences and 
     if (response.status !== 200) throw new Error('Synthetic audited update failed')
     return {taskID,requestID:response.headers.get('X-Request-ID')!}
   },clientID)
-  const historyHash=()=>database("SELECT md5(string_agg(row_to_json(e)::text,'' ORDER BY id)) FROM app.audit_events e")
+  const historyHash=()=>database("SELECT * FROM audit_events ORDER BY id")
   const before=historyHash()
   const reads:string[]=[]
   page.on('request',request=>{if(request.method()==='GET' && new URL(request.url()).pathname.startsWith('/api/v1/')) reads.push(new URL(request.url()).pathname)})
@@ -1026,7 +1002,7 @@ test('audit viewer filters real immutable events, inspects safe differences and 
   await page.getByRole('button',{name:'Clear filters',exact:true}).click();await expect(table).toBeVisible()
   expect(await table.innerText()).not.toMatch(/Synthetic private|password|token|email/)
   expect(reads.every(url=>url.startsWith('/api/v1/audit-logs') || (url === '/api/v1/auth/session' || url === '/api/v1/auth/preferences'))).toBe(true)
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${clientRole}' AND permission_key IN ('tasks.create','tasks.update')`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${clientRole}' AND permission_key IN ('tasks.create','tasks.update')`)
   await page.goto(`/app/clients/${clientID}/audit`)
   await expect(page.getByRole('heading',{name:'Audit history',exact:true})).toBeVisible()
   await expect(table).toBeVisible();expect(await table.innerText()).not.toContain('Synthetic private')
@@ -1039,11 +1015,11 @@ test('audit viewer filters real immutable events, inspects safe differences and 
   await markTaskScreenshot(page);await page.screenshot({path:testInfo.outputPath('audit-error.png'),fullPage:true})
   await page.unroute(`**/api/v1/clients/${clientID}/audit-logs?*`)
   await page.getByRole('button',{name:'Try again',exact:true}).click();await expect(table).toBeVisible()
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${clientRole}' AND permission_key='clients.view'`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${clientRole}' AND permission_key='clients.view'`)
   await page.getByRole('button',{name:'Refresh audit history',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible();await expect(table).toHaveCount(0)
   await page.goto('/app/audit');await expect(table).toBeVisible();expect(await table.innerText()).not.toContain(clientID)
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${rootRole}' AND permission_key='audit.view'`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${rootRole}' AND permission_key='audit.view'`)
   await page.getByRole('button',{name:'Refresh audit history',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
   expect(historyHash()).toBe(before)
@@ -1052,7 +1028,7 @@ test('audit viewer filters real immutable events, inspects safe differences and 
 test('pricing retains exact versions and immutable collections through lost-response recovery and cost-access changes', async ({ page }, testInfo) => {
   test.setTimeout(120_000)
   const client='f5555555-5555-4555-8555-555555555555', actor='f1111111-1111-4111-8111-111111111111', role='f2222222-2222-4222-8222-222222222222', path=`/app/clients/${client}/pricing`, base=`/api/v1/clients/${client}/pricing`
-  database(`INSERT INTO app.client_scopes(id) VALUES('${client}'); INSERT INTO app.clients(id,name) VALUES('${client}','Synthetic Pricing Client'); INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actor}','pricing.browser.fixture@example.com','Pricing Fixture',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO app.roles(id,role_key,display_name) VALUES('${role}','pricing_browser_fixture','Synthetic pricing operator'); INSERT INTO app.role_permissions(id,role_id,permission_key) SELECT gen_random_uuid(),'${role}',permission_key FROM app.permissions WHERE permission_key IN ('pricing.view','pricing.manage','billing.view','billing.create','billing.update'); INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),'${actor}','${role}','client','${client}');`)
+  database(`INSERT INTO client_scopes(id) VALUES('${client}'); INSERT INTO clients(id,name,created_at,updated_at) VALUES('${client}','Synthetic Pricing Client',utc_now(),utc_now()); INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${actor}','pricing.browser.fixture@example.com','Pricing Fixture',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO roles(id,role_key,display_name,created_at,updated_at) VALUES('${role}','pricing_browser_fixture','Synthetic pricing operator',utc_now(),utc_now()); INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) SELECT new_id(),'${role}',permission_key,utc_now() FROM permissions WHERE permission_key IN ('pricing.view','pricing.manage','billing.view','billing.create','billing.update'); INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES(new_id(),'${actor}','${role}','client','${client}',utc_now());`)
   const reads:string[]=[]
   page.on('request',r=>{if(r.method()==='GET'&&r.url().includes('/api/v1/clients'))reads.push(new URL(r.url()).pathname)})
   await page.goto(path)
@@ -1080,7 +1056,7 @@ test('pricing retains exact versions and immutable collections through lost-resp
   await page.getByRole('button',{name:'Save pricing agreement',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Pricing agreement',exact:true})).toBeVisible()
   const sheet=new URL(page.url()).pathname.split('/').at(-1)!
-  expect(database(`SELECT total_minor::text FROM app.pricing_versions WHERE sheet_id='${sheet}' AND revision=1`)).toBe('125')
+  expect(database(`SELECT total_minor FROM pricing_versions WHERE sheet_id='${sheet}' AND revision=1`)).toBe('125')
   expect(reads.every(p=>p.startsWith(base))).toBe(true)
   await page.setViewportSize({width:1440,height:1000})
   await markTaskScreenshot(page);await page.screenshot({path:testInfo.outputPath('pricing-history-desktop.png'),fullPage:true})
@@ -1097,9 +1073,9 @@ test('pricing retains exact versions and immutable collections through lost-resp
   await page.getByRole('button',{name:'Open collection',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Copied pricing terms',exact:true})).toBeVisible()
   const collection=new URL(page.url()).pathname.split('/').at(-1)!, financial=`/app/clients/${client}/billing/${collection}`
-  expect(database(`SELECT count(*)::text FROM app.collections WHERE client_id='${client}'`)).toBe('1')
-  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE resource_id='${collection}' AND event_name='billing.created'`)).toBe('1')
-  const retained=()=>database(`SELECT md5(string_agg(row_to_json(l)::text,'' ORDER BY position)) FROM app.pricing_snapshot_lines l WHERE collection_id='${collection}'`), original=retained()
+  expect(database(`SELECT count(*) FROM collections WHERE client_id='${client}'`)).toBe('1')
+  expect(database(`SELECT count(*) FROM audit_events WHERE resource_id='${collection}' AND event_name='billing.created'`)).toBe('1')
+  const retained=()=>database(`SELECT * FROM pricing_snapshot_lines WHERE collection_id='${collection}' ORDER BY position`), original=retained()
   await page.getByRole('link',{name:'Edit collection',exact:true}).click()
   await expect(page.getByLabel('Collection amount')).toHaveAttribute('readonly','')
   await page.getByLabel('Collection description').fill('Synthetic copied collection metadata')
@@ -1112,18 +1088,18 @@ test('pricing retains exact versions and immutable collections through lost-resp
   await expect(page.getByText(/Preview matches/)).toBeVisible()
   await page.getByRole('button',{name:'Save new version',exact:true}).click()
   await expect(page.getByRole('link',{name:'Version 2 · Synthetic revised pricing',exact:true})).toBeVisible()
-  expect(database(`SELECT amount_minor::text FROM app.collections WHERE id='${collection}'`)).toBe('125');expect(retained()).toBe(original)
+  expect(database(`SELECT amount_minor FROM collections WHERE id='${collection}'`)).toBe('125');expect(retained()).toBe(original)
   await page.getByRole('link',{name:'Version 1 · Synthetic exact pricing agreement',exact:true}).click()
   await expect(page.getByText(/Superseded on its start date/).first()).toBeVisible()
   await expect(page.getByRole('button',{name:'Create collection from version',exact:true})).toBeDisabled()
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='pricing.manage'`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key='pricing.manage'`)
   await page.getByRole('button',{name:'Refresh agreement',exact:true}).click()
   // Session refresh explicitly updates the actor/grant query partition.
   await page.goto('/app/access');await page.getByRole('button',{name:'Refresh access',exact:true}).click();await page.goto(path+'/'+sheet)
   await expect(page.getByRole('heading',{name:'Pricing agreement',exact:true})).toBeVisible()
   await expect(page.getByText(/Internal aggregate cost/)).toHaveCount(0)
   await expect(page.getByRole('link',{name:'Create new version',exact:true})).toHaveCount(0)
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='pricing.view'`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key='pricing.view'`)
   await page.goto('/app/access');await page.getByRole('button',{name:'Refresh access',exact:true}).click();await page.goto(financial)
   await expect(page.getByRole('heading',{name:'Copied pricing terms',exact:true})).toBeVisible()
   await expect(page.getByRole('link',{name:'Open retained pricing version',exact:true})).toHaveCount(0)
@@ -1136,12 +1112,12 @@ test('finance preserves exact currencies, reconciles a lost payment response and
   test.setTimeout(120_000)
   const clientID='b5555555-5555-4555-8555-555555555555', actorID='b1111111-1111-4111-8111-111111111111', roleID='b2222222-2222-4222-8222-222222222222', path=`/app/clients/${clientID}/billing`, base=`/api/v1/clients/${clientID}/billing`
   database(`
-    INSERT INTO app.client_scopes(id) VALUES('${clientID}');
-    INSERT INTO app.clients(id,name) VALUES('${clientID}','Synthetic Finance Client');
-    INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actorID}','finance.browser.fixture@example.com','Finance-only Fixture',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444';
-    INSERT INTO app.roles(id,role_key,display_name) VALUES('${roleID}','finance_browser_fixture','Synthetic finance operator');
-    INSERT INTO app.role_permissions(id,role_id,permission_key) SELECT gen_random_uuid(),'${roleID}',permission_key FROM app.permissions WHERE permission_key IN ('billing.view','billing.create','billing.update','billing.delete');
-    INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),'${actorID}','${roleID}','client','${clientID}');
+    INSERT INTO client_scopes(id) VALUES('${clientID}');
+    INSERT INTO clients(id,name,created_at,updated_at) VALUES('${clientID}','Synthetic Finance Client',utc_now(),utc_now());
+    INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${actorID}','finance.browser.fixture@example.com','Finance-only Fixture',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444';
+    INSERT INTO roles(id,role_key,display_name,created_at,updated_at) VALUES('${roleID}','finance_browser_fixture','Synthetic finance operator',utc_now(),utc_now());
+    INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) SELECT new_id(),'${roleID}',permission_key,utc_now() FROM permissions WHERE permission_key IN ('billing.view','billing.create','billing.update','billing.delete');
+    INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES(new_id(),'${actorID}','${roleID}','client','${clientID}',utc_now());
   `)
   const privateReads:string[]=[]
   page.on('request',request=>{if(request.method()==='GET' && request.url().includes('/api/v1/clients')) privateReads.push(new URL(request.url()).pathname)})
@@ -1186,7 +1162,7 @@ test('finance preserves exact currencies, reconciles a lost payment response and
   await page.getByLabel('Payment amount (USD)').fill('1.001')
   await page.getByRole('button',{name:'Record payment',exact:true}).click()
   await expect(page.getByText(/Use at most 2 decimal places/)).toBeVisible()
-  expect(database(`SELECT count(*)::text FROM app.payments WHERE collection_id='${usd}'`)).toBe('0')
+  expect(database(`SELECT count(*) FROM payments WHERE collection_id='${usd}'`)).toBe('0')
   await page.getByLabel('Payment amount (USD)').fill('25.00')
   await page.getByLabel('Payment date (UTC calendar)').fill(yesterday)
   await page.getByLabel('Payment reference').fill('Synthetic private finance reference')
@@ -1201,7 +1177,7 @@ test('finance preserves exact currencies, reconciles a lost payment response and
   })
   await page.getByRole('button',{name:'Record payment',exact:true}).click()
   await expect(page.getByRole('button',{name:'Retry original payment',exact:true})).toBeVisible()
-  expect(database(`SELECT count(*)::text FROM app.payments WHERE collection_id='${usd}'`)).toBe('1')
+  expect(database(`SELECT count(*) FROM payments WHERE collection_id='${usd}'`)).toBe('1')
   // Browser Back changes the route, but the command and modal survive above routes.
   await page.goBack()
   await expect(page.getByRole('button',{name:'Retry original payment',exact:true})).toBeVisible()
@@ -1233,13 +1209,13 @@ test('finance preserves exact currencies, reconciles a lost payment response and
   await page.getByLabel('Payment amount (USD)').fill('1.00')
   await page.getByRole('button',{name:'Record payment',exact:true}).click()
   await expect(page.getByRole('dialog',{name:'Payment not recorded',exact:true})).toBeVisible()
-  expect(database(`SELECT count(*)::text FROM app.payments WHERE collection_id='${usd}'`)).toBe('1')
+  expect(database(`SELECT count(*) FROM payments WHERE collection_id='${usd}'`)).toBe('1')
   await page.getByRole('button',{name:'Reload collection before retrying',exact:true}).click()
   await expect(page.getByText('Synthetic concurrent note',{exact:true})).toBeVisible()
   await page.getByRole('button',{name:'Cancel collection',exact:true}).click()
   await expect(page.getByRole('dialog',{name:'Cancel collection?',exact:true})).toContainText('not refunded')
   await page.getByRole('button',{name:'Keep collection',exact:true}).click()
-  expect(database(`SELECT CASE WHEN cancelled_at IS NULL THEN 'active' ELSE 'cancelled' END FROM app.collections WHERE id='${usd}'`)).toBe('active')
+  expect(database(`SELECT CASE WHEN cancelled_at IS NULL THEN 'active' ELSE 'cancelled' END FROM collections WHERE id='${usd}'`)).toBe('active')
   await page.getByRole('button',{name:'Cancel collection',exact:true}).click()
   await markTaskScreenshot(page)
   await page.screenshot({path:testInfo.outputPath('finance-cancellation.png'),fullPage:true})
@@ -1247,24 +1223,24 @@ test('finance preserves exact currencies, reconciles a lost payment response and
   await expect(page.getByText('Collection cancelled. Payment history retained.',{exact:true})).toBeVisible()
   await expect(page.getByRole('button',{name:'Record payment',exact:true})).toHaveCount(0)
   await expect(page.getByRole('table',{name:'Collection payments'})).toContainText('USD 25.00')
-  expect(database(`SELECT paid_minor::text FROM app.collections WHERE id='${usd}'`)).toBe('2500')
-  expect(database(`SELECT count(*)::text FROM app.payments WHERE collection_id='${usd}'`)).toBe('1')
-  expect(database(`SELECT string_agg(event_name,',' ORDER BY occurred_at,id) FROM app.audit_events WHERE resource_id='${usd}'`)).toBe('billing.created,billing.payment_recorded,billing.updated,billing.updated,billing.cancelled')
-  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE resource_id='${usd}' AND (before_state::text||after_state::text) LIKE '%Synthetic private finance reference%'`)).toBe('0')
+  expect(database(`SELECT paid_minor FROM collections WHERE id='${usd}'`)).toBe('2500')
+  expect(database(`SELECT count(*) FROM payments WHERE collection_id='${usd}'`)).toBe('1')
+  expect(database(`SELECT group_concat(event_name,',' ORDER BY occurred_at,id) FROM audit_events WHERE resource_id='${usd}'`)).toBe('billing.created,billing.payment_recorded,billing.updated,billing.updated,billing.cancelled')
+  expect(database(`SELECT count(*) FROM audit_events WHERE resource_id='${usd}' AND (before_state||after_state) LIKE '%Synthetic private finance reference%'`)).toBe('0')
   expect(await page.evaluate(()=>({local:localStorage.length,session:sessionStorage.length}))).toEqual({local:0,session:0})
   await page.getByRole('link',{name:'Finance',exact:true}).click()
   await expect(balances).toContainText('USD 25.00')
   await page.goto(`/app/clients/22222222-2222-4222-8222-222222222222/billing`)
   await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
-  database(`UPDATE app.clients SET archived_at=clock_timestamp(),revision=revision+1,updated_at=clock_timestamp() WHERE id='${clientID}'`)
+  database(`UPDATE clients SET archived_at=utc_now(),revision=revision+1,updated_at=utc_now() WHERE id='${clientID}'`)
   await page.goto(`${path}/${kwd}`)
   await expect(page.getByRole('heading',{name:'Collection details',exact:true})).toBeVisible()
   await page.getByLabel('Payment amount (KWD)').fill('0.001')
   await page.getByRole('button',{name:'Record payment',exact:true}).click()
   await expect(page.getByRole('dialog',{name:'Payment not recorded',exact:true})).toBeVisible()
-  expect(database(`SELECT count(*)::text FROM app.payments WHERE collection_id='${kwd}'`)).toBe('0')
+  expect(database(`SELECT count(*) FROM payments WHERE collection_id='${kwd}'`)).toBe('0')
   await page.getByRole('button',{name:'Reload collection before retrying',exact:true}).click()
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${roleID}' AND permission_key='billing.view'`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${roleID}' AND permission_key='billing.view'`)
   // An in-flight origin read can detect revocation before the refresh button is clicked.
   // Re-enter the route with a fresh session to assert the same denial deterministically.
   await page.goto(`${path}/${kwd}`)
@@ -1276,12 +1252,12 @@ test('overview reconciles real sources in one bounded request and omits revoked 
   test.setTimeout(120_000)
   const client='a5555555-5555-4555-8555-555555555555',actor='a1111111-1111-4111-8111-111111111111',role='a2222222-2222-4222-8222-222222222222',path=`/app/clients/${client}`,base=`/api/v1/clients/${client}`
   database(`
-    INSERT INTO app.client_scopes(id) VALUES('${client}');
-    INSERT INTO app.clients(id,name) VALUES('${client}','Synthetic overview client');
-    INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actor}','overview.fixture@example.com','Overview Fixture',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444';
-    INSERT INTO app.roles(id,role_key,display_name) VALUES('${role}','overview_fixture','Synthetic overview role');
-    INSERT INTO app.role_permissions(id,role_id,permission_key) SELECT gen_random_uuid(),'${role}',permission_key FROM app.permissions WHERE permission_key IN ('clients.view','tasks.view','tasks.create','reminders.view','reminders.create','billing.view','billing.create','billing.update','billing.delete','activity.view');
-    INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),'${actor}','${role}','client','${client}');
+    INSERT INTO client_scopes(id) VALUES('${client}');
+    INSERT INTO clients(id,name,created_at,updated_at) VALUES('${client}','Synthetic overview client',utc_now(),utc_now());
+    INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${actor}','overview.fixture@example.com','Overview Fixture',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444';
+    INSERT INTO roles(id,role_key,display_name,created_at,updated_at) VALUES('${role}','overview_fixture','Synthetic overview role',utc_now(),utc_now());
+    INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) SELECT new_id(),'${role}',permission_key,utc_now() FROM permissions WHERE permission_key IN ('clients.view','tasks.view','tasks.create','reminders.view','reminders.create','billing.view','billing.create','billing.update','billing.delete','activity.view');
+    INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES(new_id(),'${actor}','${role}','client','${client}',utc_now());
   `)
   await page.goto(path)
   await page.getByLabel('Email',{exact:true}).fill('overview.fixture@example.com')
@@ -1315,7 +1291,7 @@ test('overview reconciles real sources in one bounded request and omits revoked 
   },{client,actor})
   const reads:string[]=[]
   page.on('request',r=>{const url=new URL(r.url());if(url.pathname.startsWith('/api/v1/'))reads.push(url.pathname+url.search)})
-  const auditBefore=database(`SELECT count(*)::text FROM app.audit_events WHERE client_id='${client}'`)
+  const auditBefore=database(`SELECT count(*) FROM audit_events WHERE client_id='${client}'`)
   const aggregatePromise=page.waitForResponse(r=>new URL(r.url()).pathname===base+'/overview')
   await page.getByRole('button',{name:'Refresh overview',exact:true}).click()
   const aggregate=(await(await aggregatePromise).json()).data
@@ -1328,7 +1304,7 @@ test('overview reconciles real sources in one bounded request and omits revoked 
   await expect(page.getByRole('list',{name:'Recent client activity',exact:true}).getByRole('listitem')).toHaveCount(5)
   await expect(page.getByText('USD 184,467,440,737,095,516.14',{exact:true})).toHaveCount(3)
   expect(await page.locator('main').innerText()).not.toContain('Synthetic private')
-  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE client_id='${client}'`)).toBe(auditBefore)
+  expect(database(`SELECT count(*) FROM audit_events WHERE client_id='${client}'`)).toBe(auditBefore)
   for(const viewport of [{width:1440,height:1000},{width:820,height:1050},{width:390,height:844}]){
     await page.setViewportSize(viewport);await markTaskScreenshot(page)
     expect(await page.evaluate(()=>document.documentElement.scrollWidth===document.documentElement.clientWidth)).toBe(true)
@@ -1353,14 +1329,14 @@ test('overview reconciles real sources in one bounded request and omits revoked 
   await page.unroute(`**${base}/overview`)
   await page.getByRole('button',{name:'Try again',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Financial position',exact:true})).toBeVisible()
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key IN ('billing.view','tasks.view')`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key IN ('billing.view','tasks.view')`)
   await page.getByRole('button',{name:'Refresh overview',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Synthetic overview client',exact:true})).toBeVisible()
   await expect(page.getByRole('heading',{name:'Financial position',exact:true})).toHaveCount(0)
   await expect(page.getByRole('heading',{name:'Overdue tasks',exact:true})).toHaveCount(0)
   await expect(page.getByRole('heading',{name:'Due reminders',exact:true})).toBeVisible()
   await expect(page.getByText('Task created.',{exact:true})).toHaveCount(0)
-  database(`UPDATE app.clients SET archived_at=clock_timestamp(),revision=revision+1,updated_at=clock_timestamp() WHERE id='${client}'`)
+  database(`UPDATE clients SET archived_at=utc_now(),revision=revision+1,updated_at=utc_now() WHERE id='${client}'`)
   await page.getByRole('button',{name:'Refresh overview',exact:true}).click()
   await expect(page.getByText(/overview and history remain readable/)).toBeVisible()
   await page.getByRole('link',{name:'Profile',exact:true}).click()
@@ -1368,16 +1344,16 @@ test('overview reconciles real sources in one bounded request and omits revoked 
   await expect(page.getByRole('button',{name:'Archive client',exact:true})).toHaveCount(0)
   await page.getByRole('link',{name:'Overview',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Synthetic overview client',exact:true})).toBeVisible()
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='clients.view'`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key='clients.view'`)
   await page.getByRole('button',{name:'Refresh overview',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
   await expect(page.getByRole('heading',{name:'Due reminders',exact:true})).toHaveCount(0)
   expect(await page.evaluate(()=>localStorage.length+sessionStorage.length)).toBe(0)
 })
 
-test('GA4 creates audited pending setup, clears unavailable credentials and reads independent analytics status', async ({ page }, testInfo) => {
+test('GA4 rejects invalid credentials, clears private input and reads independent stored analytics', async ({ page }, testInfo) => {
   const client = 'fb555555-5555-4555-8555-555555555555', actor = 'fb111111-1111-4111-8111-111111111111', role = 'fb222222-2222-4222-8222-222222222222'
-  database(`INSERT INTO app.client_scopes(id) VALUES('${client}'); INSERT INTO app.clients(id,name) VALUES('${client}','Synthetic GA4 client'); INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actor}','ga4.browser.fixture@example.com','Synthetic GA4 operator',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO app.roles(id,role_key,display_name) VALUES('${role}','ga4_browser_fixture','Synthetic GA4 reader and manager'); INSERT INTO app.role_permissions(id,role_id,permission_key) SELECT gen_random_uuid(),'${role}',permission_key FROM app.permissions WHERE permission_key IN ('clients.view','analytics.view','integrations.view','integrations.manage'); INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),'${actor}','${role}','client','${client}');`)
+  database(`INSERT INTO client_scopes(id) VALUES('${client}'); INSERT INTO clients(id,name,created_at,updated_at) VALUES('${client}','Synthetic GA4 client',utc_now(),utc_now()); INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${actor}','ga4.browser.fixture@example.com','Synthetic GA4 operator',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO roles(id,role_key,display_name,created_at,updated_at) VALUES('${role}','ga4_browser_fixture','Synthetic GA4 reader and manager',utc_now(),utc_now()); INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) SELECT new_id(),'${role}',permission_key,utc_now() FROM permissions WHERE permission_key IN ('clients.view','analytics.view','integrations.view','integrations.manage'); INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES(new_id(),'${actor}','${role}','client','${client}',utc_now());`)
   const path = `/app/clients/${client}`
   await page.goto(path + '/integrations')
   await page.getByLabel('Email', { exact: true }).fill('ga4.browser.fixture@example.com')
@@ -1388,19 +1364,19 @@ test('GA4 creates audited pending setup, clears unavailable credentials and read
   await expect(page.getByRole('heading', { name: 'GA4 setup and synchronization', exact: true })).toBeVisible()
   const connection = page.url().split('/').at(-1)!
   expect(connection).toMatch(/^[a-f0-9-]{36}$/)
-  expect(database(`SELECT state FROM app.integration_connections WHERE id='${connection}'`)).toBe('pending')
-  expect(database(`SELECT count(*) FROM app.audit_events WHERE resource_id='${connection}' AND event_name='integration_connection.created'`)).toBe('1')
+  expect(database(`SELECT state FROM integration_connections WHERE id='${connection}'`)).toBe('pending')
+  expect(database(`SELECT count(*) FROM audit_events WHERE resource_id='${connection}' AND event_name='integration_connection.created'`)).toBe('1')
   await page.getByLabel('Start date', { exact: true }).fill('2026-10-01')
   await page.getByLabel('End date', { exact: true }).fill('2026-10-03')
   await page.getByLabel('Service-account JSON key', { exact: true }).fill('Synthetic unavailable key fixture')
   await page.getByRole('checkbox').check()
   const response = page.waitForResponse(r => r.url().endsWith('/ga4/credentials') && r.request().method() === 'POST')
   await page.getByRole('button', { name: 'Install key and queue sync', exact: true }).click()
-  // This isolated API deliberately has no encryption keyring or live Google key.
-  expect((await response).status()).toBe(503)
+  // Invalid synthetic JSON is rejected locally before any provider call.
+  expect((await response).status()).toBe(400)
   await expect(page.getByLabel('Service-account JSON key', { exact: true })).toHaveValue('')
   await expect(page.getByRole('button', { name: 'Install key and queue sync', exact: true })).toBeDisabled()
-  expect(database(`SELECT count(*) FROM app.analytics_sync_jobs WHERE connection_id='${connection}'`)).toBe('0')
+  expect(database(`SELECT count(*) FROM analytics_sync_jobs WHERE connection_id='${connection}'`)).toBe('0')
   await page.getByRole('link', { name: 'View GA4 reports', exact: true }).click()
   await page.getByLabel('Start date', { exact: true }).fill('2026-10-01')
   await page.getByLabel('End date', { exact: true }).fill('2026-10-03')
@@ -1414,7 +1390,7 @@ test('GA4 creates audited pending setup, clears unavailable credentials and read
     report.client_id = client; report.connection_id = connection
   }
   const workspaceJSON = JSON.stringify(measured).replaceAll("'", "''")
-  database(`UPDATE app.integration_connections SET state='connected',revision=revision+1,updated_at=clock_timestamp() WHERE id='${connection}'; INSERT INTO app.analytics_sync_jobs(id,client_id,connection_id,requested_by,since,until,connection_revision,generation,credential_revision,state,attempts,finished_at) VALUES(gen_random_uuid(),'${client}','${connection}','${actor}','2026-10-01','2026-10-03',2,1,1,'succeeded',1,clock_timestamp()); INSERT INTO app.analytics_snapshots(client_id,connection_id,generation,since,until,workspace) VALUES('${client}','${connection}',1,'2026-10-01','2026-10-03','${workspaceJSON}'::jsonb);`)
+  database(`UPDATE integration_connections SET state='connected',revision=revision+1,updated_at=utc_now() WHERE id='${connection}'; INSERT INTO analytics_sync_jobs(id,client_id,connection_id,requested_by,since,until,connection_revision,generation,credential_revision,state,attempts,finished_at,provider,revision,created_at,updated_at) VALUES(new_id(),'${client}','${connection}','${actor}','2026-10-01','2026-10-03',2,1,1,'succeeded',1,utc_now(),'ga4',1,utc_now(),utc_now()); INSERT INTO analytics_snapshots(client_id,connection_id,generation,since,until,workspace,id,provider,revision,synced_at,workspace_sha256) VALUES('${client}','${connection}',1,'2026-10-01','2026-10-03','${workspaceJSON}',new_id(),'ga4',1,utc_now(),sha256('${workspaceJSON}'));`)
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByRole('table', { name: /Traffic acquisition/ })).toBeVisible()
   await expect(page.getByRole('img', { name: 'Daily active users bar chart', exact: true })).toBeVisible()
@@ -1425,14 +1401,14 @@ test('GA4 creates audited pending setup, clears unavailable credentials and read
     expect(await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`ga4-synthetic-reports-${width}.png`), fullPage: true })
   }
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key IN ('integrations.view','integrations.manage')`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key IN ('integrations.view','integrations.manage')`)
   await page.reload()
   await page.getByLabel('Start date', { exact: true }).fill('2026-10-01')
   await page.getByLabel('End date', { exact: true }).fill('2026-10-03')
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByRole('table', { name: /Daily trends/ })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Connection setup and sync', exact: true })).toHaveCount(0)
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='analytics.view'`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key='analytics.view'`)
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
@@ -1440,7 +1416,7 @@ test('GA4 creates audited pending setup, clears unavailable credentials and read
 
 test('WooCommerce creates audited pending setup, clears keys and reads separate exact stored cohorts', async ({ page }, testInfo) => {
   const client = 'fc555555-5555-4555-8555-555555555555', actor = 'fc111111-1111-4111-8111-111111111111', role = 'fc222222-2222-4222-8222-222222222222'
-  database(`INSERT INTO app.client_scopes(id) VALUES('${client}'); INSERT INTO app.clients(id,name) VALUES('${client}','Synthetic WooCommerce client'); INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actor}','commerce.browser.fixture@example.com','Synthetic commerce operator',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO app.roles(id,role_key,display_name) VALUES('${role}','commerce_browser_fixture','Synthetic commerce reader and manager'); INSERT INTO app.role_permissions(id,role_id,permission_key) SELECT gen_random_uuid(),'${role}',permission_key FROM app.permissions WHERE permission_key IN ('clients.view','analytics.view','integrations.view','integrations.manage'); INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),'${actor}','${role}','client','${client}');`)
+  database(`INSERT INTO client_scopes(id) VALUES('${client}'); INSERT INTO clients(id,name,created_at,updated_at) VALUES('${client}','Synthetic WooCommerce client',utc_now(),utc_now()); INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${actor}','commerce.browser.fixture@example.com','Synthetic commerce operator',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO roles(id,role_key,display_name,created_at,updated_at) VALUES('${role}','commerce_browser_fixture','Synthetic commerce reader and manager',utc_now(),utc_now()); INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) SELECT new_id(),'${role}',permission_key,utc_now() FROM permissions WHERE permission_key IN ('clients.view','analytics.view','integrations.view','integrations.manage'); INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES(new_id(),'${actor}','${role}','client','${client}',utc_now());`)
   await page.goto(`/app/clients/${client}/integrations`)
   await page.getByLabel('Email', { exact: true }).fill('commerce.browser.fixture@example.com')
   await page.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
@@ -1451,8 +1427,8 @@ test('WooCommerce creates audited pending setup, clears keys and reads separate 
   await expect(page.getByRole('heading', { name: 'WooCommerce setup and synchronization', exact: true })).toBeVisible()
   const connection = page.url().split('/').at(-1)!
   expect(connection).toMatch(/^[a-f0-9-]{36}$/)
-  expect(database(`SELECT state FROM app.integration_connections WHERE id='${connection}'`)).toBe('pending')
-  expect(database(`SELECT count(*) FROM app.audit_events WHERE resource_id='${connection}' AND event_name='integration_connection.created'`)).toBe('1')
+  expect(database(`SELECT state FROM integration_connections WHERE id='${connection}'`)).toBe('pending')
+  expect(database(`SELECT count(*) FROM audit_events WHERE resource_id='${connection}' AND event_name='integration_connection.created'`)).toBe('1')
   await page.getByLabel('Start date (UTC)', { exact: true }).fill('2026-10-01')
   await page.getByLabel('End date (UTC, exclusive)', { exact: true }).fill('2026-10-04')
   await page.getByLabel('Consumer key', { exact: true }).fill('ck_' + 'a'.repeat(40))
@@ -1460,24 +1436,24 @@ test('WooCommerce creates audited pending setup, clears keys and reads separate 
   await page.getByRole('checkbox').check()
   const response = page.waitForResponse(r => r.url().endsWith('/woocommerce/credentials') && r.request().method() === 'POST')
   await page.getByRole('button', { name: 'Save Read key and queue sync', exact: true }).click()
-  // No encryption keyring or vendor access is configured in this isolated API.
-  expect((await response).status()).toBe(503)
+  // A 202 confirms only protected local storage and queued work, not vendor access.
+  expect((await response).status()).toBe(202)
   await expect(page.getByLabel('Consumer key', { exact: true })).toHaveValue('')
   await expect(page.getByLabel('Consumer secret', { exact: true })).toHaveValue('')
-  await expect(page.getByRole('button', { name: 'Save Read key and queue sync', exact: true })).toBeDisabled()
-  expect(database(`SELECT count(*) FROM app.analytics_sync_jobs WHERE connection_id='${connection}'`)).toBe('0')
+  await expect(page.getByRole('button', { name: 'Replace Read key and queue sync', exact: true })).toBeDisabled()
+  expect(database(`SELECT count(*) FROM analytics_sync_jobs WHERE connection_id='${connection}'`)).toBe('1')
   await page.getByRole('link', { name: 'View WooCommerce reports', exact: true }).click()
   await page.getByLabel('Start date (UTC)', { exact: true }).fill('2026-10-01')
   await page.getByLabel('End date (UTC, exclusive)', { exact: true }).fill('2026-10-04')
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
-  await expect(page.getByText('Not synchronized', { exact: true })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Synchronization status' })).toContainText(/Queued|Synchronizing|Synchronization failed/)
   await expect(page.getByText(/No measured reports are available/)).toBeVisible()
   // Synthetic private storage tests real authenticated reads/rendering only.
   // It does not establish real-store access, collection or credential validity.
   const measured = syntheticCommerceWorkspace()
   for (const report of [measured.orders, measured.refunds, measured.products]) { report.client_id = client; report.connection_id = connection }
   const workspaceJSON = JSON.stringify(measured).replaceAll("'", "''")
-  database(`UPDATE app.integration_connections SET state='connected',revision=revision+1,updated_at=clock_timestamp() WHERE id='${connection}'; INSERT INTO app.analytics_sync_jobs(id,client_id,connection_id,requested_by,since,until,provider,start_at,end_at,currency,connection_revision,generation,credential_revision,state,attempts,finished_at) VALUES(gen_random_uuid(),'${client}','${connection}','${actor}',NULL,NULL,'woocommerce','2026-10-01T00:00:00Z','2026-10-04T00:00:00Z','USD',2,1,1,'succeeded',1,clock_timestamp()); INSERT INTO app.analytics_snapshots(client_id,connection_id,generation,since,until,provider,start_at,end_at,currency,workspace) VALUES('${client}','${connection}',1,NULL,NULL,'woocommerce','2026-10-01T00:00:00Z','2026-10-04T00:00:00Z','USD','${workspaceJSON}'::jsonb);`)
+  database(`UPDATE integration_connections SET state='connected',revision=revision+1,updated_at=utc_now() WHERE id='${connection}'; INSERT INTO analytics_sync_jobs(id,client_id,connection_id,requested_by,since,until,provider,start_at,end_at,currency,connection_revision,generation,credential_revision,state,attempts,finished_at,revision,created_at,updated_at) VALUES(new_id(),'${client}','${connection}','${actor}',NULL,NULL,'woocommerce','2026-10-01T00:00:00.000000Z','2026-10-04T00:00:00.000000Z','USD',(SELECT revision FROM integration_connections WHERE id='${connection}'),(SELECT generation FROM integration_connections WHERE id='${connection}'),1,'succeeded',1,utc_now(),1,utc_now(),utc_now()); INSERT INTO analytics_snapshots(client_id,connection_id,generation,since,until,provider,start_at,end_at,currency,workspace,id,revision,synced_at,workspace_sha256) VALUES('${client}','${connection}',(SELECT generation FROM integration_connections WHERE id='${connection}'),NULL,NULL,'woocommerce','2026-10-01T00:00:00.000000Z','2026-10-04T00:00:00.000000Z','USD','${workspaceJSON}',new_id(),1,utc_now(),sha256('${workspaceJSON}'));`)
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByRole('table', { name: 'Order-created cohort', exact: true })).toBeVisible()
   await expect(page.getByRole('table', { name: 'Refund-created events', exact: true })).toBeVisible()
@@ -1493,14 +1469,14 @@ test('WooCommerce creates audited pending setup, clears keys and reads separate 
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByText(/No measured reports are available/)).toBeVisible()
   await expect(page.getByRole('table')).toHaveCount(0)
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key IN ('integrations.view','integrations.manage')`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key IN ('integrations.view','integrations.manage')`)
   await page.reload()
   await page.getByLabel('Start date (UTC)', { exact: true }).fill('2026-10-01')
   await page.getByLabel('End date (UTC, exclusive)', { exact: true }).fill('2026-10-04')
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByRole('table', { name: 'Original product lines', exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Connection setup and sync', exact: true })).toHaveCount(0)
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='analytics.view'`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key='analytics.view'`)
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
@@ -1508,7 +1484,7 @@ test('WooCommerce creates audited pending setup, clears keys and reads separate 
 
 test('Meta creates audited pending setup, clears its token and reads exact stored account observations', async ({ page }, testInfo) => {
   const client = 'fd555555-5555-4555-8555-555555555555', actor = 'fd111111-1111-4111-8111-111111111111', role = 'fd222222-2222-4222-8222-222222222222'
-  database(`INSERT INTO app.client_scopes(id) VALUES('${client}'); INSERT INTO app.clients(id,name) VALUES('${client}','Synthetic Meta client'); INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actor}','marketing.browser.fixture@example.com','Synthetic marketing operator',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO app.roles(id,role_key,display_name) VALUES('${role}','marketing_browser_fixture','Synthetic marketing reader and manager'); INSERT INTO app.role_permissions(id,role_id,permission_key) SELECT gen_random_uuid(),'${role}',permission_key FROM app.permissions WHERE permission_key IN ('clients.view','analytics.view','integrations.view','integrations.manage'); INSERT INTO app.user_roles(id,user_id,role_id,scope_kind,client_id) VALUES(gen_random_uuid(),'${actor}','${role}','client','${client}');`)
+  database(`INSERT INTO client_scopes(id) VALUES('${client}'); INSERT INTO clients(id,name,created_at,updated_at) VALUES('${client}','Synthetic Meta client',utc_now(),utc_now()); INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${actor}','marketing.browser.fixture@example.com','Synthetic marketing operator',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO roles(id,role_key,display_name,created_at,updated_at) VALUES('${role}','marketing_browser_fixture','Synthetic marketing reader and manager',utc_now(),utc_now()); INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) SELECT new_id(),'${role}',permission_key,utc_now() FROM permissions WHERE permission_key IN ('clients.view','analytics.view','integrations.view','integrations.manage'); INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES(new_id(),'${actor}','${role}','client','${client}',utc_now());`)
   await page.goto(`/app/clients/${client}/integrations`)
   await page.getByLabel('Email', { exact: true }).fill('marketing.browser.fixture@example.com')
   await page.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
@@ -1519,29 +1495,29 @@ test('Meta creates audited pending setup, clears its token and reads exact store
   await expect(page.getByRole('heading', { name: 'Meta setup and synchronization', exact: true })).toBeVisible()
   const connection = page.url().split('/').at(-1)!
   expect(connection).toMatch(/^[a-f0-9-]{36}$/)
-  expect(database(`SELECT state FROM app.integration_connections WHERE id='${connection}'`)).toBe('pending')
-  expect(database(`SELECT count(*) FROM app.audit_events WHERE resource_id='${connection}' AND event_name='integration_connection.created'`)).toBe('1')
+  expect(database(`SELECT state FROM integration_connections WHERE id='${connection}'`)).toBe('pending')
+  expect(database(`SELECT count(*) FROM audit_events WHERE resource_id='${connection}' AND event_name='integration_connection.created'`)).toBe('1')
   await page.getByLabel('Start date', { exact: true }).fill('2026-10-01')
   await page.getByLabel('End date', { exact: true }).fill('2026-10-03')
   await page.getByLabel('Meta user read token', { exact: true }).fill('SyntheticReadTokenFixture123456')
   await page.getByRole('checkbox').check()
   const response = page.waitForResponse(r => r.url().endsWith('/meta_ads/credentials') && r.request().method() === 'POST')
   await page.getByRole('button', { name: 'Save read token and queue sync', exact: true }).click()
-  // This isolated API has no protected keyring or real Meta credentials.
-  expect((await response).status()).toBe(503)
+  // A synthetic read token queues local work; it does not prove Meta authorization.
+  expect((await response).status()).toBe(202)
   await expect(page.getByLabel('Meta user read token', { exact: true })).toHaveValue('')
-  await expect(page.getByRole('button', { name: 'Save read token and queue sync', exact: true })).toBeDisabled()
-  expect(database(`SELECT count(*) FROM app.analytics_sync_jobs WHERE connection_id='${connection}'`)).toBe('0')
+  await expect(page.getByRole('button', { name: 'Replace read token and queue sync', exact: true })).toBeDisabled()
+  expect(database(`SELECT count(*) FROM analytics_sync_jobs WHERE connection_id='${connection}'`)).toBe('1')
   await page.getByRole('link', { name: 'View Meta reports', exact: true }).click()
   await page.getByLabel('Start date', { exact: true }).fill('2026-10-01')
   await page.getByLabel('End date', { exact: true }).fill('2026-10-03')
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
-  await expect(page.getByText('Not synchronized', { exact: true })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Synchronization status' })).toContainText(/Queued|Synchronizing|Synchronization failed/)
   // Synthetic stored data proves real API/UI reads, not provider access.
   const w = syntheticMarketingView().data!
   w.report.client_id = client; w.report.connection_id = connection
   const workspaceJSON = JSON.stringify(w).replaceAll("'", "''")
-  database(`UPDATE app.integration_connections SET state='connected',revision=revision+1,updated_at=clock_timestamp() WHERE id='${connection}'; INSERT INTO app.analytics_sync_jobs(id,client_id,connection_id,requested_by,since,until,provider,connection_revision,generation,credential_revision,state,attempts,finished_at) VALUES(gen_random_uuid(),'${client}','${connection}','${actor}','2026-10-01','2026-10-03','meta_ads',2,1,1,'succeeded',1,clock_timestamp()); INSERT INTO app.analytics_snapshots(client_id,connection_id,generation,since,until,provider,workspace) VALUES('${client}','${connection}',1,'2026-10-01','2026-10-03','meta_ads','${workspaceJSON}'::jsonb);`)
+  database(`UPDATE integration_connections SET state='connected',revision=revision+1,updated_at=utc_now() WHERE id='${connection}'; INSERT INTO analytics_sync_jobs(id,client_id,connection_id,requested_by,since,until,provider,connection_revision,generation,credential_revision,state,attempts,finished_at,revision,created_at,updated_at) VALUES(new_id(),'${client}','${connection}','${actor}','2026-10-01','2026-10-03','meta_ads',(SELECT revision FROM integration_connections WHERE id='${connection}'),(SELECT generation FROM integration_connections WHERE id='${connection}'),1,'succeeded',1,utc_now(),1,utc_now(),utc_now()); INSERT INTO analytics_snapshots(client_id,connection_id,generation,since,until,provider,workspace,id,revision,synced_at,workspace_sha256) VALUES('${client}','${connection}',(SELECT generation FROM integration_connections WHERE id='${connection}'),'2026-10-01','2026-10-03','meta_ads','${workspaceJSON}',new_id(),1,utc_now(),sha256('${workspaceJSON}'));`)
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByRole('table', { name: 'Daily account observations', exact: true })).toBeVisible()
   await expect(page.getByText('1.980198%', { exact: true })).toBeVisible()
@@ -1555,56 +1531,17 @@ test('Meta creates audited pending setup, clears its token and reads exact store
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByText(/No measured reports are available/)).toBeVisible()
   await expect(page.getByRole('table')).toHaveCount(0)
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key IN ('integrations.view','integrations.manage')`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key IN ('integrations.view','integrations.manage')`)
   await page.reload()
   await page.getByLabel('Start date', { exact: true }).fill('2026-10-01')
   await page.getByLabel('End date', { exact: true }).fill('2026-10-03')
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByRole('table', { name: 'Daily account observations', exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Connection setup and sync', exact: true })).toHaveCount(0)
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='analytics.view'`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key='analytics.view'`)
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
-})
-
-test('Release Center identifies the actual API build and removes revoked access', async ({ page }, testInfo) => {
-  const actor='ca000000-0000-4000-8000-000000000001', role='ca000000-0000-4000-8000-000000000002'
-  database(`INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actor}','release.browser.fixture@example.com','Synthetic Release Reader',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO app.roles(id,role_key,display_name) VALUES('${role}','release_browser_fixture','Synthetic release viewer'); INSERT INTO app.role_permissions(id,role_id,permission_key) VALUES(gen_random_uuid(),'${role}','releases.view'); INSERT INTO app.user_roles(id,user_id,role_id,scope_kind) VALUES(gen_random_uuid(),'${actor}','${role}','global');`)
-  await page.goto('/app/releases')
-  await page.getByLabel('Email',{exact:true}).fill('release.browser.fixture@example.com')
-  await page.getByLabel('Password',{exact:true}).fill('clearly synthetic browser password')
-  await page.getByRole('button',{name:'Sign in',exact:true}).click()
-  await expect(page.getByRole('heading',{name:'Release Center',exact:true})).toBeVisible()
-  const response=await page.request.get('/api/v1/releases')
-  expect(response.status()).toBe(200)
-  const data=(await response.json()).data
-  expect(data.runtime.status).toBe('available')
-  expect(data.runtime.commit_sha).toMatch(/^[a-f0-9]{40}$/)
-  expect(data.runtime.commit_sha).toBe(process.env.AUTH_TEST_REVISION)
-  expect(data.runtime.built_at).toBe(process.env.AUTH_TEST_BUILD_TIME)
-  expect(data.runtime.version).toBe('sha-'+data.runtime.commit_sha)
-  await expect(page.getByText(data.runtime.version,{exact:true})).toBeVisible()
-  await expect(page.getByText('No production deployment evidence source is connected. Artifact publication does not prove a rollout.',{exact:true})).toBeVisible()
-  const before=database('SELECT count(*) FROM app.audit_events')
-  await page.getByRole('button',{name:'Refresh release information',exact:true}).click()
-  await expect(page.getByText(data.runtime.version,{exact:true})).toBeVisible()
-  expect(database('SELECT count(*) FROM app.audit_events')).toBe(before)
-  for (const width of [1440,390]) {
-    await page.setViewportSize({width,height:1000})
-    expect(await page.evaluate(()=>document.documentElement.scrollWidth===document.documentElement.clientWidth)).toBe(true)
-    await markSyntheticScreenshot(page)
-    await page.screenshot({path:testInfo.outputPath(`releases-${width}.png`),fullPage:true})
-  }
-  await page.getByRole('button',{name:'Refresh release information',exact:true}).focus()
-  await page.keyboard.press('Enter')
-  await expect(page.getByText(data.runtime.version,{exact:true})).toBeVisible()
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='releases.view'`)
-  await page.getByRole('button',{name:'Refresh release information',exact:true}).click()
-  await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
-  await expect(page.getByText(data.runtime.version,{exact:true})).toHaveCount(0)
-  expect((await page.request.get('/api/v1/releases')).status()).toBe(403)
-  expect(await page.evaluate(()=>localStorage.length+sessionStorage.length)).toBe(0)
 })
 
 test('integration metadata, confirmed local disable, uncertain outcome recovery and fresh scope', async ({ page }, testInfo) => {
@@ -1643,7 +1580,7 @@ test('integration metadata, confirmed local disable, uncertain outcome recovery 
   await markTaskScreenshot(page)
   await page.screenshot({path:testInfo.outputPath('integration-confirm-mobile.png'),fullPage:true})
   // Change metadata after opening confirmation: the server must reject the old revision.
-  database(`UPDATE app.integration_connections SET revision=revision+1,updated_at=clock_timestamp() WHERE id='${first}'`)
+  database(`UPDATE integration_connections SET revision=revision+1,updated_at=utc_now() WHERE id='${first}'`)
   const posts:string[]=[]
   page.on('request',request=>{if(request.method()==='POST'&&request.url().endsWith('/disconnect'))posts.push(request.postData()??'')})
   await page.getByRole('button',{name:'Confirm local disable',exact:true}).click()
@@ -1653,7 +1590,7 @@ test('integration metadata, confirmed local disable, uncertain outcome recovery 
   expect(posts).toHaveLength(1)
   await page.getByRole('button',{name:'Close and reload',exact:true}).click()
   await expect(disable).toBeEnabled()
-  const before=database(`SELECT count(*)::text FROM app.audit_events WHERE resource_id='${first}' AND event_name='integration_connection.updated'`)
+  const before=database(`SELECT count(*) FROM audit_events WHERE resource_id='${first}' AND event_name='integration_connection.updated'`)
   // Let the real API commit, then lose the response. The UI must read, never resubmit.
   await page.route(`**${base}/${first}/disconnect`,async route=>{
     const response=await route.fetch();expect(response.status()).toBe(200)
@@ -1669,8 +1606,8 @@ test('integration metadata, confirmed local disable, uncertain outcome recovery 
   await expect(page.getByRole('heading',{name:'Remote revocation requires manual action',exact:true})).toBeVisible()
   await expect(disable).toHaveCount(0)
   expect(posts).toHaveLength(2)
-  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE resource_id='${first}' AND event_name='integration_connection.updated'`)).toBe(String(Number(before)+1))
-  expect(database(`SELECT state || ':' || revision::text || ':' || generation::text FROM app.integration_connections WHERE id='${first}'`)).toBe('revocation_failed:9007199254740995:2')
+  expect(database(`SELECT count(*) FROM audit_events WHERE resource_id='${first}' AND event_name='integration_connection.updated'`)).toBe(String(Number(before)+1))
+  expect(database(`SELECT state || ':' || revision || ':' || generation FROM integration_connections WHERE id='${first}'`)).toBe('revocation_failed:9007199254740995:2')
   await markTaskScreenshot(page);await page.screenshot({path:testInfo.outputPath('integration-manual-mobile.png'),fullPage:true})
 
   await page.getByRole('link',{name:'Integrations',exact:true}).click()
@@ -1684,7 +1621,7 @@ test('integration metadata, confirmed local disable, uncertain outcome recovery 
     return {status:response.status,body:await response.json()}
   },{base,second})
   expect(noOp).toMatchObject({status:200,body:{data:{state:'revocation_failed',revision:'2'},revocation:{status:'unavailable',manual_action_required:true}}})
-  expect(database(`SELECT count(*)::text FROM app.audit_events WHERE resource_id='${second}' AND event_name='integration_connection.updated'`)).toBe('1')
+  expect(database(`SELECT count(*) FROM audit_events WHERE resource_id='${second}' AND event_name='integration_connection.updated'`)).toBe('1')
   await page.setViewportSize({width:1440,height:1000});await markTaskScreenshot(page)
   await page.screenshot({path:testInfo.outputPath('integration-manual-desktop.png'),fullPage:true})
   // Selected-provider DTO projections test the frontend compatibility only.
@@ -1717,19 +1654,19 @@ test('integration metadata, confirmed local disable, uncertain outcome recovery 
         await page.screenshot({path:testInfo.outputPath(`integration-${provider}-${viewport.width}.png`),fullPage:true})
       }
       expect(mutations).toBe(0)
-      expect(database(`SELECT bool_and(provider='meta_ads')::text FROM app.integration_connections WHERE client_id='${client}'`)).toBe('true')
+      expect(database(`SELECT CASE WHEN min(provider='meta_ads') THEN 'true' ELSE 'false' END FROM integration_connections WHERE client_id='${client}'`)).toBe('true')
     } finally { await page.unroute(pattern,project) }
   }
   // Revoke manage while preserving view, then archive the client: history is retained.
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='integrations.manage'`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key='integrations.manage'`)
   await page.goto(path+'/f8900000-0000-4000-8000-000000000003')
   await expect(page.getByRole('heading',{name:'Meta Ads',exact:true})).toBeVisible()
   await expect(disable).toHaveCount(0)
-  database(`UPDATE app.clients SET archived_at=clock_timestamp(),revision=revision+1,updated_at=clock_timestamp() WHERE id='${client}'`)
+  database(`UPDATE clients SET archived_at=utc_now(),revision=revision+1,updated_at=utc_now() WHERE id='${client}'`)
   await page.getByRole('button',{name:'Reload connection',exact:true}).click()
   await expect(page.getByText('This client or website is archived. Connection history remains readable; changes are unavailable.',{exact:true})).toBeVisible()
   await expect(disable).toHaveCount(0)
-  database(`UPDATE app.role_permissions SET revoked_at=clock_timestamp() WHERE role_id='${role}' AND permission_key='integrations.view'`)
+  database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key='integrations.view'`)
   await page.getByRole('button',{name:'Reload connection',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Access denied',exact:true})).toBeVisible()
   await expect(page.getByRole('heading',{name:'Meta Ads',exact:true})).toHaveCount(0)

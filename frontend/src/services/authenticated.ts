@@ -50,11 +50,10 @@ export async function authenticatedJSON(
     method?: 'POST' | 'PATCH' | 'PUT' | 'DELETE'
     body?: unknown
     signal?: AbortSignal
-    revalidateRelease?: boolean
   } = {},
 ) {
   if (
-    !/^\/api\/v1\/(users|roles|permissions|clients|audit-logs|releases)(?:[/?]|$)/.test(
+    !/^\/api\/v1\/(users|roles|permissions|clients|audit-logs)(?:[/?]|$)/.test(
       path,
     ) ||
     /[\s#\\]/.test(path) ||
@@ -78,9 +77,6 @@ export async function authenticatedJSON(
           }
         : {
             Accept: 'application/json',
-            ...(path === '/api/v1/releases' && options.revalidateRelease
-              ? { 'X-Release-Refresh': 'revalidate' }
-              : {}),
           },
       body: options.method ? JSON.stringify(options.body ?? {}) : null,
     })

@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process'
+import { database } from './database'
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
@@ -9,30 +9,7 @@ let clientID = '',
   firstID = '',
   secondID = '',
   connectionID = ''
-function database(sql: string) {
-  const container = process.env.AUTH_TEST_CONTAINER
-  if (!container || !/^[a-f0-9]{12,64}$/.test(container))
-    throw new Error('An isolated browser-test container is required.')
-  return execFileSync(
-    'docker',
-    [
-      '--host=unix:///var/run/docker.sock',
-      'exec',
-      '-i',
-      container,
-      'psql',
-      '-U',
-      'postgres',
-      '-d',
-      'else',
-      '-v',
-      'ON_ERROR_STOP=1',
-      '-Atc',
-      sql,
-    ],
-    { encoding: 'utf8' },
-  ).trim()
-}
+
 async function login(page: Page, path = '/app/clients') {
   await page.goto(path)
   await page
@@ -69,9 +46,9 @@ test('independent website creation, primary changes, editing, switching and expl
   page,
 }) => {
   test.setTimeout(120_000)
-  if (database(`SELECT count(*) FROM app.users WHERE id='${actor}'`) === '0')
+  if (database(`SELECT count(*) FROM users WHERE id='${actor}'`) === '0')
     database(
-      `INSERT INTO app.users(id,email,display_name,password_hash) SELECT '${actor}','websites.browser.fixture@example.com','Synthetic website operator',password_hash FROM app.users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO app.roles(id,role_key,display_name) VALUES('${role}','website_browser_fixture','Synthetic website manager'); INSERT INTO app.role_permissions(id,role_id,permission_key) SELECT gen_random_uuid(),'${role}',permission_key FROM app.permissions WHERE permission_key IN ('clients.create','clients.view','clients.update','clients.archive','integrations.view','integrations.manage','analytics.view','activity.view'); INSERT INTO app.user_roles(id,user_id,role_id,scope_kind) VALUES(gen_random_uuid(),'${actor}','${role}','global');`,
+      `INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${actor}','websites.browser.fixture@example.com','Synthetic website operator',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO roles(id,role_key,display_name,created_at,updated_at) VALUES('${role}','website_browser_fixture','Synthetic website manager',utc_now(),utc_now()); INSERT INTO role_permissions(id,role_id,permission_key,assigned_at) SELECT new_id(),'${role}',permission_key,utc_now() FROM permissions WHERE permission_key IN ('clients.create','clients.view','clients.update','clients.archive','integrations.view','integrations.manage','analytics.view','activity.view'); INSERT INTO user_roles(id,user_id,role_id,scope_kind,assigned_at) VALUES(new_id(),'${actor}','${role}','global',utc_now());`,
     )
   await login(page)
   const created = await request(page, '/api/v1/clients', {
@@ -123,14 +100,14 @@ test('independent website creation, primary changes, editing, switching and expl
   }
   expect(
     database(
-      `SELECT count(*) FROM app.client_websites WHERE client_id='${clientID}' AND is_primary AND archived_at IS NULL`,
+      `SELECT count(*) FROM client_websites WHERE client_id='${clientID}' AND is_primary AND archived_at IS NULL`,
     ),
   ).toBe('1')
   expect(
     database(
-      `SELECT is_primary FROM app.client_websites WHERE id='${firstID}'`,
+      `SELECT CASE WHEN is_primary THEN 'true' ELSE 'false' END FROM client_websites WHERE id='${firstID}'`,
     ),
-  ).toBe('f')
+  ).toBe('false')
   await page.goto(`${base}/${secondID}`)
   await page.getByRole('button', { name: 'Edit website', exact: true }).click()
   const edit = page.getByRole('dialog', { name: 'Edit website' })
@@ -193,12 +170,12 @@ test('independent website creation, primary changes, editing, switching and expl
   expect(wrong.status()).toBe(404)
   expect(
     database(
-      `SELECT count(*) FROM app.audit_events WHERE resource_kind='website' AND client_id='${clientID}'`,
+      `SELECT count(*) FROM audit_events WHERE resource_kind='website' AND client_id='${clientID}'`,
     ),
   ).toBe('7')
   expect(
     database(
-      `SELECT count(*) FROM app.audit_events WHERE resource_kind='website_integration' AND client_id='${clientID}'`,
+      `SELECT count(*) FROM audit_events WHERE resource_kind='website_integration' AND client_id='${clientID}'`,
     ),
   ).toBe('1')
 })
@@ -224,7 +201,7 @@ test('account language selection persists across reloads and preserves entered w
     await expect
       .poll(() =>
         database(
-          `SELECT locale FROM app.user_locale_preferences WHERE user_id='${actor}'`,
+          `SELECT locale FROM user_locale_preferences WHERE user_id='${actor}'`,
         ),
       )
       .toBe(locale)
@@ -278,7 +255,7 @@ test('website archive preserves reports, hides mutations and records safe histor
   ).toBeVisible()
   expect(
     database(
-      `SELECT count(*) FROM app.analytics_sync_jobs WHERE connection_id='${connectionID}'`,
+      `SELECT count(*) FROM analytics_sync_jobs WHERE connection_id='${connectionID}'`,
     ),
   ).toBe('0')
 })

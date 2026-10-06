@@ -8,7 +8,7 @@ import {
 import { createQueryClient } from '../../app/query-client'
 import { AuthProvider } from './AuthProvider'
 import { useAuth } from './auth-context'
-import { identity } from '../releases/fixtures.test-data'
+import type { Session } from './session'
 import * as service from './auth-service'
 
 vi.mock('./auth-service', () => ({
@@ -19,6 +19,15 @@ vi.mock('./auth-service', () => ({
 vi.mock('../../i18n/preferences', () => ({
   applyAccountLocale: vi.fn().mockResolvedValue(undefined),
 }))
+const identity: Session = {
+  user: {
+    id: '11111111-1111-4111-8111-111111111111',
+    email: 'idle.fixture@example.com',
+    display_name: 'Synthetic session reader',
+    permissions: [{ permission: 'clients.view', scope: 'global' }],
+  },
+  session: { expires_at: '2099-01-01T00:00:00Z' },
+}
 function Probe() {
   const auth = useAuth()
   return <p>{auth.status}</p>

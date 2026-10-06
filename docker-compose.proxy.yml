@@ -1,8 +1,0 @@
-# Optional managed-cloud build CA. Use alongside the base Compose file.
-services:
-  else:
-    build:
-      secrets: [proxy_ca]
-secrets:
-  proxy_ca:
-    file: ${CODEX_PROXY_CERT:?The managed session CA must be set}

@@ -141,11 +141,6 @@ const MarketingReportPage = lazy(() =>
 const AuditPage = lazy(() =>
   import('../features/audit/AuditPage').then((m) => ({ default: m.AuditPage })),
 )
-const ReleasePage = lazy(() =>
-  import('../features/releases/ReleasePage').then((m) => ({
-    default: m.ReleasePage,
-  })),
-)
 const BillingListPage = lazy(() =>
   import('../features/billing/BillingListPage').then((m) => ({
     default: m.BillingListPage,
@@ -204,14 +199,6 @@ export function App() {
           <Route path="/app" element={<ApplicationShell />}>
             <Route index element={<WorkspacePage />} />
             <Route path="access" element={<AccessPage />} />
-            <Route
-              path="releases"
-              element={
-                <ClientRoute name={copy('Release Center', 'common')}>
-                  <ReleasePage />
-                </ClientRoute>
-              }
-            />
             <Route
               path="audit"
               element={

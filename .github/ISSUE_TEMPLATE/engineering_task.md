@@ -28,7 +28,7 @@ Define the smallest coherent slice and its owning domains.
 
 ## Technical Requirements
 
-Identify existing abstractions, branch ownership, validation, pagination, and contracts. Record significant decisions before implementation.
+Identify existing abstractions, domain ownership, validation, pagination, and contracts. Work on `main` only and record significant decisions before implementation.
 
 ## Database Changes
 
@@ -59,9 +59,9 @@ List relevant unit, integration, negative-permission, migration, frontend, conta
 - [ ] Observable scope is implemented and verified.
 - [ ] Relevant validation, authorization, audit, and migration checks pass.
 - [ ] Relevant lint, typecheck, tests, build, Docker, and CI checks pass.
-- [ ] Documentation and valuable Obsidian context are updated.
+- [ ] Documentation and relevant concise maintenance notes are updated.
 - [ ] No secrets or production customer fixtures are committed.
-- [ ] PR references this Issue.
+- [ ] Change commits reference this Issue.
 
 ## Dependencies
 

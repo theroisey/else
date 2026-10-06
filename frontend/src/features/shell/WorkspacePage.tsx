@@ -14,7 +14,7 @@ export function WorkspacePage() {
   if (!session) return null
   const grants = session.user.permissions
   const administration = visibleDestinations(grants).filter((item) =>
-    ['/app/users', '/app/roles', '/app/audit', '/app/releases'].includes(
+    ['/app/users', '/app/roles', '/app/audit'].includes(
       item.path,
     ),
   )

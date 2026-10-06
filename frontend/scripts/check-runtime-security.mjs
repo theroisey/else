@@ -34,6 +34,12 @@ try {
     ...(process.env.CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.CHROMIUM_EXECUTABLE_PATH } : {}),
   })
   const page = await browser.newPage()
+  // Test-only ordinary script, fulfilled at a same-origin URL. It executes under
+  // the real page's CSP without adding a probe to production image artifacts.
+  await page.route(`${origin.origin}/assets/_security-test-eval.js`, (route) => route.fulfill({
+    contentType: 'application/javascript',
+    body: 'window.syntheticEvalProbeLoaded = true; try { new Function("window.syntheticUnsafeEvalRan = true")() } catch {}',
+  }))
   await page.addInitScript(() => {
     window.syntheticCSPViolations = []
     window.syntheticCSPKinds = []

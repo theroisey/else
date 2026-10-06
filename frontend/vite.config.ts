@@ -18,6 +18,8 @@ export default defineConfig({
   build: { assetsInlineLimit: 0 },
   preview: { host: '127.0.0.1', strictPort: true, proxy: {} },
   test: {
+    // Keep DOM interaction tests predictable on two-core CI/development hosts.
+    maxWorkers: 2,
     include: ['src/**/*.test.{ts,tsx}'],
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
