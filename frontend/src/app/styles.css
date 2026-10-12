@@ -176,7 +176,7 @@
   .drawer .ui-dialog-panel { @apply h-dvh max-h-dvh content-start rounded-none border-y-0 border-r-0; }
   .workspace-section { @apply min-w-0 border-t border-line py-5; }
   .context-rail { @apply h-fit min-w-0 border-t border-line bg-surface p-5; }
-  .filter-bar { @apply border-y border-line bg-surface py-4; }
+  .filter-bar { @apply min-w-0 border-y border-line bg-surface p-4 sm:px-5; }
   .form-section { @apply min-w-0 rounded-md border border-line bg-surface p-5 sm:p-6; }
   .empty-state { @apply border-y border-line py-10; }
   .empty-state h2 { @apply font-display text-2xl font-normal; }
@@ -314,8 +314,28 @@
   .ui-input, .appearance-control select, .website-switcher select { font-size: 1rem; }
   .ui-button, .appearance-control select, .website-switcher select { min-height: 2.75rem; }
   .ui-table .ui-button { min-height: 2.75rem; }
+  .help-trigger, .account-trigger, .command-trigger { min-height: 2.75rem; }
+  .help-trigger, .command-trigger, .shell-toolbar .ui-button { min-width: 2.75rem; }
+}
+@media (max-width: 639px) {
+  .filter-actions { grid-row: auto; grid-template-rows: auto; }
+  .filter-actions::before { display: none; }
 }
 .ui-field-body { font-weight: 400; }
 @media (min-width: 640px) {
   .filter-grid.picker-filters { grid-template-columns: minmax(0, 1fr) minmax(7rem, auto); }
+}
+
+/* Quiet, bounded motion shares the reduced-motion override above. */
+@keyframes workspace-entry { from { opacity: .65; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes panel-entry { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
+@layer components {
+  .workspace-main > section { animation: workspace-entry 160ms ease-out; }
+  .account-popup, details[open] > .sidebar-link { animation: panel-entry 140ms ease-out; }
+  .sidebar-link::before { transition: background-color 140ms ease; }
+  .ui-button:not(:disabled):active { opacity: .85; }
+  .help-trigger { @apply inline-flex min-h-8 min-w-8 shrink-0 items-center justify-center rounded-sm text-muted hover:bg-surface-subtle hover:text-ink; transition: background-color 140ms ease, color 140ms ease; }
+  .ui-field p { font-weight: 400; }
+  .filter-grid { row-gap: .75rem; }
+  @media (max-width: 639px) { .metric-cell { padding-inline: 0; } }
 }

@@ -163,3 +163,11 @@ In another terminal, `make frontend` starts frontend hot reload at `http://127.0
 ## License
 
 No public application license has been declared. Third-party dependency and font license notices ship with the image; they do not license Roisey Else itself.
+
+### Workspace refinements
+
+Use the question icon in the header for a short guide to the current section. Settings includes Light/Dark/System appearance and optional browser alerts. Alerts require browser permission and an open panel (background tabs are supported); private details remain inside the application. No closed-browser push provider is required.
+
+New sign-ins receive rotating, HttpOnly refresh cookies with a fixed seven-day limit. Access sessions retain their twelve-hour lifetime, renew automatically while authorized, and end on logout, account disablement, expiry or detected token reuse. Legacy sessions are not silently upgraded. Schema 7 is additive; take a verified checkpoint after upgrading and use a schema-compatible artifact for rollback. No production database reset is involved.
+
+Production serves one hashed application JavaScript bundle, separate CSS/fonts and the small pre-paint theme script. For day-to-day development, `make check-changed` runs source-impact checks; the full `make check` and image/browser gates remain required before release.

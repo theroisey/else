@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { expect, it } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import { resolve } from 'node:path'

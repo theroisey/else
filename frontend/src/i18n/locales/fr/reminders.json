@@ -7,7 +7,6 @@
   "Adjust the filters or create a reminder if you have access.": "Modifiez les filtres ou créez un rappel si vous y êtes autorisé.",
   "All schedules": "Toutes les programmations",
   "All states": "Tous les états",
-  "any, me, or an owner ID, including historical owners": "any, me ou un ID de responsable, y compris les anciens responsables",
   "Apply filters": "Appliquer les filtres",
   "Browse resources": "Parcourir les ressources",
   "Cancel": "Annuler",
@@ -121,5 +120,8 @@
   "Dismissing reminder": "Rejet du rappel",
   "Resources": "Ressources",
   "Earlier": "Première",
-  "Later": "Seconde"
+  "Later": "Seconde",
+  "Specific or historical owner": "Responsable précis ou historique",
+  "Owner identifier": "Identifiant du responsable",
+  "Use an owner identifier only for a specific or historical assignment.": "Utilisez un identifiant seulement pour une affectation précise ou historique."
 }

@@ -134,7 +134,43 @@ impl Api {
                 status: 200,
                 body: Some(login.session.document()),
                 binary: None,
-                cookies: self.login_cookies(&login.token, &login.csrf, &login.session.expires_at),
+                cookies: self.login_cookies(&login),
+            });
+        }
+        if route == ["auth", "refresh"]
+            || (route == ["auth", "logout"]
+                && cookie(&request.headers, self.config.refresh_cookie()).is_some())
+        {
+            no_query(&request)?;
+            if method != "POST" {
+                return Err(Error::Method("POST"));
+            }
+            #[derive(Deserialize)]
+            #[serde(deny_unknown_fields)]
+            struct Empty {}
+            let _: Empty = validation::json(&request.body)?;
+            let refresh = cookie(&request.headers, self.config.refresh_cookie())
+                .ok_or(Error::Unauthorized)?;
+            let csrf =
+                cookie(&request.headers, self.config.csrf_cookie()).ok_or_else(csrf_error)?;
+            let header = single_header(&request.headers, "x-csrf-token").ok_or_else(csrf_error)?;
+            if route == ["auth", "logout"] {
+                self.auth
+                    .logout_refresh(&refresh, &csrf, header, request.request_id.clone())
+                    .await?;
+                let mut reply = Reply::empty();
+                reply.cookies = self.clear_cookies();
+                return Ok(reply);
+            }
+            let renewed = self
+                .auth
+                .renew(&refresh, &csrf, header, request.request_id.clone())
+                .await?;
+            return Ok(Reply {
+                status: 200,
+                body: Some(renewed.session.document()),
+                binary: None,
+                cookies: self.login_cookies(&renewed),
             });
         }
         let token =
@@ -575,25 +611,22 @@ impl Api {
         Ok(())
     }
 
-    fn login_cookies(&self, token: &str, csrf: &str, expires: &str) -> Vec<String> {
-        let date = chrono::DateTime::parse_from_rfc3339(expires)
-            .expect("server-owned session expiry")
-            .format("%a, %d %b %Y %H:%M:%S GMT");
+    fn login_cookies(&self, login: &crate::auth::LoginResult) -> Vec<String> {
         let secure = if self.config.secure_cookie {
             "; Secure"
         } else {
             ""
         };
-        vec![
-            format!(
-                "{}={token}; Path=/; Max-Age=43200; Expires={date}; HttpOnly; SameSite=Strict{secure}",
-                self.config.session_cookie()
-            ),
-            format!(
-                "{}={csrf}; Path=/; Max-Age=43200; Expires={date}; SameSite=Strict{secure}",
-                self.config.csrf_cookie()
-            ),
-        ]
+        [(self.config.session_cookie(),&login.token,&login.session.expires_at,true),
+         (self.config.csrf_cookie(),&login.csrf,&login.refresh_expires_at,false),
+         (self.config.refresh_cookie(),&login.refresh,&login.refresh_expires_at,true)]
+            .into_iter().map(|(name,value,expires,http_only)| {
+                let expiry=chrono::DateTime::parse_from_rfc3339(expires).expect("server-owned expiry");
+                let date=expiry.format("%a, %d %b %Y %H:%M:%S GMT");
+                let age=(expiry.with_timezone(&chrono::Utc)-chrono::Utc::now()).num_seconds().max(0);
+                let private=if http_only {"; HttpOnly"} else {""};
+                format!("{name}={value}; Path=/; Max-Age={age}; Expires={date}{private}; SameSite=Strict{secure}")
+            }).collect()
     }
     pub fn clear_cookies(&self) -> Vec<String> {
         let secure = if self.config.secure_cookie {
@@ -609,6 +642,10 @@ impl Api {
             format!(
                 "{}=; Path=/; Max-Age=0; SameSite=Strict{secure}",
                 self.config.csrf_cookie()
+            ),
+            format!(
+                "{}=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict{secure}",
+                self.config.refresh_cookie()
             ),
         ]
     }

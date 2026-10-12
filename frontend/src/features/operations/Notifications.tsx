@@ -1,6 +1,6 @@
 import { time } from './time'
 import { Link } from 'react-router'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { faBell } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -9,6 +9,7 @@ import { copy, useLocale } from '../../i18n'
 import { useRecordOperations } from '../auth/useRecordOperations'
 import { OperationsHeader, OperationsError } from './Shared'
 import * as api from './service'
+import { claimBrowserAlert, useBrowserAlerts } from './browser-notifications'
 const labels: Record<string, string> = {
   task_assigned: 'Task assigned',
   recurring_generated: 'Recurring task created',
@@ -37,11 +38,65 @@ const labels: Record<string, string> = {
 export function NotificationControl() {
   useLocale()
   const op = useRecordOperations('operations')
+  const actor = op.auth.session!.user.id
+  const context = JSON.stringify(op.key)
+  const alerts = useBrowserAlerts(actor)
+  const seen = useRef({ context: '', timestamp: '' })
   const query = useQuery({
     queryKey: [...op.key, 'notifications', ''],
     queryFn: ({ signal }) => op.read(() => api.inbox('', signal)),
     refetchInterval: 30_000,
+    refetchIntervalInBackground: alerts.enabled,
   })
+  useEffect(() => {
+    const rows = query.data?.data
+    if (!rows) return
+    const latest = rows.reduce(
+      (time, row) => (row.created_at > time ? row.created_at : time),
+      '',
+    )
+    if (seen.current.context !== context) {
+      seen.current = { context, timestamp: latest }
+      return // Establish a baseline without notifying for old inbox history.
+    }
+    const fresh = rows.some(
+      (row) => !row.read_at && row.created_at > seen.current.timestamp,
+    )
+    seen.current.timestamp =
+      latest > seen.current.timestamp ? latest : seen.current.timestamp
+    if (!fresh || !alerts.enabled) return
+    let active = true
+    let notification: Notification | undefined
+    void claimBrowserAlert(actor, latest, () => active)
+      .then((claimed) => {
+        if (!claimed || !active) return
+        try {
+          notification = new Notification('Roisey Else', {
+            body: copy(
+              'You have a new update. Open the panel to review it.',
+              'help',
+            ),
+            icon: '/assets/roisey-r-v1.svg',
+            tag: 'roisey-else-update',
+          })
+          notification.onclick = () => {
+            if (!active) return
+            window.focus()
+            window.location.assign('/app/notifications')
+            notification?.close()
+          }
+        } catch {
+          /* In-app notifications remain available if native delivery fails. */
+        }
+      })
+      .catch(() => {
+        /* Restricted browser APIs do not interrupt the inbox. */
+      })
+    return () => {
+      active = false
+      notification?.close()
+    }
+  }, [actor, context, alerts.enabled, query.data])
   return (
     <Link
       to="/app/notifications"

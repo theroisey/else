@@ -7,7 +7,6 @@
   "Adjust the filters or create a reminder if you have access.": "Adjust the filters or create a reminder if you have access.",
   "All schedules": "All schedules",
   "All states": "All states",
-  "any, me, or an owner ID, including historical owners": "any, me, or an owner ID, including historical owners",
   "Apply filters": "Apply filters",
   "Browse resources": "Browse resources",
   "Cancel": "Cancel",
@@ -121,5 +120,8 @@
   "Dismissing reminder": "Dismissing reminder",
   "Resources": "Resources",
   "Earlier": "Earlier",
-  "Later": "Later"
+  "Later": "Later",
+  "Specific or historical owner": "Specific or historical owner",
+  "Owner identifier": "Owner identifier",
+  "Use an owner identifier only for a specific or historical assignment.": "Use an owner identifier only for a specific or historical assignment."
 }

@@ -2,11 +2,11 @@ import { copy, useLocale } from '../../i18n/index'
 import { LanguageControl } from '../../i18n/LanguageControl'
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, Navigate, useLocation } from 'react-router'
+import { Navigate, useLocation } from 'react-router'
 import { Brand } from '../../components/brand/Brand'
 import { AppearanceControl } from '../appearance/Appearance'
 import { faArrowRightToBracket } from '@fortawesome/free-solid-svg-icons'
-import { Button, TextField, buttonStyles } from '../../components/ui'
+import { Button, TextField } from '../../components/ui'
 import { safeReturnTo } from '../shell/navigation'
 import { useAuth } from './auth-context'
 import { AuthError } from './auth-service'
@@ -159,12 +159,6 @@ export function LoginPage() {
       </main>
       <footer className="login-footer">
         <span>{copy('Roisey Else · Authorized access', 'auth')}</span>
-        <Link
-          className={buttonStyles({ variant: 'ghost', size: 'compact' })}
-          to="/service-status"
-        >
-          {copy('Service status', 'auth')}
-        </Link>
       </footer>
     </div>
   )

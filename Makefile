@@ -15,7 +15,7 @@ DEV_ORIGIN ?= http://127.0.0.1:5173
 BACKUP_NAME ?= backup-$(shell date -u +%Y%m%dT%H%M%SZ)
 BACKUP_PATH ?= /var/lib/roisey-else/backups/$(BACKUP_NAME)
 
-.PHONY: help install dev dev-bootstrap frontend frontend-build backend backend-release build test test-http test-browser test-container test-capacity test-compose test-cache redis-artifacts runtime-fixture lint fmt check docker up down restart logs clean migrate bootstrap key-inventory rotate-credentials update backup restore
+.PHONY: help install dev dev-bootstrap frontend frontend-build backend backend-release build test test-http test-browser test-container test-capacity test-compose test-cache redis-artifacts runtime-fixture lint fmt check check-changed docker up down restart logs clean migrate bootstrap key-inventory rotate-credentials update backup restore
 
 help: ## List the supported workflows
 	@awk 'BEGIN {FS=":.*## ";print "Roisey Else workflows"} /^[a-z-]+:.*## / {printf "  %-18s %s\n",$$1,$$2}' $(MAKEFILE_LIST)
@@ -51,6 +51,9 @@ build: frontend-build backend-release redis-artifacts ## Prepare all production 
 test: redis-artifacts ## Run meaningful frontend and Rust unit/domain tests
 	cd frontend && $(NODE) node_modules/vitest/vitest.mjs run
 	$(CARGO) test --locked --workspace
+
+check-changed: ## Check affected local source; shared changes retain full tests
+	$(PYTHON) tools/check-changed.py
 
 test-http: frontend-build redis-artifacts ## Verify real Pingora HTTP and both shutdown signals
 	$(CARGO) build --locked --workspace

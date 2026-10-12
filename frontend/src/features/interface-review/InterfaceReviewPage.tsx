@@ -63,10 +63,10 @@ export function InterfaceReviewPage() {
           <Brand />
           <Link
             className={buttonStyles({ variant: 'ghost', size: 'compact' })}
-            to="/service-status"
+            to="/app"
           >
             <span aria-hidden="true">←</span>
-            {copy('Service status', 'common')}{' '}
+            {copy('Workspace', 'common')}{' '}
           </Link>
         </div>
         <div className="mx-auto max-w-6xl px-6 pb-4">

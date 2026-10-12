@@ -23,6 +23,8 @@ use std::{
 use subtle::ConstantTimeEq;
 use tokio::sync::Semaphore;
 
+mod refresh;
+
 #[derive(Clone)]
 pub struct Auth {
     pub db: Database,
@@ -64,6 +66,8 @@ pub struct LoginResult {
     pub session: Session,
     pub token: String,
     pub csrf: String,
+    pub refresh: String,
+    pub refresh_expires_at: String,
 }
 
 fn argon() -> Argon2<'static> {
@@ -232,9 +236,13 @@ impl Auth {
         };
         let (token, token_hash) = secret();
         let (csrf, csrf_hash) = secret();
+        let (refresh, refresh_hash) = secret();
         let session_id = validation::new_id();
         let expires =
             (Utc::now() + Duration::hours(12)).to_rfc3339_opts(SecondsFormat::Micros, true);
+        let refresh_expires =
+            (Utc::now() + Duration::days(7)).to_rfc3339_opts(SecondsFormat::Micros, true);
+        let refresh_expires_at = refresh_expires.clone();
         let result = self
             .db
             .write(move |tx| {
@@ -254,6 +262,11 @@ impl Auth {
                     "INSERT INTO sessions VALUES (?1,?2,?3,?4,?5,?6,NULL)",
                     params![session_id, user_id, token_hash, csrf_hash, now, expires],
                 )?;
+                tx.execute(
+                    "INSERT INTO session_refresh_tokens VALUES (?1,?2,?3,?4,?5,NULL)",
+                    params![refresh_hash, session_id, csrf_hash, now, refresh_expires],
+                )?;
+                refresh::cleanup(tx, &now)?;
                 tx.execute(
                     "UPDATE users SET last_login_at=?1 WHERE id=?2",
                     params![now, user_id],
@@ -285,6 +298,8 @@ impl Auth {
             session: result,
             token,
             csrf,
+            refresh,
+            refresh_expires_at,
         })
     }
 

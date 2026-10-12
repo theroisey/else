@@ -84,8 +84,8 @@ pub fn fresh(tx: &Transaction<'_>, actor: &Actor) -> Result<()> {
         };
     }
     let active: bool = tx.query_row(
-        "SELECT EXISTS(SELECT 1 FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id=?1 AND s.user_id=?2 AND s.revoked_at IS NULL AND s.expires_at>?3 AND u.status='active')",
-        params![actor.session_id,actor.user_id,validation::now()],|r|r.get(0))?;
+        "SELECT EXISTS(SELECT 1 FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id=?1 AND s.user_id=?2 AND s.revoked_at IS NULL AND s.expires_at>?3 AND s.csrf_hash=?4 AND u.status='active')",
+        params![actor.session_id,actor.user_id,validation::now(),actor.csrf_hash],|r|r.get(0))?;
     if active {
         Ok(())
     } else {

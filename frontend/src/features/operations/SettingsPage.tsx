@@ -5,6 +5,7 @@ import { authenticatedJSON } from '../../services/authenticated'
 import { Button, TextField, PageSkeleton } from '../../components/ui'
 import { copy, useLocale } from '../../i18n'
 import { AppearanceSettings } from '../appearance/Appearance'
+import { BrowserAlerts } from './BrowserAlerts'
 import { hasPermission } from '../auth/permissions'
 import { useRecordOperations } from '../auth/useRecordOperations'
 import { OperationsHeader, OperationsError } from './Shared'
@@ -37,6 +38,7 @@ export function SettingsPage() {
     <section>
       <OperationsHeader title={copy('Settings', 'common')} />
       <AppearanceSettings />
+      <BrowserAlerts />
       {preferences.isPending ? (
         <PageSkeleton label={copy('Loading preferences…', 'operations')} />
       ) : preferences.isError ? (

@@ -136,15 +136,34 @@ function List({ clientID }: { clientID: string }) {
             {copy('Upcoming pending reminders', 'reminders')}
           </option>
         </SelectField>
-        <TextField
+        <SelectField
           label={copy('Owner filter', 'reminders')}
-          description={copy(
-            'any, me, or an owner ID, including historical owners',
-            'reminders',
-          )}
-          value={draft.owner}
-          onChange={(e) => setDraft({ ...draft, owner: e.target.value })}
-        />
+          value={['any', 'me'].includes(draft.owner) ? draft.owner : 'specific'}
+          onChange={(e) =>
+            setDraft({
+              ...draft,
+              owner: e.target.value === 'specific' ? '' : e.target.value,
+            })
+          }
+        >
+          <option value="any">{copy('Anyone', 'tasks')}</option>
+          <option value="me">{copy('Me', 'reminders')}</option>
+          <option value="specific">
+            {copy('Specific or historical owner', 'reminders')}
+          </option>
+        </SelectField>
+        {!['any', 'me'].includes(draft.owner) ? (
+          <TextField
+            label={copy('Owner identifier', 'reminders')}
+            description={copy(
+              'Use an owner identifier only for a specific or historical assignment.',
+              'reminders',
+            )}
+            maxLength={36}
+            value={draft.owner}
+            onChange={(e) => setDraft({ ...draft, owner: e.target.value })}
+          />
+        ) : null}
         <SelectField
           label={copy('Order', 'reminders')}
           value={draft.sort}

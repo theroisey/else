@@ -150,7 +150,6 @@ describe('cookie session UI', () => {
       'Clients',
       'Portfolio',
       'My access',
-      'Service status',
     ])
     expect(screen.getByRole('link', { name: 'Clients' })).toBeInTheDocument()
   })
@@ -261,14 +260,14 @@ describe('cookie session UI', () => {
     })
   })
 
-  it('clears the UI at absolute expiry without requiring another request', async () => {
+  it('ends a legacy session at access expiry when no refresh family exists', async () => {
     const nearExpiry = {
       ...identity,
       session: { expires_at: new Date(Date.now() + 2_000).toISOString() },
     }
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(json(200, { data: nearExpiry })),
+      vi.fn().mockImplementation((path: string) => Promise.resolve(path === '/api/v1/auth/refresh' ? unauthorized() : json(200, { data: nearExpiry }))),
     )
     renderApp()
     await screen.findByRole('heading', { name: 'Operations workspace' })

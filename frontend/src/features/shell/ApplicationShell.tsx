@@ -1,6 +1,7 @@
 import { copy, useLocale } from '../../i18n/index'
 import { useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
+import { SectionHelp } from '../../components/ui/Help'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBars, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../auth/auth-context'
@@ -221,8 +222,9 @@ export function ApplicationShell() {
               </li>
             </ol>
           </nav>
-          <div className="ml-auto flex min-w-0 items-center gap-3">
+          <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-3">
             <CommandSearch />
+            <SectionHelp />
             <NotificationControl />
             <AccountMenu />
           </div>
@@ -295,12 +297,6 @@ export function ApplicationShell() {
                     {copy(item.label, 'common')}
                   </NavLink>
                 ))}
-                <Link
-                  to="/service-status"
-                  className="sidebar-link mt-5 border-t border-line pt-4"
-                >
-                  {copy('Service status', 'common')}
-                </Link>
               </details>
             </nav>
             <div className="mt-auto border-t border-line px-3 pt-5">

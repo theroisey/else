@@ -237,8 +237,23 @@ impl Application {
             .map_err(|_| Error::Internal)
     }
 
-    fn failure(&self, error: &Error, method: &Method, correlation: &str) -> Response<Bytes> {
-        let mut response=json_response(Reply {binary:None,status:error.status().as_u16(),body:Some(serde_json::json!({"error":{"code":error.code(),"message":error.message(),"request_id":correlation}})),cookies:if matches!(error,Error::Unauthorized){self.api.clear_cookies()}else{vec![]}},method).expect("fixed error response");
+    fn failure(
+        &self,
+        error: &Error,
+        method: &Method,
+        correlation: &str,
+        path: &str,
+    ) -> Response<Bytes> {
+        // An expired access cookie must not discard the independent refresh
+        // credential before the browser can renew. Failed renewal/logout clears all.
+        let cookies = if matches!(error, Error::Unauthorized)
+            && matches!(path, "/api/v1/auth/refresh" | "/api/v1/auth/logout")
+        {
+            self.api.clear_cookies()
+        } else {
+            vec![]
+        };
+        let mut response=json_response(Reply {binary:None,status:error.status().as_u16(),body:Some(serde_json::json!({"error":{"code":error.code(),"message":error.message(),"request_id":correlation}})),cookies},method).expect("fixed error response");
         if let Error::Method(allowed) = error {
             response
                 .headers_mut()
@@ -279,6 +294,7 @@ impl HttpServerApp for Application {
         let started = Instant::now();
         let correlation = audit::request_id();
         let method = session.req_header().method.clone();
+        let path = session.req_header().uri.path().to_owned();
         let probe = matches!(
             session.req_header().uri.path(),
             "/health" | "/ready" | "/status"
@@ -308,7 +324,7 @@ impl HttpServerApp for Application {
                 // No header dumps, raw URLs, query strings, body values or driver errors.
                 tracing::warn!(request_id=%correlation,error_code=error.code(),status=error.status().as_u16(),"request_rejected");
                 session.set_keepalive(None);
-                self.failure(&error, &method, &correlation)
+                self.failure(&error, &method, &correlation, &path)
             }
         };
         response.headers_mut().insert(

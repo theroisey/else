@@ -53,8 +53,9 @@ afterEach(() => {
   focusManager.setFocused(undefined)
   onlineManager.setOnline(true)
 })
-it('does no fixed session polling while a signed-in browser is idle', async () => {
+it('does not poll a signed-in tab while it is in the background', async () => {
   vi.useFakeTimers()
+  focusManager.setFocused(false)
   vi.mocked(service.currentSession).mockResolvedValue(identity)
   setup()
   await flush()

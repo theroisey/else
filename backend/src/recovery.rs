@@ -26,6 +26,7 @@ use std::{
 pub(crate) const TABLES: &[&str] = &[
     "users",
     "sessions",
+    "session_refresh_tokens",
     "permissions",
     "roles",
     "role_permissions",

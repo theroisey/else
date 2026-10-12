@@ -1,3 +1,4 @@
+import { contractCases } from '../../test/contract-cases'
 import { expect, it } from 'vitest'
 import { hasPermission, permissionScope } from '../auth/permissions'
 import { parseSession } from '../auth/session'
@@ -35,8 +36,9 @@ function session(permissions: Grant[]) {
   })
 }
 
-it.each(keys)(
+contractCases(
   'recognizes %s from identity with exact client and global assignment scope',
+  keys,
   (permission) => {
     const grants: Grant[] = [
       { permission, scope: 'client', client_id: clientID },

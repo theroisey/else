@@ -65,6 +65,7 @@ function setup(
     if (custom) return Promise.resolve(custom)
     if (url.startsWith('/api/v1/notifications?') || url === '/api/v1/auth/preferences')
       return Promise.resolve(json({ data: { locale: null } }))
+    if (url === '/api/v1/auth/refresh') return Promise.resolve(json({ error: { code: 'authentication_required' } }, 401))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: session }))
     if (url.startsWith('/api/v1/clients?'))

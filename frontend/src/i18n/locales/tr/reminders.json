@@ -7,7 +7,6 @@
   "Adjust the filters or create a reminder if you have access.": "Filtreleri değiştirin veya erişiminiz varsa bir hatırlatıcı oluşturun.",
   "All schedules": "Tüm planlanan zamanlar",
   "All states": "Tüm durumlar",
-  "any, me, or an owner ID, including historical owners": "any, me veya geçmiş sahipler dahil bir sahip kimliği",
   "Apply filters": "Filtreleri uygula",
   "Browse resources": "Kaynakları incele",
   "Cancel": "Vazgeç",
@@ -121,5 +120,8 @@
   "Dismissing reminder": "Hatırlatıcı kapatılıyor",
   "Resources": "Kaynaklar",
   "Earlier": "Önceki",
-  "Later": "Sonraki"
+  "Later": "Sonraki",
+  "Specific or historical owner": "Belirli veya geçmiş sorumlu",
+  "Owner identifier": "Sorumlu kimliği",
+  "Use an owner identifier only for a specific or historical assignment.": "Yalnızca belirli veya geçmiş bir atama için sorumlu kimliğini kullanın."
 }

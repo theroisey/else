@@ -1,3 +1,4 @@
+import { contractCases } from '../../test/contract-cases'
 import { describe, expect, it } from 'vitest'
 import { faHouse } from '@fortawesome/free-solid-svg-icons'
 import { hasPermission } from './permissions'
@@ -12,33 +13,41 @@ const grants: Grant[] = [
 ]
 
 describe('effective permissions', () => {
-  it.each([
-    'tasks.create',
-    'tasks.update',
-    'tasks.delete',
-    'planning.view',
-    'planning.create',
-    'planning.update',
-    'planning.archive',
-  ])('recognizes %s with exact client scope', (permission) => {
-    const scoped: Grant[] = [
-      { permission, scope: 'client', client_id: clientID },
-    ]
-    expect(
-      hasPermission(scoped, { permission, scope: 'client', clientID }),
-    ).toBe(true)
-    expect(
-      hasPermission(scoped, { permission, scope: 'client', clientID: otherID }),
-    ).toBe(false)
-    expect(hasPermission(scoped, { permission, scope: 'global' })).toBe(false)
-    expect(
-      hasPermission([{ permission, scope: 'global' }], {
-        permission,
-        scope: 'client',
-        clientID,
-      }),
-    ).toBe(true)
-  })
+  contractCases(
+    'recognizes %s with exact client scope',
+    [
+      'tasks.create',
+      'tasks.update',
+      'tasks.delete',
+      'planning.view',
+      'planning.create',
+      'planning.update',
+      'planning.archive',
+    ],
+    (permission) => {
+      const scoped: Grant[] = [
+        { permission, scope: 'client', client_id: clientID },
+      ]
+      expect(
+        hasPermission(scoped, { permission, scope: 'client', clientID }),
+      ).toBe(true)
+      expect(
+        hasPermission(scoped, {
+          permission,
+          scope: 'client',
+          clientID: otherID,
+        }),
+      ).toBe(false)
+      expect(hasPermission(scoped, { permission, scope: 'global' })).toBe(false)
+      expect(
+        hasPermission([{ permission, scope: 'global' }], {
+          permission,
+          scope: 'client',
+          clientID,
+        }),
+      ).toBe(true)
+    },
+  )
   it('requires known identifiers and matching global/exact-client scope', () => {
     expect(
       hasPermission(grants, { permission: 'roles.manage', scope: 'global' }),

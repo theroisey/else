@@ -3,7 +3,6 @@ import { useAppearance } from '../features/appearance/theme'
 import { Link, Navigate, Outlet, Route, Routes } from 'react-router'
 import { lazy } from 'react'
 import { buttonStyles } from '../components/ui'
-import { FoundationPage } from '../features/foundation/FoundationPage'
 import { InterfaceReviewPage } from '../features/interface-review/InterfaceReviewPage'
 import { AuthProvider } from '../features/auth/AuthProvider'
 import { AuthGuard, PermissionGuard } from '../features/auth/AuthGuard'
@@ -242,7 +241,6 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/app" replace />} />
-      <Route path="/service-status" element={<FoundationPage />} />
       <Route path="/interface" element={<InterfaceReviewPage />} />
       <Route element={<AuthArea />}>
         <Route path="/login" element={<LoginPage />} />
@@ -825,9 +823,9 @@ export function App() {
             </p>
             <Link
               className={buttonStyles({ className: 'mt-6' })}
-              to="/service-status"
+              to="/app"
             >
-              {copy('Open service status', 'common')}
+              {copy('Open workspace', 'common')}
             </Link>
           </main>
         }

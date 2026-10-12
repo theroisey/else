@@ -15,11 +15,16 @@ export default defineConfig({
     },
   },
   // Small font subsets must remain same-origin assets under the strict font-src policy.
-  build: { assetsInlineLimit: 0 },
+  build: {
+    assetsInlineLimit: 0,
+    rolldownOptions: { output: { codeSplitting: false } },
+  },
   preview: { host: '127.0.0.1', strictPort: true, proxy: {} },
   test: {
     // Keep DOM interaction tests predictable on two-core CI/development hosts.
     maxWorkers: 2,
+    // Reuse worker processes while retaining a separate VM/DOM for each file.
+    pool: 'vmThreads',
     include: ['src/**/*.test.{ts,tsx}'],
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

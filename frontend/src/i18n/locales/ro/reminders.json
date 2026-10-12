@@ -7,7 +7,6 @@
   "Adjust the filters or create a reminder if you have access.": "Modificați filtrele sau creați un memento dacă aveți acces.",
   "All schedules": "Toate programările",
   "All states": "Toate stările",
-  "any, me, or an owner ID, including historical owners": "any, me sau ID-ul unui responsabil, inclusiv responsabili anteriori",
   "Apply filters": "Aplică filtrele",
   "Browse resources": "Răsfoiți resursele",
   "Cancel": "Renunță",
@@ -121,5 +120,8 @@
   "Dismissing reminder": "Se respinge mementoul",
   "Resources": "Resurse",
   "Earlier": "Prima",
-  "Later": "A doua"
+  "Later": "A doua",
+  "Specific or historical owner": "Responsabil specific sau anterior",
+  "Owner identifier": "Identificatorul responsabilului",
+  "Use an owner identifier only for a specific or historical assignment.": "Folosiți identificatorul numai pentru o atribuire specifică sau anterioară."
 }

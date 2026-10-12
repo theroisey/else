@@ -102,4 +102,12 @@ impl Config {
             "else_csrf"
         }
     }
+
+    pub fn refresh_cookie(&self) -> &'static str {
+        if self.secure_cookie {
+            "__Host-else_refresh"
+        } else {
+            "else_refresh"
+        }
+    }
 }

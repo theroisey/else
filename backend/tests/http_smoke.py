@@ -69,7 +69,7 @@ def run(binary: Path, frontend: Path, stop_signal: int) -> None:
                 request("/api/v1/auth/session", expected=401)
                 login, headers = request("/api/v1/auth/login", "POST", {"email": bootstrap["email"], "password": bootstrap["password"]})
                 assert login["data"]["user"]["email"] == bootstrap["email"]
-                assert len(headers.get_all("Set-Cookie")) == 2
+                assert len(headers.get_all("Set-Cookie")) == 3
                 assert all("SameSite=Strict" in value for value in headers.get_all("Set-Cookie"))
                 request("/api/v1/auth/session")
                 client, _ = request("/api/v1/clients", "POST", {"name": "Synthetic private client"}, 201)

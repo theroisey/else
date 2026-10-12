@@ -20,7 +20,8 @@ describe('auth request safety', () => {
   })
 
   it('reads only the secure CSRF cookie on HTTPS and rejects absent/malformed values', () => {
-    vi.stubGlobal('location', { protocol: 'https:' })
+    const environment = (globalThis as unknown as { jsdom: { reconfigure(options: { url: string }): void } }).jsdom
+    environment.reconfigure({ url: 'https://localhost:3000' })
     const cookie = vi.spyOn(document, 'cookie', 'get')
     cookie.mockReturnValue(`else_csrf=${'d'.repeat(43)}`)
     expect(() => csrfToken()).toThrow('Request verification failed')
@@ -28,6 +29,7 @@ describe('auth request safety', () => {
     expect(csrfToken()).toBe('s'.repeat(43))
     cookie.mockReturnValue('__Host-else_csrf=malformed')
     expect(() => csrfToken()).toThrow('Request verification failed')
+    environment.reconfigure({ url: 'http://localhost:3000' })
   })
 
   it('maps throttling and CSRF failures to safe actionable messages', async () => {

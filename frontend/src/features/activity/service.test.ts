@@ -1,3 +1,4 @@
+import { contractCases } from '../../test/contract-cases'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { APIError } from '../../services/authenticated'
 import { safeReturnTo } from '../shell/navigation'
@@ -10,13 +11,15 @@ import { event, page, clientID, identity, otherID } from './fixtures.test-data'
 import * as api from './service'
 const fetcher = vi.fn()
 const json = (body: unknown) =>
-  new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), {
+    headers: { 'Content-Type': 'application/json' },
+  })
 beforeEach(() => {
   fetcher.mockReset()
   vi.stubGlobal('fetch', fetcher)
 })
 
-it.each(eventTypes)('accepts only the static %s projection', (type) => {
+contractCases('accepts only the static %s projection', eventTypes, (type) => {
   const row = event(1, type)
   expect(parsePage(page([row])).data).toEqual([row])
   for (const delta of [
@@ -29,15 +32,21 @@ it.each(eventTypes)('accepts only the static %s projection', (type) => {
 })
 it('requires both client/activity grants and each independent current domain view', () => {
   const grants = identity.user.permissions
-  const root = grants.filter((g) => ['clients.view', 'activity.view'].includes(g.permission))
-  expect(activityPermissions(root, clientID).allows(event(1, 'client.created'))).toBe(true)
+  const root = grants.filter((g) =>
+    ['clients.view', 'activity.view'].includes(g.permission),
+  )
+  expect(
+    activityPermissions(root, clientID).allows(event(1, 'client.created')),
+  ).toBe(true)
   for (const type of [
     'task.created',
     'plan.created',
     'milestone.created',
     'reminder.created',
   ] as const)
-    expect(activityPermissions(root, clientID).allows(event(1, type))).toBe(false)
+    expect(activityPermissions(root, clientID).allows(event(1, type))).toBe(
+      false,
+    )
   expect(activityPermissions(grants, otherID).view).toBe(false)
   expect(
     activityPermissions(
@@ -60,10 +69,17 @@ it('requires both client/activity grants and each independent current domain vie
       clientID,
     ).view,
   ).toBe(true)
-  expect(activityPermissions(grants, clientID).allows({ ...event(), client_id: otherID })).toBe(
-    false,
-  )
-  for (const permissions of [taskPermissions, planningPermissions, reminderPermissions]) {
+  expect(
+    activityPermissions(grants, clientID).allows({
+      ...event(),
+      client_id: otherID,
+    }),
+  ).toBe(false)
+  for (const permissions of [
+    taskPermissions,
+    planningPermissions,
+    reminderPermissions,
+  ]) {
     expect(permissions(grants, clientID).activityView).toBe(true)
     expect(
       permissions(
@@ -104,14 +120,20 @@ it('rejects invalid dates, unreviewed events and expanded successful envelopes',
     expect(() => parsePage(page([{ ...event(), ...delta }]))).toThrow(APIError)
   expect(() => parsePage({ ...page([event()]), total: 1 })).toThrow(APIError)
   expect(() =>
-    parsePage({ ...page([event()]), page: { limit: 25, next_cursor: null, metadata: 'private' } }),
+    parsePage({
+      ...page([event()]),
+      page: { limit: 25, next_cursor: null, metadata: 'private' },
+    }),
   ).toThrow(APIError)
-  expect(() => parsePage(page([{ ...event(1, 'client.created'), resource_id: otherID }]))).toThrow(
-    APIError,
-  )
-  expect(parsePage(page([event(1, 'client.created', '0001-01-01T00:00:00Z')])).data).toHaveLength(1)
+  expect(() =>
+    parsePage(page([{ ...event(1, 'client.created'), resource_id: otherID }])),
+  ).toThrow(APIError)
   expect(
-    parsePage(page([event(1, 'client.created', '9999-12-31T23:59:59.999999Z')])).data,
+    parsePage(page([event(1, 'client.created', '0001-01-01T00:00:00Z')])).data,
+  ).toHaveLength(1)
+  expect(
+    parsePage(page([event(1, 'client.created', '9999-12-31T23:59:59.999999Z')]))
+      .data,
   ).toHaveLength(1)
 })
 it('validates descending microseconds, UUID ties, uniqueness and bounded continuation pages', () => {
@@ -150,8 +172,12 @@ it('sends only a bounded read with the unchanged opaque cursor and rejects cross
     credentials: 'same-origin',
     body: null,
   })
-  fetcher.mockResolvedValueOnce(json(page([{ ...event(), client_id: otherID }])))
-  await expect(api.list(clientID, '', new AbortController().signal)).rejects.toThrow(APIError)
+  fetcher.mockResolvedValueOnce(
+    json(page([{ ...event(), client_id: otherID }])),
+  )
+  await expect(
+    api.list(clientID, '', new AbortController().signal),
+  ).rejects.toThrow(APIError)
   fetcher.mockResolvedValueOnce(
     json(
       page(
@@ -160,13 +186,17 @@ it('sends only a bounded read with the unchanged opaque cursor and rejects cross
       ),
     ),
   )
-  await expect(api.list(clientID, 'loop', new AbortController().signal)).rejects.toThrow(APIError)
+  await expect(
+    api.list(clientID, 'loop', new AbortController().signal),
+  ).rejects.toThrow(APIError)
   const calls = fetcher.mock.calls.length
   for (const [id, cursor] of [
     ['invalid', ''],
     [clientID, '../private'],
     [clientID, 'x'.repeat(257)],
   ])
-    await expect(api.list(id!, cursor!, new AbortController().signal)).rejects.toThrow(APIError)
+    await expect(
+      api.list(id!, cursor!, new AbortController().signal),
+    ).rejects.toThrow(APIError)
   expect(fetcher.mock.calls).toHaveLength(calls)
 })
