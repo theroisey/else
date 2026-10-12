@@ -1,6 +1,6 @@
 # Architecture and verification
 
-Roisey Else is one modular Rust application with a React frontend. [Domain contracts](domains.md), [providers](providers.md), [operations](operations.md), and [frontend](frontend.md) hold the non-obvious maintenance rules. Current runtime scope/evidence is [#135](https://github.com/theroisey/else/issues/135). Historical decisions remain in Git and their issue discussions; superseded deployment guides are intentionally removed.
+Roisey Else is one modular Rust application with a React frontend. [Domain contracts](domains.md), [providers](providers.md), [operations](operations.md), and [frontend](frontend.md), and [unified operations](operations-platform.md) hold the non-obvious maintenance rules. Current runtime scope/evidence is [#135](https://github.com/theroisey/else/issues/135). Historical decisions remain in Git and their issue discussions; superseded deployment guides are intentionally removed.
 
 ## Runtime
 
@@ -11,7 +11,7 @@ flowchart LR
     subgraph Image[One custom scratch image]
         App[PID 1: Rust / native Pingora]
         UI[Prebuilt React assets]
-        Worker[Bounded in-process provider workers]
+        Worker[Bounded provider and operations workers]
         App --> UI
         App --> Worker
         App --> Redis[Owned Redis child: loopback, transient]
@@ -21,7 +21,7 @@ flowchart LR
     Worker --> Providers[Fixed trusted provider HTTPS]
 ```
 
-Pingora 0.9.0 supplies `HttpServerApp` and the native listener. There is no second HTTP server; Hyper is an outbound HTTP/1 client only. Rust integrates SIGTERM/SIGINT and unexpected child exit with Pingora's bounded graceful drain. Readiness fails before drain; provider tasks use the same shutdown signal. The serving process owns an exclusive filesystem lease. Native operator invocations are explicit temporary commands, not supervised resident processes.
+Pingora 0.9.0 supplies `HttpServerApp` and the native listener. There is no second HTTP server; Hyper is an outbound HTTP/1 client only. Rust integrates SIGTERM/SIGINT and unexpected child exit with Pingora's bounded graceful drain. Readiness fails before drain; provider and operational automation tasks use the same shutdown signal. The serving process owns an exclusive filesystem lease. Native operator invocations are explicit temporary commands, not supervised resident processes.
 
 `server.rs` applies exact CSP/frame/nosniff/referrer headers to every response. APIs and private errors are `no-store`. Static assets are validated/confined/snapshotted at startup, accept only shipped types, refuse source maps/symlinks/traversal, and serve deterministic gzip, ETags and hashed immutable caching. Unknown API/asset paths return 404; normal browser routes receive the SPA. Theme initialization remains an ordinary blocking same-origin script.
 

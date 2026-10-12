@@ -39,3 +39,13 @@ Before releasing recovered traffic, reconcile post-checkpoint revocations, disab
 ## Verification ownership
 
 Runtime, capacity and Compose harnesses own random disposable resource names and free loopback ports. Fixture-only Compose overrides replace image/container/volume names internally; the production configuration stays fixed. Test cleanup targets only those owned resources. Synthetic helper binaries are prepared outside Docker and never copied into the production image.
+
+## Operational automation and schema upgrades
+
+Additive migrations `000003_operations`, `000004_commercial_finance` and `000005_recurring_operations` extend existing identities/tasks/collections with request evidence and reviews, team-managed grants, service terms/periods/transfers/reversals, recurring versions/occurrences and notification state. Existing payment collectors remain NULL rather than inferred. Do not edit a migration already applied to an installation. There is no automatic downgrade: rolling code back requires an artifact compatible with schema 5, or a separately rehearsed empty-target checkpoint restore with post-checkpoint reconciliation.
+
+Private screenshots and documents are database BLOBs and travel with supported backups. Recovery verifies request/task state and delivery/review sequences, commercial source amounts/collectors/net reversals, recurring identities/versions and all foreign keys. Take a fresh verified checkpoint after upgrade; older snapshot schemas cannot be directly restored with a mismatched artifact.
+
+The existing Rust worker runs automation without an external cron. It examines bounded queues (25 task templates and 25 agreements per work cycle), uses durable unique identities and rechecks current managers. It checks ordinary due work every 30 seconds, continues a nonempty backlog on a short bounded interval and backs off a failed schedule for five minutes. Paused/cancelled schedules do not generate. Catch-up over 62 days requires explicit authorized reconciliation rather than unlimited backfill; no bulk historical billing endpoint is supplied. See [operations platform](operations-platform.md) for remediation.
+
+Native serving/tests share the fixed private loopback Redis port 6379: run native HTTP/browser/cache gates serially and preserve unrelated listeners. Docker fixture containers have independent network namespaces. Production still has one application container and no new environment secret/provider requirement.

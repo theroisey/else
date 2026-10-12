@@ -116,7 +116,7 @@ def run(args):
                 sessions.append(("; ".join(cookies), next(value.split("=", 1)[1] for value in cookies if value.startswith("else_csrf="))))
             barrier = threading.Barrier(100, timeout=15)
             root = "/api/v1/clients/" + CLIENT
-            paths = ["/api/v1/clients?limit=25", root + "/overview", root + "/tasks?limit=25", root + "/reminders?limit=25",
+            paths = ["/api/v1/clients?limit=25", "/api/v1/today", "/api/v1/tasks?limit=25&status=active", root + "/overview", root + "/tasks?limit=25", root + "/reminders?limit=25",
                      root + "/billing?limit=25", root + "/pricing?limit=25", root + "/activity?limit=25", root + "/audit-logs?limit=25",
                      root + "/analytics/" + CONNECTION + "?since=2026-10-01&until=2026-10-03", root + "/plans?limit=25"]
 

@@ -9,13 +9,34 @@ Roisey Else brings the work around each client into one place. See what needs at
 ## What you can do
 
 - Maintain client profiles, contacts, tags, and independent websites.
+- Start in Today with authorized tasks, requests, delivery reviews, notifications, and an owner-only currency-separated financial snapshot.
+- Connect advertising employees and developers through website-linked requests, private screenshots, decisions, versioned deliveries, approvals, and revisions.
+- Organize advertising teams and brand responsibilities without granting company finance to employees.
 - Assign tasks, organize plans and milestones, and schedule reminders with explicit timezones.
 - Track collections, partial payments, overdue balances, and immutable pricing agreements.
+- Record service agreements, the actual collecting party, consulting allocations, internal settlements, and audited payment reversals.
+- Generate daily, weekly, and monthly tasks and contractual billing periods automatically, with retained schedule/price versions and duplicate prevention.
 - Read GA4 analytics, WooCommerce order/refund reports, and Meta Ads performance for the selected client and reporting period.
 - Manage users, roles, and global or client-specific access; inspect audit history and authorized activity.
 - Work in Light, Dark, or System appearance, with English, Turkish, Romanian, German, and French interfaces.
 
 Archival keeps authorized history available. Financial amounts stay exact and separated by currency. Provider reports distinguish measured, empty, stale, and unavailable data.
+
+## Daily work
+
+Today is the operational starting point. Employees see their assigned brands, personal work and requests; developers see the shared technical queue; leaders see their authorized team's work. Owners retain management and finance access under their individual accounts. Inside a brand, Summary, Work, Websites, Finance and More keep daily actions close while preserving planning, analytics, integrations and audit tools. Finance appears only with the required permissions.
+
+An employee selects a brand and website, explains an issue and attaches a screenshot. A developer accepts or rejects it with a recorded decision, assigns accepted work and submits a delivery. The requester or authorized leader reviews the result, approves it or requests a reasoned revision. Before/after evidence and every delivery version stay attached to the original request. Developers cannot approve their own deliveries.
+
+Create real accounts through Users, then create a team, add its leader and employees, and assign brand responsibilities through Team. Use the dedicated advertising employee role rather than the legacy Viewer role, which retains its historical finance permissions. The second owner needs a separate account with the authorized full administrator role; no additional people or customer records are seeded. Settings includes personal notification preferences and the owner-managed business timezone.
+
+## Service finances and automation
+
+A 1,000 USD maintenance obligation remains separate from a 700 EUR consulting obligation. A consulting split of 200 EUR for ROISE and 500 EUR for the advertising partner is included in the original 700 EUR. If the partner collects all 700 EUR, the customer owes zero and the partner owes ROISE 200 EUR internally. If ROISE collects it, ROISE owes the partner 500 EUR. Internal transfers never charge the customer again.
+
+The default split recognizes collected funds proportionally: collecting 350 EUR recognizes 100 EUR for ROISE and 250 EUR for the partner, with 350 EUR still due from the customer. An explicitly selected contractual policy can use the agreed full allocation instead. Refunds retain original payments and adjust the customer's and internal balances; advertising media spend stays independent. This is operational financial tracking, not legal tax invoicing.
+
+Active schedules run inside the existing application process; no extra container or external cron is required. Each task occurrence and service billing period has a durable unique identity. Monthly schedules clamp short months to their last day and return to the original anchor afterward. Pause/resume affects future generation, and historical terms remain intact. The worker rechecks its configured manager's current authority and exposes failures for authorized reconciliation. See the [operations platform guide](notes/operations-platform.md) for limits, permissions and recovery.
 
 ## Quick start
 
