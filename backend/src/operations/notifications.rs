@@ -103,7 +103,15 @@ pub(crate) fn emit_task(
     let preference = preference_sql("u.id", "tasks");
     let leader = grant_sql("u.id", "tasks.read_team", "t.client_id");
     let owner = grant_sql("u.id", "staff.manage", "t.client_id");
-    let mut stmt=tx.prepare(&format!("SELECT u.id,t.client_id FROM tasks t JOIN users u ON u.status='active' WHERE t.id=?1 AND {visibility} AND {preference} AND (t.assignee_id=u.id OR (?2 AND ({leader} OR {owner})))"))?;
+    // Ordinary assignment has at most one recipient. Bind that recipient
+    // before evaluating record permissions, including zero recipients for an
+    // unassigned task. A user-directory scan here serializes unrelated writes.
+    let recipients = if supervisors {
+        "JOIN users u ON u.status='active'"
+    } else {
+        "JOIN users u ON u.id=t.assignee_id AND u.status='active'"
+    };
+    let mut stmt=tx.prepare(&format!("SELECT u.id,t.client_id FROM tasks t {recipients} WHERE t.id=?1 AND {visibility} AND {preference} AND (t.assignee_id=u.id OR (?2 AND ({leader} OR {owner})))"))?;
     let audience = stmt
         .query_map(params![id, supervisors], |r| {
             Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
