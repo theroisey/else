@@ -115,6 +115,8 @@ test('refresh tokens renew expired access across tabs, rotate cookies and deny r
 })
 
 test('revoked backend grants disappear on refresh without adding placeholder destinations', async ({ page }) => {
+  const createdBefore = BigInt(database("SELECT count(*) FROM audit_events WHERE event_name='session.created'"))
+  const archivedBefore = BigInt(database("SELECT count(*) FROM audit_events WHERE event_name='session.archived'"))
   await page.goto('/app/access')
   await signIn(page)
   await expect(page.getByRole('table')).toContainText('clients.view')
@@ -127,8 +129,8 @@ test('revoked backend grants disappear on refresh without adding placeholder des
   await page.getByText('Browser Fixture', { exact: true }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
-  expect(database("SELECT count(*) FROM audit_events WHERE event_name='session.created'")).toBe('4')
-  expect(database("SELECT count(*) FROM audit_events WHERE event_name='session.archived'")).toBe('3')
+  expect(BigInt(database("SELECT count(*) FROM audit_events WHERE event_name='session.created'"))).toBe(createdBefore + 1n)
+  expect(BigInt(database("SELECT count(*) FROM audit_events WHERE event_name='session.archived'"))).toBe(archivedBefore + 1n)
 })
 
 test('administration creates and updates accounts, manages scoped roles and revokes disabled sessions', async ({ page, browser }, testInfo) => {
