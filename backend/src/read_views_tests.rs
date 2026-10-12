@@ -170,7 +170,7 @@ async fn overview_has_bounded_ordered_queues_and_omits_unauthorized_sections() {
     let horizon =
         chrono::DateTime::parse_from_rfc3339(view["horizon_end"].as_str().unwrap()).unwrap();
     assert_eq!((horizon - as_of).num_hours(), 168);
-    f.connection().execute("UPDATE role_permissions SET revoked_at=?1 WHERE permission_key IN ('tasks.view','billing.view','reminders.view')",[validation::now()]).unwrap();
+    f.connection().execute("UPDATE role_permissions SET revoked_at=?1 WHERE permission_key IN ('tasks.view','tasks.read_own','tasks.read_team','tasks.read_development','billing.view','reminders.view')",[validation::now()]).unwrap();
     let view = overview::read(&f.db, f.actor.clone(), f.client.clone())
         .await
         .unwrap();

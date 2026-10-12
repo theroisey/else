@@ -11,12 +11,14 @@ use tokio::task::JoinSet;
 
 pub struct Worker {
     sync: Synchronization,
+    operations: crate::db::Database,
     providers: Arc<Providers>,
 }
 impl Worker {
-    pub fn new(sync: Synchronization) -> Result<Self> {
+    pub fn new(sync: Synchronization, operations: crate::db::Database) -> Result<Self> {
         Ok(Self {
             sync,
+            operations,
             providers: Arc::new(Providers::new()?),
         })
     }
@@ -63,6 +65,7 @@ impl BackgroundService for Worker {
         for _ in 0..2 {
             let worker = Self {
                 sync: self.sync.clone(),
+                operations: self.operations.clone(),
                 providers: self.providers.clone(),
             };
             work.spawn(async move {
@@ -79,6 +82,20 @@ impl BackgroundService for Worker {
                 }
             });
         }
+        let operations = self.operations.clone();
+        work.spawn(async move {
+            loop {
+                let delay = match crate::operations::automation::tick(&operations).await {
+                    Ok(true) => Duration::from_millis(250),
+                    Ok(false) => Duration::from_secs(30),
+                    Err(error) => {
+                        tracing::warn!(error_code = error.code(), "operation_job_cycle_failed");
+                        Duration::from_secs(30)
+                    }
+                };
+                tokio::time::sleep(delay).await;
+            }
+        });
         let mut prune = tokio::time::interval(Duration::from_secs(900));
         prune.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {

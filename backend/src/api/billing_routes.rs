@@ -9,6 +9,40 @@ impl Api {
         route: &[&str],
     ) -> Result<Reply> {
         match route {
+            [id, "reversals"] => {
+                if r.method != Method::GET {
+                    return Err(Error::Method("GET"));
+                }
+                Ok(Reply::page(
+                    billing::reversals(
+                        &self.db,
+                        actor,
+                        client,
+                        validation::id(id)?,
+                        query(r, &["limit", "cursor"])?,
+                    )
+                    .await?,
+                ))
+            }
+            [id, "payments", payment, "reverse"] => {
+                no_query(r)?;
+                if r.method != Method::POST {
+                    return Err(Error::Method("POST"));
+                }
+                Reply::data(
+                    200,
+                    billing::reverse(
+                        &self.db,
+                        actor,
+                        client,
+                        validation::id(id)?,
+                        validation::id(payment)?,
+                        validation::json(&r.body)?,
+                    )
+                    .await?,
+                )
+            }
+
             [id, "pricing-snapshot"] => {
                 no_query(r)?;
                 if r.method != Method::GET {

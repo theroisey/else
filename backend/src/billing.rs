@@ -21,7 +21,7 @@ pub const CURRENCIES: &[(&str, i64)] = &[
 ];
 const STATUS: &str = "CASE WHEN c.cancelled_at IS NOT NULL THEN 'cancelled' WHEN c.paid_minor=c.amount_minor THEN 'paid' WHEN c.due_date<?3 THEN 'overdue' WHEN c.paid_minor>0 THEN 'partially_paid' ELSE 'pending' END";
 const COLUMNS: &str = "c.id,c.client_id,c.created_by,c.description,c.internal_note,CAST(c.amount_minor AS TEXT) AS amount_minor,CAST(c.paid_minor AS TEXT) AS paid_minor,CAST(CASE WHEN c.cancelled_at IS NULL THEN c.amount_minor-c.paid_minor ELSE 0 END AS TEXT) AS outstanding_minor,c.currency,c.currency_exponent,c.due_date,c.cancelled_at,CAST(c.revision AS TEXT) AS revision,c.created_at,c.updated_at";
-const PAYMENT_COLUMNS: &str = "id,client_id,collection_id,recorded_by,currency,CAST(amount_minor AS TEXT) AS amount_minor,paid_on,method,reference,note,command_id,CAST(collection_revision AS TEXT) AS collection_revision,recorded_at";
+const PAYMENT_COLUMNS: &str = "id,client_id,collection_id,recorded_by,currency,CAST(amount_minor AS TEXT) AS amount_minor,paid_on,method,reference,note,command_id,CAST(collection_revision AS TEXT) AS collection_revision,recorded_at,collector,partner_id,(SELECT u.display_name FROM users u WHERE u.id=payments.recorded_by) AS recorded_by_name";
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -191,6 +191,8 @@ pub async fn update(
     db.write(move |tx| {
         authorize(tx,&actor,&client,Some("billing.update"),true)?;
         let old=document(tx,&client,&id)?;let previous=revision(&old)?;let next=next_revision(previous,expected.ok_or(Error::Invalid("invalid_request"))?)?;
+        let commercial:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM billing_periods WHERE collection_id=?1)",[&id],|r|r.get(0))?;
+        if commercial && validation::exact_integer(old["amount_minor"].as_str().ok_or(Error::Internal)?,true)?!=terms.amount{return Err(Error::Conflict("commercial_period_workflow"))}
         if old["status"]=="cancelled" || old["currency"]!=terms.currency {return Err(Error::Conflict("conflict"));}
         tx.execute("UPDATE collections SET description=?1,internal_note=?2,amount_minor=?3,due_date=?4,revision=?5,updated_at=?6 WHERE id=?7",params![terms.description,terms.note,terms.amount,terms.due,next,validation::now(),id])?;
         audit::mutation(tx,&actor,"billing",&id,Some(&client),"updated",(Some(snapshot(&old)?), snapshot(&document(tx,&client,&id)?)?))?;
@@ -203,6 +205,7 @@ pub async fn update(
 pub struct Payment {
     expected_revision: String,
     command_id: String,
+    collector: Option<String>,
     amount_minor: String,
     currency: String,
     paid_on: String,
@@ -224,6 +227,13 @@ pub async fn record_payment(
     let amount = validation::exact_integer(&input.amount_minor, true)?;
     validation::id(&input.command_id)?;
     exponent(&input.currency)?;
+    if input
+        .collector
+        .as_deref()
+        .is_some_and(|c| !["roise", "partner"].contains(&c))
+    {
+        return Err(Error::Invalid("invalid_collector"));
+    }
     input.paid_on = validation::date(&input.paid_on)?;
     if input.paid_on > today()
         || !["bank_transfer", "cash", "card", "other"].contains(&input.method.as_str())
@@ -236,7 +246,10 @@ pub async fn record_payment(
         // Authorized committed-command reconciliation precedes lifecycle checks.
         authorize(tx,&actor,&client,Some("billing.update"),false)?;
         let old=document(tx,&client,&id)?;
-        let committed:Option<(String,bool)>=tx.query_row("SELECT id,(recorded_by=?1 AND expected_revision=?2 AND amount_minor=?3 AND currency=?4 AND paid_on=?5 AND method=?6 AND reference=?7 AND note=?8) FROM payments WHERE collection_id=?9 AND command_id=?10",params![actor.user_id,expected,amount,input.currency,input.paid_on,input.method,input.reference,input.note,id,input.command_id],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
+        let configured:Option<(String,Option<String>)>=tx.query_row("SELECT v.collector,v.partner_id FROM billing_periods b JOIN agreement_versions v ON v.id=b.version_id WHERE b.collection_id=?1",[&id],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
+        let collector=input.collector.clone().or_else(||configured.as_ref().map(|(c,_)|c.clone()));
+        let partner=if collector.as_deref()==Some("partner"){configured.as_ref().and_then(|(_,p)|p.clone()).ok_or(Error::Invalid("invalid_collector"))?.into()}else{None};
+        let committed:Option<(String,bool)>=tx.query_row("SELECT id,(recorded_by=?1 AND expected_revision=?2 AND amount_minor=?3 AND currency=?4 AND paid_on=?5 AND method=?6 AND reference=?7 AND note=?8 AND collector IS ?11 AND partner_id IS ?12) FROM payments WHERE collection_id=?9 AND command_id=?10",params![actor.user_id,expected,amount,input.currency,input.paid_on,input.method,input.reference,input.note,id,input.command_id,collector,partner],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
         if let Some((payment_id,equal))=committed {
             if !equal {return Err(Error::Conflict("conflict"));}
             return Ok(Mutation{id,revision:revision(&old)?.to_string(),payment_id:Some(payment_id),replayed:true});
@@ -247,10 +260,11 @@ pub async fn record_payment(
         let outstanding=validation::exact_integer(old["outstanding_minor"].as_str().ok_or(Error::Internal)?,false)?;
         if amount>outstanding {return Err(Error::Conflict("conflict"));}
         let payment_id=validation::new_id();let now=validation::now();
-        tx.execute("INSERT INTO payments VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14)",params![payment_id,id,client,input.currency,actor.user_id,amount,input.paid_on,input.method,input.reference,input.note,input.command_id,expected,next,now])?;
+        tx.execute("INSERT INTO payments(id,collection_id,client_id,currency,recorded_by,amount_minor,paid_on,method,reference,note,command_id,expected_revision,collection_revision,recorded_at,collector,partner_id) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16)",params![payment_id,id,client,input.currency,actor.user_id,amount,input.paid_on,input.method,input.reference,input.note,input.command_id,expected,next,now,collector,partner])?;
         // A storage trigger applies the append-only ledger to the cached balance.
         tx.execute("UPDATE collections SET revision=?1,updated_at=?2 WHERE id=?3",params![next,now,id])?;
         audit::mutation(tx,&actor,"billing",&id,Some(&client),"payment_recorded",(Some(snapshot(&old)?), snapshot(&document(tx,&client,&id)?)?))?;
+        notify_payment(tx,&id,"payment_recorded",&payment_id)?;
         Ok(Mutation{id,revision:next.to_string(),payment_id:Some(payment_id),replayed:false})
     }).await
 }
@@ -260,6 +274,83 @@ pub async fn record_payment(
 pub struct Cancellation {
     expected_revision: String,
     confirm: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Reversal {
+    expected_revision: String,
+    command_id: String,
+    amount_minor: String,
+    currency: String,
+    reversed_on: String,
+    reason: String,
+}
+#[derive(Serialize)]
+pub struct Correction {
+    pub id: String,
+    pub revision: String,
+    pub reversal_id: String,
+    pub replayed: bool,
+}
+pub async fn reverse(
+    db: &Database,
+    actor: Actor,
+    client: String,
+    id: String,
+    payment: String,
+    mut input: Reversal,
+) -> Result<Correction> {
+    let expected = validation::exact_integer(&input.expected_revision, true)?;
+    let amount = validation::exact_integer(&input.amount_minor, true)?;
+    validation::id(&input.command_id)?;
+    billing_currency(&input.currency)?;
+    input.reversed_on = validation::date(&input.reversed_on)?;
+    input.reason = validation::text(&input.reason, 2000, true, true)?;
+    if input.reversed_on > today() {
+        return Err(Error::Invalid("invalid_request"));
+    }
+    db.write(move|tx|{
+        authorize(tx,&actor,&client,None,false)?;
+        security::require(tx,&actor,"billing.reverse",Some(&client)).map_err(hidden)?;
+        security::require(tx,&actor,"finance.approve_adjustment",Some(&client)).map_err(hidden)?;
+        let old=document(tx,&client,&id)?;
+        let original:Value=tx.query_row("SELECT id,amount_minor,paid_on,currency FROM payments WHERE id=?1 AND collection_id=?2 AND client_id=?3",params![payment,id,client],row_json)?;
+        let committed:Option<(String,bool)>=tx.query_row("SELECT id,(recorded_by=?1 AND expected_revision=?2 AND amount_minor=?3 AND currency=?4 AND reversed_on=?5 AND reason=?6 AND payment_id=?7) FROM payment_reversals WHERE collection_id=?8 AND command_id=?9",params![actor.user_id,expected,amount,input.currency,input.reversed_on,input.reason,payment,id,input.command_id],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
+        if let Some((rid,equal))=committed{
+            if !equal{return Err(Error::Conflict("command_conflict"))}
+            return Ok(Correction{id,revision:revision(&old)?.to_string(),reversal_id:rid,replayed:true});
+        }
+        security::client(tx,&client,true)?;
+        if old["status"]=="cancelled" || original["currency"]!=input.currency || original["paid_on"].as_str().is_none_or(|v|v>input.reversed_on.as_str()){return Err(Error::Conflict("invalid_reversal"))}
+        let previous=revision(&old)?;let next=next_revision(previous,expected)?;
+        let reversed:String=tx.query_row("SELECT exact_sum(amount_minor) FROM payment_reversals WHERE payment_id=?1",[&payment],|r|r.get(0))?;
+        let remainder=original["amount_minor"].as_i64().ok_or(Error::Internal)?.checked_sub(validation::exact_integer(&reversed,false)?).ok_or(Error::Internal)?;
+        if amount>remainder{return Err(Error::Conflict("invalid_reversal"))}
+        let rid=validation::new_id();let now=validation::now();
+        tx.execute("INSERT INTO payment_reversals(id,payment_id,collection_id,client_id,currency,recorded_by,amount_minor,reversed_on,reason,command_id,expected_revision,collection_revision,recorded_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)",params![rid,payment,id,client,input.currency,actor.user_id,amount,input.reversed_on,input.reason,input.command_id,expected,next,now])?;
+        tx.execute("UPDATE collections SET revision=?1,updated_at=?2 WHERE id=?3",params![next,now,id])?;
+        audit::mutation(tx,&actor,"billing",&id,Some(&client),"updated",(Some(snapshot(&old)?),snapshot(&document(tx,&client,&id)?)?))?;
+        notify_payment(tx,&id,"payment_reversed",&rid)?;
+        Ok(Correction{id,revision:next.to_string(),reversal_id:rid,replayed:false})
+    }).await
+}
+fn billing_currency(currency: &str) -> Result<()> {
+    exponent(currency).map(|_| ())
+}
+pub async fn reversals(
+    db: &Database,
+    actor: Actor,
+    client: String,
+    id: String,
+    q: Query,
+) -> Result<Value> {
+    let page = q.paging()?;
+    db.read(move|tx|{
+        authorize(tx,&actor,&client,None,false)?;document(tx,&client,&id)?;
+        let mut stmt=tx.prepare("SELECT id,payment_id,collection_id,client_id,currency,recorded_by,CAST(amount_minor AS TEXT) AS amount_minor,reversed_on,reason,command_id,CAST(collection_revision AS TEXT) AS collection_revision,recorded_at FROM payment_reversals WHERE collection_id=?1 AND (?2 IS NULL OR id>?2) ORDER BY id LIMIT ?3")?;
+        page.page(stmt.query_map(params![id,page.cursor,(page.limit+1) as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?)
+    }).await
 }
 
 pub async fn cancel(
@@ -276,6 +367,13 @@ pub async fn cancel(
     db.write(move |tx| {
         authorize(tx, &actor, &client, Some("billing.delete"), true)?;
         let old = document(tx, &client, &id)?;
+        if tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM billing_periods WHERE collection_id=?1)",
+            [&id],
+            |r| r.get::<_, bool>(0),
+        )? {
+            return Err(Error::Conflict("commercial_period_workflow"));
+        }
         if matches!(old["status"].as_str(), Some("paid" | "cancelled")) {
             return Err(Error::Conflict("conflict"));
         }
@@ -360,6 +458,19 @@ pub fn exponent(currency: &str) -> Result<i64> {
         .find(|c| c.0 == currency)
         .map(|c| c.1)
         .ok_or(Error::Invalid("invalid_request"))
+}
+fn notify_payment(tx: &Transaction<'_>, collection: &str, kind: &str, id: &str) -> Result<()> {
+    let period: Option<String> = tx
+        .query_row(
+            "SELECT id FROM billing_periods WHERE collection_id=?1",
+            [collection],
+            |r| r.get(0),
+        )
+        .optional()?;
+    if let Some(period) = period {
+        crate::operations::notifications::emit_period(tx, &period, kind, &format!("{kind}:{id}"))?;
+    }
+    Ok(())
 }
 pub fn today() -> String {
     chrono::Utc::now().format("%Y-%m-%d").to_string()
@@ -552,6 +663,7 @@ mod tests {
         let client = fixture.client.clone();
         let collection=create(db,actor.clone(),client.clone(),validation::json(br#"{"description":"Synthetic race obligation","amount_minor":"100","currency":"EUR"}"#).unwrap()).await.unwrap();
         let payment = || Payment {
+            collector: None,
             expected_revision: "1".into(),
             command_id: validation::new_id(),
             amount_minor: "60".into(),

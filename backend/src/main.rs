@@ -195,8 +195,8 @@ fn serve(config: Config) -> Result<(), Failure> {
     let vault = roisey_else::vault::Vault::new(db.clone(), ring.clone());
     let synchronization =
         roisey_else::synchronization::Synchronization::new(db.clone(), vault.clone(), ring);
-    let worker =
-        roisey_else::provider_worker::Worker::new(synchronization.clone()).map_err(|e| {
+    let worker = roisey_else::provider_worker::Worker::new(synchronization.clone(), db.clone())
+        .map_err(|e| {
             Failure::domain("provider_trust", "provider_trust_initialization_failed", e)
         })?;
     let assets = Assets::load(&config.frontend)

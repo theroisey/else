@@ -57,6 +57,33 @@ pub(crate) const TABLES: &[&str] = &[
     "client_websites",
     "website_integrations",
     "user_locale_preferences",
+    "operation_settings",
+    "teams",
+    "team_memberships",
+    "team_leadership_history",
+    "brand_staff_assignments",
+    "technical_requests",
+    "request_deliveries",
+    "delivery_reviews",
+    "request_events",
+    "request_commands",
+    "request_evidence",
+    "notifications",
+    "commercial_partners",
+    "service_agreements",
+    "agreement_versions",
+    "agreement_commands",
+    "period_commands",
+    "billing_periods",
+    "payment_reversals",
+    "internal_settlements",
+    "recurring_tasks",
+    "recurring_task_versions",
+    "recurring_task_occurrences",
+    "recurring_task_commands",
+    "notification_preferences",
+    "automation_failures",
+    "automation_alerts",
 ];
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -305,8 +332,10 @@ pub(crate) fn verify(connection: &mut Connection, ring: &Keyring) -> Result<BTre
         return Err(Error::Internal);
     }
     db::validate_history(&tx, false)?;
+    crate::operations::evidence::verify(&tx)?;
+    crate::operations::integrity::verify(&tx)?;
     crate::pricing::verify_lines(&tx)?;
-    let invalid:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM collections c WHERE c.paid_minor<>coalesce((SELECT sum(amount_minor) FROM payments p WHERE p.collection_id=c.id),0) OR c.revision<coalesce((SELECT max(collection_revision) FROM payments p WHERE p.collection_id=c.id),1))",[],|r|r.get(0))?;
+    let invalid:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM collections c WHERE CAST(c.paid_minor AS TEXT)<>(SELECT exact_sum(amount) FROM (SELECT amount_minor AS amount FROM payments p WHERE p.collection_id=c.id UNION ALL SELECT -amount_minor FROM payment_reversals rv WHERE rv.collection_id=c.id)) OR c.revision<coalesce((SELECT max(collection_revision) FROM payments p WHERE p.collection_id=c.id),1) OR c.revision<coalesce((SELECT max(collection_revision) FROM payment_reversals rv WHERE rv.collection_id=c.id),1))",[],|r|r.get(0))?;
     if invalid {
         return Err(Error::Internal);
     }

@@ -19,6 +19,7 @@ pub struct Actor {
 enum Principal {
     Session,
     Operator,
+    Job,
 }
 impl Actor {
     pub(crate) fn session(
@@ -47,10 +48,16 @@ impl Actor {
             principal: Principal::Operator,
         })
     }
+    pub(crate) fn job(user_id: String) -> Result<Self> {
+        let mut actor = Self::operator(user_id)?;
+        actor.principal = Principal::Job;
+        Ok(actor)
+    }
     pub fn source(&self) -> &'static str {
         match self.principal {
             Principal::Session => "http",
             Principal::Operator => "cli",
+            Principal::Job => "job",
         }
     }
 }
@@ -64,7 +71,7 @@ pub struct Grant {
 }
 
 pub fn fresh(tx: &Transaction<'_>, actor: &Actor) -> Result<()> {
-    if matches!(actor.principal, Principal::Operator) {
+    if matches!(actor.principal, Principal::Operator | Principal::Job) {
         let active: bool = tx.query_row(
             "SELECT EXISTS(SELECT 1 FROM users WHERE id=?1 AND status='active')",
             [&actor.user_id],

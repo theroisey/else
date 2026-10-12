@@ -16,6 +16,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 pub struct Request {
+    pub upload_admission: Option<tokio::sync::OwnedSemaphorePermit>,
     pub method: Method,
     pub path: String,
     pub query: String,
@@ -26,6 +27,7 @@ pub struct Request {
     pub request_id: String,
 }
 pub struct Reply {
+    pub binary: Option<crate::operations::evidence::File>,
     pub status: u16,
     pub body: Option<Value>,
     pub cookies: Vec<String>,
@@ -38,6 +40,7 @@ impl Reply {
             body: Some(
                 serde_json::json!({"data":serde_json::to_value(data).map_err(|_|Error::Internal)?}),
             ),
+            binary: None,
             cookies: vec![],
         })
     }
@@ -45,6 +48,7 @@ impl Reply {
         Self {
             status: 200,
             body: Some(data),
+            binary: None,
             cookies: vec![],
         }
     }
@@ -52,6 +56,7 @@ impl Reply {
         Self {
             status: 204,
             body: None,
+            binary: None,
             cookies: vec![],
         }
     }
@@ -67,16 +72,19 @@ pub struct Api {
 }
 
 mod billing_routes;
+mod commercial_routes;
 mod integration_routes;
+mod operations_routes;
 mod planning_routes;
 mod pricing_routes;
+mod recurring_routes;
 mod reminders_routes;
 mod report_routes;
 mod tasks_routes;
 mod website_routes;
 
 impl Api {
-    pub async fn dispatch(&self, request: Request) -> Result<Reply> {
+    pub async fn dispatch(&self, mut request: Request) -> Result<Reply> {
         let parts: Vec<&str> = request.path.trim_start_matches('/').split('/').collect();
         if parts.len() < 3
             || parts[0] != "api"
@@ -93,6 +101,14 @@ impl Api {
             "permissions",
             "clients",
             "audit-logs",
+            "requests",
+            "today",
+            "tasks",
+            "operations-people",
+            "preferences",
+            "operations-settings",
+            "teams",
+            "notifications",
         ]
         .contains(&route[0])
         {
@@ -117,6 +133,7 @@ impl Api {
             return Ok(Reply {
                 status: 200,
                 body: Some(login.session.document()),
+                binary: None,
                 cookies: self.login_cookies(&login.token, &login.csrf, &login.session.expires_at),
             });
         }
@@ -136,6 +153,31 @@ impl Api {
             }
         }
         match route {
+            ["clients", client, "recurring-tasks", rest @ ..] => {
+                self.recurring(&request, actor, validation::id(client)?, rest)
+                    .await
+            }
+            ["clients", client, "agreements", rest @ ..] => {
+                self.commercial(&request, actor, validation::id(client)?, rest, false)
+                    .await
+            }
+            ["clients", client, "commercial-periods", rest @ ..] => {
+                self.commercial(&request, actor, validation::id(client)?, rest, true)
+                    .await
+            }
+            ["preferences"]
+            | ["operations-settings"]
+            | ["today"]
+            | ["tasks"]
+            | ["operations-people"]
+            | ["teams", ..]
+            | ["requests", ..]
+            | ["notifications", ..]
+            | ["clients", _, "requests", ..]
+            | ["clients", _, "evidence", ..] => {
+                let admission = request.upload_admission.take();
+                self.operations(&request, actor, admission).await
+            }
             ["audit-logs"] => {
                 if method != "GET" {
                     return Err(Error::Method("GET"));
@@ -513,7 +555,17 @@ impl Api {
         }
         let content_type =
             single_header(&r.headers, "content-type").and_then(|v| v.parse::<mime::Mime>().ok());
-        if content_type.is_none_or(|v| v.essence_str() != "application/json") {
+        let upload = r.method == Method::POST && Self::upload_route(&r.path).is_some();
+        if content_type.is_none_or(|v| {
+            if upload {
+                !matches!(
+                    v.essence_str(),
+                    "image/png" | "image/jpeg" | "image/webp" | "application/pdf"
+                )
+            } else {
+                v.essence_str() != "application/json"
+            }
+        }) {
             return Err(Error::Response(
                 StatusCode::UNSUPPORTED_MEDIA_TYPE,
                 "content_type_required",

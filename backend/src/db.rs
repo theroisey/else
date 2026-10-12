@@ -13,10 +13,20 @@ use std::{
 use tokio::sync::Semaphore;
 
 pub(crate) const SCHEMA: &str = include_str!("../migrations/sqlite/000001_initial.sql");
-pub const SCHEMA_VERSION: u16 = 2;
+pub const SCHEMA_VERSION: u16 = 5;
 const SECOND_SCHEMA: &str = include_str!("../migrations/sqlite/000002_runtime_cleanup.sql");
+const OPERATIONS_SCHEMA: &str = include_str!("../migrations/sqlite/000003_operations.sql");
+const FINANCE_SCHEMA: &str = include_str!("../migrations/sqlite/000004_commercial_finance.sql");
+const RECURRING_SCHEMA: &str = include_str!("../migrations/sqlite/000005_recurring_operations.sql");
+const MIGRATIONS: &[&str] = &[
+    SCHEMA,
+    SECOND_SCHEMA,
+    OPERATIONS_SCHEMA,
+    FINANCE_SCHEMA,
+    RECURRING_SCHEMA,
+];
 pub(crate) fn migration_records() -> Vec<(i64, String)> {
-    [SCHEMA, SECOND_SCHEMA]
+    MIGRATIONS
         .iter()
         .enumerate()
         .map(|(i, text)| ((i + 1) as i64, format!("{:x}", Sha256::digest(text))))
@@ -248,6 +258,34 @@ fn existing_private_file(path: &Path) -> Result<()> {
     Ok(())
 }
 
+struct ExactSum;
+impl rusqlite::functions::Aggregate<i128, String> for ExactSum {
+    fn init(&self, _: &mut rusqlite::functions::Context<'_>) -> rusqlite::Result<i128> {
+        Ok(0)
+    }
+    fn step(
+        &self,
+        ctx: &mut rusqlite::functions::Context<'_>,
+        total: &mut i128,
+    ) -> rusqlite::Result<()> {
+        *total = total
+            .checked_add(i128::from(ctx.get::<i64>(0)?))
+            .ok_or_else(|| {
+                rusqlite::Error::UserFunctionError(Box::new(std::io::Error::other(
+                    "exact aggregate overflow",
+                )))
+            })?;
+        Ok(())
+    }
+    fn finalize(
+        &self,
+        _: &mut rusqlite::functions::Context<'_>,
+        total: Option<i128>,
+    ) -> rusqlite::Result<String> {
+        Ok(total.unwrap_or(0).to_string())
+    }
+}
+
 fn configure_connection(connection: Connection) -> Result<Connection> {
     connection.busy_timeout(Duration::from_secs(2))?;
     connection.pragma_update(None, "foreign_keys", "ON")?;
@@ -257,6 +295,14 @@ fn configure_connection(connection: Connection) -> Result<Connection> {
     let token = Arc::new(Mutex::new(validation::new_id()));
     let current = token.clone();
     let flags = rusqlite::functions::FunctionFlags::SQLITE_UTF8;
+    connection.create_aggregate_function(
+        "exact_sum",
+        1,
+        flags
+            | rusqlite::functions::FunctionFlags::SQLITE_INNOCUOUS
+            | rusqlite::functions::FunctionFlags::SQLITE_DETERMINISTIC,
+        ExactSum,
+    )?;
     connection.create_scalar_function(
         "transaction_token",
         0,
@@ -367,7 +413,7 @@ fn migrate(connection: &mut Connection) -> Result<()> {
         return Err(Error::Internal);
     }
     for (version, digest) in records.iter().skip(stored.len()) {
-        tx.execute_batch(if *version == 1 { SCHEMA } else { SECOND_SCHEMA })?;
+        tx.execute_batch(MIGRATIONS[(*version - 1) as usize])?;
         if *version == 1 {
             for table in [
                 "pricing_versions",
@@ -389,38 +435,105 @@ fn migrate(connection: &mut Connection) -> Result<()> {
 
 fn seed_catalog(connection: &mut Connection) -> Result<()> {
     let tx = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
-    let count: i64 = tx.query_row("SELECT count(*) FROM roles", [], |r| r.get(0))?;
-    if count != 0 {
-        return Ok(());
-    }
     let now = validation::now();
+    let mut added = Vec::new();
     for (key, scope, description) in PERMISSIONS {
-        tx.execute(
-            "INSERT INTO permissions VALUES (?1,?2,?3)",
+        if tx.execute(
+            "INSERT OR IGNORE INTO permissions VALUES (?1,?2,?3)",
             params![key, scope, description],
-        )?;
+        )? == 1
+        {
+            added.push(*key);
+        }
     }
     for (role, key, name) in [
         (ADMIN_ROLE, "initial_administrator", "Initial Administrator"),
         ("00000000-0000-4000-8000-000000000002", "finance", "Finance"),
         ("00000000-0000-4000-8000-000000000003", "viewer", "Viewer"),
+        (
+            "00000000-0000-4000-8000-000000000004",
+            "developer",
+            "Software Developer",
+        ),
+        (
+            "00000000-0000-4000-8000-000000000005",
+            "advertising_leader",
+            "Advertising Leader",
+        ),
+        (
+            "00000000-0000-4000-8000-000000000006",
+            "advertising_employee",
+            "Advertising Employee",
+        ),
+        (
+            "00000000-0000-4000-8000-000000000007",
+            "team_leadership",
+            "Team Leadership",
+        ),
     ] {
-        tx.execute("INSERT INTO roles (id,role_key,display_name,system_role,created_at,updated_at) VALUES (?1,?2,?3,1,?4,?4)",params![role,key,name,now])?;
-        let keys: Vec<&str> = match key {
-            "initial_administrator" => PERMISSIONS.iter().map(|x| x.0).collect(),
-            "finance" => vec![
-                "clients.view",
-                "billing.view",
-                "billing.manage",
-                "pricing.view",
-            ],
-            _ => vec![
-                "clients.view",
-                "billing.view",
-                "pricing.view",
-                "tasks.view",
-                "analytics.view",
-            ],
+        let created = tx.execute("INSERT OR IGNORE INTO roles(id,role_key,display_name,system_role,created_at,updated_at) VALUES (?1,?2,?3,1,?4,?4)",params![role,key,name,now])? == 1;
+        // Existing role definitions and revocations remain intact. The full
+        // initial administrator receives only newly introduced catalog keys.
+        let keys: Vec<&str> = if !created {
+            if role == ADMIN_ROLE {
+                added.clone()
+            } else {
+                vec![]
+            }
+        } else {
+            match key {
+                "initial_administrator" => PERMISSIONS.iter().map(|p| p.0).collect(),
+                "finance" => vec![
+                    "clients.view",
+                    "billing.view",
+                    "billing.manage",
+                    "pricing.view",
+                ],
+                "viewer" => vec![
+                    "clients.view",
+                    "billing.view",
+                    "pricing.view",
+                    "tasks.view",
+                    "analytics.view",
+                ],
+                "developer" => vec![
+                    "clients.view",
+                    "tasks.read_development",
+                    "tasks.update_own",
+                    "tasks.create",
+                    "tickets.create",
+                    "tickets.read_all",
+                    "tickets.accept",
+                    "tickets.reject",
+                    "tickets.assign",
+                    "tickets.deliver",
+                    "tickets.reopen",
+                ],
+                "team_leadership" => vec!["staff.read_team"],
+                "advertising_leader" => vec![
+                    "clients.view",
+                    "tasks.read_team",
+                    "tasks.create",
+                    "tasks.assign_team",
+                    "tasks.update_own",
+                    "tickets.create",
+                    "tickets.read_own",
+                    "tickets.read_team",
+                    "tickets.approve",
+                    "tickets.request_revision",
+                    "staff.read_team",
+                    "staff.assign_brands",
+                ],
+                _ => vec![
+                    "clients.view",
+                    "tasks.read_own",
+                    "tasks.update_own",
+                    "tickets.create",
+                    "tickets.read_own",
+                    "tickets.approve",
+                    "tickets.request_revision",
+                ],
+            }
         };
         for permission in keys {
             tx.execute("INSERT INTO role_permissions(id,role_id,permission_key,seeded,assigned_at) VALUES (?1,?2,?3,1,?4)",params![validation::new_id(),role,permission,now])?;
@@ -503,6 +616,90 @@ pub const PERMISSIONS: &[(&str, &str, &str)] = &[
         "client",
         "View client integration metadata",
     ),
+    ("tasks.read_team", "client", "Read supervised team tasks"),
+    (
+        "tasks.read_development",
+        "client",
+        "Read authorized technical development tasks",
+    ),
+    (
+        "tasks.assign_team",
+        "client",
+        "Assign supervised team tasks",
+    ),
+    (
+        "finance.approve_adjustment",
+        "client",
+        "Approve financial reversals and corrections",
+    ),
+    ("tasks.read_own", "client", "Read personally assigned tasks"),
+    (
+        "tasks.update_own",
+        "client",
+        "Change personally assigned general task status",
+    ),
+    ("tickets.create", "client", "Create technical requests"),
+    ("tickets.read_own", "client", "Read own technical requests"),
+    (
+        "tickets.read_team",
+        "client",
+        "Read authorized team requests",
+    ),
+    ("tickets.read_all", "client", "Read all brand requests"),
+    ("tickets.accept", "client", "Accept technical requests"),
+    ("tickets.reject", "client", "Reject technical requests"),
+    ("tickets.assign", "client", "Assign technical requests"),
+    (
+        "tickets.deliver",
+        "client",
+        "Start work and submit deliveries",
+    ),
+    (
+        "tickets.approve",
+        "client",
+        "Approve authorized independent deliveries",
+    ),
+    (
+        "tickets.request_revision",
+        "client",
+        "Request delivery revisions",
+    ),
+    ("tickets.reopen", "client", "Reopen rejected requests"),
+    ("tickets.cancel", "client", "Cancel technical requests"),
+    ("staff.read_team", "global", "Read authorized teams"),
+    ("staff.manage", "global", "Manage organization teams"),
+    (
+        "staff.assign_brands",
+        "client",
+        "Assign brands within authorized teams",
+    ),
+    (
+        "finance.read_company",
+        "global",
+        "Read company financial overview",
+    ),
+    (
+        "agreements.view",
+        "client",
+        "Read commercial service agreements",
+    ),
+    (
+        "agreements.manage",
+        "client",
+        "Manage commercial agreements and settlements",
+    ),
+    (
+        "billing.reverse",
+        "client",
+        "Record audited customer payment reversals",
+    ),
+    ("recurring.view", "client", "Read recurring task schedules"),
+    (
+        "recurring.manage",
+        "client",
+        "Manage recurring task schedules",
+    ),
+    ("settings.manage", "global", "Manage operational settings"),
 ];
 
 #[cfg(test)]
@@ -606,7 +803,7 @@ mod tests {
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO schema_migrations VALUES (3,'future',?1)",
+            "INSERT INTO schema_migrations VALUES (99,'future',?1)",
             [validation::now()],
         )
         .unwrap();

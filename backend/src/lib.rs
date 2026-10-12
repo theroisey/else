@@ -18,6 +18,7 @@ pub mod integrations;
 #[cfg(test)]
 mod integrations_tests;
 pub mod key_operations;
+pub mod operations;
 #[cfg(test)]
 mod operations_tests;
 pub mod overview;

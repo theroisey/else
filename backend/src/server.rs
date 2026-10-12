@@ -27,6 +27,7 @@ pub struct Application {
     pub draining: Arc<AtomicBool>,
     redis: Arc<crate::embedded_redis::EmbeddedRedis>,
     requests: Semaphore,
+    evidence_uploads: Arc<Semaphore>,
     options: HttpServerOptions,
 }
 
@@ -46,6 +47,7 @@ impl Application {
             draining,
             redis,
             requests: Semaphore::new(128),
+            evidence_uploads: Arc::new(Semaphore::new(2)),
             options,
         }
     }
@@ -88,13 +90,43 @@ impl Application {
             .and_then(|a| a.as_inet())
             .map(|a| a.ip().to_string())
             .unwrap_or_else(|| "unknown".into());
+        let upload = method == Method::POST && Api::upload_route(&path).is_some();
+        let admission = if upload {
+            let permit = self
+                .evidence_uploads
+                .clone()
+                .try_acquire_owned()
+                .map_err(|_| Error::Busy)?;
+            self.api
+                .evidence_preflight(&Request {
+                    upload_admission: None,
+                    method: method.clone(),
+                    path: path.clone(),
+                    query: query.clone(),
+                    query_present: session.req_header().uri.query().is_some(),
+                    headers: headers.clone(),
+                    body: Vec::new(),
+                    peer: peer.clone(),
+                    request_id: correlation.into(),
+                })
+                .await?;
+            session.set_read_timeout(Some(Duration::from_secs(30)));
+            Some(permit)
+        } else {
+            None
+        };
+        let maximum = if upload {
+            crate::operations::evidence::MAX_FILE
+        } else {
+            64 * 1024
+        };
         let mut body = Vec::new();
         while let Some(chunk) = session
             .read_request_body()
             .await
             .map_err(|_| Error::Invalid("invalid_request"))?
         {
-            if body.len() + chunk.len() > 64 * 1024 {
+            if body.len() + chunk.len() > maximum {
                 return Err(Error::Invalid("invalid_request"));
             }
             body.extend_from_slice(&chunk);
@@ -123,6 +155,7 @@ impl Application {
                 })?;
             }
             let reply = Reply {
+                binary: None,
                 status: 200,
                 body: Some(serde_json::json!({"status":if path=="/ready"{"ready"}else{"ok"}})),
                 cookies: vec![],
@@ -133,6 +166,7 @@ impl Application {
             return json_response(
                 self.api
                     .dispatch(Request {
+                        upload_admission: admission,
                         method: method.clone(),
                         path,
                         query_present: session.req_header().uri.query().is_some(),
@@ -204,7 +238,7 @@ impl Application {
     }
 
     fn failure(&self, error: &Error, method: &Method, correlation: &str) -> Response<Bytes> {
-        let mut response=json_response(Reply {status:error.status().as_u16(),body:Some(serde_json::json!({"error":{"code":error.code(),"message":error.message(),"request_id":correlation}})),cookies:if matches!(error,Error::Unauthorized){self.api.clear_cookies()}else{vec![]}},method).expect("fixed error response");
+        let mut response=json_response(Reply {binary:None,status:error.status().as_u16(),body:Some(serde_json::json!({"error":{"code":error.code(),"message":error.message(),"request_id":correlation}})),cookies:if matches!(error,Error::Unauthorized){self.api.clear_cookies()}else{vec![]}},method).expect("fixed error response");
         if let Error::Method(allowed) = error {
             response
                 .headers_mut()
@@ -249,8 +283,15 @@ impl HttpServerApp for Application {
             session.req_header().uri.path(),
             "/health" | "/ready" | "/status"
         );
+        let request_budget = if method == Method::POST
+            && Api::upload_route(session.req_header().uri.path()).is_some()
+        {
+            30
+        } else {
+            5
+        };
         let result = tokio::time::timeout(
-            Duration::from_secs(5),
+            Duration::from_secs(request_budget),
             self.handle(&mut session, &correlation),
         )
         .await
@@ -300,19 +341,39 @@ impl HttpServerApp for Application {
 }
 
 fn json_response(reply: Reply, method: &Method) -> Result<Response<Bytes>> {
-    let body = reply
-        .body
-        .map(|body| serde_json::to_vec(&body).map(Bytes::from))
-        .transpose()
-        .map_err(|_| Error::Internal)?
-        .unwrap_or_default();
+    let (body, content_type, disposition) = if let Some(file) = reply.binary {
+        let disposition = format!(
+            "{}; filename=\"{}\"",
+            if file.mime == "application/pdf" {
+                "attachment"
+            } else {
+                "inline"
+            },
+            file.filename
+        );
+        (Bytes::from(file.body), file.mime, Some(disposition))
+    } else {
+        (
+            reply
+                .body
+                .map(|body| serde_json::to_vec(&body).map(Bytes::from))
+                .transpose()
+                .map_err(|_| Error::Internal)?
+                .unwrap_or_default(),
+            "application/json; charset=utf-8".into(),
+            None,
+        )
+    };
     let mut response = Response::builder()
         .status(reply.status)
         .header(header::CACHE_CONTROL, "no-store");
     if reply.status != 204 {
         response = response
-            .header(header::CONTENT_TYPE, "application/json; charset=utf-8")
+            .header(header::CONTENT_TYPE, content_type)
             .header(header::CONTENT_LENGTH, body.len());
+    }
+    if let Some(disposition) = disposition {
+        response = response.header(header::CONTENT_DISPOSITION, disposition);
     }
     for cookie in reply.cookies {
         response = response.header(header::SET_COOKIE, cookie);

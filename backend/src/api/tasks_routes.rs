@@ -63,6 +63,11 @@ impl Api {
                 }
                 let id = validation::id(id)?;
                 match *operation {
+                    "assignment" => Reply::data(
+                        200,
+                        tasks::assign(&self.db, actor, client, id, validation::json(&r.body)?)
+                            .await?,
+                    ),
                     "status" => Reply::data(
                         200,
                         tasks::status(&self.db, actor, client, id, validation::json(&r.body)?)

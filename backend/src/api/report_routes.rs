@@ -105,6 +105,7 @@ impl Api {
             .enqueue(actor, scope, revision, period, plaintext)
             .await?;
         Ok(Reply {
+            binary: None,
             status: 202,
             body: Some(serde_json::to_value(queued).map_err(|_| Error::Internal)?),
             cookies: vec![],
