@@ -224,7 +224,10 @@ fn serve(config: Config) -> Result<(), Failure> {
     listener.add_tcp(&config.address.to_string());
     let conf = ServerConf {
         daemon: false,
-        threads: 4,
+        threads: std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(2)
+            .min(4),
         grace_period_seconds: Some(0),
         graceful_shutdown_timeout_seconds: Some(10),
         ..ServerConf::default()

@@ -116,7 +116,14 @@ impl Database {
         }
         Ok(Self(Arc::new(Pool {
             connections: Mutex::new(connections),
-            slots: Arc::new(Semaphore::new(CONNECTIONS - 1)),
+            // Avoid oversubscribing a quota-limited host with CPU-heavy
+            // cross-brand reads; leave execution budget for the writer.
+            slots: Arc::new(Semaphore::new(
+                std::thread::available_parallelism()
+                    .map(|n| n.get().saturating_sub(1))
+                    .unwrap_or(1)
+                    .clamp(1, CONNECTIONS - 1),
+            )),
             writer: Arc::new(Semaphore::new(1)),
         })))
     }
@@ -155,8 +162,8 @@ impl Database {
         } else {
             None
         };
-        // Seven read permits leave one connection available to the single
-        // admitted writer. Reads cannot place it behind a saturated read queue.
+        // CPU-bounded read permits always leave a connection available to the
+        // single admitted writer. Reads cannot consume its reserved capacity.
         let slot = if write {
             None
         } else {
@@ -716,7 +723,8 @@ mod tests {
         let release = Arc::new((Mutex::new(false), std::sync::Condvar::new()));
         let (entered, mut receiving) = tokio::sync::mpsc::unbounded_channel();
         let mut readers = Vec::new();
-        for _ in 0..8 {
+        let read_slots = database.0.slots.available_permits();
+        for _ in 0..=read_slots {
             let db = database.clone();
             let release = release.clone();
             let entered = entered.clone();
@@ -734,12 +742,13 @@ mod tests {
                 .await
             }));
         }
-        for _ in 0..7 {
+        for _ in 0..read_slots {
             receiving.recv().await.unwrap();
         }
-        let eighth_is_queued = tokio::time::timeout(Duration::from_millis(100), receiving.recv())
-            .await
-            .is_err();
+        let excess_reader_is_queued =
+            tokio::time::timeout(Duration::from_millis(100), receiving.recv())
+                .await
+                .is_err();
         let committed = tokio::time::timeout(
             Duration::from_millis(500),
             database.write(|tx| {
@@ -758,7 +767,7 @@ mod tests {
         for reader in readers {
             reader.await.unwrap().unwrap();
         }
-        assert!(eighth_is_queued);
+        assert!(excess_reader_is_queued);
         committed.unwrap().unwrap();
         assert!(database.read(|tx| tx.query_row("SELECT EXISTS(SELECT 1 FROM client_scopes WHERE id='99999999-9999-4999-8999-999999999999')", [], |r| r.get::<_, bool>(0)).map_err(Error::from)).await.unwrap());
     }
