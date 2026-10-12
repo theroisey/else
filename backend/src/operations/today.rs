@@ -45,10 +45,9 @@ pub async fn read(db: &Database, actor: Actor, q: Query) -> Result<Value> {
             let count:i64=tx.query_row("SELECT count(DISTINCT m.user_id) FROM teams tm JOIN team_memberships m ON m.team_id=tm.id JOIN users u ON u.id=m.user_id WHERE tm.archived_at IS NULL AND m.revoked_at IS NULL AND u.status='active' AND (?1 OR tm.leader_id=?2)",params![all,actor.user_id],|r|r.get(0))?;output["team_members"]=json!(count.to_string());
         }
         if security::allowed_user(tx,&actor.user_id,"finance.read_company",None)? {
-            let billing=grant_sql("?1","billing.view","c.client_id");let mut stmt=tx.prepare(&format!("SELECT c.currency,c.amount_minor-c.paid_minor,c.due_date FROM collections c WHERE c.cancelled_at IS NULL AND c.paid_minor<c.amount_minor AND {billing} AND (?2 IS NULL OR c.client_id=?2)"))?;
-            let mut rows=stmt.query(params![actor.user_id,client])?;let mut totals=BTreeMap::<String,(i128,i128)>::new();
-            while let Some(row)=rows.next()? {let currency:String=row.get(0)?;let amount:i64=row.get(1)?;let due:Option<String>=row.get(2)?;let v=totals.entry(currency).or_default();v.0=v.0.checked_add(i128::from(amount)).ok_or(Error::Internal)?;if due.as_deref().is_some_and(|d|d<&now[..10]){v.1=v.1.checked_add(i128::from(amount)).ok_or(Error::Internal)?}}
-            output["finance"]=json!(totals.into_iter().map(|(currency,(outstanding,overdue))|json!({"currency":currency,"outstanding_minor":outstanding.to_string(),"overdue_minor":overdue.to_string()})).collect::<Vec<_>>());
+            let billing=grant_sql("?1","billing.view","c.client_id");
+            let mut stmt=tx.prepare(&format!("SELECT c.currency,exact_sum(c.amount_minor-c.paid_minor) AS outstanding_minor,exact_sum(CASE WHEN c.due_date<?3 THEN c.amount_minor-c.paid_minor ELSE 0 END) AS overdue_minor FROM collections c WHERE c.cancelled_at IS NULL AND c.paid_minor<c.amount_minor AND {billing} AND (?2 IS NULL OR c.client_id=?2) GROUP BY c.currency ORDER BY c.currency"))?;
+            output["finance"]=json!(stmt.query_map(params![actor.user_id,client,&now[..10]],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?);
             let agreements=grant_sql("?1","agreements.view","b.client_id");let access=grant_sql("?1","billing.view","b.client_id");let brand_access=grant_sql("?1","clients.view","b.client_id");
             let mut stmt=tx.prepare(&format!("{} WHERE b.voided_at IS NULL AND v.partner_id IS NOT NULL AND {agreements} AND {access} AND {brand_access} AND (?2 IS NULL OR b.client_id=?2)",commercial::PERIOD_SQL))?;
             let mut rows=stmt.query(params![actor.user_id,client])?;let mut internal=BTreeMap::<String,(i128,i128)>::new();

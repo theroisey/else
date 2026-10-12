@@ -957,3 +957,62 @@ async fn rejection_requires_a_reason_and_reopening_retains_the_original_decision
         0
     );
 }
+
+#[tokio::test]
+async fn today_finance_preserves_wide_exact_totals_currency_scope_and_revoked_access() {
+    use crate::billing;
+    let f = Fixture::new().await;
+    let other = clients::create(
+        &f.db,
+        f.actor.clone(),
+        input(json!({"name":"Synthetic second financial brand"})),
+    )
+    .await
+    .unwrap();
+    let yesterday = chrono::Utc::now()
+        .date_naive()
+        .pred_opt()
+        .unwrap()
+        .to_string();
+    for brand in [&f.client, &other.id] {
+        billing::create(
+            &f.db,
+            f.actor.clone(),
+            brand.clone(),
+            input(json!({"description":"Synthetic exact EUR obligation","currency":"EUR","amount_minor":i64::MAX.to_string(),"due_date":yesterday})),
+        ).await.unwrap();
+    }
+    let software=billing::create(
+        &f.db,f.actor.clone(),f.client.clone(),
+        input(json!({"description":"Synthetic monthly software","currency":"USD","amount_minor":"100000","due_date":yesterday})),
+    ).await.unwrap();
+    billing::record_payment(
+        &f.db,f.actor.clone(),f.client.clone(),software.id,
+        input(json!({"expected_revision":"1","command_id":validation::new_id(),"currency":"USD","amount_minor":"60000","paid_on":yesterday,"method":"bank_transfer"})),
+    ).await.unwrap();
+    let dashboard = today::read(&f.db, f.actor.clone(), Query::default())
+        .await
+        .unwrap();
+    assert_eq!(
+        dashboard["finance"],
+        json!([
+            {"currency":"EUR","outstanding_minor":"18446744073709551614","overdue_minor":"18446744073709551614"},
+            {"currency":"USD","outstanding_minor":"40000","overdue_minor":"40000"}
+        ])
+    );
+    let scoped = today::read(
+        &f.db,
+        f.actor.clone(),
+        Query::parse(&format!("client_id={}", f.client), &["client_id"]).unwrap(),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        scoped["finance"][0]["outstanding_minor"],
+        i64::MAX.to_string()
+    );
+    assert_eq!(scoped["finance"][1]["outstanding_minor"], "40000");
+    f.connection().execute("UPDATE role_permissions SET revoked_at=?2 WHERE role_id=?1 AND permission_key='billing.view'",params![crate::db::ADMIN_ROLE,validation::now()]).unwrap();
+    let withdrawn = today::read(&f.db, f.actor, Query::default()).await.unwrap();
+    assert_eq!(withdrawn["finance"], json!([]));
+}
