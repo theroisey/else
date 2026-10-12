@@ -22,8 +22,16 @@ use sha2::{Digest, Sha256};
 
 /// Only compiled identifiers/permission keys may be interpolated here.
 pub(crate) fn grant_sql(user: &str, key: &str, client: &str) -> String {
+    // A global grant is independent of the candidate row. Keep it in an
+    // uncorrelated subquery so SQLite evaluates it once per statement instead
+    // of joining the grant tables for every task/receivable in a dashboard.
+    // Client grants still bind the actual resource, under the same fresh read
+    // transaction and retained revocation checks.
+    let base = format!(
+        "SELECT 1 FROM user_roles ur JOIN role_permissions rp ON rp.role_id=ur.role_id WHERE ur.user_id={user} AND ur.revoked_at IS NULL AND rp.revoked_at IS NULL AND rp.permission_key='{key}'"
+    );
     format!(
-        "EXISTS(SELECT 1 FROM user_roles ur JOIN role_permissions rp ON rp.role_id=ur.role_id WHERE ur.user_id={user} AND ur.revoked_at IS NULL AND rp.revoked_at IS NULL AND rp.permission_key='{key}' AND (ur.scope_kind='global' OR ur.client_id={client}))"
+        "(EXISTS({base} AND ur.scope_kind='global') OR EXISTS({base} AND ur.scope_kind='client' AND ur.client_id={client}))"
     )
 }
 pub(crate) fn hidden(error: Error) -> Error {
