@@ -9,7 +9,7 @@ const unrelated = 'b0333333-3333-4333-8333-333333333333'
 // five-attempt login limiter instead of exhausting another suite's owner.
 test.beforeAll(() => {
   const owner = 'a0444444-4444-4444-8444-444444444444'
-  database(`INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${owner}','operations.owner.fixture@example.com','Synthetic operations owner',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES(new_id(),'${owner}','00000000-0000-4000-8000-000000000001','global',NULL,utc_now());`)
+  database(`INSERT OR IGNORE INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${owner}','operations.owner.fixture@example.com','Synthetic operations owner',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT OR IGNORE INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES('a0555555-5555-4555-8555-555555555555','${owner}','00000000-0000-4000-8000-000000000001','global',NULL,utc_now());`)
 })
 async function login(page: Page, email: string, path = '/app') {
   await page.goto(path)
@@ -505,6 +505,7 @@ test('operations: team leader scope, brand assignment and dynamic removal', asyn
       .click()
     const form = page.getByRole('dialog', { name: 'Assign brand', exact: true })
     await form.getByLabel('Employee', { exact: true }).selectOption(user)
+    await form.getByLabel('Find brand', { exact: true }).fill('Synthetic team brand')
     await form.getByLabel('Brand', { exact: true }).selectOption(teamBrand)
     await form
       .getByLabel('Responsibility')
@@ -518,9 +519,11 @@ test('operations: team leader scope, brand assignment and dynamic removal', asyn
   const leadContext = await browser.newContext(),
     lead = await leadContext.newPage()
   await login(lead, 'team.leader@example.com', new URL(url).pathname)
+  await expect(lead.getByRole('navigation', { name: 'Breadcrumb', exact: true })).toContainText('Team')
   await lead.getByRole('button', { name: 'Assign brand', exact: true }).click()
   drawer = lead.getByRole('dialog', { name: 'Assign brand', exact: true })
   await drawer.getByLabel('Employee', { exact: true }).selectOption(memberID)
+  await drawer.getByLabel('Find brand', { exact: true }).fill('Synthetic team brand')
   await drawer.getByLabel('Brand', { exact: true }).selectOption(teamBrand)
   await drawer.getByLabel('Responsibility').fill('Synthetic campaign tracking')
   await drawer

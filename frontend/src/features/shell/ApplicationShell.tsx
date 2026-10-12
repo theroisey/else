@@ -34,8 +34,8 @@ export function ApplicationShell() {
   const current = navigation.find(
     (item) =>
       item.path === location.pathname ||
-      (item.path === '/app/clients' &&
-        location.pathname.startsWith('/app/clients/')),
+      (['/app/clients', '/app/team'].includes(item.path) &&
+        location.pathname.startsWith(item.path + '/')),
   )
   const taskContext = /^\/app\/clients\/[^/]+\/tasks(?:\/|$)/.test(
     location.pathname,
@@ -251,7 +251,7 @@ export function ApplicationShell() {
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  end={item.path !== '/app/clients'}
+                  end={!['/app/clients', '/app/team'].includes(item.path)}
                   ref={index === 0 ? firstLinkRef : undefined}
                   onClick={() => {
                     setMobileOpen(false)
@@ -280,7 +280,7 @@ export function ApplicationShell() {
                   <NavLink
                     key={item.path}
                     to={item.path}
-                    end={item.path !== '/app/clients'}
+                    end={!['/app/clients', '/app/team'].includes(item.path)}
                     onClick={() => {
                       setMobileOpen(false)
                       window.requestAnimationFrame(() =>
