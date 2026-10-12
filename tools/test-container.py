@@ -155,10 +155,15 @@ def run(args):
             runtime = runtime_fixture.inspect(name)
             index, _ = request("/app/clients")
             assert index == (ROOT / "frontend/dist/index.html").read_bytes()
-            asset = next((ROOT / "frontend/dist/assets").glob("*.js.gz"))
+            scripts = sorted(path for path in (ROOT / "frontend/dist/assets").glob("*.js") if path.name != "theme-init.js")
+            assert len(scripts) == 1 and scripts[0].name.startswith("index-"), "production must contain one hashed application bundle"
+            asset = scripts[0].with_suffix(".js.gz")
             encoded, headers = request("/assets/" + asset.name[:-3], headers={"Accept-Encoding": "gzip"})
             assert headers["Content-Encoding"] == "gzip" and "immutable" in headers["Cache-Control"]
             assert gzip.decompress(encoded) == asset.with_suffix("").read_bytes()
+            theme, theme_headers = request("/assets/theme-init.js", headers={"Accept-Encoding": "gzip"})
+            assert theme_headers["Cache-Control"] == "no-cache", "pre-paint theme bootstrap must stay fresh"
+            assert gzip.decompress(theme) == (ROOT / "frontend/dist/assets/theme-init.js").read_bytes()
             request("/assets/missing.js", expected=404)
             request("/%2e%2e/private", expected=404)
             request("/api/v1/releases", expected=404)
