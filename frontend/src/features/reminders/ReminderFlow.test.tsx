@@ -1,3 +1,4 @@
+import { emptyToday } from '../operations/fixtures.test-data'
 import { afterEach, expect, it, vi } from 'vitest'
 import {
   act,
@@ -57,6 +58,7 @@ function setup(
     if (custom) return Promise.resolve(custom)
     if (url === '/api/v1/auth/preferences')
       return Promise.resolve(json({ data: { locale: null } }))
+    if(url==='/api/v1/today')return Promise.resolve(json({data:emptyToday}))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: session }))
     if (url.startsWith(base + '/owners?'))
@@ -148,6 +150,7 @@ it('opens reminder-only scoped views without client/resource/directory reads or 
       ([url]) =>
         url === '/api/v1/auth/session' ||
         url === '/api/v1/auth/preferences' ||
+        url.startsWith('/api/v1/notifications?') ||
         url.startsWith(base),
     ),
   ).toBe(true)
@@ -644,13 +647,13 @@ it('does not navigate from a departed route after an old mutation finishes', asy
   await u.click(screen.getByRole('button', { name: 'Save reminder' }))
   await waitFor(() => expect(writeCalls(fetcher)).toHaveLength(1))
   await u.click(screen.getByRole('link', { name: 'ROISEY ELSE' }))
-  await screen.findByRole('heading', { name: 'Operations workspace' })
+  await screen.findByRole('heading', { name: 'Today' })
   await act(async () => {
     finish(json({ data: { id: recordID, revision: 2 } }))
     await pending
   })
   expect(
-    screen.getByRole('heading', { name: 'Operations workspace' }),
+    screen.getByRole('heading', { name: 'Today' }),
   ).toBeVisible()
   expect(screen.queryByText('Reminder updated.')).not.toBeInTheDocument()
 })

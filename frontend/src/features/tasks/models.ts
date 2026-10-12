@@ -67,7 +67,10 @@ export const metadataSchema = z
     tags: z
       .array(text(40, true).transform((v) => v.toLowerCase()))
       .max(20, 'Use up to 20 tags.')
-      .refine((v) => new Set(v).size === v.length, 'Tags must be distinct after normalization.'),
+      .refine(
+        (v) => new Set(v).size === v.length,
+        'Tags must be distinct after normalization.',
+      ),
   })
   .refine(
     (v) =>
@@ -93,6 +96,10 @@ const summaryBase = z.object({
   id: uuid,
   client_id: uuid,
   created_by: uuid,
+  creator_name: z.string().max(100).optional(),
+  assignee_name: z.string().max(100).nullable().optional(),
+  brand_name: z.string().max(200).optional(),
+  request_id: uuid.nullable().optional(),
   assignee_id: uuid.nullable(),
   title: text(200, true),
   status: z.enum(statuses),
@@ -131,7 +138,9 @@ function consistent(v: z.infer<typeof summaryBase>) {
   )
 }
 const summarySchema = summaryBase.refine(consistent)
-const taskSchema = summaryBase.extend({ description: text(8000, false, true) }).refine(consistent)
+const taskSchema = summaryBase
+  .extend({ description: text(8000, false, true) })
+  .refine(consistent)
 export type Summary = z.infer<typeof summarySchema>
 export type Task = z.infer<typeof taskSchema>
 const candidateSchema = z.object({ id: uuid, display_name: text(100, true) })
@@ -150,7 +159,8 @@ function pageSchema<T extends z.ZodType<{ id: string }>>(item: T) {
         v.data.length <= v.page.limit &&
         new Set(v.data.map((i) => i.id)).size === v.data.length &&
         (!v.page.next_cursor ||
-          (v.data.length === v.page.limit && v.page.next_cursor === v.data.at(-1)?.id)),
+          (v.data.length === v.page.limit &&
+            v.page.next_cursor === v.data.at(-1)?.id)),
     )
 }
 function parse<T>(schema: z.ZodType<T>, body: unknown): T {
@@ -158,9 +168,12 @@ function parse<T>(schema: z.ZodType<T>, body: unknown): T {
   if (!result.success) throw new APIError(0, 'invalid_response')
   return result.data
 }
-export const parseTask = (body: unknown) => parse(z.object({ data: taskSchema }), body).data
-export const parsePage = (body: unknown) => parse(pageSchema(summarySchema), body)
-export const parseCandidates = (body: unknown) => parse(pageSchema(candidateSchema), body)
+export const parseTask = (body: unknown) =>
+  parse(z.object({ data: taskSchema }), body).data
+export const parsePage = (body: unknown) =>
+  parse(pageSchema(summarySchema), body)
+export const parseCandidates = (body: unknown) =>
+  parse(pageSchema(candidateSchema), body)
 export const parseMutation = (body: unknown) =>
   parse(z.object({ data: z.object({ id: uuid, revision }) }), body).data
 export interface Filter {

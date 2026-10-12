@@ -19,10 +19,19 @@ export async function read(
     await authenticatedJSON(`/api/v1/clients/${client}/overview`, { signal }),
     client,
   )
-  const { finance, tasks, reminders, activity, ...context } = value
+  const { finance, tasks, reminders, activity, operations, ...context } = value
   const result: Overview = context
   if (has('billing.view') && finance) result.finance = finance
-  if (has('tasks.view') && tasks) result.tasks = tasks
+  if (
+    [
+      'tasks.view',
+      'tasks.read_own',
+      'tasks.read_team',
+      'tasks.read_development',
+    ].some(has) &&
+    tasks
+  )
+    result.tasks = tasks
   if (has('reminders.view') && reminders) result.reminders = reminders
   if (has('activity.view') && activity) {
     const items = activity.items.filter(
@@ -33,5 +42,10 @@ export async function read(
       has_more: activity.has_more && items.length === activity.items.length,
     }
   }
+  if (
+    ['tickets.read_all', 'tickets.read_team', 'tickets.read_own'].some(has) &&
+    operations
+  )
+    result.operations = operations
   return result
 }

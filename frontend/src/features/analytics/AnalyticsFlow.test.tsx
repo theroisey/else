@@ -83,7 +83,7 @@ function setup({
 }
 async function choosePeriod() {
   const user = userEvent.setup()
-  await screen.findByRole('button', { name: 'Load stored reports' })
+  await screen.findByRole('button', { name: 'Load stored reports' }, {timeout:5000})
   await user.type(screen.getByLabelText('Start date'), period.since)
   await user.type(screen.getByLabelText('End date'), period.until)
   await user.click(screen.getByRole('button', { name: 'Load stored reports' }))

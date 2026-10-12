@@ -1,3 +1,4 @@
+import { BrandOperations } from '../operations/BrandOperations'
 import { copy, useLocale } from '../../i18n/index'
 import { ClientNavigation } from '../clients/ClientNavigation'
 import { Link, useLocation, useParams } from 'react-router'
@@ -64,8 +65,7 @@ function Workspace({
       // before consuming its cancellation signal and starting the network read.
       await Promise.resolve()
       const signal = context.signal
-      if (signal.aborted)
-        throw new DOMException('Read cancelled', 'AbortError')
+      if (signal.aborted) throw new DOMException('Read cancelled', 'AbortError')
       return operation.read(() => service.read(client, grants, signal))
     },
     staleTime: 0,
@@ -163,6 +163,9 @@ function Workspace({
           'overview',
         )}
       </p>
+      {data.operations ? (
+        <BrandOperations client={client} data={data.operations} />
+      ) : null}
       {data.finance ? (
         <FinancialPosition finance={data.finance} base={base} />
       ) : null}

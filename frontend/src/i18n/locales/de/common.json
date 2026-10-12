@@ -283,5 +283,22 @@
   "Resource kind": "Ressourcentyp",
   "Resource": "Ressource",
   "Request ID": "Anfrage-ID",
-  "Schema version": "Schemaversion"
+  "Schema version": "Schemaversion",
+  "Task queue": "Aufgabenliste",
+  "Today": "Heute",
+  "Technical requests": "Technische Anfragen",
+  "Notifications": "Benachrichtigungen",
+  "Team": "Team",
+  "Portfolio": "Portfolio",
+  "This occurrence is not due, is paused or exceeds the safe recovery window. Review the schedule before generating work.": "Der Termin ist noch nicht fällig, pausiert oder außerhalb des sicheren Nachholzeitraums. Prüfen Sie den Zeitplan.",
+  "This billing period is not due, is paused or exceeds the safe recovery window. Review the agreement before generating charges.": "Die Abrechnungsperiode ist nicht fällig, pausiert oder außerhalb des sicheren Nachholzeitraums. Prüfen Sie die Vereinbarung.",
+  "Choose an active manager with current brand access and the required generation permissions.": "Wählen Sie eine aktive Person mit Marken- und Erstellungsrechten.",
+  "The ROISE share must be included in the total. Check the partner, collector and allocation policy.": "Der ROISE-Anteil ist im Gesamtbetrag enthalten. Prüfen Sie Partner, Empfänger und Verteilung.",
+  "This period has payment or transfer history. Use retained reversals instead of voiding it.": "Diese Periode enthält Zahlungen oder Transfers. Verwenden Sie nachvollziehbare Gegenbuchungen.",
+  "This receivable belongs to a service agreement. Manage its terms and corrections through service finance.": "Diese Forderung gehört zu einer Servicevereinbarung. Verwalten Sie Bedingungen und Korrekturen dort.",
+  "Choose a future start date for the new schedule version.": "Wählen Sie ein künftiges Startdatum für die neue Version.",
+  "Choose an effective date after the latest recorded terms. Historical currency cannot change.": "Wählen Sie ein Datum nach den letzten Bedingungen. Die historische Währung bleibt unverändert.",
+  "This command already exists with different values. Reconcile recorded history before starting another command.": "Dieser Auftrag existiert mit anderen Werten. Gleichen Sie den Verlauf vor einem neuen Auftrag ab.",
+  "This task belongs to a technical request. Change status and assignment through that request.": "Diese Aufgabe gehört zu einer technischen Anfrage. Ändern Sie Status und Zuweisung dort.",
+  "Check the original payment, available refundable amount, currency and refund date.": "Prüfen Sie ursprüngliche Zahlung, Erstattungsbetrag, Währung und Datum."
 }

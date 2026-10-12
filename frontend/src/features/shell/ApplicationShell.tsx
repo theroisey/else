@@ -6,6 +6,7 @@ import { faBars, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../auth/auth-context'
 import { visibleDestinations } from './navigation'
 import { AccountMenu } from './AccountMenu'
+import { NotificationControl } from '../operations/Notifications'
 import { Brand } from '../../components/brand/Brand'
 import { CommandSearch } from './CommandSearch'
 
@@ -14,6 +15,19 @@ export function ApplicationShell() {
   const auth = useAuth()
   const location = useLocation()
   const navigation = visibleDestinations(auth.session?.user.permissions ?? [])
+  const advancedPaths = [
+    '/app/portfolio',
+    '/app/access',
+    '/app/users',
+    '/app/roles',
+    '/app/audit',
+  ]
+  const primary = navigation.filter(
+    (item) => !advancedPaths.includes(item.path),
+  )
+  const advanced = navigation.filter((item) =>
+    advancedPaths.includes(item.path),
+  )
   const [mobileOpen, setMobileOpen] = useState(false)
   const toggleRef = useRef<HTMLButtonElement>(null)
   const firstLinkRef = useRef<HTMLAnchorElement>(null)
@@ -209,6 +223,7 @@ export function ApplicationShell() {
           </nav>
           <div className="ml-auto flex min-w-0 items-center gap-3">
             <CommandSearch />
+            <NotificationControl />
             <AccountMenu />
           </div>
         </div>
@@ -232,7 +247,7 @@ export function ApplicationShell() {
               <p className="eyebrow px-3 pb-4">
                 {copy('Private operations', 'common')}
               </p>
-              {navigation.map((item, index) => (
+              {primary.map((item, index) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
@@ -252,12 +267,41 @@ export function ApplicationShell() {
                   {copy(item.label, 'common')}
                 </NavLink>
               ))}
-              <Link
-                to="/service-status"
-                className="sidebar-link mt-5 border-t border-line pt-4"
+              <details
+                className="mt-5 border-t border-line pt-4"
+                open={
+                  advancedPaths.includes(location.pathname) ? true : undefined
+                }
               >
-                {copy('Service status', 'common')}
-              </Link>
+                <summary className="sidebar-link cursor-pointer">
+                  {copy('More', 'operations')}
+                </summary>
+                {advanced.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    end={item.path !== '/app/clients'}
+                    onClick={() => {
+                      setMobileOpen(false)
+                      window.requestAnimationFrame(() =>
+                        document.getElementById('workspace-content')?.focus(),
+                      )
+                    }}
+                    className={({ isActive }) =>
+                      `sidebar-link ${isActive || (item.path === '/app/clients' && clientContext) ? 'is-active' : ''}`
+                    }
+                  >
+                    <FontAwesomeIcon icon={item.icon} aria-hidden="true" />
+                    {copy(item.label, 'common')}
+                  </NavLink>
+                ))}
+                <Link
+                  to="/service-status"
+                  className="sidebar-link mt-5 border-t border-line pt-4"
+                >
+                  {copy('Service status', 'common')}
+                </Link>
+              </details>
             </nav>
             <div className="mt-auto border-t border-line px-3 pt-5">
               <p className="eyebrow mb-4">

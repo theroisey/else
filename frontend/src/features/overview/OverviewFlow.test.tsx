@@ -31,7 +31,10 @@ function setup(
 ) {
   let current = session
   const fetcher = vi.fn((url: string) => {
-    if (url === '/api/v1/auth/preferences')
+    if (
+      url.startsWith('/api/v1/notifications?') ||
+      url === '/api/v1/auth/preferences'
+    )
       return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: current }))
@@ -104,6 +107,7 @@ it('shows exact finance, prioritized attention, real activity and honest integra
       ([url]) =>
         url === base ||
         url === '/api/v1/auth/session' ||
+        url.startsWith('/api/v1/notifications?') ||
         url === '/api/v1/auth/preferences',
     ),
   ).toBe(true)
@@ -177,7 +181,9 @@ it.each(['no profile access', 'foreign scope', 'invalid route'])(
     expect(
       fetcher.mock.calls.every(
         ([url]) =>
-          url === '/api/v1/auth/session' || url === '/api/v1/auth/preferences',
+          url === '/api/v1/auth/session' ||
+          url.startsWith('/api/v1/notifications?') ||
+          url === '/api/v1/auth/preferences',
       ),
     ).toBe(true)
   },

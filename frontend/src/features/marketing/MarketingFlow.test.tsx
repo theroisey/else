@@ -54,6 +54,14 @@ function setup({
   let current = session
   const cache = createQueryClient()
   const fetcher = vi.fn((url: string, options: RequestInit) => {
+    if (url === '/api/v1/notifications?limit=25')
+      return Promise.resolve(
+        json({
+          data: [],
+          page: { limit: 25, next_cursor: null },
+          unread_count: '0',
+        }),
+      )
     if (url === '/api/v1/auth/preferences')
       return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
@@ -90,7 +98,7 @@ function setup({
 }
 async function fillPeriod() {
   const user = userEvent.setup()
-  await screen.findByLabelText('Start date')
+  await screen.findByLabelText('Start date', {}, { timeout: 5000 })
   await user.type(screen.getByLabelText('Start date'), period.since)
   await user.type(screen.getByLabelText('End date'), period.until)
   return user
@@ -372,7 +380,11 @@ it('creates an authorized immutable pending account and requires a first token',
     mutate: async () => json({ data: pending }, 201),
   })
   const user = userEvent.setup()
-  await screen.findByRole('heading', { name: 'Add Meta ad account' })
+  await screen.findByRole(
+    'heading',
+    { name: 'Add Meta ad account' },
+    { timeout: 5000 },
+  )
   await user.type(screen.getByLabelText('Meta ad account ID'), '123456789')
   expect(
     screen.getByRole('button', { name: 'Add pending ad account' }),

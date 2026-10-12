@@ -33,7 +33,8 @@ const json = (status: number, body: unknown) =>
 const unauthorized = () =>
   json(401, { error: { code: 'authentication_required' } })
 
-function renderApp(path = '/app') {
+// Session lifecycle is independent of the operational landing query.
+function renderApp(path = '/app/portfolio') {
   const client = createQueryClient()
   render(
     <QueryClientProvider client={client}>
@@ -142,7 +143,15 @@ describe('cookie session UI', () => {
     )
     expect(
       navigation.getAllByRole('link').map((link) => link.textContent),
-    ).toEqual(['Workspace', 'My access', 'Clients', 'Service status'])
+    ).toEqual([
+      'Today',
+      'Notifications',
+      'Settings',
+      'Clients',
+      'Portfolio',
+      'My access',
+      'Service status',
+    ])
     expect(screen.getByRole('link', { name: 'Clients' })).toBeInTheDocument()
   })
 
@@ -206,19 +215,17 @@ describe('cookie session UI', () => {
   })
 
   it('fails closed on service/malformed responses and recovers after retry', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(
-        json(200, {
-          data: {
-            user: {
-              ...identity.user,
-              permissions: [{ permission: 'roles.manage', scope: 'client' }],
-            },
-            session: identity.session,
+    const fetchMock = vi.fn().mockResolvedValue(
+      json(200, {
+        data: {
+          user: {
+            ...identity.user,
+            permissions: [{ permission: 'roles.manage', scope: 'client' }],
           },
-        }),
-      )
+          session: identity.session,
+        },
+      }),
+    )
     vi.stubGlobal('fetch', fetchMock)
     renderApp()
     expect(
@@ -296,13 +303,11 @@ describe('cookie session UI', () => {
   it('provides explicit empty access and no invented modules', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValue(
-          json(200, {
-            data: { ...identity, user: { ...identity.user, permissions: [] } },
-          }),
-        ),
+      vi.fn().mockResolvedValue(
+        json(200, {
+          data: { ...identity, user: { ...identity.user, permissions: [] } },
+        }),
+      ),
     )
     renderApp('/app/access')
     expect(

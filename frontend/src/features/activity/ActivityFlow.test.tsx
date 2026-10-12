@@ -30,7 +30,7 @@ function setup(
 ) {
   let current = session
   const fetcher = vi.fn((url: string, init: RequestInit) => {
-    if (url === '/api/v1/auth/preferences')
+    if (url.startsWith('/api/v1/notifications?') || url === '/api/v1/auth/preferences')
       return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: current }))
@@ -102,7 +102,7 @@ it('renders persisted client events with exact UTC time and no detail/directory 
     fetcher.mock.calls.every(
       ([url]) =>
         url === '/api/v1/auth/session' ||
-        url === '/api/v1/auth/preferences' ||
+        url.startsWith('/api/v1/notifications?') || url === '/api/v1/auth/preferences' ||
         url.startsWith(base + '?'),
     ),
   ).toBe(true)

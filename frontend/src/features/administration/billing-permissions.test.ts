@@ -158,7 +158,7 @@ it('does not infer granular billing grants from view, legacy manage, or another 
 it('preserves future identity keys without authorizing or accepting them in role/catalog responses', () => {
   for (const permission of [
     'billing.refund',
-    'billing.reverse',
+    'billing.future_reverse',
     'billing.create_extra',
   ]) {
     const grants = session([{ permission, scope: 'global' }]).user.permissions

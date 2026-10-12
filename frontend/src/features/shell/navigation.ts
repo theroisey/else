@@ -23,7 +23,57 @@ export interface Destination {
 
 // Register a destination only when its page and backend contract exist.
 export const destinations: readonly Destination[] = [
-  { path: '/app', label: 'Workspace', icon: faHouse },
+  { path: '/app', label: 'Today', icon: faHouse },
+  {
+    path: '/app/tasks',
+    label: 'Task queue',
+    icon: faClockRotateLeft,
+    visible: (grants) =>
+      grants.some((g) =>
+        [
+          'tasks.view',
+          'tasks.read_own',
+          'tasks.read_team',
+          'tasks.read_development',
+        ].includes(g.permission),
+      ),
+  },
+  {
+    path: '/app/requests',
+    label: 'Technical requests',
+    icon: faBuilding,
+    visible: (grants) =>
+      grants.some((g) =>
+        ['tickets.read_own', 'tickets.read_team', 'tickets.read_all'].includes(
+          g.permission,
+        ),
+      ),
+  },
+  {
+    path: '/app/notifications',
+    label: 'Notifications',
+    icon: faClockRotateLeft,
+  },
+  {
+    path: '/app/finance',
+    label: 'Finance',
+    icon: faBuilding,
+    visible: (grants) =>
+      grants.some((g) => g.permission === 'finance.read_company'),
+  },
+  {
+    path: '/app/team',
+    label: 'Team',
+    icon: faUsers,
+    visible: (grants) =>
+      grants.some(
+        (g) =>
+          g.scope === 'global' &&
+          ['staff.read_team', 'staff.manage'].includes(g.permission),
+      ),
+  },
+  { path: '/app/portfolio', label: 'Portfolio', icon: faBuilding },
+  { path: '/app/settings', label: 'Settings', icon: faShieldHalved },
   { path: '/app/access', label: 'My access', icon: faShieldHalved },
   {
     path: '/app/clients',
@@ -66,7 +116,35 @@ export function safeReturnTo(value: unknown) {
   if (typeof value !== 'string') return '/app'
   if (
     destinations.some((destination) => destination.path === value) ||
-    value === '/app/clients/new'
+    value === '/app/clients/new' ||
+    value === '/app/requests/new'
+  )
+    return value
+  const recurring =
+    /^\/app\/clients\/([^/]+)\/recurring-tasks(?:\/([^/]+))?$/.exec(value)
+  if (
+    recurring &&
+    isUUID(recurring[1]) &&
+    (!recurring[2] || isUUID(recurring[2]))
+  )
+    return value
+  const finance = /^\/app\/clients\/([^/]+)\/finance(?:\/([^/]+))?$/.exec(value)
+  if (finance && isUUID(finance[1]) && (!finance[2] || isUUID(finance[2])))
+    return value
+  if (value === '/app/finance') return value
+  const team = /^\/app\/team\/([^/]+)$/.exec(value)
+  if (team && isUUID(team[1])) return value
+  const siteRequest =
+    /^\/app\/clients\/([^/]+)\/websites\/([^/]+)\/requests\/new$/.exec(value)
+  if (siteRequest && isUUID(siteRequest[1]) && isUUID(siteRequest[2]))
+    return value
+  const request = /^\/app\/clients\/([^/]+)\/requests(?:\/(new|[^/]+))?$/.exec(
+    value,
+  )
+  if (
+    request &&
+    isUUID(request[1]) &&
+    (!request[2] || request[2] === 'new' || isUUID(request[2]))
   )
     return value
   const match = /^\/app\/clients\/([^/]+)(?:\/(edit|profile))?$/.exec(value)

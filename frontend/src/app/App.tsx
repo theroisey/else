@@ -17,6 +17,26 @@ import { ClientRoute } from '../features/clients/ClientRoute'
 import { PaymentRecoveryBoundary } from '../features/billing/PaymentRecovery'
 import { CopyRecoveryBoundary } from '../features/pricing/CopyRecovery'
 
+const RecurringPage = lazy(() =>
+  import('../features/operations/RecurringPage').then((m) => ({
+    default: m.RecurringPage,
+  })),
+)
+const SettingsPage = lazy(() =>
+  import('../features/operations/SettingsPage').then((m) => ({
+    default: m.SettingsPage,
+  })),
+)
+const FinancePage = lazy(() =>
+  import('../features/operations/FinancePage').then((m) => ({
+    default: m.FinancePage,
+  })),
+)
+const TeamPage = lazy(() =>
+  import('../features/operations/TeamPage').then((m) => ({
+    default: m.TeamPage,
+  })),
+)
 const WebsitesPage = lazy(() =>
   import('../features/websites/WebsitesPage').then((m) => ({
     default: m.WebsitesPage,
@@ -172,6 +192,37 @@ const PricingEditorPage = lazy(() =>
   })),
 )
 
+const TaskQueuePage = lazy(() =>
+  import('../features/operations/TaskQueuePage').then((m) => ({
+    default: m.TaskQueuePage,
+  })),
+)
+const TodayPage = lazy(() =>
+  import('../features/operations/TodayPage').then((m) => ({
+    default: m.TodayPage,
+  })),
+)
+const RequestListPage = lazy(() =>
+  import('../features/operations/RequestListPage').then((m) => ({
+    default: m.RequestListPage,
+  })),
+)
+const RequestCreatePage = lazy(() =>
+  import('../features/operations/RequestCreatePage').then((m) => ({
+    default: m.RequestCreatePage,
+  })),
+)
+const RequestDetailPage = lazy(() =>
+  import('../features/operations/RequestDetailPage').then((m) => ({
+    default: m.RequestDetailPage,
+  })),
+)
+const NotificationsPage = lazy(() =>
+  import('../features/operations/Notifications').then((m) => ({
+    default: m.NotificationsPage,
+  })),
+)
+
 function AuthArea() {
   useLocale()
   return (
@@ -197,7 +248,143 @@ export function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<AuthGuard />}>
           <Route path="/app" element={<ApplicationShell />}>
-            <Route index element={<WorkspacePage />} />
+            <Route
+              index
+              element={
+                <ClientRoute>
+                  <TodayPage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="tasks"
+              element={
+                <ClientRoute>
+                  <TaskQueuePage />
+                </ClientRoute>
+              }
+            />
+            <Route path="portfolio" element={<WorkspacePage />} />
+            <Route
+              path="team"
+              element={
+                <ClientRoute>
+                  <TeamPage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="team/:teamID"
+              element={
+                <ClientRoute>
+                  <TeamPage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="requests"
+              element={
+                <ClientRoute>
+                  <RequestListPage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="requests/new"
+              element={
+                <ClientRoute>
+                  <RequestCreatePage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="notifications"
+              element={
+                <ClientRoute>
+                  <NotificationsPage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="clients/:id/requests"
+              element={
+                <ClientRoute>
+                  <RequestListPage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="clients/:id/requests/new"
+              element={
+                <ClientRoute>
+                  <RequestCreatePage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="clients/:id/requests/:requestID"
+              element={
+                <ClientRoute>
+                  <RequestDetailPage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="clients/:id/websites/:websiteID/requests/new"
+              element={
+                <ClientRoute>
+                  <RequestCreatePage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="finance"
+              element={
+                <ClientRoute>
+                  <FinancePage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="clients/:id/finance"
+              element={
+                <ClientRoute>
+                  <FinancePage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="clients/:id/finance/:periodID"
+              element={
+                <ClientRoute>
+                  <FinancePage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="clients/:id/recurring-tasks"
+              element={
+                <ClientRoute>
+                  <RecurringPage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="clients/:id/recurring-tasks/:templateID"
+              element={
+                <ClientRoute>
+                  <RecurringPage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="settings"
+              element={
+                <ClientRoute>
+                  <SettingsPage />
+                </ClientRoute>
+              }
+            />
             <Route path="access" element={<AccessPage />} />
             <Route
               path="audit"

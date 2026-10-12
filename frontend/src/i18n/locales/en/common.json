@@ -283,5 +283,22 @@
   "Resource kind": "Resource kind",
   "Resource": "Resource",
   "Request ID": "Request ID",
-  "Schema version": "Schema version"
+  "Schema version": "Schema version",
+  "Task queue": "Task queue",
+  "Today": "Today",
+  "Technical requests": "Technical requests",
+  "Notifications": "Notifications",
+  "Team": "Team",
+  "Portfolio": "Portfolio",
+  "This occurrence is not due, is paused or exceeds the safe recovery window. Review the schedule before generating work.": "This occurrence is not due, is paused or exceeds the safe recovery window. Review the schedule before generating work.",
+  "This billing period is not due, is paused or exceeds the safe recovery window. Review the agreement before generating charges.": "This billing period is not due, is paused or exceeds the safe recovery window. Review the agreement before generating charges.",
+  "Choose an active manager with current brand access and the required generation permissions.": "Choose an active manager with current brand access and the required generation permissions.",
+  "The ROISE share must be included in the total. Check the partner, collector and allocation policy.": "The ROISE share must be included in the total. Check the partner, collector and allocation policy.",
+  "This period has payment or transfer history. Use retained reversals instead of voiding it.": "This period has payment or transfer history. Use retained reversals instead of voiding it.",
+  "This receivable belongs to a service agreement. Manage its terms and corrections through service finance.": "This receivable belongs to a service agreement. Manage its terms and corrections through service finance.",
+  "Choose a future start date for the new schedule version.": "Choose a future start date for the new schedule version.",
+  "Choose an effective date after the latest recorded terms. Historical currency cannot change.": "Choose an effective date after the latest recorded terms. Historical currency cannot change.",
+  "This command already exists with different values. Reconcile recorded history before starting another command.": "This command already exists with different values. Reconcile recorded history before starting another command.",
+  "This task belongs to a technical request. Change status and assignment through that request.": "This task belongs to a technical request. Change status and assignment through that request.",
+  "Check the original payment, available refundable amount, currency and refund date.": "Check the original payment, available refundable amount, currency and refund date."
 }

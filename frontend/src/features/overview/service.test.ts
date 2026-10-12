@@ -232,3 +232,48 @@ it('registers only the exact new profile return route', () => {
   for (const path of ['profile/edit', 'profile?secret=1', 'profile/..'])
     expect(safeReturnTo(`/app/clients/${clientID}/${path}`)).toBe('/app')
 })
+
+it('keeps personal task sections for scoped operational readers and rejects foreign dossier context', async () => {
+  const v = overview()
+  const personal = identity.user.permissions
+    .filter((g) => g.permission === 'clients.view')
+    .concat({
+      permission: 'tasks.read_own',
+      scope: 'client',
+      client_id: clientID,
+    })
+  fetcher.mockResolvedValue(json(v))
+  const result = await read(clientID, personal, new AbortController().signal)
+  expect(result.tasks).toBeDefined()
+  expect(result.finance).toBeUndefined()
+  const counts = {
+    new: '0',
+    accepted: '0',
+    rejected: '0',
+    in_progress: '0',
+    delivered: '0',
+    revision_requested: '0',
+    approved: '0',
+    cancelled: '0',
+  }
+  const ops = {
+    counts,
+    requests: { items: [], has_more: false },
+    staff: {
+      items: [
+        {
+          id: otherID,
+          client_id: otherID,
+          display_name: 'Synthetic foreign employee',
+          team_name: 'Synthetic foreign team',
+          responsibility: '',
+        },
+      ],
+      has_more: false,
+    },
+    websites: { items: [], has_more: false },
+  }
+  expect(() =>
+    parseOverview({ data: { ...v, operations: ops } }, clientID),
+  ).toThrow(APIError)
+})

@@ -63,7 +63,7 @@ function setup(
   const fetcher = vi.fn((url: string, init: RequestInit = {}) => {
     const custom = override(url, init)
     if (custom) return Promise.resolve(custom)
-    if (url === '/api/v1/auth/preferences')
+    if (url.startsWith('/api/v1/notifications?') || url === '/api/v1/auth/preferences')
       return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: session }))
@@ -126,7 +126,7 @@ it('denies wrong-client deep links before fetching with a scoped view grant', as
   expect(
     fetcher.mock.calls.every(
       ([path]) =>
-        path === '/api/v1/auth/session' || path === '/api/v1/auth/preferences',
+        path === '/api/v1/auth/session' || path.startsWith('/api/v1/notifications?') || path === '/api/v1/auth/preferences',
     ),
   ).toBe(true)
   expect(
@@ -274,7 +274,7 @@ it('shows no mutation controls to a scoped viewer and keeps unavailable modules 
   expect(
     modules.queryByRole('link', { name: 'Marketing' }),
   ).not.toBeInTheDocument()
-  expect(modules.getByRole('link', { name: 'Overview' })).toBeInTheDocument()
+  expect(modules.getByRole('link', { name: 'Summary' })).toBeInTheDocument()
   expect(modules.getByRole('link', { name: 'Profile' })).toHaveAttribute(
     'aria-current',
     'page',

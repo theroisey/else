@@ -283,5 +283,22 @@
   "Resource kind": "Tipul resursei",
   "Resource": "Resursă",
   "Request ID": "ID cerere",
-  "Schema version": "Versiunea schemei"
+  "Schema version": "Versiunea schemei",
+  "Task queue": "Lista sarcinilor",
+  "Today": "Astăzi",
+  "Technical requests": "Cereri tehnice",
+  "Notifications": "Notificări",
+  "Team": "Echipă",
+  "Portfolio": "Portofoliu",
+  "This occurrence is not due, is paused or exceeds the safe recovery window. Review the schedule before generating work.": "Apariția nu este scadentă, este suspendată sau depășește intervalul sigur de recuperare. Verifică programul.",
+  "This billing period is not due, is paused or exceeds the safe recovery window. Review the agreement before generating charges.": "Perioada nu este scadentă, este suspendată sau depășește intervalul sigur de recuperare. Verifică acordul.",
+  "Choose an active manager with current brand access and the required generation permissions.": "Alege un manager activ cu acces la marcă și permisiuni de generare.",
+  "The ROISE share must be included in the total. Check the partner, collector and allocation policy.": "Partea ROISE este inclusă în total. Verifică partenerul, colectorul și politica de alocare.",
+  "This period has payment or transfer history. Use retained reversals instead of voiding it.": "Perioada are plăți sau transferuri. Folosește reversări păstrate în istoric.",
+  "This receivable belongs to a service agreement. Manage its terms and corrections through service finance.": "Creanța aparține unui acord de servicii. Gestionează termenii și corecțiile din finanțele serviciului.",
+  "Choose a future start date for the new schedule version.": "Alege o dată viitoare pentru noua versiune.",
+  "Choose an effective date after the latest recorded terms. Historical currency cannot change.": "Alege o dată după ultimii termeni înregistrați. Moneda istorică nu se schimbă.",
+  "This command already exists with different values. Reconcile recorded history before starting another command.": "Comanda există cu alte valori. Reconciliază istoricul înaintea unei alte comenzi.",
+  "This task belongs to a technical request. Change status and assignment through that request.": "Sarcina aparține unei cereri tehnice. Modifică starea și responsabilul din cerere.",
+  "Check the original payment, available refundable amount, currency and refund date.": "Verifică plata inițială, suma rambursabilă, moneda și data."
 }

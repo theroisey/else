@@ -2,6 +2,29 @@ import { AuthError, csrfToken } from '../features/auth/auth-service'
 import { isRecord } from '../features/auth/session'
 
 const messages: Record<string, string> = {
+  occurrence_not_due:
+    'This occurrence is not due, is paused or exceeds the safe recovery window. Review the schedule before generating work.',
+  period_not_due:
+    'This billing period is not due, is paused or exceeds the safe recovery window. Review the agreement before generating charges.',
+  invalid_manager:
+    'Choose an active manager with current brand access and the required generation permissions.',
+  invalid_allocation:
+    'The ROISE share must be included in the total. Check the partner, collector and allocation policy.',
+  period_has_transactions:
+    'This period has payment or transfer history. Use retained reversals instead of voiding it.',
+  commercial_period_workflow:
+    'This receivable belongs to a service agreement. Manage its terms and corrections through service finance.',
+  future_schedule_required:
+    'Choose a future start date for the new schedule version.',
+  future_terms_required:
+    'Choose an effective date after the latest recorded terms. Historical currency cannot change.',
+  command_conflict:
+    'This command already exists with different values. Reconcile recorded history before starting another command.',
+  linked_request_workflow:
+    'This task belongs to a technical request. Change status and assignment through that request.',
+  invalid_reversal:
+    'Check the original payment, available refundable amount, currency and refund date.',
+
   invalid_schedule:
     'Check the local date, named timezone and explicit occurrence. The server timezone rules must agree with the selected offset.',
   invalid_owner:
@@ -53,7 +76,7 @@ export async function authenticatedJSON(
   } = {},
 ) {
   if (
-    !/^\/api\/v1\/(users|roles|permissions|clients|audit-logs)(?:[/?]|$)/.test(
+    !/^\/api\/v1\/(users|roles|permissions|clients|audit-logs|requests|notifications|today|teams|tasks|operations-people|preferences|operations-settings)(?:[/?]|$)/.test(
       path,
     ) ||
     /[\s#\\]/.test(path) ||

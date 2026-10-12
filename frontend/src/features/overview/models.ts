@@ -1,3 +1,4 @@
+import { states, exact, uuid as operationsID } from '../operations/models'
 import { z } from '../../lib/validation'
 import { APIError } from '../../services/authenticated'
 import { instant } from '../../lib/time'
@@ -97,6 +98,52 @@ const schema = z
           .strict()
           .optional(),
         activity: queue(activityEventSchema).optional(),
+        operations: z
+          .object({
+            counts: z
+              .object(
+                Object.fromEntries(states.map((v) => [v, exact])) as Record<
+                  (typeof states)[number],
+                  typeof exact
+                >,
+              )
+              .strict(),
+            requests: queue(
+              z
+                .object({
+                  id: operationsID,
+                  client_id: operationsID,
+                  title,
+                  status: z.enum(states),
+                  requester_name: z.string().max(100),
+                  updated_at: utc,
+                })
+                .strict(),
+            ),
+            staff: queue(
+              z
+                .object({
+                  id: operationsID,
+                  client_id: operationsID,
+                  display_name: z.string().max(100),
+                  team_name: z.string().max(100),
+                  responsibility: z.string().max(300),
+                })
+                .strict(),
+            ),
+            websites: queue(
+              z
+                .object({
+                  id: operationsID,
+                  client_id: operationsID,
+                  name: title,
+                  domain: z.string().max(253),
+                })
+                .strict(),
+            ),
+          })
+          .strict()
+          .optional(),
       })
       .strict(),
   })
@@ -110,6 +157,15 @@ export function parseOverview(body: unknown, client: string): Overview {
   const parsed = schema.safeParse(body)
   if (!parsed.success) throw new APIError(0, 'invalid_response')
   const v = parsed.data.data
+  if (
+    v.operations &&
+    [
+      ...v.operations.requests.items,
+      ...v.operations.staff.items,
+      ...v.operations.websites.items,
+    ].some((row) => row.client_id !== client)
+  )
+    throw new APIError(0, 'invalid_response')
   const invalid = () => {
     throw new APIError(0, 'invalid_response')
   }

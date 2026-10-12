@@ -63,7 +63,8 @@ function PaymentRow({ payment }: { payment: Payment }) {
         </time>
         <span className="mt-1 block break-all text-muted">
           {copy('Recorded by {{value1}}', 'billing', {
-            value1: payment.recorded_by,
+            value1:
+              payment.recorded_by_name ?? copy('Recorded user', 'operations'),
           })}
         </span>
       </td>

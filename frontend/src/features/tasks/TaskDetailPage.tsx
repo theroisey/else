@@ -162,18 +162,23 @@ function TaskDetail({
           <dl className="mt-4 grid gap-4">
             {[
               [copy('Task ID', 'tasks'), task.id],
-              [copy('Client ID', 'tasks'), clientID],
+              [
+                copy('Brand', 'operations'),
+                task.brand_name ??
+                  operation.parent.data?.name ??
+                  copy('Selected brand', 'operations'),
+              ],
               [
                 copy('Assignee', 'tasks'),
                 task.assignee_id === operation.auth.session?.user.id
                   ? copy('Me', 'tasks')
-                  : (task.assignee_id ?? copy('Unassigned', 'tasks')),
+                  : (task.assignee_name ?? copy('Unassigned', 'tasks')),
               ],
               [
                 copy('Creator', 'tasks'),
                 task.created_by === operation.auth.session?.user.id
                   ? copy('Me', 'tasks')
-                  : task.created_by,
+                  : (task.creator_name ?? copy('Recorded user', 'operations')),
               ],
               [copy('Updated', 'tasks'), formatTime(task.updated_at)],
             ].map(([label, value]) => (

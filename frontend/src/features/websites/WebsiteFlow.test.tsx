@@ -107,7 +107,7 @@ it('rejects malformed deep links before requesting website records', async () =>
   const fetcher = setup(`/app/clients/${clientID}/websites/invalid`)
   await screen.findByRole('heading', { name: 'Website page not found' })
   expect(
-    fetcher.mock.calls.every(([url]) => url.startsWith('/api/v1/auth/')),
+    fetcher.mock.calls.every(([url]) => url.startsWith('/api/v1/auth/') || url.startsWith('/api/v1/notifications?')),
   ).toBe(true)
 })
 it('denies a different client without issuing business reads', async () => {
@@ -126,7 +126,7 @@ it('denies a different client without issuing business reads', async () => {
   )
   await screen.findByRole('heading', { name: 'Access denied' })
   expect(
-    fetcher.mock.calls.every(([url]) => url.startsWith('/api/v1/auth/')),
+    fetcher.mock.calls.every(([url]) => url.startsWith('/api/v1/auth/') || url.startsWith('/api/v1/notifications?')),
   ).toBe(true)
 })
 it('shows authentic entered content and website navigation without client-wide report requests', async () => {

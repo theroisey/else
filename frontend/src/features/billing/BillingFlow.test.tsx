@@ -56,7 +56,7 @@ function setup(
   const fetcher = vi.fn((url: string, init: RequestInit) => {
     const custom = override(url, init)
     if (custom) return Promise.resolve(custom)
-    if (url === '/api/v1/auth/preferences')
+    if (url.startsWith('/api/v1/notifications?') || url === '/api/v1/auth/preferences')
       return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: session }))
@@ -206,7 +206,7 @@ it('shows server totals separately and opens billing-only routes without unrelat
     fetcher.mock.calls.every(
       ([url]) =>
         url === '/api/v1/auth/session' ||
-        url === '/api/v1/auth/preferences' ||
+        url.startsWith('/api/v1/notifications?') || url === '/api/v1/auth/preferences' ||
         url.startsWith(base),
     ),
   ).toBe(true)
@@ -253,7 +253,7 @@ it('denies the wrong client without a private request and validates safe return 
   expect(
     fetcher.mock.calls.every(
       ([url]) =>
-        url === '/api/v1/auth/session' || url === '/api/v1/auth/preferences',
+        url === '/api/v1/auth/session' || url.startsWith('/api/v1/notifications?') || url === '/api/v1/auth/preferences',
     ),
   ).toBe(true)
   expect(safeReturnTo(detail + '/edit')).toBe(detail + '/edit')

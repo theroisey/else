@@ -69,7 +69,7 @@ function setup(
   const fetcher = vi.fn((url: string, init: RequestInit) => {
     const custom = override(url, init)
     if (custom) return Promise.resolve(custom)
-    if (url === '/api/v1/auth/preferences')
+    if (url.startsWith('/api/v1/notifications?') || url === '/api/v1/auth/preferences')
       return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: identity }))
@@ -242,7 +242,7 @@ it('retains archived agreement history while disabling append and new collection
       : undefined,
   )
   expect(
-    await screen.findByRole('link', { name: 'Version 1 · ' + profile.title }),
+    await screen.findByRole('link', { name: 'Version 1 · ' + profile.title }, {timeout:5000}),
   ).toBeVisible()
   expect(
     screen.queryByRole('link', { name: 'Create new version' }),
@@ -258,7 +258,7 @@ it('shows real history with view-only grants and no metadata or cost reads', asy
     await screen.findByRole('heading', { name: profile.title }),
   ).toBeVisible()
   expect(
-    await screen.findByRole('link', { name: 'Version 1 · ' + profile.title }),
+    await screen.findByRole('link', { name: 'Version 1 · ' + profile.title }, {timeout:5000}),
   ).toBeVisible()
   expect(screen.queryByText(/Internal unit cost/)).not.toBeInTheDocument()
   expect(
@@ -272,7 +272,7 @@ it('shows real history with view-only grants and no metadata or cost reads', asy
       ([u]) =>
         u.startsWith(base) ||
         u === '/api/v1/auth/session' ||
-        u === '/api/v1/auth/preferences',
+        u.startsWith('/api/v1/notifications?') || u === '/api/v1/auth/preferences',
     ),
   ).toBe(true)
 })

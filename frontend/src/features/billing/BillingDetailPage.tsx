@@ -10,6 +10,8 @@ import { BillingHeader, BillingState, BillingError } from './Shared'
 import { pagePath } from './models'
 import { money } from './money'
 import { PaymentForm } from './PaymentForm'
+import { RefundForm, RefundHistory } from '../operations/RefundForm'
+import { hasPermission } from '../auth/permissions'
 import { PaymentHistory } from './PaymentHistory'
 import { CancelCollection } from './CancelCollection'
 import { BillingSnapshot } from '../pricing/BillingSnapshot'
@@ -36,6 +38,15 @@ function Detail({
   const operation = useBilling(clientID),
     [confirm, setConfirm] = useState(false),
     [notice, setNotice] = useState('')
+  const [refund, setRefund] = useState(false)
+  const correction = ['billing.reverse', 'finance.approve_adjustment'].every(
+    (permission) =>
+      hasPermission(operation.auth.session?.user.permissions ?? [], {
+        permission,
+        scope: 'client',
+        clientID,
+      }),
+  )
   const query = useQuery({
     queryKey: [...operation.key, 'detail', recordID],
     queryFn: ({ signal }) =>
@@ -163,6 +174,26 @@ function Detail({
             operation={operation}
             id={recordID}
           />
+          <RefundHistory client={clientID} id={recordID} />
+          {correction &&
+          operation.writable &&
+          r.status !== 'cancelled' &&
+          r.paid_minor !== '0' ? (
+            <Button className="mt-5" onClick={() => setRefund(true)}>
+              {copy('Record refund', 'operations')}
+            </Button>
+          ) : null}
+          {refund && correction && operation.writable ? (
+            <RefundForm
+              record={{
+                id: r.id,
+                client_id: clientID,
+                currency: r.currency,
+                revision: r.revision,
+              }}
+              close={() => setRefund(false)}
+            />
+          ) : null}
           {confirm && operation.permissions.cancel && operation.writable ? (
             <CancelCollection
               record={r}

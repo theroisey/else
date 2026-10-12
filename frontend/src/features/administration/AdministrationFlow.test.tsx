@@ -69,7 +69,7 @@ function setup(
   const fetcher = vi.fn((url: string, init: RequestInit = {}) => {
     const custom = override(url, init)
     if (custom) return Promise.resolve(custom)
-    if (url === '/api/v1/auth/preferences')
+    if (url.startsWith('/api/v1/notifications?') || url === '/api/v1/auth/preferences')
       return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: session }))
@@ -129,7 +129,7 @@ it('denies deep links and avoids administration requests without the exact view 
   expect(
     fetcher.mock.calls.every(
       ([path]) =>
-        path === '/api/v1/auth/session' || path === '/api/v1/auth/preferences',
+        path === '/api/v1/auth/session' || path.startsWith('/api/v1/notifications?') || path === '/api/v1/auth/preferences',
     ),
   ).toBe(true)
   expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument()

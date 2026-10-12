@@ -1,4 +1,6 @@
 import { copy, useLocale } from '../../i18n/index'
+import { hasPermission } from '../auth/permissions'
+import { AssigneePicker } from './AssigneePicker'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { Button, Dialog, buttonStyles } from '../../components/ui'
@@ -21,10 +23,36 @@ export function TaskActions({
 }) {
   useLocale()
   const [next, setNext] = useState<TaskStatus | ''>('')
+  const [assigning, setAssigning] = useState(false)
   if (task.archived_at || !operation.writable) return null
   const update = operation.permissions.update,
     archive = operation.permissions.archive
+  const statusUpdate =
+    update ||
+    (operation.permissions.updateOwn &&
+      task.assignee_id === operation.auth.session?.user.id)
   const busy = operation.pending || !!operation.error
+  if (task.request_id)
+    return (
+      <p className="text-sm text-muted">
+        {copy(
+          'Status and assignment are managed through the technical request.',
+          'operations',
+        )}{' '}
+        {hasPermission(operation.auth.session?.user.permissions ?? [], {
+          permission: 'tickets.read_all',
+          scope: 'client',
+          clientID: task.client_id,
+        }) ? (
+          <Link
+            className="underline underline-offset-4"
+            to={`/app/clients/${task.client_id}/requests/${task.request_id}`}
+          >
+            {copy('Open technical request', 'operations')}
+          </Link>
+        ) : null}
+      </p>
+    )
   return (
     <div className="record-actions flex flex-wrap items-center gap-2">
       {update && !['done', 'cancelled'].includes(task.status) ? (
@@ -35,7 +63,7 @@ export function TaskActions({
           {copy('Edit task', 'tasks')}
         </Link>
       ) : null}
-      {update ? (
+      {statusUpdate ? (
         <form
           className="inline-flex items-center gap-1.5"
           onSubmit={(e) => {
@@ -87,6 +115,24 @@ export function TaskActions({
             {copy('Apply status', 'tasks')}
           </Button>
         </form>
+      ) : null}
+      {operation.permissions.assignTeam &&
+      !['done', 'cancelled'].includes(task.status) ? (
+        <Button
+          size="compact"
+          disabled={busy}
+          onClick={() => setAssigning(true)}
+        >
+          {copy('Reassign task', 'operations')}
+        </Button>
+      ) : null}
+      {assigning ? (
+        <TaskAssignment
+          task={task}
+          operation={operation}
+          close={() => setAssigning(false)}
+          onSuccess={onSuccess}
+        />
       ) : null}
       {archive ? (
         <Button
@@ -164,6 +210,73 @@ export function TaskArchive({
           {copy('Confirm archive', 'tasks')}
         </Button>
       </div>
+    </Dialog>
+  )
+}
+
+function TaskAssignment({
+  task,
+  operation,
+  close,
+  onSuccess,
+}: {
+  task: Summary
+  operation: Operation
+  close: () => void
+  onSuccess: (v: string) => void
+}) {
+  const [baseline] = useState(task)
+  const [value, setValue] = useState(task.assignee_id ?? '')
+  return (
+    <Dialog
+      open
+      variant="drawer"
+      title={copy('Reassign task', 'operations')}
+      description={copy(
+        'Assignments are limited to your authorized team and brand.',
+        'operations',
+      )}
+      onClose={() => {
+        if (!operation.pending) close()
+      }}
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          void operation
+            .run(() =>
+              api.assign(
+                task.client_id,
+                task.id,
+                value || null,
+                baseline.revision,
+              ),
+            )
+            .then((r) => {
+              if (r) {
+                onSuccess(copy('Task reassigned.', 'operations'))
+                close()
+              }
+            })
+        }}
+      >
+        <AssigneePicker
+          clientID={task.client_id}
+          operation={operation}
+          value={value}
+          onChange={setValue}
+          disabled={operation.pending}
+          error={operation.error}
+        />
+        <Button
+          type="submit"
+          className="mt-5"
+          variant="primary"
+          disabled={operation.pending}
+        >
+          {copy('Save', 'operations')}
+        </Button>
+      </form>
     </Dialog>
   )
 }

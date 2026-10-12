@@ -28,7 +28,10 @@ export function AssigneePicker({
     queryKey: [...operation.key, 'candidates', cursor],
     queryFn: ({ signal }) =>
       operation.read(() => api.candidates(clientID, cursor, signal)),
-    enabled: operation.permissions.create || operation.permissions.update,
+    enabled:
+      operation.permissions.create ||
+      operation.permissions.update ||
+      operation.permissions.assignTeam,
   })
   const candidates = query.isError ? [] : (query.data?.data ?? [])
   return (
@@ -53,9 +56,7 @@ export function AssigneePicker({
           <option value="">{copy('Unassigned', 'tasks')}</option>
           {value && !candidates.some((c) => c.id === value) ? (
             <option value={value}>
-              {copy('Selected assignee · {{value1}}', 'tasks', {
-                value1: value.slice(0, 8),
-              })}
+              {copy('Recorded assignee', 'operations')}
             </option>
           ) : null}
           {candidates.map((c) => (

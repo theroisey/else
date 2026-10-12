@@ -30,6 +30,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     gcTime: 0,
     refetchOnWindowFocus: 'always',
     refetchOnReconnect: 'always',
+    refetchInterval: (current) =>
+      current.state.data?.session ? 30_000 : false,
+    refetchIntervalInBackground: false,
   })
 
   const forgetSession = useCallback(

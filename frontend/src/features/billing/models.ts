@@ -125,6 +125,7 @@ export const paymentSchema = z
     amount_minor: positive,
     currency,
     paid_on: dateSchema,
+    collector: z.enum(['roise', 'partner']).nullable().optional(),
     method: z.enum(methods),
     reference: text(200),
     note: text(2000, false, true),
@@ -136,8 +137,10 @@ const payment = paymentSchema.extend({
   client_id: uuid,
   collection_id: uuid,
   recorded_by: uuid,
+  recorded_by_name: z.string().max(100).optional(),
   collection_revision: revisionSchema,
   recorded_at: timestamp,
+  partner_id: uuid.nullable().optional(),
 })
 export type Payment = z.infer<typeof payment>
 export const totalsSchema = z

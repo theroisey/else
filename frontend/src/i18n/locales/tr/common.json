@@ -283,5 +283,22 @@
   "Resource kind": "Kaynak türü",
   "Resource": "Kaynak",
   "Request ID": "İstek kimliği",
-  "Schema version": "Şema sürümü"
+  "Schema version": "Şema sürümü",
+  "Task queue": "Görev kuyruğu",
+  "Today": "Bugün",
+  "Technical requests": "Teknik talepler",
+  "Notifications": "Bildirimler",
+  "Team": "Ekip",
+  "Portfolio": "Portföy",
+  "This occurrence is not due, is paused or exceeds the safe recovery window. Review the schedule before generating work.": "Bu görev dönemi henüz gelmedi, duraklatıldı veya güvenli telafi aralığını aşıyor. Önce planı inceleyin.",
+  "This billing period is not due, is paused or exceeds the safe recovery window. Review the agreement before generating charges.": "Faturalama dönemi henüz gelmedi, duraklatıldı veya güvenli telafi aralığını aşıyor. Önce sözleşmeyi inceleyin.",
+  "Choose an active manager with current brand access and the required generation permissions.": "Markaya erişimi ve kayıt oluşturma yetkisi olan aktif bir yönetici seçin.",
+  "The ROISE share must be included in the total. Check the partner, collector and allocation policy.": "ROISE payı toplam ücretin içinde olmalı. Partneri, tahsil edeni ve dağıtım politikasını kontrol edin.",
+  "This period has payment or transfer history. Use retained reversals instead of voiding it.": "Bu dönemin ödeme veya transfer geçmişi var. İptal yerine kayıtlı iade/düzeltme akışını kullanın.",
+  "This receivable belongs to a service agreement. Manage its terms and corrections through service finance.": "Bu alacak hizmet sözleşmesine bağlı. Koşulları ve düzeltmeleri hizmet finansından yönetin.",
+  "Choose a future start date for the new schedule version.": "Yeni plan sürümü için gelecekteki bir başlangıç tarihi seçin.",
+  "Choose an effective date after the latest recorded terms. Historical currency cannot change.": "Son kayıtlı koşullardan sonraki bir yürürlük tarihi seçin. Geçmiş para birimi değiştirilemez.",
+  "This command already exists with different values. Reconcile recorded history before starting another command.": "Bu işlem farklı değerlerle kaydedilmiş. Yeni işlemden önce kayıt geçmişini kontrol edin.",
+  "This task belongs to a technical request. Change status and assignment through that request.": "Bu görev teknik talebe bağlı. Durumunu ve sorumlusunu talep üzerinden değiştirin.",
+  "Check the original payment, available refundable amount, currency and refund date.": "İlk ödemeyi, iade edilebilir tutarı, para birimini ve iade tarihini kontrol edin."
 }
