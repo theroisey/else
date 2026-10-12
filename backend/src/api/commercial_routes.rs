@@ -16,14 +16,8 @@ impl Api {
                         return Err(Error::Method("GET"));
                     }
                     Ok(Reply::page(
-                        c::periods(
-                            &self.db,
-                            actor,
-                            client,
-                            None,
-                            query(r, &["limit", "cursor", "currency", "from", "to"])?,
-                        )
-                        .await?,
+                        c::periods(&self.db, actor, client, None, query(r, c::PERIOD_FILTERS)?)
+                            .await?,
                     ))
                 }
                 [id] => {
@@ -169,7 +163,7 @@ impl Api {
                         actor,
                         client,
                         Some(validation::id(id)?),
-                        query(r, &["limit", "cursor", "currency", "from", "to"])?,
+                        query(r, c::PERIOD_FILTERS)?,
                     )
                     .await?,
                 ))

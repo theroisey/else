@@ -381,5 +381,20 @@
   "Selected original payment": "Plata inițială selectată",
   "Refund date (UTC)": "Data rambursării (UTC)",
   "No refunds recorded.": "Nicio rambursare înregistrată.",
-  "Allocated now": "Alocat acum"
+  "Allocated now": "Alocat acum",
+  "Period filters": "Filtre perioade",
+  "Find service": "Caută serviciu",
+  "All services": "Toate serviciile",
+  "All currencies": "Toate monedele",
+  "Contract collector": "Încasator contractual",
+  "All collectors": "Toți încasatorii",
+  "Payment status": "Starea plății",
+  "All partners": "Toți partenerii",
+  "Selected partner": "Partener selectat",
+  "From billing date": "Data inițială de facturare",
+  "To billing date": "Data finală de facturare",
+  "Apply filters": "Aplică filtrele",
+  "Clear filters": "Șterge filtrele",
+  "No billing periods match these filters.": "Nicio perioadă de facturare nu corespunde acestor filtre.",
+  "Actual payment collector": "Încasatorul efectiv al plății"
 }

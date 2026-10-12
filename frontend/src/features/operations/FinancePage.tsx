@@ -1,6 +1,7 @@
 import { MaskedReference } from './MaskedReference'
 import { RefundForm } from './RefundForm'
 import { VoidPeriod } from './VoidPeriod'
+import { PeriodFiltersPanel } from './PeriodFiltersPanel'
 import { AutomationFailure, ManagerTransfer } from './AutomationControls'
 import { useRef, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router'
@@ -145,6 +146,16 @@ function BrandFinance({ client }: { client: string }) {
   const op = useRecordOperations('agreements', client)
   const [cursor, setCursor] = useState('')
   const [periodCursor, setPeriodCursor] = useState('')
+  const [periodFilters, setPeriodFilters] = useState<api.PeriodFilters>({
+    q: '',
+    service_type: '',
+    currency: '',
+    collector: '',
+    partner_id: '',
+    payment_status: '',
+    from: '',
+    to: '',
+  })
   const [form, setForm] = useState<'create' | 'partner' | null>(null)
   const [selected, setSelected] = useState<Agreement | null>(null)
   const grants = op.auth.session?.user.permissions ?? []
@@ -159,9 +170,11 @@ function BrandFinance({ client }: { client: string }) {
     enabled: allowed,
   })
   const periods = useQuery({
-    queryKey: [...op.key, 'periods', periodCursor],
+    queryKey: [...op.key, 'periods', periodCursor, periodFilters],
     queryFn: ({ signal }) =>
-      op.read(() => api.periods(client, null, periodCursor, signal)),
+      op.read(() =>
+        api.periods(client, null, periodCursor, signal, periodFilters),
+      ),
     enabled: allowed,
   })
   const totals = useQuery({
@@ -262,6 +275,14 @@ function BrandFinance({ client }: { client: string }) {
         </Button>
       ) : null}
       <h2 className="section-heading mt-10">{t('Billing periods')}</h2>
+      <PeriodFiltersPanel
+        client={client}
+        value={periodFilters}
+        onApply={(filters) => {
+          setPeriodCursor('')
+          setPeriodFilters(filters)
+        }}
+      />
       {periods.isPending ? (
         <PageSkeleton label={t('Loading finance…')} />
       ) : periods.isError ? (
@@ -274,7 +295,10 @@ function BrandFinance({ client }: { client: string }) {
       ) : (
         <>
           <div className="overflow-x-auto">
-            <table className="data-table w-full">
+            <table
+              aria-label={t('Billing periods')}
+              className="data-table w-full"
+            >
               <thead>
                 <tr>
                   {[
@@ -320,7 +344,11 @@ function BrandFinance({ client }: { client: string }) {
           </div>
           {!periods.data.data.length ? (
             <p className="py-5 text-muted">
-              {t('No billing periods generated.')}
+              {t(
+                Object.values(periodFilters).some(Boolean)
+                  ? 'No billing periods match these filters.'
+                  : 'No billing periods generated.',
+              )}
             </p>
           ) : null}
           <Pages

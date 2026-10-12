@@ -381,5 +381,20 @@
   "Selected original payment": "Seçili ilk ödeme",
   "Refund date (UTC)": "İade tarihi (UTC)",
   "No refunds recorded.": "İade kaydı yok.",
-  "Allocated now": "Şu an ayrılan"
+  "Allocated now": "Şu an ayrılan",
+  "Period filters": "Dönem filtreleri",
+  "Find service": "Hizmet ara",
+  "All services": "Tüm hizmetler",
+  "All currencies": "Tüm para birimleri",
+  "Contract collector": "Sözleşmedeki tahsil eden",
+  "All collectors": "Tüm tahsil edenler",
+  "Payment status": "Ödeme durumu",
+  "All partners": "Tüm iş ortakları",
+  "Selected partner": "Seçili iş ortağı",
+  "From billing date": "Başlangıç faturalama tarihi",
+  "To billing date": "Bitiş faturalama tarihi",
+  "Apply filters": "Filtreleri uygula",
+  "Clear filters": "Filtreleri temizle",
+  "No billing periods match these filters.": "Bu filtrelerle eşleşen faturalama dönemi yok.",
+  "Actual payment collector": "Tahsilatın alındığı taraf"
 }

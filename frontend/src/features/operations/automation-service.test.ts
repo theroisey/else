@@ -1,6 +1,6 @@
 import { authenticatedJSON } from '../../services/authenticated'
 import { afterEach, expect, it, vi } from 'vitest'
-import { terms, period, readPeriod } from './commercial-service'
+import { terms, period, readPeriod, periods } from './commercial-service'
 import { list } from './recurring-service'
 import { localDate } from './preferences-service'
 const client = '11111111-1111-4111-8111-111111111111',
@@ -185,4 +185,43 @@ it('permits only the registered operational roots through authenticated same-ori
   await expect(
     authenticatedJSON('/api/v1/unregistered?limit=25'),
   ).rejects.toMatchObject({ code: 'invalid_request' })
+})
+
+it('validates commercial report filters before transport and preserves encoded scoped selection', async () => {
+  const filters = {
+    q: 'Software & support',
+    service_type: 'software_maintenance',
+    currency: 'USD',
+    collector: 'roise',
+    payment_collector: 'roise',
+    partner_id: 'none',
+    payment_status: 'overdue',
+    from: '2026-10-01',
+    to: '2026-10-31',
+  }
+  respond({ data: [], page: { limit: 25, next_cursor: null } })
+  await periods(client, null, '', new AbortController().signal, filters)
+  const url = new URL(
+    String(vi.mocked(fetch).mock.calls.at(-1)![0]),
+    'http://localhost',
+  )
+  expect(url.pathname).toBe(`/api/v1/clients/${client}/commercial-periods`)
+  expect(url.searchParams.get('q')).toBe('Software & support')
+  expect(url.searchParams.get('partner_id')).toBe('none')
+  expect(url.searchParams.get('payment_status')).toBe('overdue')
+  expect(url.searchParams.get('payment_collector')).toBe('roise')
+  vi.mocked(fetch).mockClear()
+  await expect(
+    periods(client, null, '', new AbortController().signal, {
+      ...filters,
+      from: '2026-11-01',
+    }),
+  ).rejects.toMatchObject({ code: 'invalid_request' })
+  await expect(
+    periods(client, null, '', new AbortController().signal, {
+      ...filters,
+      partner_id: 'foreign-unsafe-id',
+    }),
+  ).rejects.toMatchObject({ code: 'invalid_request' })
+  expect(fetch).not.toHaveBeenCalled()
 })

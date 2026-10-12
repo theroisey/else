@@ -9,7 +9,9 @@ const unrelated = 'b0333333-3333-4333-8333-333333333333'
 // five-attempt login limiter instead of exhausting another suite's owner.
 test.beforeAll(() => {
   const owner = 'a0444444-4444-4444-8444-444444444444'
-  database(`INSERT OR IGNORE INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${owner}','operations.owner.fixture@example.com','Synthetic operations owner',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT OR IGNORE INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES('a0555555-5555-4555-8555-555555555555','${owner}','00000000-0000-4000-8000-000000000001','global',NULL,utc_now());`)
+  database(
+    `INSERT OR IGNORE INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT '${owner}','operations.owner.fixture@example.com','Synthetic operations owner',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT OR IGNORE INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES('a0555555-5555-4555-8555-555555555555','${owner}','00000000-0000-4000-8000-000000000001','global',NULL,utc_now());`,
+  )
 })
 async function login(page: Page, email: string, path = '/app') {
   await page.goto(path)
@@ -175,6 +177,45 @@ test('operations: commercial payment, revenue share, internal transfer and audit
       `SELECT count(*) FROM internal_settlements WHERE period_id='${pid}'`,
     ),
   ).toBe('1')
+  const detailPath = new URL(page.url()).pathname
+  await page.goto(`/app/clients/${client}/finance`)
+  await expect(
+    page.getByRole('heading', { name: 'Service finance', exact: true }),
+  ).toBeVisible()
+  await page.getByText('Period filters', { exact: true }).click()
+  await page
+    .getByLabel('Find service', { exact: true })
+    .fill('monthly consulting')
+  await page.getByLabel('Currency', { exact: true }).selectOption('EUR')
+  await page
+    .getByLabel('Contract collector', { exact: true })
+    .selectOption('partner')
+  await page.getByLabel('Actual payment collector', { exact: true }).selectOption('partner')
+  await page
+    .getByLabel('Payment status', { exact: true })
+    .selectOption('partially_paid')
+  await page.getByRole('button', { name: 'Apply filters', exact: true }).click()
+  const report = page.getByRole('table', {
+    name: 'Billing periods',
+    exact: true,
+  })
+  await expect(report.locator('tbody tr')).toHaveCount(1)
+  await expect(report).toContainText('Synthetic monthly consulting')
+  await expect(report).toContainText('EUR 350.00')
+  await page.getByLabel('Currency', { exact: true }).selectOption('USD')
+  await page.getByRole('button', { name: 'Apply filters', exact: true }).click()
+  await expect(
+    page.getByText('No billing periods match these filters.', { exact: true }),
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Clear filters', exact: true }).click()
+  await expect(report.locator('tbody tr')).toHaveCount(1)
+  await page.goto(detailPath)
+  await expect(
+    page.getByRole('heading', {
+      name: 'Synthetic monthly consulting',
+      exact: true,
+    }),
+  ).toBeVisible()
   for (const width of [360, 390, 430, 1440]) {
     await page.setViewportSize({ width, height: 1000 })
     expect(
@@ -505,7 +546,9 @@ test('operations: team leader scope, brand assignment and dynamic removal', asyn
       .click()
     const form = page.getByRole('dialog', { name: 'Assign brand', exact: true })
     await form.getByLabel('Employee', { exact: true }).selectOption(user)
-    await form.getByLabel('Find brand', { exact: true }).fill('Synthetic team brand')
+    await form
+      .getByLabel('Find brand', { exact: true })
+      .fill('Synthetic team brand')
     await form.getByLabel('Brand', { exact: true }).selectOption(teamBrand)
     await form
       .getByLabel('Responsibility')
@@ -519,11 +562,15 @@ test('operations: team leader scope, brand assignment and dynamic removal', asyn
   const leadContext = await browser.newContext(),
     lead = await leadContext.newPage()
   await login(lead, 'team.leader@example.com', new URL(url).pathname)
-  await expect(lead.getByRole('navigation', { name: 'Breadcrumb', exact: true })).toContainText('Team')
+  await expect(
+    lead.getByRole('navigation', { name: 'Breadcrumb', exact: true }),
+  ).toContainText('Team')
   await lead.getByRole('button', { name: 'Assign brand', exact: true }).click()
   drawer = lead.getByRole('dialog', { name: 'Assign brand', exact: true })
   await drawer.getByLabel('Employee', { exact: true }).selectOption(memberID)
-  await drawer.getByLabel('Find brand', { exact: true }).fill('Synthetic team brand')
+  await drawer
+    .getByLabel('Find brand', { exact: true })
+    .fill('Synthetic team brand')
   await drawer.getByLabel('Brand', { exact: true }).selectOption(teamBrand)
   await drawer.getByLabel('Responsibility').fill('Synthetic campaign tracking')
   await drawer

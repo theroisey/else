@@ -164,9 +164,12 @@ async function page<T extends { id: string }>(
   cursor: string,
   signal: AbortSignal,
   bind: (v: T) => boolean,
+  filters: Record<string, string> = {},
 ) {
   const q = new URLSearchParams({ limit: '25' })
   if (cursor) q.set('cursor', identifier(cursor))
+  for (const [key, value] of Object.entries(filters))
+    if (value) q.set(key, value)
   const v = checked(
     z.object({ data: z.array(schema).max(25), page: pagination }).strict(),
     await authenticatedJSON(`${path}?${q}`, { signal }),
@@ -195,13 +198,55 @@ export const agreements = (
     signal,
     (v) => v.client_id === client,
   )
-export const periods = (
+export interface PeriodFilters {
+  q: string
+  service_type: string
+  currency: string
+  collector: string
+  payment_collector?: string
+  partner_id: string
+  payment_status: string
+  from: string
+  to: string
+}
+const periodFiltersInput = z
+  .object({
+    q: z.string().max(100),
+    service_type: z.enum([
+      '',
+      'software_maintenance',
+      'software_development',
+      'advertising_consulting',
+      'other',
+    ]),
+    currency: z.union([currency, z.literal('')]),
+    collector: z.enum(['', 'roise', 'partner']),
+    payment_collector: z.enum(['', 'roise', 'partner']).default(''),
+    partner_id: z.union([uuid, z.literal(''), z.literal('none')]),
+    payment_status: z.enum([
+      '',
+      'pending',
+      'partially_paid',
+      'paid',
+      'overdue',
+      'cancelled',
+    ]),
+    from: z.union([dateSchema, z.literal('')]),
+    to: z.union([dateSchema, z.literal('')]),
+  })
+  .strict()
+  .refine((v) => !v.from || !v.to || v.from <= v.to)
+export const periods = async (
   client: string,
   id: string | null,
   cursor: string,
   signal: AbortSignal,
-) =>
-  page(
+  filters?: PeriodFilters,
+) => {
+  const checkedFilters = filters ? periodFiltersInput.safeParse(filters) : null
+  if (checkedFilters && !checkedFilters.success)
+    throw new APIError(0, 'invalid_request')
+  return page(
     id
       ? `${base(client)}/agreements/${identifier(id)}/periods`
       : `${base(client)}/commercial-periods`,
@@ -209,7 +254,9 @@ export const periods = (
     cursor,
     signal,
     (v) => v.client_id === client && (!id || v.agreement_id === id),
+    checkedFilters?.success ? { ...checkedFilters.data } : {},
   )
+}
 export const versions = (
   client: string,
   id: string,

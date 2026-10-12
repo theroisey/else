@@ -542,6 +542,19 @@ pub(crate) fn period_position(mut period: Value) -> Result<Value> {
     }
     Ok(period)
 }
+pub(crate) const PERIOD_FILTERS: &[&str] = &[
+    "limit",
+    "cursor",
+    "currency",
+    "from",
+    "to",
+    "q",
+    "service_type",
+    "collector",
+    "payment_status",
+    "partner_id",
+    "payment_collector",
+];
 pub async fn periods(
     db: &Database,
     actor: Actor,
@@ -559,11 +572,49 @@ pub async fn periods(
     if from.as_ref().zip(to.as_ref()).is_some_and(|(a, b)| a > b) {
         return Err(Error::Invalid("invalid_dates"));
     }
+    let service = q
+        .choice(
+            "service_type",
+            "",
+            &[
+                "",
+                "software_maintenance",
+                "software_development",
+                "advertising_consulting",
+                "other",
+            ],
+        )?
+        .to_owned();
+    let collector = q
+        .choice("collector", "", &["", "roise", "partner"])?
+        .to_owned();
+    let payment_collector = q
+        .choice("payment_collector", "", &["", "roise", "partner"])?
+        .to_owned();
+    let status = q
+        .choice(
+            "payment_status",
+            "",
+            &[
+                "",
+                "pending",
+                "partially_paid",
+                "paid",
+                "overdue",
+                "cancelled",
+            ],
+        )?
+        .to_owned();
+    let search = q.text("q", 100)?;
+    let partner = q.get("partner_id").unwrap_or("").to_owned();
+    if !partner.is_empty() && partner != "none" {
+        validation::id(&partner)?;
+    }
     db.read(move|tx|{
         authorize(tx,&actor,&client,false)?;
         if let Some(agreement)=&agreement{document(tx,&client,agreement)?;}
-        let mut stmt=tx.prepare(&format!("{PERIOD_SQL} WHERE b.client_id=?1 AND (?2 IS NULL OR b.agreement_id=?2) AND (?3 IS NULL OR b.id>?3) AND (?4='' OR b.currency=?4) AND (?5 IS NULL OR b.billing_date>=?5) AND (?6 IS NULL OR b.billing_date<=?6) ORDER BY b.id LIMIT ?7"))?;
-        let rows=stmt.query_map(params![client,agreement,page.cursor,currency,from,to,(page.limit+1) as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?;
+        let mut stmt=tx.prepare(&format!("{PERIOD_SQL} WHERE b.client_id=?1 AND (?2 IS NULL OR b.agreement_id=?2) AND (?3 IS NULL OR b.id>?3) AND (?4='' OR b.currency=?4) AND (?5 IS NULL OR b.billing_date>=?5) AND (?6 IS NULL OR b.billing_date<=?6) AND (?8='' OR a.service_type=?8) AND (?9='' OR v.collector=?9) AND (?10='' OR CASE WHEN c.cancelled_at IS NOT NULL THEN 'cancelled' WHEN c.paid_minor>=c.amount_minor THEN 'paid' WHEN c.due_date<?13 THEN 'overdue' WHEN c.paid_minor>0 THEN 'partially_paid' ELSE 'pending' END=?10) AND (?11='' OR instr(unicode_lower(a.title),unicode_lower(?11))>0) AND (?12='' OR (?12='none' AND v.partner_id IS NULL) OR v.partner_id=?12) AND (?14='' OR EXISTS(SELECT 1 FROM payments pm WHERE pm.collection_id=b.collection_id AND pm.collector=?14 AND pm.amount_minor>CAST((SELECT exact_sum(rv.amount_minor) FROM payment_reversals rv WHERE rv.payment_id=pm.id) AS INTEGER))) ORDER BY b.id LIMIT ?7"))?;
+        let rows=stmt.query_map(params![client,agreement,page.cursor,currency,from,to,(page.limit+1) as i64,service,collector,status,search,partner,billing::today(),payment_collector],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?;
         page.page(rows.into_iter().map(period_position).collect::<Result<Vec<_>>>()?)
     }).await
 }
@@ -693,7 +744,7 @@ mod tests {
         share: &str,
         collector: &str,
     ) -> String {
-        let a=create(&f.db,f.actor.clone(),f.client.clone(),input(json!({"command_id":validation::new_id(),"title":"Synthetic service","service_type":"advertising_consulting","frequency":"monthly","start_date":schedule::today("Europe/Bucharest").unwrap().to_string(),"due_offset_days":7,"terms":{"amount_minor":total,"currency":currency,"roise_share_minor":share,"partner_id":partner,"collector":collector,"allocation_policy":"proportional"}}))).await.unwrap();
+        let a=create(&f.db,f.actor.clone(),f.client.clone(),input(json!({"command_id":validation::new_id(),"title":"Synthetic service","service_type":if partner.is_none()&&currency=="USD"{"software_maintenance"}else{"advertising_consulting"},"frequency":"monthly","start_date":schedule::today("Europe/Bucharest").unwrap().to_string(),"due_offset_days":7,"terms":{"amount_minor":total,"currency":currency,"roise_share_minor":share,"partner_id":partner,"collector":collector,"allocation_policy":"proportional"}}))).await.unwrap();
         a["id"].as_str().unwrap().into()
     }
     async fn period_fixture(f: &Fixture, agreement: &str) -> Value {
@@ -868,6 +919,94 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(totals.as_array().unwrap().len(), 2);
+        let filters = Query::parse("currency=USD&service_type=software_maintenance&collector=roise&payment_status=partially_paid&partner_id=none&q=synthetic", PERIOD_FILTERS).unwrap();
+        let report = periods(&f.db, f.actor.clone(), f.client.clone(), None, filters)
+            .await
+            .unwrap();
+        assert_eq!(report["data"].as_array().unwrap().len(), 1);
+        assert_eq!(report["data"][0]["id"], s["id"]);
+        let partner_filter = Query::parse(
+            &format!("currency=EUR&collector=partner&partner_id={partner}"),
+            PERIOD_FILTERS,
+        )
+        .unwrap();
+        let report = periods(
+            &f.db,
+            f.actor.clone(),
+            f.client.clone(),
+            None,
+            partner_filter,
+        )
+        .await
+        .unwrap();
+        assert_eq!(report["data"].as_array().unwrap().len(), 2);
+        // Contract responsibility and the actual collector are independent.
+        let mixed_agreement = agreement(
+            &f,
+            Some(partner.clone()),
+            "EUR",
+            "70000",
+            "20000",
+            "partner",
+        )
+        .await;
+        let mixed = period_fixture(&f, &mixed_agreement).await;
+        pay(&f, &mixed, "35000", "roise").await;
+        let mixed_report = periods(
+            &f.db,
+            f.actor.clone(),
+            f.client.clone(),
+            None,
+            Query::parse("collector=partner&payment_collector=roise", PERIOD_FILTERS).unwrap(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(mixed_report["data"].as_array().unwrap().len(), 1);
+        assert_eq!(mixed_report["data"][0]["id"], mixed["id"]);
+        // Simulate an elapsed due date in this isolated ledger fixture.
+        let yesterday = chrono::Utc::now()
+            .date_naive()
+            .pred_opt()
+            .unwrap()
+            .to_string();
+        f.connection()
+            .execute(
+                "UPDATE collections SET due_date=?1 WHERE id=?2",
+                params![yesterday, s["collection_id"].as_str().unwrap()],
+            )
+            .unwrap();
+        let overdue = periods(
+            &f.db,
+            f.actor.clone(),
+            f.client.clone(),
+            Some(software),
+            Query::parse("payment_status=overdue", PERIOD_FILTERS).unwrap(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(overdue["data"][0]["id"], s["id"]);
+        assert!(
+            periods(
+                &f.db,
+                f.actor.clone(),
+                f.client.clone(),
+                None,
+                Query::parse("from=2026-10-02&to=2026-10-01", PERIOD_FILTERS).unwrap()
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            periods(
+                &f.db,
+                f.actor,
+                f.client,
+                None,
+                Query::parse("partner_id=invalid", PERIOD_FILTERS).unwrap()
+            )
+            .await
+            .is_err()
+        );
     }
     #[tokio::test]
     async fn agreements_preserve_historical_terms_pause_and_deny_unrelated_scope() {

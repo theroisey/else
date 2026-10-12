@@ -381,5 +381,20 @@
   "Selected original payment": "Selected original payment",
   "Refund date (UTC)": "Refund date (UTC)",
   "No refunds recorded.": "No refunds recorded.",
-  "Allocated now": "Allocated now"
+  "Allocated now": "Allocated now",
+  "Period filters": "Period filters",
+  "Find service": "Find service",
+  "All services": "All services",
+  "All currencies": "All currencies",
+  "Contract collector": "Contract collector",
+  "All collectors": "All collectors",
+  "Payment status": "Payment status",
+  "All partners": "All partners",
+  "Selected partner": "Selected partner",
+  "From billing date": "From billing date",
+  "To billing date": "To billing date",
+  "Apply filters": "Apply filters",
+  "Clear filters": "Clear filters",
+  "No billing periods match these filters.": "No billing periods match these filters.",
+  "Actual payment collector": "Actual payment collector"
 }

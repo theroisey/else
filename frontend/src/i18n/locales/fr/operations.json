@@ -381,5 +381,20 @@
   "Selected original payment": "Paiement initial sélectionné",
   "Refund date (UTC)": "Date du remboursement (UTC)",
   "No refunds recorded.": "Aucun remboursement enregistré.",
-  "Allocated now": "Attribué actuellement"
+  "Allocated now": "Attribué actuellement",
+  "Period filters": "Filtres de périodes",
+  "Find service": "Rechercher un service",
+  "All services": "Tous les services",
+  "All currencies": "Toutes les devises",
+  "Contract collector": "Encaisseur contractuel",
+  "All collectors": "Tous les encaisseurs",
+  "Payment status": "État du paiement",
+  "All partners": "Tous les partenaires",
+  "Selected partner": "Partenaire sélectionné",
+  "From billing date": "Date de facturation à partir du",
+  "To billing date": "Date de facturation jusqu’au",
+  "Apply filters": "Appliquer les filtres",
+  "Clear filters": "Effacer les filtres",
+  "No billing periods match these filters.": "Aucune période de facturation ne correspond à ces filtres.",
+  "Actual payment collector": "Encaisseur effectif du paiement"
 }

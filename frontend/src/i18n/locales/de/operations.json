@@ -381,5 +381,20 @@
   "Selected original payment": "Ausgewählte ursprüngliche Zahlung",
   "Refund date (UTC)": "Erstattungsdatum (UTC)",
   "No refunds recorded.": "Keine Erstattungen erfasst.",
-  "Allocated now": "Aktuell zugeteilt"
+  "Allocated now": "Aktuell zugeteilt",
+  "Period filters": "Zeitraumfilter",
+  "Find service": "Dienstleistung suchen",
+  "All services": "Alle Dienstleistungen",
+  "All currencies": "Alle Währungen",
+  "Contract collector": "Vertraglicher Zahlungsempfänger",
+  "All collectors": "Alle Zahlungsempfänger",
+  "Payment status": "Zahlungsstatus",
+  "All partners": "Alle Partner",
+  "Selected partner": "Ausgewählter Partner",
+  "From billing date": "Abrechnungsdatum ab",
+  "To billing date": "Abrechnungsdatum bis",
+  "Apply filters": "Filter anwenden",
+  "Clear filters": "Filter zurücksetzen",
+  "No billing periods match these filters.": "Keine Abrechnungszeiträume entsprechen diesen Filtern.",
+  "Actual payment collector": "Tatsächlicher Zahlungsempfänger"
 }
