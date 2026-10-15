@@ -7,7 +7,11 @@ function path(id: string) {
   if (!isUUID(id)) throw new APIError(0, 'invalid_request')
   return `/api/v1/clients/${id}`
 }
-export async function clients(filter: Filter, cursor: string, signal: AbortSignal) {
+export async function clients(
+  filter: Filter,
+  cursor: string,
+  signal: AbortSignal,
+) {
   if (
     (cursor && !isUUID(cursor)) ||
     !['active', 'archived', 'all'].includes(filter.status) ||
@@ -25,7 +29,9 @@ export async function clients(filter: Filter, cursor: string, signal: AbortSigna
   if (filter.q.trim()) query.set('q', filter.q.trim())
   if (filter.tag.trim()) query.set('tag', filter.tag.trim().toLowerCase())
   if (cursor) query.set('cursor', cursor)
-  return authenticatedJSON(`/api/v1/clients?${query}`, { signal }).then(parsePage)
+  return authenticatedJSON(`/api/v1/clients?${query}`, { signal }).then(
+    parsePage,
+  )
 }
 export const client = async (id: string, signal?: AbortSignal) =>
   authenticatedJSON(path(id), signal ? { signal } : {}).then(parseClient)
@@ -35,11 +41,15 @@ function confirmed(body: unknown, expected: number, id?: string) {
     throw new APIError(0, 'invalid_response')
   return result
 }
-export const create = (profile: Profile) =>
-  authenticatedJSON('/api/v1/clients', { method: 'POST', body: profile }).then((body) =>
-    confirmed(body, 1),
+export const create = (profile: Omit<Profile, 'website'>) =>
+  authenticatedJSON('/api/v1/clients', { method: 'POST', body: profile }).then(
+    (body) => confirmed(body, 1),
   )
-export const update = async (id: string, profile: Profile, expected_revision: number) =>
+export const update = async (
+  id: string,
+  profile: Omit<Profile, 'website'>,
+  expected_revision: number,
+) =>
   authenticatedJSON(path(id), {
     method: 'PUT',
     body: { ...profile, expected_revision },

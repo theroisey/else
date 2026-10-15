@@ -58,10 +58,7 @@ function WebsiteWorkspace({
     hasPermission(grants, { permission, scope: 'client', clientID })
   const view = has('clients.view')
   const [editing, setEditing] = useState(false)
-  const [confirm, setConfirm] = useState<{
-    record: Website
-    action: 'primary' | 'archive'
-  } | null>(null)
+  const [confirm, setConfirm] = useState<Website | null>(null)
   const [notice, setNotice] = useState('')
   const [history, setHistory] = useState([''])
   const [availableHistory, setAvailableHistory] = useState([''])
@@ -287,16 +284,6 @@ function WebsiteWorkspace({
               </div>
               <div>
                 <dt className="text-xs text-muted">
-                  {copy('Primary website', 'websites')}
-                </dt>
-                <dd className="mt-1">
-                  {record.is_primary
-                    ? copy('Yes', 'websites')
-                    : copy('No', 'websites')}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted">
                   {copy('Last updated', 'websites')}
                 </dt>
                 <dd className="mt-1">{formatTime(record.updated_at)}</dd>
@@ -305,7 +292,7 @@ function WebsiteWorkspace({
             {record.needs_review ? (
               <p className="mt-5 text-sm text-warning-ink">
                 {copy(
-                  'The original website value was preserved during migration. Edit and validate it before setting it as primary.',
+                  'The original website value was preserved during migration. Edit it to validate the address.',
                   'websites',
                 )}
               </p>
@@ -322,18 +309,8 @@ function WebsiteWorkspace({
               )}
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              {manage && !record.is_primary && !record.needs_review ? (
-                <Button
-                  onClick={() => setConfirm({ record, action: 'primary' })}
-                >
-                  {copy('Set as primary', 'websites')}
-                </Button>
-              ) : null}
               {archive ? (
-                <Button
-                  variant="danger"
-                  onClick={() => setConfirm({ record, action: 'archive' })}
-                >
+                <Button variant="danger" onClick={() => setConfirm(record)}>
                   {copy('Archive website', 'websites')}
                 </Button>
               ) : null}
@@ -619,39 +596,24 @@ function WebsiteWorkspace({
         onClose={() => {
           if (!operation.pending) setConfirm(null)
         }}
-        title={
-          confirm?.action === 'archive'
-            ? copy('Archive website', 'websites')
-            : copy('Set primary website', 'websites')
-        }
-        description={
-          confirm?.action === 'archive'
-            ? copy(
-                'Retain this property and its history. Website editing and new assignments will be unavailable.',
-                'websites',
-              )
-            : copy(
-                'This property becomes the primary website. Any previous primary remains in the portfolio.',
-                'websites',
-              )
-        }
+        title={copy('Archive website', 'websites')}
+        description={copy(
+          'Retain this property and its history. Website editing and new assignments will be unavailable.',
+          'websites',
+        )}
       >
         <div className="mt-6 flex flex-wrap gap-3">
           <Button
-            variant={confirm?.action === 'archive' ? 'danger' : 'primary'}
+            variant="danger"
             disabled={operation.pending || !!operation.error}
             loading={operation.pending}
             onClick={() => {
               if (!confirm) return
               void operation
-                .run(() => api.action(confirm.record, confirm.action))
+                .run(() => api.action(confirm, 'archive'))
                 .then((result) => {
                   if (result) {
-                    setNotice(
-                      confirm.action === 'archive'
-                        ? 'Website archived.'
-                        : 'Primary website updated.',
-                    )
+                    setNotice('Website archived.')
                     setConfirm(null)
                   }
                 })

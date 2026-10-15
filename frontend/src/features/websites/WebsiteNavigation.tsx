@@ -69,7 +69,6 @@ export function WebsiteNavigation({ clientID }: { clientID: string }) {
               {list.data?.data.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.domain || w.name}
-                  {w.is_primary ? copy(' · Primary', 'websites') : ''}
                 </option>
               ))}
             </select>

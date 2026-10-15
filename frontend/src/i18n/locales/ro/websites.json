@@ -66,7 +66,7 @@
   "Showing the first 25 active websites. Open All websites to browse the portfolio.": "Se afișează primele 25 de site-uri active. Deschideți Toate site-urile pentru a consulta portofoliul.",
   "Status": "Stare",
   "Switch website": "Schimbă site-ul",
-  "The original website value was preserved during migration. Edit and validate it before setting it as primary.": "Valoarea inițială a site-ului a fost păstrată la migrare. Editați-o și validați-o înainte de a o seta ca principală.",
+  "The original website value was preserved during migration. Edit it to validate the address.": "Valoarea inițială a site-ului a fost păstrată la migrare. Editați-o pentru a valida adresa.",
   "This property becomes the primary website. Any previous primary remains in the portfolio.": "Acest site devine principal. Site-ul principal anterior rămâne în portofoliu.",
   "This website or its client is archived. History and stored reports remain available; changes are unavailable.": "Acest site sau clientul său este arhivat. Istoricul și rapoartele salvate rămân accesibile; modificările nu sunt disponibile.",
   "Unable to load website context. Reload this page.": "Contextul site-ului nu a putut fi încărcat. Reîncărcați pagina.",

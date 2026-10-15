@@ -70,8 +70,6 @@ export function LoginPage() {
     <div className="login-page">
       <header className="login-header">
         <Brand />
-        <AppearanceControl />
-        <LanguageControl />
       </header>
       <main className="login-main">
         <div className="login-editorial">
@@ -158,6 +156,10 @@ export function LoginPage() {
         </section>
       </main>
       <footer className="login-footer">
+        <div className="login-preferences">
+          <AppearanceControl variant="text" />
+          <LanguageControl variant="text" />
+        </div>
         <span>{copy('Roisey Else · Authorized access', 'auth')}</span>
       </footer>
     </div>

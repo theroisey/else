@@ -66,7 +66,7 @@
   "Showing the first 25 active websites. Open All websites to browse the portfolio.": "İlk 25 etkin web sitesi gösteriliyor. Portföyü incelemek için Tüm web siteleri’ni açın.",
   "Status": "Durum",
   "Switch website": "Web sitesi değiştir",
-  "The original website value was preserved during migration. Edit and validate it before setting it as primary.": "Geçiş sırasında özgün web sitesi değeri korundu. Birincil olarak ayarlamadan önce düzenleyip doğrulayın.",
+  "The original website value was preserved during migration. Edit it to validate the address.": "Geçiş sırasında özgün web sitesi değeri korundu. Adresi doğrulamak için düzenleyin.",
   "This property becomes the primary website. Any previous primary remains in the portfolio.": "Bu web sitesi birincil olur. Önceki birincil web sitesi portföyde kalır.",
   "This website or its client is archived. History and stored reports remain available; changes are unavailable.": "Bu web sitesi veya müşterisi arşivlenmiş. Geçmiş ve kayıtlı raporlar erişilebilir kalır; değişiklik yapılamaz.",
   "Unable to load website context. Reload this page.": "Web sitesi bağlamı yüklenemedi. Bu sayfayı yenileyin.",

@@ -1,7 +1,6 @@
 import { useLocale } from '../../i18n/index'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
-import { faCircleNotch } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { buttonStyles } from './button-styles'
 import type { ButtonSize, ButtonVariant } from './button-styles'
@@ -36,16 +35,13 @@ export function Button({
       disabled={disabled || loading}
       aria-busy={loading || undefined}
     >
-      {loading && icon ? (
-        <FontAwesomeIcon
-          className="size-3 motion-safe:animate-spin"
-          icon={faCircleNotch}
-          aria-hidden="true"
-        />
-      ) : icon ? (
+      {icon ? (
         <FontAwesomeIcon className="size-3" icon={icon} aria-hidden="true" />
       ) : null}
       <span>{children}</span>
+      <span className="button-progress" aria-hidden="true">
+        <span />
+      </span>
       {loading && loadingLabel ? (
         <span className="sr-only" role="status">
           {' '}

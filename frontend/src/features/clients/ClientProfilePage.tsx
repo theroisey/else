@@ -141,20 +141,6 @@ function ClientWorkspace({ id }: { id: string }) {
             <dl className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
                 <dt className="text-xs text-muted">
-                  {copy('Legacy profile website', 'clients')}
-                </dt>
-                <dd className="mt-1 break-all">
-                  {client.website || copy('Not provided', 'clients')}
-                  <Link
-                    className="mt-2 block text-xs underline underline-offset-4"
-                    to={`/app/clients/${id}/websites`}
-                  >
-                    {copy('Manage websites', 'clients')}
-                  </Link>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted">
                   {copy('Tags', 'clients')}
                 </dt>
                 <dd className="mt-1 break-words">

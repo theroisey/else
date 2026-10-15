@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowRightFromBracket,
   faChevronDown,
+  faUser,
 } from '@fortawesome/free-solid-svg-icons'
 import { Button } from '../../components/ui'
 import { useAuth } from '../auth/auth-context'
@@ -65,16 +66,22 @@ export function AccountMenu() {
         className="account-trigger"
         aria-label={copy('Account', 'common')}
       >
-        <span className="truncate">{auth.session?.user.display_name}</span>
-        <FontAwesomeIcon
-          className="text-[0.5rem] text-muted"
-          icon={faChevronDown}
+        <span className="account-mobile-icon" aria-hidden="true">
+          <FontAwesomeIcon icon={faUser} />
+        </span>
+        <span className="account-name truncate">
+          {auth.session?.user.display_name}
+        </span>
+        <span
+          className="account-chevron text-[0.5rem] text-muted"
           aria-hidden="true"
-        />
+        >
+          <FontAwesomeIcon icon={faChevronDown} />
+        </span>
       </summary>
       <div className="account-popup">
         <p className="break-all text-sm text-muted">
-          {auth.session?.user.email}
+          {`${auth.session?.user.display_name} · ${auth.session?.user.email}`}
         </p>
         <Link
           className="min-h-8 py-1 font-semibold underline underline-offset-4"

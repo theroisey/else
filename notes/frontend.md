@@ -46,7 +46,11 @@ Mutations disable duplicate submission and retain their original command, normal
 
 ## Refinement and session renewal
 
-Filter surfaces share inset horizontal padding and localized label subgrids; the reminder owner filter starts with Anyone/Me and reveals historical identifiers only when explicitly selected. The header question icon opens a focus-trapped section guide with route-specific workflow explanations in every locale. Quiet 140–160 ms entry/menu/action transitions honor reduced motion. Service Status UI is removed; operational `/health` and `/ready` remain.
+Filter surfaces share inset horizontal padding and localized label subgrids; the reminder owner filter starts with Anyone/Me and reveals historical identifiers only when explicitly selected. The header question icon opens a focus-trapped section guide with route-specific workflow explanations in every locale. Workspace navigation fades the live main area out for 90 ms and the incoming area in for 160 ms, with bounded timers and no captured DOM or retained route copies. Current auth/grant guards remain live and cancel pending exits immediately; same-route filters preserve drafts. Native browser Back/Forward commits immediately and fades in. Reduced motion skips scripted animation. The outgoing main area is temporarily inert and focus moves to the new main region. Skeletons and button progress use a quiet opacity cycle; button progress also fades when work ends. Menus and dialogs retain their short entry transitions. Service Status UI is removed; operational `/health` and `/ready` remain.
+
+The login header contains only authentic branding. Appearance and language live in the footer as text buttons opening the shared focus-trapped choice dialog; account/settings selectors retain their existing behavior. Mobile account controls use a compact accessible icon, with the full identity inside the menu.
+
+Client forms and profiles omit the retired legacy website field; independent properties remain in Websites without primary designation controls or badges. Profile writes omit the legacy key so even malformed historical values remain untouched.
 
 Production emits one hashed application JS bundle, including locale resources; CSS/fonts remain separate cacheable files. The small ordinary blocking theme bootstrap remains separate to prevent theme flash without relaxing CSP. This trades initial code bytes for fewer module requests; native gzip and immutable caching stay enabled. The single bundle is not an instruction to expose tests or fixtures.
 

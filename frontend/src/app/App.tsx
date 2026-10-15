@@ -15,6 +15,7 @@ import { AccessPage } from '../features/shell/AccessPage'
 import { ClientRoute } from '../features/clients/ClientRoute'
 import { PaymentRecoveryBoundary } from '../features/billing/PaymentRecovery'
 import { CopyRecoveryBoundary } from '../features/pricing/CopyRecovery'
+import { NavigationTransitions } from '../features/shell/NavigationTransitions'
 
 const RecurringPage = lazy(() =>
   import('../features/operations/RecurringPage').then((m) => ({
@@ -226,11 +227,13 @@ function AuthArea() {
   useLocale()
   return (
     <AuthProvider>
-      <PaymentRecoveryBoundary>
-        <CopyRecoveryBoundary>
-          <Outlet />
-        </CopyRecoveryBoundary>
-      </PaymentRecoveryBoundary>
+      <NavigationTransitions>
+        <PaymentRecoveryBoundary>
+          <CopyRecoveryBoundary>
+            <Outlet />
+          </CopyRecoveryBoundary>
+        </PaymentRecoveryBoundary>
+      </NavigationTransitions>
     </AuthProvider>
   )
 }

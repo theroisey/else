@@ -2,10 +2,31 @@ import { statusLabel } from '../../i18n/labels'
 import { copy, useLocale } from '../../i18n/index'
 import { useAppearance } from './theme'
 import type { Appearance } from './theme'
+import { TextChoice } from '../../components/ui/TextChoice'
 
-export function AppearanceControl() {
+export function AppearanceControl({
+  variant = 'select',
+}: {
+  variant?: 'select' | 'text'
+}) {
   useLocale()
   const { preference, setAppearance } = useAppearance()
+  if (variant === 'text')
+    return (
+      <TextChoice
+        label={copy('Appearance', 'settings')}
+        description={copy(
+          'Choose the light or dark workspace, or follow your device. Your preference is saved in this browser.',
+          'settings',
+        )}
+        value={preference}
+        options={(['light', 'dark', 'system'] as const).map((value) => ({
+          value,
+          label: statusLabel(value),
+        }))}
+        onChange={setAppearance}
+      />
+    )
   return (
     <label className="appearance-control">
       <span>{copy('Appearance', 'settings')}</span>

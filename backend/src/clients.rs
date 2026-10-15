@@ -28,7 +28,7 @@ pub struct Profile {
     #[serde(default)]
     legal_name: String,
     #[serde(default)]
-    website: String,
+    website: Option<String>,
     #[serde(default)]
     notes: String,
     #[serde(default)]
@@ -46,11 +46,14 @@ impl Profile {
         }
         self.name = validation::text(&self.name, 200, true, false)?;
         self.legal_name = validation::text(&self.legal_name, 200, false, false)?;
-        self.website = validation::text(&self.website, 2048, false, false)?;
+        self.website = self
+            .website
+            .as_deref()
+            .map(|value| validation::text(value, 2048, false, false))
+            .transpose()?;
         self.notes = validation::text(&self.notes, 4000, false, false)?;
-        if !self.website.is_empty() {
-            let parsed =
-                url::Url::parse(&self.website).map_err(|_| Error::Invalid("invalid_request"))?;
+        if let Some(website) = self.website.as_deref().filter(|value| !value.is_empty()) {
+            let parsed = url::Url::parse(website).map_err(|_| Error::Invalid("invalid_request"))?;
             if !matches!(parsed.scheme(), "http" | "https")
                 || parsed.host_str().is_none()
                 || !parsed.username().is_empty()
@@ -126,10 +129,10 @@ pub async fn create(db: &Database, actor: Actor, profile: Profile) -> Result<Mut
         security::require(tx,&actor,"clients.create",None)?;
         let id=validation::new_id();let now=validation::now();
         tx.execute("INSERT INTO client_scopes VALUES (?1)",[&id])?;
-        tx.execute("INSERT INTO clients(id,name,legal_name,website,notes,created_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?6)",params![id,profile.name,profile.legal_name,profile.website,profile.notes,now])?;
+        tx.execute("INSERT INTO clients(id,name,legal_name,website,notes,created_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?6)",params![id,profile.name,profile.legal_name,profile.website.as_deref().unwrap_or(""),profile.notes,now])?;
         children(tx,&id,&profile)?;
         audit::mutation(tx,&actor,"client",&id,Some(&id),"created",(None, Snapshot::revision(1)))?;
-        crate::websites::legacy_create(tx,&actor,&id,&profile.name,&profile.website,&now)?;
+        crate::websites::legacy_create(tx,&actor,&id,&profile.name,profile.website.as_deref().unwrap_or(""),&now)?;
         Ok(Mutation {id,revision:1})
     }).await
 }
@@ -141,7 +144,9 @@ pub async fn update(db: &Database, actor: Actor, id: String, profile: Profile) -
         security::client(tx,&id,true)?;
         let previous:i64=tx.query_row("SELECT revision FROM clients WHERE id=?1",[&id],|r|r.get(0))?;
         let revision=next_revision(previous,profile.expected_revision.ok_or(Error::Invalid("invalid_request"))?)?;
-        tx.execute("UPDATE clients SET name=?1,legal_name=?2,website=?3,notes=?4,revision=?5,updated_at=?6 WHERE id=?7",params![profile.name,profile.legal_name,profile.website,profile.notes,revision,validation::now(),id])?;
+        // Omission retires the legacy UI field without clearing or revalidating
+        // historical values. Explicit legacy API updates remain validated.
+        tx.execute("UPDATE clients SET name=?1,legal_name=?2,website=coalesce(?3,website),notes=?4,revision=?5,updated_at=?6 WHERE id=?7",params![profile.name,profile.legal_name,profile.website,profile.notes,revision,validation::now(),id])?;
         tx.execute("DELETE FROM client_contacts WHERE client_id=?1",[&id])?;
         tx.execute("DELETE FROM client_tags WHERE client_id=?1",[&id])?;
         children(tx,&id,&profile)?;
@@ -279,6 +284,36 @@ mod tests {
         assert_eq!(page["data"][0]["id"], created.id);
         assert!(page["data"][0].get("contacts").is_none());
         let conn = crate::db::connection(&path).unwrap();
+        // Retired profile fields may contain pre-validation historical values.
+        // Editing the current form must neither clear them nor require repair.
+        conn.execute(
+            "UPDATE clients SET website='historical malformed website' WHERE id=?1",
+            [&created.id],
+        )
+        .unwrap();
+        let revised = validation::json::<Profile>(
+            br#"{"name":"Synthetic updated account","expected_revision":1}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            update(&db, actor.clone(), created.id.clone(), revised)
+                .await
+                .unwrap()
+                .revision,
+            2
+        );
+        let saved = read(&db, actor.clone(), created.id.clone()).await.unwrap();
+        assert_eq!(saved["website"], "historical malformed website");
+        assert_eq!(saved["name"], "Synthetic updated account");
+        let invalid = validation::json::<Profile>(
+            br#"{"name":"Invalid change","website":"javascript:alert(1)","expected_revision":2}"#,
+        )
+        .unwrap();
+        assert!(
+            update(&db, actor.clone(), created.id.clone(), invalid)
+                .await
+                .is_err()
+        );
         conn.execute_batch("CREATE TRIGGER reject_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(ABORT,'synthetic failure'); END;").unwrap();
         assert!(
             archive(
@@ -286,7 +321,7 @@ mod tests {
                 actor.clone(),
                 created.id.clone(),
                 ConfirmRevision {
-                    expected_revision: 1,
+                    expected_revision: 2,
                     confirm: true
                 }
             )
@@ -295,7 +330,7 @@ mod tests {
         );
         assert_eq!(
             read(&db, actor.clone(), created.id.clone()).await.unwrap()["revision"],
-            1
+            2
         );
         conn.execute_batch("DROP TRIGGER reject_audit;").unwrap();
         archive(
@@ -303,7 +338,7 @@ mod tests {
             actor.clone(),
             created.id.clone(),
             ConfirmRevision {
-                expected_revision: 1,
+                expected_revision: 2,
                 confirm: true,
             },
         )
@@ -319,7 +354,7 @@ mod tests {
                 actor.clone(),
                 created.id.clone(),
                 ConfirmRevision {
-                    expected_revision: 2,
+                    expected_revision: 3,
                     confirm: true
                 }
             )

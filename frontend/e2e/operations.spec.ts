@@ -112,6 +112,7 @@ test('operations: commercial payment, revenue share, internal transfer and audit
   await page
     .getByRole('link', { name: 'Synthetic monthly consulting', exact: true })
     .click()
+  await expect(page).toHaveURL(/\/finance\/[a-f0-9-]{36}$/)
   const periodURL = page.url(),
     pid = periodURL.split('/').at(-1)!
   await page
@@ -532,6 +533,7 @@ test('operations: team leader scope, brand assignment and dynamic removal', asyn
   await page
     .getByRole('link', { name: 'Synthetic advertising team', exact: true })
     .click()
+  await expect(page).toHaveURL(/\/team\/[a-f0-9-]{36}$/)
   const url = page.url()
   await page.getByRole('button', { name: 'Add employee', exact: true }).click()
   drawer = page.getByRole('dialog', { name: 'Add employee', exact: true })

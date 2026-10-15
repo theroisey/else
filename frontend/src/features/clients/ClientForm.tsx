@@ -10,11 +10,11 @@ import type { Client, Profile } from './models'
 import { useClients } from './hooks'
 import * as api from './service'
 
-type Draft = Omit<Profile, 'tags'> & { tags_text: string }
+type Draft = Omit<Profile, 'tags' | 'website'> & { tags_text: string }
+const editableProfileSchema = profileSchema.omit({ website: true })
 const draftOf = (profile: Profile): Draft => ({
   name: profile.name,
   legal_name: profile.legal_name,
-  website: profile.website,
   notes: profile.notes,
   contacts: profile.contacts.map((c) => ({ ...c })),
   tags_text: profile.tags.join('\n'),
@@ -40,7 +40,7 @@ export function ClientForm({ client }: { client?: Client }) {
   async function submit(draft: Draft) {
     if (busy) return
     clearErrors()
-    const parsed = profileSchema.safeParse({
+    const parsed = editableProfileSchema.safeParse({
       ...draft,
       tags: draft.tags_text
         .split('\n')
@@ -123,21 +123,6 @@ export function ClientForm({ client }: { client?: Client }) {
           maxLength={400}
           {...register('legal_name')}
           error={copy(errors.legal_name?.message, 'clients') ?? ''}
-        />
-        <TextField
-          label={
-            client
-              ? copy('Legacy profile website', 'clients')
-              : copy('Initial website', 'clients')
-          }
-          description={copy(
-            'Manage independent properties in the Websites area. This legacy field is retained for compatibility.',
-            'clients',
-          )}
-          type="url"
-          maxLength={2048}
-          {...register('website')}
-          error={copy(errors.website?.message, 'clients') ?? ''}
         />
         <div className="grid gap-1.5">
           <label htmlFor="client-notes" className="font-semibold">

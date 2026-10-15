@@ -18,7 +18,7 @@ const record: Client = {
   status: 'active',
   revision: 1,
   tags: ['fixture'],
-  website: '',
+  website: 'historical malformed website',
   notes: '',
   contacts: [
     { name: 'Contact Fixture', email: 'contact@example.com', phone: '' },
@@ -291,6 +291,7 @@ it('validates form fields, contacts and tags before sending normalized creation'
   expect(fetcher.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(
     false,
   )
+  expect(screen.queryByLabelText(/website/i)).not.toBeInTheDocument()
   await u.type(screen.getByLabelText('Client name'), ' New Fixture ')
   await u.type(screen.getByLabelText('Tags', { exact: true }), 'TAG\ntag')
   await u.click(screen.getByRole('button', { name: 'Add contact' }))
@@ -347,6 +348,7 @@ it('preserves stale drafts until explicit reload and replaces contacts using the
   const request = fetcher.mock.calls
     .filter(([, init]) => init?.method === 'PUT')
     .at(-1)!
+  expect(JSON.parse(request[1]?.body as string)).not.toHaveProperty('website')
   expect(JSON.parse(request[1]?.body as string)).toMatchObject({
     expected_revision: 2,
     contacts: [],

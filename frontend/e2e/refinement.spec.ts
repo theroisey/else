@@ -26,9 +26,11 @@ test('refinement: inset filters, keyboard section guides and reduced motion in b
     await page.getByText('Synthetic refinement owner', { exact: true }).click()
     await page.getByLabel('Appearance', { exact: true }).selectOption(theme)
     await page.getByText('Synthetic refinement owner', { exact: true }).click()
-    for (const width of [360, 390, 430, 1280, 1440, 1920]) {
+    for (const width of [360, 390, 430, 640, 768, 820, 1024, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 1000 })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+      const targets = await page.locator('.shell-header button, .shell-header summary, .shell-header a.ui-button').evaluateAll(elements => elements.filter(el => el.getClientRects().length).map(el => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, height: r.height } }))
+      for (const target of targets) { expect(target.left).toBeGreaterThanOrEqual(0); expect(target.right).toBeLessThanOrEqual(width); if (width < 640) expect(target.height).toBeGreaterThanOrEqual(44) }
       const inset = await page.locator('.reminder-filters').evaluate(el => {
         const bounds = el.getBoundingClientRect()
         const first = el.querySelector('input')!.getBoundingClientRect()
@@ -96,4 +98,58 @@ test('refinement: browser permission is explicit, new private updates deliver on
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
   await senderContext.close()
+})
+
+test('refinement: navigation fades out and in, restores focus and respects reduced motion', async ({
+  page,
+}) => {
+  await login(page)
+  await expect(
+    page.getByRole('heading', { name: 'Settings', exact: true }),
+  ).toBeVisible()
+  await page.evaluate(() => {
+    const original = HTMLElement.prototype.animate
+    const frames: Array<Keyframe[] | PropertyIndexedKeyframes | null> = []
+    HTMLElement.prototype.animate = function (keyframes, options) {
+      if (this.id === 'workspace-content') frames.push(keyframes as Keyframe[])
+      return original.call(this, keyframes, options)
+    }
+    Object.assign(window, { syntheticTransitions: frames })
+  })
+  await page
+    .getByRole('navigation', { name: 'Application', exact: true })
+    .getByRole('link', { name: 'Clients', exact: true })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: 'Clients', exact: true }),
+  ).toBeVisible()
+  expect(
+    await page.evaluate(() =>
+      (
+        window as unknown as { syntheticTransitions: Keyframe[][] }
+      ).syntheticTransitions.map((frames) =>
+        frames.map((frame) => Number(frame.opacity)),
+      ),
+    ),
+  ).toEqual([
+    [1, 0],
+    [0, 1],
+  ])
+  await expect(page.locator('#workspace-content')).toBeFocused()
+  await expect(page.locator('#workspace-content')).not.toHaveAttribute('inert')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page
+    .getByRole('navigation', { name: 'Application', exact: true })
+    .getByRole('link', { name: 'Settings', exact: true })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: 'Settings', exact: true }),
+  ).toBeVisible()
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { syntheticTransitions: unknown[] })
+          .syntheticTransitions.length,
+    ),
+  ).toBe(2)
 })

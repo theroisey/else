@@ -130,11 +130,6 @@ export function WebsitesPage() {
                   ) : null}
                 </div>
                 <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
-                  {w.is_primary ? (
-                    <Status tone="neutral">
-                      {copy('Primary', 'websites')}
-                    </Status>
-                  ) : null}
                   {w.needs_review ? (
                     <Status tone="warning">
                       {copy('Review legacy URL', 'websites')}

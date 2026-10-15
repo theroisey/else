@@ -42,7 +42,7 @@ async function request(
     ...(body === undefined ? {} : { data: body }),
   })
 }
-test('independent website creation, primary changes, editing, switching and explicit provider association', async ({
+test('independent website creation without primary controls, editing, switching and explicit provider association', async ({
   page,
 }) => {
   test.setTimeout(120_000)
@@ -86,28 +86,25 @@ test('independent website creation, primary changes, editing, switching and expl
     ).toBeVisible()
     if (!firstID) firstID = page.url().split('/').at(-1)!
     else secondID = page.url().split('/').at(-1)!
-    await page
-      .getByRole('button', { name: 'Set as primary', exact: true })
-      .click()
-    await page
-      .getByRole('dialog', { name: 'Set primary website' })
-      .getByRole('button', { name: 'Confirm', exact: true })
-      .click()
     await expect(
-      page.getByText('Primary website updated.', { exact: true }),
-    ).toBeVisible()
+      page.getByRole('button', { name: 'Set as primary', exact: true }),
+    ).toHaveCount(0)
+    await expect(
+      page.getByText('Primary website', { exact: true }),
+    ).toHaveCount(0)
     await page.goto(base)
   }
   expect(
     database(
       `SELECT count(*) FROM client_websites WHERE client_id='${clientID}' AND is_primary AND archived_at IS NULL`,
     ),
-  ).toBe('1')
+  ).toBe('0')
   expect(
     database(
       `SELECT CASE WHEN is_primary THEN 'true' ELSE 'false' END FROM client_websites WHERE id='${firstID}'`,
     ),
   ).toBe('false')
+  database(`UPDATE client_websites SET is_primary=1 WHERE id='${secondID}'`)
   await page.goto(`${base}/${secondID}`)
   await page.getByRole('button', { name: 'Edit website', exact: true }).click()
   const edit = page.getByRole('dialog', { name: 'Edit website' })
@@ -116,6 +113,11 @@ test('independent website creation, primary changes, editing, switching and expl
     .fill('https://shop.example.com/collection')
   await edit.getByRole('button', { name: 'Save website', exact: true }).click()
   await expect(edit).not.toBeVisible()
+  expect(
+    database(
+      `SELECT CASE WHEN is_primary THEN 'true' ELSE 'false' END FROM client_websites WHERE id='${secondID}'`,
+    ),
+  ).toBe('true')
   await expect(
     page.getByText('https://shop.example.com/collection', { exact: true }),
   ).toBeVisible()
@@ -172,7 +174,7 @@ test('independent website creation, primary changes, editing, switching and expl
     database(
       `SELECT count(*) FROM audit_events WHERE resource_kind='website' AND client_id='${clientID}'`,
     ),
-  ).toBe('7')
+  ).toBe('4')
   expect(
     database(
       `SELECT count(*) FROM audit_events WHERE resource_kind='website_integration' AND client_id='${clientID}'`,

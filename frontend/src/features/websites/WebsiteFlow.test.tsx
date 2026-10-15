@@ -107,7 +107,11 @@ it('rejects malformed deep links before requesting website records', async () =>
   const fetcher = setup(`/app/clients/${clientID}/websites/invalid`)
   await screen.findByRole('heading', { name: 'Website page not found' })
   expect(
-    fetcher.mock.calls.every(([url]) => url.startsWith('/api/v1/auth/') || url.startsWith('/api/v1/notifications?')),
+    fetcher.mock.calls.every(
+      ([url]) =>
+        url.startsWith('/api/v1/auth/') ||
+        url.startsWith('/api/v1/notifications?'),
+    ),
   ).toBe(true)
 })
 it('denies a different client without issuing business reads', async () => {
@@ -126,7 +130,11 @@ it('denies a different client without issuing business reads', async () => {
   )
   await screen.findByRole('heading', { name: 'Access denied' })
   expect(
-    fetcher.mock.calls.every(([url]) => url.startsWith('/api/v1/auth/') || url.startsWith('/api/v1/notifications?')),
+    fetcher.mock.calls.every(
+      ([url]) =>
+        url.startsWith('/api/v1/auth/') ||
+        url.startsWith('/api/v1/notifications?'),
+    ),
   ).toBe(true)
 })
 it('shows authentic entered content and website navigation without client-wide report requests', async () => {
@@ -148,27 +156,39 @@ it('shows authentic entered content and website navigation without client-wide r
     ),
   ).toBe(false)
 })
-it('requires confirmation and the current revision before making a website primary', async () => {
-  const fetcher = setup(`/app/clients/${clientID}/websites/${websiteID}`)
-  const user = userEvent.setup()
-  await user.click(
-    await screen.findByRole('button', { name: 'Set as primary' }),
+it('removes primary designation controls while preserving independent website editing', async () => {
+  const fetcher = setup(
+    `/app/clients/${clientID}/websites/${websiteID}`,
+    identity,
+    { ...website, is_primary: true },
   )
-  const dialog = screen.getByRole('dialog', { name: 'Set primary website' })
+  const user = userEvent.setup()
+  await screen.findByRole('heading', { name: website.name })
   expect(
-    fetcher.mock.calls.filter(([, options]) => options?.method === 'POST'),
-  ).toHaveLength(0)
-  await user.click(within(dialog).getByRole('button', { name: 'Confirm' }))
+    screen.queryByText('Primary website', { exact: true }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: 'Set as primary' }),
+  ).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Switch website')).not.toHaveTextContent(
+    'Primary',
+  )
+  await user.click(
+    screen.getByRole('button', { name: 'Edit website' }),
+  )
+  const dialog = screen.getByRole('dialog', { name: 'Edit website' })
+  await user.click(within(dialog).getByRole('button', { name: 'Save website' }))
   await waitFor(() =>
     expect(
       fetcher.mock.calls.some(
         ([url, options]) =>
-          url.endsWith('/primary') &&
-          options?.body === '{"expected_revision":1,"confirm":true}',
+          url === `${base}/websites/${websiteID}` &&
+          options?.method === 'PUT' &&
+          JSON.parse(options.body as string).expected_revision === 1 &&
+          !('is_primary' in JSON.parse(options.body as string)),
       ),
     ).toBe(true),
   )
-  expect(await screen.findByText('Primary website updated.')).toBeVisible()
 })
 it('retains archived site history and hides edit, primary and archive controls', async () => {
   setup(`/app/clients/${clientID}/websites/${websiteID}`, identity, {

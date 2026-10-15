@@ -66,7 +66,7 @@
   "Showing the first 25 active websites. Open All websites to browse the portfolio.": "Die ersten 25 aktiven Websites werden angezeigt. Öffnen Sie Alle Websites, um das Portfolio zu durchsuchen.",
   "Status": "Status",
   "Switch website": "Website wechseln",
-  "The original website value was preserved during migration. Edit and validate it before setting it as primary.": "Der ursprüngliche Website-Wert wurde bei der Migration erhalten. Bearbeiten und validieren Sie ihn, bevor Sie ihn als primär festlegen.",
+  "The original website value was preserved during migration. Edit it to validate the address.": "Der ursprüngliche Website-Wert wurde bei der Migration erhalten. Bearbeiten Sie ihn, um die Adresse zu validieren.",
   "This property becomes the primary website. Any previous primary remains in the portfolio.": "Diese Website wird zur primären Website. Die bisherige primäre Website bleibt im Portfolio.",
   "This website or its client is archived. History and stored reports remain available; changes are unavailable.": "Diese Website oder ihr Kunde ist archiviert. Verlauf und gespeicherte Berichte bleiben verfügbar; Änderungen sind nicht möglich.",
   "Unable to load website context. Reload this page.": "Der Website-Kontext konnte nicht geladen werden. Laden Sie diese Seite neu.",

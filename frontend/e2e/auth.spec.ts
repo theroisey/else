@@ -75,7 +75,7 @@ test('real login, cookie security, responsive keyboard navigation and CSRF logou
   await expect(page.getByRole('navigation', { name: 'Application', exact: true }).getByRole('link', { name: 'Today', exact: true })).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(openNavigation).toBeFocused()
-  await page.getByText('Browser Fixture', { exact: true }).click()
+  await page.getByLabel('Account', { exact: true }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
   expect((await context.cookies()).some((cookie) => cookie.name === 'else_session' || cookie.name === 'else_csrf' || cookie.name === 'else_refresh')).toBe(false)
@@ -126,7 +126,7 @@ test('revoked backend grants disappear on refresh without adding placeholder des
   await expect(page.getByRole('table')).toHaveCount(0)
   const links = page.getByRole('navigation', { name: 'Application', exact: true }).getByRole('link')
   await expect(links).toHaveText(['Today', 'Notifications', 'Settings', 'Portfolio', 'My access'])
-  await page.getByText('Browser Fixture', { exact: true }).click()
+  await page.getByLabel('Account', { exact: true }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
   expect(BigInt(database("SELECT count(*) FROM audit_events WHERE event_name='session.created'"))).toBe(createdBefore + 1n)
@@ -267,7 +267,7 @@ test('client records use real pagination, forms, conflict recovery, scoped acces
   await expect(page.getByRole('alert')).toContainText('1–200 characters')
   await page.getByLabel('Client name', { exact: true }).fill('Managed Client Fixture')
   await page.getByLabel('Legal name', { exact: true }).fill('Synthetic Client Legal Name')
-  await page.getByLabel('Initial website', { exact: true }).fill('https://example.com')
+  await expect(page.getByLabel('Initial website', { exact: true })).toHaveCount(0)
   await page.getByLabel('Internal notes', { exact: true }).fill('Clearly synthetic client notes for browser verification.')
   await page.getByLabel('Tags', { exact: true }).fill('BROWSER\nFixture')
   await page.getByRole('button', { name: 'Add contact', exact: true }).click()
@@ -286,6 +286,7 @@ test('client records use real pagination, forms, conflict recovery, scoped acces
   await expect(page.getByRole('heading', { name: 'Managed Client Fixture', exact: true })).toBeVisible()
   const clientID = page.url().split('/').at(-1)!
   expect(clientID).toMatch(/^[0-9a-f-]{36}$/)
+  database(`UPDATE clients SET website='historical malformed profile value' WHERE id='${clientID}'`)
   await markSyntheticScreenshot(page)
   for (const viewport of [{ width: 1440, height: 1000 }, { width: 820, height: 1050 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport)
@@ -301,8 +302,8 @@ test('client records use real pagination, forms, conflict recovery, scoped acces
   const raced = await page.evaluate(async (id) => {
     const current = (await (await fetch(`/api/v1/clients/${id}`)).json()).data
     const token = document.cookie.split('; ').find(c => c.startsWith('else_csrf='))?.slice('else_csrf='.length)
-    const { name, legal_name, website, notes, contacts, tags, revision } = current
-    const response = await fetch(`/api/v1/clients/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token ?? '' }, body: JSON.stringify({ name: `${name} Current`, legal_name, website, notes, contacts, tags, expected_revision: revision }) })
+    const { name, legal_name, notes, contacts, tags, revision } = current
+    const response = await fetch(`/api/v1/clients/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token ?? '' }, body: JSON.stringify({ name: `${name} Current`, legal_name, notes, contacts, tags, expected_revision: revision }) })
     return response.status
   }, clientID)
   expect(raced).toBe(200)
@@ -315,6 +316,7 @@ test('client records use real pagination, forms, conflict recovery, scoped acces
   await page.getByLabel('Client name', { exact: true }).fill('Updated Client Fixture')
   await page.getByRole('button', { name: 'Save client', exact: true }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Client updated.' })).toBeVisible()
+  expect(database(`SELECT website FROM clients WHERE id='${clientID}'`)).toBe('historical malformed profile value')
 
   const viewerContext = await browser.newContext()
   try {
@@ -1333,6 +1335,8 @@ test('overview reconciles real sources in one bounded request and omits revoked 
   await expect(page.getByRole('heading',{name:taskTitle,exact:true})).toBeVisible()
   reads.length=0
   await page.getByRole('link',{name:'Summary',exact:true}).click()
+  await expect(page).toHaveURL(path)
+  await expect(page.getByRole('button',{name:'Refresh overview',exact:true})).toBeVisible()
   await expect(page.getByRole('heading',{name:'Synthetic overview client',exact:true})).toBeVisible()
   expect(reads.filter(v=>v===base+'/overview')).toHaveLength(1)
   expect(reads.every(v=>v===base+'/overview'||(v==='/api/v1/auth/session'||v==='/api/v1/auth/preferences'||v==='/api/v1/notifications?limit=25'))).toBe(true)
@@ -1361,6 +1365,8 @@ test('overview reconciles real sources in one bounded request and omits revoked 
   await expect(page.getByRole('heading',{name:'Profile',exact:true})).toBeVisible()
   await expect(page.getByRole('button',{name:'Archive client',exact:true})).toHaveCount(0)
   await page.getByRole('link',{name:'Summary',exact:true}).click()
+  await expect(page).toHaveURL(path)
+  await expect(page.getByRole('button',{name:'Refresh overview',exact:true})).toBeVisible()
   await expect(page.getByRole('heading',{name:'Synthetic overview client',exact:true})).toBeVisible()
   database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key='clients.view'`)
   await page.getByRole('button',{name:'Refresh overview',exact:true}).click()

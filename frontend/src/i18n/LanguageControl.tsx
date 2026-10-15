@@ -3,6 +3,7 @@ import { copy, languages, languageNames, setLocale, useLocale } from './index'
 import type { Locale } from './index'
 import { saveAccountLocale } from './preferences'
 import { useAuth } from '../features/auth/auth-context'
+import { TextChoice } from '../components/ui/TextChoice'
 
 // Login, account and settings share one pending preference write. Disabling all
 // mounted selectors prevents two controls from saving competing choices.
@@ -16,7 +17,11 @@ function setPreferenceState(value: typeof preferenceState) {
   preferenceState = value
   for (const notify of preferenceListeners) notify()
 }
-export function LanguageControl() {
+export function LanguageControl({
+  variant = 'select',
+}: {
+  variant?: 'select' | 'text'
+}) {
   const locale = useLocale()
   const auth = useAuth()
   const { pending, error } = useSyncExternalStore(
@@ -48,23 +53,43 @@ export function LanguageControl() {
   }
   return (
     <div>
-      <label className="appearance-control">
-        <span>{copy('Language', 'settings')}</span>
-        <select
-          aria-label={copy('Language', 'settings')}
+      {variant === 'text' ? (
+        <TextChoice
+          label={copy('Language', 'settings')}
+          description={copy(
+            'Choose your interface language. Your account preference follows you across devices. Financial currencies and your own content remain unchanged.',
+            'settings',
+          )}
           value={locale}
+          options={languages.map((value) => ({
+            value,
+            label: languageNames[value],
+            lang: value,
+          }))}
           disabled={pending}
-          onChange={(e) => {
-            void change(e.target.value as Locale)
+          onChange={(value) => {
+            void change(value)
           }}
-        >
-          {languages.map((value) => (
-            <option value={value} key={value} lang={value}>
-              {languageNames[value]}
-            </option>
-          ))}
-        </select>
-      </label>
+        />
+      ) : (
+        <label className="appearance-control">
+          <span>{copy('Language', 'settings')}</span>
+          <select
+            aria-label={copy('Language', 'settings')}
+            value={locale}
+            disabled={pending}
+            onChange={(e) => {
+              void change(e.target.value as Locale)
+            }}
+          >
+            {languages.map((value) => (
+              <option value={value} key={value} lang={value}>
+                {languageNames[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {error ? (
         <p className="mt-2 text-xs text-danger-ink" role="alert">
           {copy(error, 'settings')}

@@ -26,6 +26,8 @@ Archival keeps authorized history available. Financial amounts stay exact and se
 
 Today is the operational starting point. Employees see their assigned brands, personal work and requests; developers see the shared technical queue; leaders see their authorized team's work. Owners retain management and finance access under their individual accounts. Inside a brand, Summary, Work, Websites, Finance and More keep daily actions close while preserving planning, analytics, integrations and audit tools. Finance appears only with the required permissions.
 
+Create the client first, then add its independent properties in Websites. There is no primary website selector. Existing website records and historical values remain intact. On the sign-in page, appearance and language preferences are available as text buttons in the footer.
+
 An employee selects a brand and website, explains an issue and attaches a screenshot. A developer accepts or rejects it with a recorded decision, assigns accepted work and submits a delivery. The requester or authorized leader reviews the result, approves it or requests a reasoned revision. Before/after evidence and every delivery version stay attached to the original request. Developers cannot approve their own deliveries.
 
 Create real accounts through Users, then create a team, add its leader and employees, and assign brand responsibilities through Team. Use the dedicated advertising employee role rather than the legacy Viewer role, which retains its historical finance permissions. The second owner needs a separate account with the authorized full administrator role; no additional people or customer records are seeded. Settings includes personal notification preferences and the owner-managed business timezone.

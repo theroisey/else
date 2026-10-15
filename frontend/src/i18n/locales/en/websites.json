@@ -66,7 +66,7 @@
   "Showing the first 25 active websites. Open All websites to browse the portfolio.": "Showing the first 25 active websites. Open All websites to browse the portfolio.",
   "Status": "Status",
   "Switch website": "Switch website",
-  "The original website value was preserved during migration. Edit and validate it before setting it as primary.": "The original website value was preserved during migration. Edit and validate it before setting it as primary.",
+  "The original website value was preserved during migration. Edit it to validate the address.": "The original website value was preserved during migration. Edit it to validate the address.",
   "This property becomes the primary website. Any previous primary remains in the portfolio.": "This property becomes the primary website. Any previous primary remains in the portfolio.",
   "This website or its client is archived. History and stored reports remain available; changes are unavailable.": "This website or its client is archived. History and stored reports remain available; changes are unavailable.",
   "Unable to load website context. Reload this page.": "Unable to load website context. Reload this page.",
