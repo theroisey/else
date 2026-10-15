@@ -27,7 +27,7 @@ pingora-core = { version = "=0.9.0", default-features = false }
 rand = "0.9"
 redis = {version="=1.7.1",default-features=false,features=["tokio-comp"]}
 ring = "0.17"
-rustls = {version="0.23",default-features=false,features=["ring","std","tls12"]}
+rustls = {version="0.23.46",default-features=false,features=["ring","std","tls12"]}
 rustls-native-certs = "0.8"
 rusqlite = { version = "=0.40.2", features = ["bundled", "backup", "functions"] }
 serde = { version = "1", features = ["derive"] }

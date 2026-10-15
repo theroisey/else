@@ -81,6 +81,50 @@ class AdvisoryGateTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     gate.assess(self.report, metadata)
 
+    def yaml_disposition(self):
+        report, metadata = copy.deepcopy(self.report), copy.deepcopy(self.metadata)
+        report["warnings"]["unmaintained"].append({
+            "kind": "unmaintained",
+            "package": {"name": "unsafe-libyaml", "version": "0.2.11", "checksum": gate.YAML_CHECKSUM},
+            "advisory": {"id": "RUSTSEC-2024-0449", "informational": "unmaintained", "package": "unsafe-libyaml"},
+        })
+        metadata["packages"] += [
+            {"id": "unsafe", "name": "unsafe-libyaml", "version": "0.2.11"},
+            {"id": "yaml", "name": "serde_yaml", "version": "0.9.34+deprecated"},
+        ]
+        metadata["resolve"]["nodes"][0]["deps"].append({"pkg": "yaml"})
+        metadata["resolve"]["nodes"].append({"id": "yaml", "deps": [{"pkg": "unsafe"}]})
+        return report, metadata
+
+    def test_unused_yaml_disposition_is_bound_to_both_upstream_parents(self):
+        report, metadata = self.yaml_disposition()
+        gate.assess(report, metadata)
+        for dependency in ("unsafe", "yaml"):
+            with self.subTest(dependency=dependency):
+                changed = copy.deepcopy(metadata)
+                changed["resolve"]["nodes"].append({"id": "macro", "deps": [{"pkg": dependency}]})
+                with self.assertRaises(ValueError):
+                    gate.assess(report, changed)
+        for name in ("serde_yaml", "pingora-core"):
+            with self.subTest(package=name):
+                changed = copy.deepcopy(metadata)
+                next(p for p in changed["packages"] if p["name"] == name)["version"] = "99.0.0"
+                with self.assertRaises(ValueError):
+                    gate.assess(report, changed)
+
+    def test_yaml_maintenance_review_never_allows_vulnerabilities_or_changed_findings(self):
+        for section, key, value in (("package", "checksum", "0" * 64), ("package", "version", "0.2.12"),
+                                    ("advisory", "id", "RUSTSEC-2099-0001"), ("advisory", "informational", "unsound")):
+            with self.subTest(key=key):
+                report, metadata = self.yaml_disposition()
+                report["warnings"]["unmaintained"][-1][section][key] = value
+                with self.assertRaises(ValueError):
+                    gate.assess(report, metadata)
+        report, metadata = self.yaml_disposition()
+        report["vulnerabilities"]["found"] = True
+        with self.assertRaises(ValueError):
+            gate.assess(report, metadata)
+
     def test_scanner_error_or_registry_diagnostic_cannot_pass(self):
         for result in (subprocess.CompletedProcess([], 1, "{}", ""),
                        subprocess.CompletedProcess([], 0, "{}", "registry lookup failed")):
