@@ -77,7 +77,8 @@ test('keeps translated client filters aligned, keyboard usable and bounded in bo
           expect(control.labelled).toBe(true)
           expect(control.left).toBeGreaterThanOrEqual(0)
           expect(control.right).toBeLessThanOrEqual(width)
-          expect(control.height).toBe(width < 640 ? 44 : 40)
+          // Transformed ancestors can introduce subpixel DOMRect rounding.
+          expect(control.height).toBeCloseTo(width < 640 ? 44 : 40, 2)
         }
         if (width >= 1280) {
           const tops = measured.controls.map((control) => control.top)
