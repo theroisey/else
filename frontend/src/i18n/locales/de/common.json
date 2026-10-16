@@ -298,5 +298,7 @@
   "Choose an effective date after the latest recorded terms. Historical currency cannot change.": "Wählen Sie ein Datum nach den letzten Bedingungen. Die historische Währung bleibt unverändert.",
   "This command already exists with different values. Reconcile recorded history before starting another command.": "Dieser Auftrag existiert mit anderen Werten. Gleichen Sie den Verlauf vor einem neuen Auftrag ab.",
   "This task belongs to a technical request. Change status and assignment through that request.": "Diese Aufgabe gehört zu einer technischen Anfrage. Ändern Sie Status und Zuweisung dort.",
-  "Check the original payment, available refundable amount, currency and refund date.": "Prüfen Sie ursprüngliche Zahlung, Erstattungsbetrag, Währung und Datum."
+  "Check the original payment, available refundable amount, currency and refund date.": "Prüfen Sie ursprüngliche Zahlung, Erstattungsbetrag, Währung und Datum.",
+  "Requests": "Anfragen",
+  "Choose a page.": "Wählen Sie eine Seite."
 }

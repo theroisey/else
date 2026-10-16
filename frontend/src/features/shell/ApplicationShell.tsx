@@ -1,9 +1,8 @@
 import { copy, useLocale } from '../../i18n/index'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { SectionHelp } from '../../components/ui/Help'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBars, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../auth/auth-context'
 import { visibleDestinations } from './navigation'
 import { AccountMenu } from './AccountMenu'
@@ -11,6 +10,7 @@ import { NotificationControl } from '../operations/Notifications'
 import { Brand } from '../../components/brand/Brand'
 import { CommandSearch } from './CommandSearch'
 import { preloadLink } from '../../app/prefetch'
+import { MobileNavigation } from './MobileNavigation'
 
 export function ApplicationShell() {
   useLocale()
@@ -33,9 +33,6 @@ export function ApplicationShell() {
   const advanced = navigation.filter((item) =>
     advancedPaths.includes(item.path),
   )
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const toggleRef = useRef<HTMLButtonElement>(null)
-  const firstLinkRef = useRef<HTMLAnchorElement>(null)
   const current = navigation.find(
     (item) =>
       item.path === location.pathname ||
@@ -158,11 +155,6 @@ export function ApplicationShell() {
           : copy('Client workspace', 'common')
       : '')
 
-  function closeNavigation() {
-    setMobileOpen(false)
-    toggleRef.current?.focus()
-  }
-
   return (
     <div
       className="min-h-dvh"
@@ -177,29 +169,6 @@ export function ApplicationShell() {
       </a>
       <header className="shell-header">
         <div className="shell-brand">
-          <button
-            ref={toggleRef}
-            className="ui-button min-h-9 border-line bg-surface px-2 lg:hidden"
-            aria-label={
-              mobileOpen
-                ? copy('Close navigation', 'common')
-                : copy('Open navigation', 'common')
-            }
-            aria-expanded={mobileOpen}
-            aria-controls="application-navigation"
-            onClick={() => {
-              setMobileOpen(!mobileOpen)
-              if (!mobileOpen)
-                window.requestAnimationFrame(() =>
-                  firstLinkRef.current?.focus(),
-                )
-            }}
-          >
-            <FontAwesomeIcon
-              icon={mobileOpen ? faXmark : faBars}
-              aria-hidden="true"
-            />
-          </button>
           <Link to="/app" aria-label={copy('ROISEY ELSE', 'common')}>
             <Brand />
           </Link>
@@ -239,16 +208,7 @@ export function ApplicationShell() {
         </div>
       </header>
       <div className="shell-grid">
-        <aside
-          className={`${mobileOpen ? 'block' : 'hidden'} shell-sidebar lg:block`}
-          id="application-navigation"
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.preventDefault()
-              closeNavigation()
-            }
-          }}
-        >
+        <aside className="shell-sidebar hidden lg:block">
           <div className="sidebar-inner">
             <nav
               className="sidebar-nav"
@@ -257,14 +217,12 @@ export function ApplicationShell() {
               <p className="eyebrow px-3 pb-4">
                 {copy('Private operations', 'common')}
               </p>
-              {primary.map((item, index) => (
+              {primary.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   end={!['/app/clients', '/app/team'].includes(item.path)}
-                  ref={index === 0 ? firstLinkRef : undefined}
                   onClick={() => {
-                    setMobileOpen(false)
                     window.requestAnimationFrame(() =>
                       document.getElementById('workspace-content')?.focus(),
                     )
@@ -292,7 +250,6 @@ export function ApplicationShell() {
                     to={item.path}
                     end={!['/app/clients', '/app/team'].includes(item.path)}
                     onClick={() => {
-                      setMobileOpen(false)
                       window.requestAnimationFrame(() =>
                         document.getElementById('workspace-content')?.focus(),
                       )
@@ -323,6 +280,7 @@ export function ApplicationShell() {
           <Outlet />
         </main>
       </div>
+      <MobileNavigation navigation={navigation} />
     </div>
   )
 }

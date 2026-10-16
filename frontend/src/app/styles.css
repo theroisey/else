@@ -115,6 +115,8 @@
   button, a { -webkit-tap-highlight-color: transparent; }
   button:disabled { cursor: not-allowed; }
   input, select, textarea { accent-color: var(--accent); }
+  /* Fieldsets retain a UA min-content width, even inside an otherwise bounded grid. */
+  fieldset { min-inline-size: 0; }
   ::selection { background: var(--text-primary); color: var(--background); }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   h1, h2, h3 { text-wrap: balance; }
@@ -136,7 +138,11 @@
   .ui-button-compact { min-height: var(--control-compact-height); padding-block: .25rem; }
   .ui-button svg { @apply text-xs; }
   .ui-button[aria-busy="true"] { cursor: progress; }
-  .ui-input { @apply w-full min-w-0 rounded-sm border border-line-strong bg-surface px-3 text-sm text-ink shadow-none transition-colors duration-150 placeholder:text-muted hover:border-accent disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-muted; min-height: var(--control-height); padding-block: .5rem; font-weight: 400; line-height: 1.25rem; }
+  .ui-input { @apply w-full min-w-0 rounded-sm border border-line-strong bg-surface px-3 text-sm text-ink shadow-none transition-colors duration-150 placeholder:text-muted hover:border-accent disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-muted; max-inline-size: 100%; min-height: var(--control-height); padding-block: .5rem; font-weight: 400; line-height: 1.25rem; }
+  /* Keep the native picker, but remove iOS's intrinsic date-control appearance/width. */
+  input.ui-input:is([type="date"], [type="time"], [type="datetime-local"]) { appearance: none; min-inline-size: 0; }
+  input.ui-input::-webkit-date-and-time-value { min-inline-size: 0; text-align: start; }
+  input.ui-input::-webkit-datetime-edit { min-inline-size: 0; padding: 0; }
   input.ui-input, select.ui-input { height: var(--control-height); }
   select.ui-input, select option { background-color: var(--surface); color: var(--text-primary); }
   select.ui-input { appearance: auto; padding-block: 0; }
@@ -173,6 +179,9 @@
   .ui-dialog-panel > div:first-child { @apply border-b border-line pb-5; }
   .ui-dialog-panel h2 { @apply font-display text-[1.75rem] font-normal leading-tight; }
   .ui-dialog.drawer { @apply bottom-0 left-auto right-0 top-0 m-0 h-dvh max-h-dvh max-w-none w-[min(38rem,100%)]; }
+  .ui-dialog.sheet { inset: auto 0 0; margin: 0 auto; width: min(38rem, 100%); max-height: 85dvh; }
+  .ui-dialog.sheet .ui-dialog-panel { max-height: 85dvh; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; border-radius: var(--radius-md) var(--radius-md) 0 0; padding-bottom: max(1.25rem, env(safe-area-inset-bottom)); }
+  .ui-dialog.sheet nav { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
   .drawer .ui-dialog-panel { @apply h-dvh max-h-dvh content-start rounded-none border-y-0 border-r-0; }
   .workspace-section { @apply min-w-0 border-t border-line py-5; }
   .context-rail { @apply h-fit min-w-0 border-t border-line bg-surface p-5; }
@@ -208,6 +217,18 @@
   .shell-breadcrumb { @apply hidden min-w-0 text-[0.6875rem] text-muted md:block; }
   .shell-breadcrumb ol { @apply flex flex-wrap items-center gap-2; }
   .shell-breadcrumb li[aria-current] { @apply text-ink; }
+  .mobile-navigation { @apply fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-surface; padding: .25rem max(.375rem, env(safe-area-inset-right)) max(.25rem, env(safe-area-inset-bottom)) max(.375rem, env(safe-area-inset-left)); }
+  .mobile-navigation-link { @apply relative flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-sm px-1 py-2 text-center text-[0.6875rem] font-medium leading-[0.875rem] text-muted transition-colors duration-150 hover:bg-surface-subtle hover:text-ink; overflow-wrap: anywhere; }
+  .mobile-navigation-link svg { height: 1rem; width: 1.25rem; }
+  .mobile-navigation-link.is-active { color: var(--text-primary); }
+  .mobile-navigation-link.is-active::before { content: ''; position: absolute; inset: -.25rem 30% auto; height: 2px; background: var(--accent); }
+  @media (max-width: 1023px) {
+    .workspace-main { padding-bottom: calc(7rem + env(safe-area-inset-bottom)); }
+    html { scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+    .shell-header { min-height: calc(4rem + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); padding-inline: env(safe-area-inset-left) env(safe-area-inset-right); }
+    .shell-grid { padding-inline: env(safe-area-inset-left) env(safe-area-inset-right); }
+    .login-page { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  }
   .account-trigger { @apply flex min-h-9 max-w-48 cursor-pointer list-none items-center gap-2 rounded-sm px-2 text-xs font-medium hover:bg-surface-subtle; }
   .account-popup { @apply absolute right-0 z-40 mt-3 grid w-[min(20rem,calc(100vw-2rem))] gap-4 rounded-md border border-line-strong bg-surface-elevated p-5 shadow-dialog; }
   .appearance-control { @apply flex items-center justify-between gap-4 text-xs text-muted; }
@@ -354,7 +375,6 @@
   .workspace-main [role="alert"] { animation: workspace-arrive var(--motion-fast) var(--motion-ease); }
   .ui-button, .help-trigger, .command-trigger, .account-trigger { transition-property: color, background-color, border-color, transform; transition-duration: var(--motion-fast); transition-timing-function: var(--motion-ease); }
   .ui-button:not(:disabled):active, .help-trigger:active, .command-trigger:active, .account-trigger:active { transform: translateY(1px); }
-  @media (max-width: 1023px) { .shell-sidebar:not(.hidden) { animation: panel-arrive var(--motion-enter) var(--motion-ease); } }
   .sidebar-link::before { transition: background-color 140ms ease; }
   .ui-button { position: relative; }
   .button-progress { position: absolute; inset: auto .5rem 3px; height: 2px; overflow: hidden; opacity: 0; transition: opacity 160ms ease; pointer-events: none; }

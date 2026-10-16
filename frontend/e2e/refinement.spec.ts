@@ -28,6 +28,7 @@ test('refinement: inset filters, keyboard section guides and reduced motion in b
     await page.getByText('Synthetic refinement owner', { exact: true }).click()
     for (const width of [360, 390, 430, 640, 768, 820, 1024, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 1000 })
+      if (width < 1024) await expect(page.locator('.mobile-navigation a[aria-current="page"]')).toHaveAttribute('href', '/app/clients')
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
       const targets = await page.locator('.shell-header button, .shell-header summary, .shell-header a.ui-button').evaluateAll(elements => elements.filter(el => el.getClientRects().length).map(el => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, height: r.height } }))
       for (const target of targets) { expect(target.left).toBeGreaterThanOrEqual(0); expect(target.right).toBeLessThanOrEqual(width); if (width < 640) expect(target.height).toBeGreaterThanOrEqual(44) }
@@ -42,6 +43,26 @@ test('refinement: inset filters, keyboard section guides and reduced motion in b
       if ([390, 1440].includes(width)) await page.screenshot({ path: info.outputPath(`refinement-${theme}-${width}.png`), fullPage: true })
     }
   }
+  // Exercise real CSS env() insets rather than assuming all phones have zero safe area.
+  const device = await page.context().newCDPSession(page)
+  await device.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 44, bottom: 34, left: 0, right: 0 } })
+  await page.setViewportSize({ width: 390, height: 680 })
+  expect(await page.locator('.mobile-navigation').evaluate(el => parseFloat(getComputedStyle(el).paddingBottom))).toBeGreaterThanOrEqual(34)
+  expect(await page.locator('.shell-header').evaluate(el => parseFloat(getComputedStyle(el).paddingTop))).toBeGreaterThanOrEqual(44)
+  await page.locator('.mobile-navigation').getByRole('button', { name: 'More', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'More', exact: true })).toBeVisible()
+  await page.getByRole('dialog', { name: 'More', exact: true }).getByRole('link', { name: 'Audit history', exact: true }).scrollIntoViewIfNeeded()
+  await expect(page.getByRole('button', { name: 'Close navigation', exact: true })).toBeInViewport()
+  await page.screenshot({ path: info.outputPath('mobile-more-safe-area.png') })
+  await page.keyboard.press('Escape')
+  await device.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, bottom: 21, left: 44, right: 44 } })
+  await page.setViewportSize({ width: 844, height: 390 })
+  const safeBounds = await page.locator('.mobile-navigation a, .mobile-navigation button, .shell-header button, .shell-header summary').evaluateAll(elements => elements.filter(el => el.getClientRects().length).map(el => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right } }))
+  for (const bounds of safeBounds) { expect(bounds.left).toBeGreaterThanOrEqual(44); expect(bounds.right).toBeLessThanOrEqual(800) }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await device.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, bottom: 0, left: 0, right: 0 } })
+  await device.detach()
+  await page.setViewportSize({ width: 1440, height: 1000 })
   const help = page.getByRole('button', { name: 'Help for this section' })
   await help.focus()
   await page.keyboard.press('Enter')
@@ -172,7 +193,9 @@ test('refinement: navigation is immediate, restores focus and limits fades to lo
   ).toBe(0)
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  const more = page.locator('.mobile-navigation').getByRole('button', { name: 'More', exact: true })
+  await more.click()
+  await expect(page.getByRole('dialog', { name: 'More', exact: true })).toBeVisible()
   expect(await page.evaluate(async () => {
     for (let frame = 0; frame < 18; frame++) {
       await new Promise(requestAnimationFrame)
@@ -180,7 +203,15 @@ test('refinement: navigation is immediate, restores focus and limits fades to lo
     }
     return true
   })).toBe(true)
-  await page.getByRole('button', { name: 'Close navigation', exact: true }).click()
+  await page.getByRole('dialog', { name: 'More', exact: true }).getByRole('link', { name: 'Team', exact: true }).click()
+  await expect(page).toHaveURL(/\/app\/team$/)
+  await expect(page.getByRole('dialog', { name: 'More', exact: true })).toHaveCount(0)
+  await expect(page.locator('#workspace-content')).toBeFocused()
+  await expect(more).toHaveAttribute('aria-current', 'page')
+  await more.click()
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await expect(page.getByRole('dialog', { name: 'More', exact: true })).toHaveCount(0)
+  await expect(page.locator('.mobile-navigation')).toBeHidden()
   await page.goto('/app/access')
   await expect(page).toHaveURL(/\/app$/)
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible()

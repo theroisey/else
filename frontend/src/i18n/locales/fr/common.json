@@ -298,5 +298,7 @@
   "Choose an effective date after the latest recorded terms. Historical currency cannot change.": "Choisissez une date après les dernières conditions. La devise historique ne peut pas changer.",
   "This command already exists with different values. Reconcile recorded history before starting another command.": "Cette commande existe avec d’autres valeurs. Vérifiez l’historique avant une nouvelle commande.",
   "This task belongs to a technical request. Change status and assignment through that request.": "Cette tâche relève d’une demande technique. Modifiez son statut et son responsable dans la demande.",
-  "Check the original payment, available refundable amount, currency and refund date.": "Vérifiez le paiement initial, le montant remboursable, la devise et la date."
+  "Check the original payment, available refundable amount, currency and refund date.": "Vérifiez le paiement initial, le montant remboursable, la devise et la date.",
+  "Requests": "Demandes",
+  "Choose a page.": "Choisissez une page."
 }

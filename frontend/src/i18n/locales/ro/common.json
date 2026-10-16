@@ -298,5 +298,7 @@
   "Choose an effective date after the latest recorded terms. Historical currency cannot change.": "Alege o dată după ultimii termeni înregistrați. Moneda istorică nu se schimbă.",
   "This command already exists with different values. Reconcile recorded history before starting another command.": "Comanda există cu alte valori. Reconciliază istoricul înaintea unei alte comenzi.",
   "This task belongs to a technical request. Change status and assignment through that request.": "Sarcina aparține unei cereri tehnice. Modifică starea și responsabilul din cerere.",
-  "Check the original payment, available refundable amount, currency and refund date.": "Verifică plata inițială, suma rambursabilă, moneda și data."
+  "Check the original payment, available refundable amount, currency and refund date.": "Verifică plata inițială, suma rambursabilă, moneda și data.",
+  "Requests": "Cereri",
+  "Choose a page.": "Alegeți o pagină."
 }

@@ -46,6 +46,12 @@ Actual-image browser workflows cover login/cookie/expiry/revocation/admin/client
 
 ## Daily operations
 
+Below 1024px, the shell replaces the desktop sidebar with a fixed bottom navigation: Today, Tasks, Requests, Clients and More, filtered by the same current grants. More opens the shared keyboard-trapped dialog as a bounded bottom sheet; Escape restores its trigger, navigation focuses content, and resizing to desktop closes it. Every remaining authorized destination stays available there. The header has no hamburger. Safe-area insets and workspace bottom clearance keep the bar away from the home indicator and form actions. Viewport fitting covers installed iOS/Android displays.
+
+Shared inputs cap their inline size, fieldsets can shrink below their native min-content size, and native date/time controls discard iOS intrinsic appearance while retaining their browser picker and calendar values. Do not mask date overflow by clipping the form. Responsive pricing checks measure date controls against their field and sibling textarea, preserve entered dates, and hit-test the submit button above the bottom bar in both themes.
+
+Mobile regressions extend existing browser scenarios rather than adding another suite. Chromium exercises 360/390/430/820px pricing forms in English/Turkish and both themes, all five locales on the client filters, keyboard navigation, permission-filtered links, breakpoint changes and emulated portrait/landscape safe areas. Physical iOS/Android testing is separate; the local WebKit download was blocked by network policy. No dependency, authentication, financial, or database contract changes are required.
+
 `features/operations` owns Today, global task/request queues, request evidence/timeline/delivery/review, teams/brand assignments, notifications, commercial services/periods/corrections, recurring templates and preferences. Default navigation starts at Today; secondary portfolio/administration stays under More. Client tabs group Summary, Work, Websites, Finance and More without removing original modules. Human names replace raw IDs in operational selectors and payment history.
 
 Authenticated current-grant refresh runs every 30 seconds in an active tab and on focus/reconnect; notification polling uses the same lightweight interval. Every API still enforces fresh authorization. Filters and long histories progressively disclose bounded paged queries. Before/after images lazy-load through protected same-origin requests. All five locales share strict operation DTO validation and accessible theme-aware controls.

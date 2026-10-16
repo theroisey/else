@@ -81,12 +81,16 @@ test('real login, cookie security, responsive keyboard navigation and CSRF logou
     expect(await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`access-${viewport.width}.png`), fullPage: true })
   }
-  const openNavigation = page.getByRole('button', { name: 'Open navigation' })
-  await openNavigation.focus()
+  const moreNavigation = page.locator('.mobile-navigation').getByRole('button', { name: 'More', exact: true })
+  await expect(page.getByRole('button', { name: 'Open navigation' })).toHaveCount(0)
+  await moreNavigation.focus()
   await page.keyboard.press('Enter')
-  await expect(page.getByRole('navigation', { name: 'Application', exact: true }).getByRole('link', { name: 'Today', exact: true })).toBeFocused()
+  const morePages = page.getByRole('dialog', { name: 'More', exact: true })
+  await expect(morePages).toBeVisible()
+  await expect(morePages.getByRole('button', { name: 'Close navigation', exact: true })).toBeFocused()
+  await expect(morePages.getByRole('link', { name: 'Roles', exact: true })).toHaveCount(0)
   await page.keyboard.press('Escape')
-  await expect(openNavigation).toBeFocused()
+  await expect(moreNavigation).toBeFocused()
   await page.getByLabel('Account', { exact: true }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
@@ -1089,6 +1093,78 @@ test('pricing retains exact versions and immutable collections through lost-resp
   const sheet=new URL(page.url()).pathname.split('/').at(-1)!
   expect(database(`SELECT total_minor FROM pricing_versions WHERE sheet_id='${sheet}' AND revision=1`)).toBe('125')
   expect(reads.every(p=>p.startsWith(base))).toBe(true)
+  // Native calendar controls must fit their field and panel, not just the viewport.
+  const copyForm = page.locator('form').filter({ has: page.locator('input[type="date"]') })
+  const originalDate = await copyForm.locator('input[type="date"]').first().inputValue()
+  await copyForm.locator('input[type="date"]').nth(1).fill(originalDate)
+  for (const locale of ['en', 'tr']) {
+    await page.evaluate(value => {
+      localStorage.setItem('roisey-else.locale', value)
+      dispatchEvent(new StorageEvent('storage', { key: 'roisey-else.locale' }))
+    }, locale)
+    await expect(page.locator('html')).toHaveAttribute('lang', locale)
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(value => {
+        localStorage.setItem('roisey-else.appearance', value)
+        dispatchEvent(new StorageEvent('storage', { key: 'roisey-else.appearance' }))
+      }, theme)
+      for (const width of [360, 390, 430, 820]) {
+        await page.setViewportSize({ width, height: 844 })
+        await page.evaluate(() => document.fonts.ready)
+        const measurements = await copyForm.evaluate(form => {
+          const note = form.querySelector('textarea')!.getBoundingClientRect()
+          return {
+            overflow: document.documentElement.scrollWidth > innerWidth,
+            controls: [...form.querySelectorAll<HTMLInputElement>('input[type="date"]')].map(input => {
+              const bounds = input.getBoundingClientRect()
+              const field = input.closest('.ui-field')!.getBoundingClientRect()
+              return { left: bounds.left, right: bounds.right, fieldRight: field.right, noteLeft: note.left, noteRight: note.right, value: input.value }
+            }),
+          }
+        })
+        expect(measurements.overflow, `${locale} ${theme} ${width}`).toBe(false)
+        for (const control of measurements.controls) {
+          expect(control.value).toBe(originalDate)
+          expect(control.left).toBeGreaterThanOrEqual(control.noteLeft - 1)
+          expect(control.right).toBeLessThanOrEqual(control.noteRight + 1)
+          expect(control.right).toBeLessThanOrEqual(control.fieldRight + 1)
+        }
+        const bar = page.locator('.mobile-navigation')
+        await expect(bar).toBeVisible()
+        // Pricing-only grants allow this deep link, not the client directory.
+        await expect(bar.locator('a[href="/app/clients"]')).toHaveCount(0)
+        for (const target of await bar.locator('a, button').evaluateAll(elements => elements.map(element => {
+          const r = element.getBoundingClientRect()
+          return { left: r.left, right: r.right, height: r.height }
+        }))) {
+          expect(target.left).toBeGreaterThanOrEqual(0)
+          expect(target.right).toBeLessThanOrEqual(width)
+          expect(target.height).toBeGreaterThanOrEqual(44)
+        }
+        const submit = copyForm.locator('button[type="submit"]')
+        await submit.scrollIntoViewIfNeeded()
+        expect(await submit.evaluate(el => {
+          const r = el.getBoundingClientRect()
+          const bar = document.querySelector('.mobile-navigation')!.getBoundingClientRect()
+          const target = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+          return r.bottom <= bar.top && (target === el || el.contains(target))
+        })).toBe(true)
+        if (locale === 'tr' && width === 390) {
+          await markTaskScreenshot(page)
+          await page.screenshot({ path: testInfo.outputPath(`mobile-collection-${theme}.png`), fullPage: true })
+        }
+      }
+    }
+  }
+  await page.evaluate(() => {
+    localStorage.setItem('roisey-else.locale', 'en')
+    dispatchEvent(new StorageEvent('storage', { key: 'roisey-else.locale' }))
+  })
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await page.evaluate(() => {
+    localStorage.removeItem('roisey-else.locale')
+    localStorage.removeItem('roisey-else.appearance')
+  })
   await page.setViewportSize({width:1440,height:1000})
   await markTaskScreenshot(page);await page.screenshot({path:testInfo.outputPath('pricing-history-desktop.png'),fullPage:true})
   const commands:string[]=[]

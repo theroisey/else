@@ -2,6 +2,8 @@ import { copy, useLocale } from '../../i18n/index'
 import { useEffect, useId, useRef } from 'react'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faXmark } from '@fortawesome/free-solid-svg-icons'
 
 const focusableSelector = [
   'a[href]',
@@ -21,14 +23,16 @@ export function Dialog({
   onClose,
   eyebrow = copy('Confirmation', 'common'),
   variant = 'dialog',
+  closeLabel,
 }: {
-  variant?: 'dialog' | 'drawer'
+  variant?: 'dialog' | 'drawer' | 'sheet'
   open: boolean
   title: string
   description: string
   children: ReactNode
   onClose: () => void
   eyebrow?: string
+  closeLabel?: string
 }) {
   useLocale()
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -98,7 +102,7 @@ export function Dialog({
   return createPortal(
     <dialog
       ref={dialogRef}
-      className={`ui-dialog ${variant === 'drawer' ? 'drawer' : ''}`}
+      className={`ui-dialog ${variant === 'dialog' ? '' : variant}`}
       aria-labelledby={titleID}
       aria-describedby={descriptionID}
       onCancel={(event) => {
@@ -110,7 +114,17 @@ export function Dialog({
       tabIndex={-1}
     >
       <div className="ui-dialog-panel">
-        <div>
+        <div className={closeLabel ? 'relative pr-12' : undefined}>
+          {closeLabel ? (
+            <button
+              type="button"
+              className="ui-button absolute right-0 top-0 min-h-11 min-w-11 border-transparent bg-transparent text-muted hover:bg-surface-subtle hover:text-ink"
+              aria-label={closeLabel}
+              onClick={onClose}
+            >
+              <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
+            </button>
+          ) : null}
           <p className="eyebrow">{eyebrow}</p>
           <h2 className="mt-2" id={titleID}>
             {title}

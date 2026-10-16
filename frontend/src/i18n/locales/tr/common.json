@@ -298,5 +298,7 @@
   "Choose an effective date after the latest recorded terms. Historical currency cannot change.": "Son kayıtlı koşullardan sonraki bir yürürlük tarihi seçin. Geçmiş para birimi değiştirilemez.",
   "This command already exists with different values. Reconcile recorded history before starting another command.": "Bu işlem farklı değerlerle kaydedilmiş. Yeni işlemden önce kayıt geçmişini kontrol edin.",
   "This task belongs to a technical request. Change status and assignment through that request.": "Bu görev teknik talebe bağlı. Durumunu ve sorumlusunu talep üzerinden değiştirin.",
-  "Check the original payment, available refundable amount, currency and refund date.": "İlk ödemeyi, iade edilebilir tutarı, para birimini ve iade tarihini kontrol edin."
+  "Check the original payment, available refundable amount, currency and refund date.": "İlk ödemeyi, iade edilebilir tutarı, para birimini ve iade tarihini kontrol edin.",
+  "Requests": "Talepler",
+  "Choose a page.": "Bir sayfa seçin."
 }

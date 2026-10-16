@@ -298,5 +298,7 @@
   "Choose an effective date after the latest recorded terms. Historical currency cannot change.": "Choose an effective date after the latest recorded terms. Historical currency cannot change.",
   "This command already exists with different values. Reconcile recorded history before starting another command.": "This command already exists with different values. Reconcile recorded history before starting another command.",
   "This task belongs to a technical request. Change status and assignment through that request.": "This task belongs to a technical request. Change status and assignment through that request.",
-  "Check the original payment, available refundable amount, currency and refund date.": "Check the original payment, available refundable amount, currency and refund date."
+  "Check the original payment, available refundable amount, currency and refund date.": "Check the original payment, available refundable amount, currency and refund date.",
+  "Requests": "Requests",
+  "Choose a page.": "Choose a page."
 }
