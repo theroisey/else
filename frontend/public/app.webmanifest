@@ -1,0 +1,18 @@
+{
+  "id": "/app",
+  "name": "Roisey Else",
+  "short_name": "Roisey Else",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#f2f0ea",
+  "icons": [
+    {
+      "src": "/assets/roisey-else-app-v1.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

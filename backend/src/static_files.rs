@@ -53,7 +53,10 @@ impl Assets {
                 }
                 let content_type = match relative.as_str() {
                     "index.html" => "text/html; charset=utf-8",
+                    "app.webmanifest" => "application/manifest+json; charset=utf-8",
                     "assets/roisey-r-v1.svg" => "image/svg+xml",
+                    "assets/roisey-else-app-v1.png" => "image/png",
+                    "assets/roisey-else-app-v1.svg" => "image/svg+xml",
                     value if value.starts_with("assets/") => {
                         match path.extension().and_then(|v| v.to_str()) {
                             Some("js") => "text/javascript; charset=utf-8",
@@ -200,12 +203,41 @@ mod tests {
             "console.log('synthetic')",
         )
         .unwrap();
+        std::fs::write(
+            root.path().join("app.webmanifest"),
+            "{\"name\":\"Synthetic app\"}",
+        )
+        .unwrap();
+        std::fs::write(
+            root.path().join("assets/roisey-else-app-v1.png"),
+            b"\x89PNG\r\n\x1a\nsynthetic icon",
+        )
+        .unwrap();
+        std::fs::write(
+            root.path().join("assets/roisey-else-app-v1.svg"),
+            "<svg xmlns=\"http://www.w3.org/2000/svg\"/>",
+        )
+        .unwrap();
         let assets = Assets::load(root.path()).unwrap();
         assert!(assets.get("/app/clients/synthetic").is_ok());
         assert!(assets.get("/assets/index-1234AbCd.js").unwrap().immutable);
+        for (path, content_type) in [
+            (
+                "/app.webmanifest",
+                "application/manifest+json; charset=utf-8",
+            ),
+            ("/assets/roisey-else-app-v1.png", "image/png"),
+            ("/assets/roisey-else-app-v1.svg", "image/svg+xml"),
+        ] {
+            let asset = assets.get(path).unwrap();
+            assert_eq!(asset.content_type, content_type);
+            assert!(!asset.immutable);
+        }
         for path in [
             "/api/v1/unknown",
             "/assets/missing.js",
+            "/assets/missing.png",
+            "/missing.webmanifest",
             "/../index.html",
             "/%2e%2e/index.html",
             "//index.html",

@@ -2,6 +2,7 @@
 // Actual application-image header application is checked independently in Container CI.
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
+import { readFileSync } from 'node:fs'
 import { chromium, expect } from '@playwright/test'
 
 let stage = 'private origin'
@@ -61,6 +62,70 @@ try {
   assert.equal(iconStyle.boxSizing, 'content-box')
   assert.equal(iconStyle.height, iconStyle.fontSize)
   assert.equal(iconStyle.verticalAlign, -0.125 * iconStyle.fontSize)
+  stage = 'mobile app icon metadata'
+  const mobileIconPath = '/assets/roisey-else-app-v1.png'
+  assert.equal(await page.locator('link[rel="apple-touch-icon"]').getAttribute('href'), mobileIconPath)
+  assert.equal(await page.locator('link[rel="apple-touch-icon"]').getAttribute('sizes'), '2048x2048')
+  assert.equal(await page.locator('meta[name="apple-mobile-web-app-capable"]').getAttribute('content'), 'yes')
+  assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'), '/app.webmanifest')
+  stage = 'mobile manifest response'
+  const manifestResponse = await page.request.get(origin.origin + '/app.webmanifest')
+  assert.equal(manifestResponse.status(), 200)
+  assert.equal(manifestResponse.headers()['content-type'], 'application/manifest+json; charset=utf-8')
+  assert.equal(manifestResponse.headers()['cache-control'], 'no-cache')
+  stage = 'mobile manifest contents'
+  const manifest = await manifestResponse.json()
+  assert.equal(manifest.id, '/app')
+  assert.equal(manifest.start_url, '/app')
+  assert.equal(manifest.scope, '/')
+  assert.equal(manifest.display, 'standalone')
+  assert.deepEqual(manifest.icons, [{ src: '/assets/roisey-else-app-v1.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }])
+  stage = 'mobile icon original bytes'
+  const iconResponse = await page.request.get(origin.origin + mobileIconPath)
+  assert.equal(iconResponse.status(), 200)
+  assert.equal(iconResponse.headers()['content-type'], 'image/png')
+  assert.deepEqual(await iconResponse.body(), readFileSync(new URL('../public/assets/roisey-else-app-v1.png', import.meta.url)))
+  const scalableResponse = await page.request.get(origin.origin + '/assets/roisey-else-app-v1.svg')
+  assert.equal(scalableResponse.status(), 200)
+  assert.equal(scalableResponse.headers()['content-type'], 'image/svg+xml')
+  const embeddedPNG = (await scalableResponse.text()).match(/href="data:image\/png;base64,([A-Za-z0-9+/=]+)"/)
+  assert.ok(embeddedPNG)
+  assert.deepEqual(Buffer.from(embeddedPNG[1], 'base64'), await iconResponse.body())
+  stage = 'mobile icon browser decoding'
+  assert.deepEqual(await page.evaluate(async (path) => {
+    const image = new Image()
+    image.src = path
+    await image.decode()
+    return [image.naturalWidth, image.naturalHeight]
+  }, mobileIconPath), [2048, 2048])
+  assert.deepEqual(await page.evaluate(async () => {
+    const image = new Image()
+    image.src = '/assets/roisey-else-app-v1.svg'
+    await image.decode()
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 512
+    const context = canvas.getContext('2d')
+    context.drawImage(image, 0, 0)
+    const pixels = context.getImageData(0, 0, 512, 512).data
+    let whitePixels = 0
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (pixels[i] > 240 && pixels[i + 1] > 240 && pixels[i + 2] > 240 && pixels[i + 3] === 255) whitePixels += 1
+    }
+    return { width: image.naturalWidth, height: image.naturalHeight, artworkVisible: whitePixels > 1000 }
+  }), { width: 512, height: 512, artworkVisible: true })
+  const devtools = await page.context().newCDPSession(page)
+  try {
+    stage = 'native mobile manifest parsing'
+    const parsed = await devtools.send('Page.getAppManifest')
+    assert.equal(parsed.url, origin.origin + '/app.webmanifest')
+    assert.deepEqual(parsed.errors, [])
+    stage = 'native mobile icon suitability'
+    const { installabilityErrors } = await devtools.send('Page.getInstallabilityErrors')
+    stage += ` (${installabilityErrors.map(({ errorId }) => /^[a-z0-9-]{1,80}$/.test(errorId) ? errorId : 'unrecognized').join(', ')})`
+    assert.deepEqual(installabilityErrors.filter(({ errorId }) => /icon/i.test(errorId)), [])
+  } finally {
+    await devtools.detach()
+  }
   stage = 'real failed-login response'
   await page.getByLabel('Email', { exact: true }).fill('csp.synthetic@example.com')
   await page.getByLabel('Password', { exact: true }).fill('clearly synthetic failed password')

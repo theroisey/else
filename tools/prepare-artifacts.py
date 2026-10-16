@@ -46,7 +46,7 @@ def frontend():
         if path.is_symlink():
             raise SystemExit("Frontend artifacts must not contain symlinks.")
         path.chmod(0o755 if path.is_dir() else 0o644)
-        if path.is_file() and path.suffix in {".html", ".js", ".css", ".svg"}:
+        if path.is_file() and path.suffix in {".html", ".js", ".css", ".svg", ".webmanifest"}:
             alternate = path.with_name(path.name + ".gz")
             encoded = gzip.compress(path.read_bytes(), compresslevel=9, mtime=0)
             if len(encoded) < path.stat().st_size:

@@ -164,6 +164,13 @@ def run(args):
             theme, theme_headers = request("/assets/theme-init.js", headers={"Accept-Encoding": "gzip"})
             assert theme_headers["Cache-Control"] == "no-cache", "pre-paint theme bootstrap must stay fresh"
             assert gzip.decompress(theme) == (ROOT / "frontend/dist/assets/theme-init.js").read_bytes()
+            for path, content_type in (("/app.webmanifest", "application/manifest+json; charset=utf-8"),
+                                       ("/assets/roisey-else-app-v1.png", "image/png"),
+                                       ("/assets/roisey-else-app-v1.svg", "image/svg+xml")):
+                mobile_asset, mobile_headers = request(path)
+                assert mobile_asset == (ROOT / "frontend/public" / path.lstrip("/")).read_bytes()
+                assert mobile_headers["Content-Type"] == content_type
+                assert mobile_headers["Cache-Control"] == "no-cache"
             request("/assets/missing.js", expected=404)
             request("/%2e%2e/private", expected=404)
             request("/api/v1/releases", expected=404)
