@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@fontsource-variable/manrope/index.css";
+@import "./fonts.css";
 @import "@fontsource/instrument-serif/latin-400.css";
 @import "@fontsource/instrument-serif/latin-ext-400.css";
 
@@ -332,10 +332,29 @@
   .filter-grid.picker-filters { grid-template-columns: minmax(0, 1fr) minmax(7rem, auto); }
 }
 
-/* Quiet, bounded motion shares the reduced-motion override above. */
+/* Motion never holds navigation, authentication guards or dismissals open. */
+:root {
+  --motion-fast: 140ms;
+  --motion-enter: 180ms;
+  --motion-ease: cubic-bezier(.2, .7, .2, 1);
+}
+@keyframes workspace-arrive { from { transform: translateY(3px); } to { transform: translateY(0); } }
+@keyframes panel-arrive { from { transform: translateY(6px); } to { transform: translateY(0); } }
+@keyframes drawer-arrive { from { transform: translateX(12px); } to { transform: translateX(0); } }
 @keyframes loading-breathe { 0%, 100% { opacity: .3; } 50% { opacity: .85; } }
 @keyframes loading-entry { from { opacity: 0; } to { opacity: 1; } }
 @layer components {
+  .boot-loading { display: flex; min-height: 100dvh; align-items: center; justify-content: center; flex-direction: column; gap: 1.5rem; animation: loading-entry var(--motion-fast) ease-out; }
+  .boot-progress { width: 6rem; height: 2px; background: var(--text-primary); animation: loading-breathe 1400ms ease-in-out infinite; }
+  .workspace-main > section { animation: workspace-arrive var(--motion-enter) var(--motion-ease); }
+  .account-popup, .client-more-sections, details[open] > .filter-grid, details[open] > .grid { animation: panel-arrive var(--motion-fast) var(--motion-ease); }
+  .ui-dialog[open] .ui-dialog-panel { animation: panel-arrive var(--motion-enter) var(--motion-ease); }
+  .ui-dialog.drawer { overflow: clip; }
+  .ui-dialog.drawer[open] .ui-dialog-panel { animation-name: drawer-arrive; }
+  .workspace-main [role="alert"] { animation: workspace-arrive var(--motion-fast) var(--motion-ease); }
+  .ui-button, .help-trigger, .command-trigger, .account-trigger { transition-property: color, background-color, border-color, transform; transition-duration: var(--motion-fast); transition-timing-function: var(--motion-ease); }
+  .ui-button:not(:disabled):active, .help-trigger:active, .command-trigger:active, .account-trigger:active { transform: translateY(1px); }
+  @media (max-width: 1023px) { .shell-sidebar:not(.hidden) { animation: panel-arrive var(--motion-enter) var(--motion-ease); } }
   .sidebar-link::before { transition: background-color 140ms ease; }
   .ui-button { position: relative; }
   .button-progress { position: absolute; inset: auto .5rem 3px; height: 2px; overflow: hidden; opacity: 0; transition: opacity 160ms ease; pointer-events: none; }

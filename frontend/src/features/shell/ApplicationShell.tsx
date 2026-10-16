@@ -10,6 +10,7 @@ import { AccountMenu } from './AccountMenu'
 import { NotificationControl } from '../operations/Notifications'
 import { Brand } from '../../components/brand/Brand'
 import { CommandSearch } from './CommandSearch'
+import { preloadLink } from '../../app/prefetch'
 
 export function ApplicationShell() {
   useLocale()
@@ -159,7 +160,11 @@ export function ApplicationShell() {
   }
 
   return (
-    <div className="min-h-dvh">
+    <div
+      className="min-h-dvh"
+      onPointerOverCapture={preloadLink}
+      onFocusCapture={preloadLink}
+    >
       <a
         href="#workspace-content"
         className="sr-only fixed left-4 top-4 z-50 rounded-sm bg-ink px-4 py-2 text-surface focus:not-sr-only"

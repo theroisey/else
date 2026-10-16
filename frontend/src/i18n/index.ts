@@ -20,15 +20,25 @@ const canonical = import.meta.glob('./locales/en/*.json', {
   eager: true,
   import: 'default',
 }) as Record<string, Record<string, string>>
-const loaders = import.meta.glob('./locales/{tr,ro,de,fr}/*.json', {
-  import: 'default',
-})
+// One request per selected language, without shipping every language at sign-in.
+const loaders = {
+  tr: () => import('./locales/tr'),
+  ro: () => import('./locales/ro'),
+  de: () => import('./locales/de'),
+  fr: () => import('./locales/fr'),
+}
 const english = Object.fromEntries(
   Object.entries(canonical).map(([path, resource]) => [
     path.split('/').at(-1)!.replace('.json', ''),
     resource,
   ]),
 )
+const namespaceBySource = new Map<string, string>()
+for (const [namespace, messages] of Object.entries(english)) {
+  for (const source of Object.keys(messages)) {
+    if (!namespaceBySource.has(source)) namespaceBySource.set(source, namespace)
+  }
+}
 export const i18n = createInstance()
 void i18n.use(initReactI18next).init({
   lng: 'en',
@@ -72,14 +82,12 @@ export async function loadLocale(locale: Locale) {
   if (locale === 'en') return
   let pending = loaded.get(locale)
   if (!pending) {
-    pending = Promise.all(
-      Object.keys(english).map(async (ns) => {
-        const load = loaders[`./locales/${locale}/${ns}.json`]
-        if (!load) throw new Error('Language resources are unavailable.')
-        const resource = await load()
+    pending = loaders[locale]().then(({ default: resources }) => {
+      if (Object.keys(english).some((ns) => !Object.hasOwn(resources, ns)))
+        throw new Error('Language resources are unavailable.')
+      for (const [ns, resource] of Object.entries(resources))
         i18n.addResourceBundle(locale, ns, resource, true, true)
-      }),
-    ).then(() => undefined)
+    })
     loaded.set(locale, pending)
     pending.catch(() => loaded.delete(locale))
   }
@@ -146,9 +154,7 @@ export function copy(
   }
   const selectedNS = Object.hasOwn(english[ns] ?? {}, source)
     ? ns
-    : (Object.keys(english).find((name) =>
-        Object.hasOwn(english[name] ?? {}, source),
-      ) ?? ns)
+    : (namespaceBySource.get(source) ?? ns)
   return i18n.t(source, {
     ns: selectedNS,
     defaultValue: source,

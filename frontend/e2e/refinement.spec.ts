@@ -64,15 +64,16 @@ test('refinement: browser permission is explicit, new private updates deliver on
   await page.addInitScript(() => {
     const records: Array<{ title: string, body: string }> = []
     let prompts = 0
+    let openLatest = () => {}
     class NativeNotification {
       static permission = 'default'
       static requestPermission() { prompts++; this.permission = 'granted'; return Promise.resolve('granted') }
       onclick: (() => void) | null = null
-      constructor(title: string, options: { body: string }) { records.push({ title, body: options.body }) }
+      constructor(title: string, options: { body: string }) { records.push({ title, body: options.body }); openLatest = () => this.onclick?.() }
       close() {}
     }
     Object.defineProperty(window, 'Notification', { value: NativeNotification, configurable: true })
-    Object.assign(window, { syntheticAlerts: { records, get prompts() { return prompts } } })
+    Object.assign(window, { syntheticAlerts: { records, get prompts() { return prompts }, open() { openLatest() } } })
   })
   await login(page)
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
@@ -93,6 +94,13 @@ test('refinement: browser permission is explicit, new private updates deliver on
   expect(messages.records).toEqual([{ title: 'Roisey Else', body: 'You have a new update. Open the panel to review it.' }])
   expect(messages.prompts).toBe(1)
   await page.screenshot({ path: info.outputPath('browser-alert-settings.png'), fullPage: true })
+  const documents: string[] = []
+  page.on('request', request => { if (request.resourceType() === 'document') documents.push(request.url()) })
+  await page.evaluate(() => (window as unknown as { syntheticAlerts: { open(): void } }).syntheticAlerts.open())
+  await expect(page.getByRole('heading', { name: 'Notifications', exact: true })).toBeVisible()
+  expect(documents).toEqual([])
+  await page.getByRole('navigation', { name: 'Application', exact: true }).getByRole('link', { name: 'Settings', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Disable browser alerts' }).click()
   await page.getByText('Synthetic refinement owner', { exact: true }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
@@ -141,7 +149,10 @@ test('refinement: navigation is immediate, restores focus and limits fades to lo
       ),
     ),
   ).toEqual([])
-  expect(await page.locator('.workspace-main > section').evaluate(el => getComputedStyle(el).animationName)).toBe('none')
+  expect(await page.locator('.workspace-main > section').evaluate(el => getComputedStyle(el).animationName)).toBe('workspace-arrive')
+  expect(await page.locator('.workspace-main > section').evaluate(el => el.getAnimations().every(animation =>
+    animation.effect instanceof KeyframeEffect && animation.effect.getKeyframes().every(frame => !Object.hasOwn(frame, 'opacity')),
+  ))).toBe(true)
   await expect(page.locator('#workspace-content')).toBeFocused()
   await expect(page.locator('#workspace-content')).not.toHaveAttribute('inert')
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -159,8 +170,65 @@ test('refinement: navigation is immediate, restores focus and limits fades to lo
           .syntheticTransitions.length,
     ),
   ).toBe(0)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  expect(await page.evaluate(async () => {
+    for (let frame = 0; frame < 18; frame++) {
+      await new Promise(requestAnimationFrame)
+      if (document.documentElement.scrollWidth > document.documentElement.clientWidth) return false
+    }
+    return true
+  })).toBe(true)
+  await page.getByRole('button', { name: 'Close navigation', exact: true }).click()
   await page.goto('/app/access')
   await expect(page).toHaveURL(/\/app$/)
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible()
   await expect(page.locator('a[href="/app/access"]')).toHaveCount(0)
+})
+
+test('performance: bounded code preloading respects Save Data, cached reads are reused, searches coalesce and failed chunks recover', async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(navigator, 'connection', { configurable: true, value: { saveData: true, effectiveType: '4g' } }))
+  const scripts: string[] = []
+  const clientReads: string[] = []
+  page.on('request', request => {
+    const url = new URL(request.url())
+    if (url.pathname.endsWith('.js')) scripts.push(url.pathname)
+    if (url.pathname === '/api/v1/clients') clientReads.push(url.search)
+  })
+  await login(page)
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+  const nav = page.getByRole('navigation', { name: 'Application', exact: true })
+  await nav.getByRole('link', { name: 'Team', exact: true }).hover()
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+  expect(scripts.some(path => /\/TeamPage-/.test(path))).toBe(false)
+  await page.evaluate(() => Object.defineProperty(navigator, 'connection', { configurable: true, value: { saveData: false, effectiveType: '4g' } }))
+  await nav.getByRole('link', { name: 'Clients', exact: true }).hover()
+  await expect.poll(() => scripts.some(path => /\/ClientsPage-/.test(path))).toBe(true)
+  expect(clientReads).toEqual([]) // Importing public code must never fetch private records.
+  await nav.getByRole('link', { name: 'Clients', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Clients', exact: true })).toBeVisible()
+  await expect(page.getByRole('table', { name: 'Clients', exact: true })).toBeVisible()
+  const loaded = clientReads.length
+  await nav.getByRole('link', { name: 'Settings', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+  await nav.getByRole('link', { name: 'Clients', exact: true }).click()
+  await expect(page.getByRole('table', { name: 'Clients', exact: true })).toBeVisible()
+  expect(clientReads.length).toBe(loaded)
+  await nav.getByRole('link', { name: 'Today', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible()
+  await page.getByText('Filter by brand and team', { exact: true }).click()
+  await expect(page.getByLabel('Brand', { exact: true })).toBeEnabled()
+  clientReads.length = 0
+  await page.getByLabel('Find brand', { exact: true }).pressSequentially('Synthetic', { delay: 15 })
+  await expect(page.getByLabel('Find brand', { exact: true })).toHaveValue('Synthetic')
+  await expect.poll(() => clientReads.filter(query => new URLSearchParams(query).get('q') === 'Synthetic').length).toBe(1)
+  expect(clientReads.filter(query => new URLSearchParams(query).get('q'))).toHaveLength(1)
+  await page.route('**/assets/UsersPage-*.js', route => route.abort())
+  await nav.getByText('More', { exact: true }).click()
+  await nav.getByRole('link', { name: 'Users', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Users page unavailable', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Reload page', exact: true })).toBeVisible()
+  await nav.getByRole('link', { name: 'Settings', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
 })

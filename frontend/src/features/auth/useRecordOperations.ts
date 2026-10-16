@@ -75,7 +75,7 @@ export function useRecordOperations(
     setErrorCode('')
     try {
       const result = await read(action)
-      await cache.invalidateQueries({ queryKey: [domain, actor] })
+      const invalidations = [[domain, actor]]
       if (
         domain === 'tasks' ||
         domain === 'billing' ||
@@ -83,11 +83,13 @@ export function useRecordOperations(
         domain === 'agreements' ||
         domain === 'recurring'
       )
-        await cache.invalidateQueries({ queryKey: ['operations', actor] })
-      if (domain === 'agreements')
-        await cache.invalidateQueries({ queryKey: ['billing', actor] })
-      if (domain === 'billing')
-        await cache.invalidateQueries({ queryKey: ['agreements', actor] })
+        invalidations.push(['operations', actor])
+      if (domain === 'agreements') invalidations.push(['billing', actor])
+      if (domain === 'billing') invalidations.push(['agreements', actor])
+      // Independent reads can reconcile together after the committed write.
+      await Promise.all(
+        invalidations.map((queryKey) => cache.invalidateQueries({ queryKey })),
+      )
       return result
     } catch (failure) {
       onFailure?.(failure)

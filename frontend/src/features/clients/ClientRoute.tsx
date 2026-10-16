@@ -57,3 +57,21 @@ export function ClientRoute({
     </PageLoadBoundary>
   )
 }
+
+/** A stable boundary: route changes must never remount financial recovery. */
+export function WorkspaceRoute({ children }: { children: ReactNode }) {
+  useLocale()
+  return (
+    <PageLoadBoundary name={copy('Workspace', 'common')}>
+      <Suspense
+        fallback={
+          <main className="mx-auto max-w-3xl px-6 py-16">
+            <PageSkeleton />
+          </main>
+        }
+      >
+        {children}
+      </Suspense>
+    </PageLoadBoundary>
+  )
+}

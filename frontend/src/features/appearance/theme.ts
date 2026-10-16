@@ -2,7 +2,6 @@ import { useSyncExternalStore } from 'react'
 
 export type Appearance = 'light' | 'dark' | 'system'
 const storageKey = 'roisey-else.appearance'
-const changeEvent = 'else:appearance'
 function readPreference(): Appearance {
   try {
     const value = localStorage.getItem(storageKey)
@@ -25,26 +24,46 @@ function apply() {
     ?.setAttribute('content', dark ? '#11110f' : '#f2f0ea')
   document.documentElement.dataset.appearance = preference
 }
-function subscribe(callback: () => void) {
-  const media = window.matchMedia?.('(prefers-color-scheme: dark)')
-  function changed() {
-    apply()
-    callback()
-  }
-  function stored(event: StorageEvent) {
-    if (event.key === storageKey || event.key === null) {
-      preference = readPreference()
-      changed()
-    }
-  }
-  window.addEventListener(changeEvent, changed)
-  window.addEventListener('storage', stored)
-  media?.addEventListener('change', changed)
+const subscribers = new Set<() => void>()
+let media: MediaQueryList | undefined
+let snapshot = {
+  preference,
+  resolved: (preference === 'dark' || (preference === 'system' && systemDark())
+    ? 'dark'
+    : 'light') as 'light' | 'dark',
+}
+function synchronize() {
+  const resolved =
+    preference === 'dark' ||
+    (preference === 'system' && (media?.matches ?? systemDark()))
+      ? 'dark'
+      : 'light'
   apply()
+  if (snapshot.preference === preference && snapshot.resolved === resolved)
+    return
+  snapshot = { preference, resolved }
+  for (const callback of subscribers) callback()
+}
+function stored(event: StorageEvent) {
+  if (event.key !== storageKey && event.key !== null) return
+  preference = readPreference()
+  synchronize()
+}
+function subscribe(callback: () => void) {
+  if (!subscribers.size) {
+    media = window.matchMedia?.('(prefers-color-scheme: dark)')
+    window.addEventListener('storage', stored)
+    media?.addEventListener('change', synchronize)
+    synchronize()
+  }
+  subscribers.add(callback)
   return () => {
-    window.removeEventListener(changeEvent, changed)
-    window.removeEventListener('storage', stored)
-    media?.removeEventListener('change', changed)
+    subscribers.delete(callback)
+    if (!subscribers.size) {
+      window.removeEventListener('storage', stored)
+      media?.removeEventListener('change', synchronize)
+      media = undefined
+    }
   }
 }
 export function setAppearance(value: Appearance) {
@@ -54,22 +73,13 @@ export function setAppearance(value: Appearance) {
   } catch {
     /* Retain the session preference. */
   }
-  apply()
-  window.dispatchEvent(new Event(changeEvent))
+  synchronize()
 }
 export function useAppearance() {
   const selected = useSyncExternalStore(
     subscribe,
-    () => preference,
-    () => 'system' as Appearance,
+    () => snapshot,
+    () => snapshot,
   )
-  const resolved = useSyncExternalStore(
-    subscribe,
-    () =>
-      preference === 'dark' || (preference === 'system' && systemDark())
-        ? 'dark'
-        : 'light',
-    () => 'light',
-  )
-  return { preference: selected, resolved, setAppearance }
+  return { ...selected, setAppearance }
 }

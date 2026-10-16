@@ -1,237 +1,82 @@
 import { copy, useLocale } from '../i18n/index'
-import { useAppearance } from '../features/appearance/theme'
+import { AppearanceSync } from '../features/appearance/Appearance'
 import { Link, Navigate, Outlet, Route, Routes } from 'react-router'
-import { lazy } from 'react'
+import { lazyPage } from './lazy-page'
+import { useEffect } from 'react'
+import { useLocation } from 'react-router'
+import { warmDestination } from './prefetch'
+import { routeLoaders } from './route-loaders'
 import { buttonStyles } from '../components/ui'
-import { InterfaceReviewPage } from '../features/interface-review/InterfaceReviewPage'
 import { AuthProvider } from '../features/auth/AuthProvider'
 import { AuthGuard, PermissionGuard } from '../features/auth/AuthGuard'
-import { UsersPage } from '../features/administration/UsersPage'
-import { RolesPage } from '../features/administration/RolesPage'
 import { LoginPage } from '../features/auth/LoginPage'
-import { ApplicationShell } from '../features/shell/ApplicationShell'
-import { WorkspacePage } from '../features/shell/WorkspacePage'
-import { ClientRoute } from '../features/clients/ClientRoute'
-import { PaymentRecoveryBoundary } from '../features/billing/PaymentRecovery'
-import { CopyRecoveryBoundary } from '../features/pricing/CopyRecovery'
+import { ClientRoute, WorkspaceRoute } from '../features/clients/ClientRoute'
 import { NavigationFocus } from '../features/shell/NavigationFocus'
 
-const RecurringPage = lazy(() =>
-  import('../features/operations/RecurringPage').then((m) => ({
-    default: m.RecurringPage,
-  })),
-)
-const SettingsPage = lazy(() =>
-  import('../features/operations/SettingsPage').then((m) => ({
-    default: m.SettingsPage,
-  })),
-)
-const FinancePage = lazy(() =>
-  import('../features/operations/FinancePage').then((m) => ({
-    default: m.FinancePage,
-  })),
-)
-const TeamPage = lazy(() =>
-  import('../features/operations/TeamPage').then((m) => ({
-    default: m.TeamPage,
-  })),
-)
-const WebsitesPage = lazy(() =>
-  import('../features/websites/WebsitesPage').then((m) => ({
-    default: m.WebsitesPage,
-  })),
-)
-const WebsitePage = lazy(() =>
-  import('../features/websites/WebsitePage').then((m) => ({
-    default: m.WebsitePage,
-  })),
-)
-const ClientsPage = lazy(() =>
-  import('../features/clients/ClientsPage').then((m) => ({
-    default: m.ClientsPage,
-  })),
-)
-const ClientEditorPage = lazy(() =>
-  import('../features/clients/ClientEditorPage').then((m) => ({
-    default: m.ClientEditorPage,
-  })),
-)
-const OverviewPage = lazy(() =>
-  import('../features/overview/OverviewPage').then((m) => ({
-    default: m.OverviewPage,
-  })),
-)
-const ClientProfilePage = lazy(() =>
-  import('../features/clients/ClientProfilePage').then((m) => ({
-    default: m.ClientProfilePage,
-  })),
-)
-const TaskListPage = lazy(() =>
-  import('../features/tasks/TaskListPage').then((m) => ({
-    default: m.TaskListPage,
-  })),
-)
-const TaskDetailPage = lazy(() =>
-  import('../features/tasks/TaskDetailPage').then((m) => ({
-    default: m.TaskDetailPage,
-  })),
-)
-const TaskEditorPage = lazy(() =>
-  import('../features/tasks/TaskEditorPage').then((m) => ({
-    default: m.TaskEditorPage,
-  })),
-)
-const PlanningListPage = lazy(() =>
-  import('../features/planning/PlanningListPage').then((m) => ({
-    default: m.PlanningListPage,
-  })),
-)
-const PlanningDetailPage = lazy(() =>
-  import('../features/planning/PlanningDetailPage').then((m) => ({
-    default: m.PlanningDetailPage,
-  })),
-)
-const PlanningEditorPage = lazy(() =>
-  import('../features/planning/PlanningEditorPage').then((m) => ({
-    default: m.PlanningEditorPage,
-  })),
-)
+const RecurringPage = lazyPage(routeLoaders.RecurringPage)
+const SettingsPage = lazyPage(routeLoaders.SettingsPage)
+const FinancePage = lazyPage(routeLoaders.FinancePage)
+const TeamPage = lazyPage(routeLoaders.TeamPage)
+const WebsitesPage = lazyPage(routeLoaders.WebsitesPage)
+const WebsitePage = lazyPage(routeLoaders.WebsitePage)
+const ClientsPage = lazyPage(routeLoaders.ClientsPage)
+const ClientEditorPage = lazyPage(routeLoaders.ClientEditorPage)
+const OverviewPage = lazyPage(routeLoaders.OverviewPage)
+const ClientProfilePage = lazyPage(routeLoaders.ClientProfilePage)
+const TaskListPage = lazyPage(routeLoaders.TaskListPage)
+const TaskDetailPage = lazyPage(routeLoaders.TaskDetailPage)
+const TaskEditorPage = lazyPage(routeLoaders.TaskEditorPage)
+const PlanningListPage = lazyPage(routeLoaders.PlanningListPage)
+const PlanningDetailPage = lazyPage(routeLoaders.PlanningDetailPage)
+const PlanningEditorPage = lazyPage(routeLoaders.PlanningEditorPage)
 
-const ReminderListPage = lazy(() =>
-  import('../features/reminders/ReminderListPage').then((m) => ({
-    default: m.ReminderListPage,
-  })),
-)
-const ReminderDetailPage = lazy(() =>
-  import('../features/reminders/ReminderDetailPage').then((m) => ({
-    default: m.ReminderDetailPage,
-  })),
-)
-const ReminderEditorPage = lazy(() =>
-  import('../features/reminders/ReminderEditorPage').then((m) => ({
-    default: m.ReminderEditorPage,
-  })),
-)
-const ActivityPage = lazy(() =>
-  import('../features/activity/ActivityPage').then((m) => ({
-    default: m.ActivityPage,
-  })),
-)
-const IntegrationListPage = lazy(() =>
-  import('../features/integrations/IntegrationListPage').then((m) => ({
-    default: m.IntegrationListPage,
-  })),
-)
-const IntegrationDetailPage = lazy(() =>
-  import('../features/integrations/IntegrationDetailPage').then((m) => ({
-    default: m.IntegrationDetailPage,
-  })),
-)
-const AnalyticsListPage = lazy(() =>
-  import('../features/analytics/AnalyticsListPage').then((m) => ({
-    default: m.AnalyticsListPage,
-  })),
-)
-const AnalyticsReportPage = lazy(() =>
-  import('../features/analytics/AnalyticsReportPage').then((m) => ({
-    default: m.AnalyticsReportPage,
-  })),
-)
-const CommerceListPage = lazy(() =>
-  import('../features/ecommerce/CommerceListPage').then((m) => ({
-    default: m.CommerceListPage,
-  })),
-)
-const CommerceReportPage = lazy(() =>
-  import('../features/ecommerce/CommerceReportPage').then((m) => ({
-    default: m.CommerceReportPage,
-  })),
-)
-const MarketingListPage = lazy(() =>
-  import('../features/marketing/MarketingListPage').then((m) => ({
-    default: m.MarketingListPage,
-  })),
-)
-const MarketingReportPage = lazy(() =>
-  import('../features/marketing/MarketingReportPage').then((m) => ({
-    default: m.MarketingReportPage,
-  })),
-)
-const AuditPage = lazy(() =>
-  import('../features/audit/AuditPage').then((m) => ({ default: m.AuditPage })),
-)
-const BillingListPage = lazy(() =>
-  import('../features/billing/BillingListPage').then((m) => ({
-    default: m.BillingListPage,
-  })),
-)
-const BillingDetailPage = lazy(() =>
-  import('../features/billing/BillingDetailPage').then((m) => ({
-    default: m.BillingDetailPage,
-  })),
-)
-const BillingEditorPage = lazy(() =>
-  import('../features/billing/BillingEditorPage').then((m) => ({
-    default: m.BillingEditorPage,
-  })),
-)
-const PricingListPage = lazy(() =>
-  import('../features/pricing/PricingListPage').then((m) => ({
-    default: m.PricingListPage,
-  })),
-)
-const PricingDetailPage = lazy(() =>
-  import('../features/pricing/PricingDetailPage').then((m) => ({
-    default: m.PricingDetailPage,
-  })),
-)
-const PricingEditorPage = lazy(() =>
-  import('../features/pricing/PricingEditorPage').then((m) => ({
-    default: m.PricingEditorPage,
-  })),
-)
+const ReminderListPage = lazyPage(routeLoaders.ReminderListPage)
+const ReminderDetailPage = lazyPage(routeLoaders.ReminderDetailPage)
+const ReminderEditorPage = lazyPage(routeLoaders.ReminderEditorPage)
+const ActivityPage = lazyPage(routeLoaders.ActivityPage)
+const IntegrationListPage = lazyPage(routeLoaders.IntegrationListPage)
+const IntegrationDetailPage = lazyPage(routeLoaders.IntegrationDetailPage)
+const AnalyticsListPage = lazyPage(routeLoaders.AnalyticsListPage)
+const AnalyticsReportPage = lazyPage(routeLoaders.AnalyticsReportPage)
+const CommerceListPage = lazyPage(routeLoaders.CommerceListPage)
+const CommerceReportPage = lazyPage(routeLoaders.CommerceReportPage)
+const MarketingListPage = lazyPage(routeLoaders.MarketingListPage)
+const MarketingReportPage = lazyPage(routeLoaders.MarketingReportPage)
+const AuditPage = lazyPage(routeLoaders.AuditPage)
+const BillingListPage = lazyPage(routeLoaders.BillingListPage)
+const BillingDetailPage = lazyPage(routeLoaders.BillingDetailPage)
+const BillingEditorPage = lazyPage(routeLoaders.BillingEditorPage)
+const PricingListPage = lazyPage(routeLoaders.PricingListPage)
+const PricingDetailPage = lazyPage(routeLoaders.PricingDetailPage)
+const PricingEditorPage = lazyPage(routeLoaders.PricingEditorPage)
 
-const TaskQueuePage = lazy(() =>
-  import('../features/operations/TaskQueuePage').then((m) => ({
-    default: m.TaskQueuePage,
-  })),
-)
-const TodayPage = lazy(() =>
-  import('../features/operations/TodayPage').then((m) => ({
-    default: m.TodayPage,
-  })),
-)
-const RequestListPage = lazy(() =>
-  import('../features/operations/RequestListPage').then((m) => ({
-    default: m.RequestListPage,
-  })),
-)
-const RequestCreatePage = lazy(() =>
-  import('../features/operations/RequestCreatePage').then((m) => ({
-    default: m.RequestCreatePage,
-  })),
-)
-const RequestDetailPage = lazy(() =>
-  import('../features/operations/RequestDetailPage').then((m) => ({
-    default: m.RequestDetailPage,
-  })),
-)
-const NotificationsPage = lazy(() =>
-  import('../features/operations/Notifications').then((m) => ({
-    default: m.NotificationsPage,
-  })),
-)
+const TaskQueuePage = lazyPage(routeLoaders.TaskQueuePage)
+const TodayPage = lazyPage(routeLoaders.TodayPage)
+const RequestListPage = lazyPage(routeLoaders.RequestListPage)
+const RequestCreatePage = lazyPage(routeLoaders.RequestCreatePage)
+const RequestDetailPage = lazyPage(routeLoaders.RequestDetailPage)
+const NotificationsPage = lazyPage(routeLoaders.NotificationsPage)
+
+const UsersPage = lazyPage(routeLoaders.UsersPage)
+
+const RolesPage = lazyPage(routeLoaders.RolesPage)
+
+const InterfaceReviewPage = lazyPage(routeLoaders.InterfaceReviewPage)
+
+const WorkspacePage = lazyPage(routeLoaders.WorkspacePage)
+
+const WorkspaceArea = lazyPage(routeLoaders.WorkspaceArea)
 
 function AuthArea() {
   useLocale()
+  const { pathname } = useLocation()
+  useEffect(() => {
+    if (pathname === '/app' || pathname.startsWith('/app/')) warmDestination(pathname)
+  }, [pathname])
   return (
     <AuthProvider>
       <NavigationFocus>
-        <PaymentRecoveryBoundary>
-          <CopyRecoveryBoundary>
-            <Outlet />
-          </CopyRecoveryBoundary>
-        </PaymentRecoveryBoundary>
+        <Outlet />
       </NavigationFocus>
     </AuthProvider>
   )
@@ -239,15 +84,37 @@ function AuthArea() {
 
 export function App() {
   useLocale()
-  useAppearance()
+  return (
+    <>
+      <AppearanceSync />
+      <ApplicationRoutes />
+    </>
+  )
+}
+
+function ApplicationRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/app" replace />} />
-      <Route path="/interface" element={<InterfaceReviewPage />} />
+      <Route
+        path="/interface"
+        element={
+          <ClientRoute>
+            <InterfaceReviewPage />
+          </ClientRoute>
+        }
+      />
       <Route element={<AuthArea />}>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<AuthGuard />}>
-          <Route path="/app" element={<ApplicationShell />}>
+          <Route
+            path="/app"
+            element={
+              <WorkspaceRoute>
+                <WorkspaceArea />
+              </WorkspaceRoute>
+            }
+          >
             <Route
               index
               element={
@@ -264,7 +131,14 @@ export function App() {
                 </ClientRoute>
               }
             />
-            <Route path="portfolio" element={<WorkspacePage />} />
+            <Route
+              path="portfolio"
+              element={
+                <ClientRoute>
+                  <WorkspacePage />
+                </ClientRoute>
+              }
+            />
             <Route
               path="team"
               element={
@@ -776,7 +650,9 @@ export function App() {
                 <PermissionGuard
                   required={{ permission: 'users.view', scope: 'global' }}
                 >
-                  <UsersPage />
+                  <ClientRoute name={copy('Users', 'common')}>
+                    <UsersPage />
+                  </ClientRoute>
                 </PermissionGuard>
               }
             />
@@ -786,7 +662,9 @@ export function App() {
                 <PermissionGuard
                   required={{ permission: 'roles.view', scope: 'global' }}
                 >
-                  <RolesPage />
+                  <ClientRoute name={copy('Roles', 'common')}>
+                    <RolesPage />
+                  </ClientRoute>
                 </PermissionGuard>
               }
             />
@@ -823,10 +701,7 @@ export function App() {
             <p className="mt-3 text-muted">
               {copy('This address has no available page.', 'common')}
             </p>
-            <Link
-              className={buttonStyles({ className: 'mt-6' })}
-              to="/app"
-            >
+            <Link className={buttonStyles({ className: 'mt-6' })} to="/app">
               {copy('Open workspace', 'common')}
             </Link>
           </main>

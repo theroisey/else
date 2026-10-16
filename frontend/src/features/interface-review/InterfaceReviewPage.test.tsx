@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { App } from '../../app/App'
 import { createQueryClient } from '../../app/query-client'
 
-function renderReview() {
+async function renderReview() {
   render(
     <QueryClientProvider client={createQueryClient()}>
       <MemoryRouter initialEntries={['/interface']}>
@@ -14,13 +14,14 @@ function renderReview() {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  await screen.findByRole('heading', { name: 'Compact, clear, operational.' })
 }
 
 describe('interface review', () => {
-  it('uses real component inventory without service or business requests', () => {
+  it('uses real component inventory without service or business requests', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
-    renderReview()
+    await renderReview()
     expect(
       screen.getByRole('heading', { name: 'Compact, clear, operational.' }),
     ).toBeInTheDocument()
@@ -39,7 +40,7 @@ describe('interface review', () => {
   })
 
   it('binds input guidance and errors, then reports local success', async () => {
-    renderReview()
+    await renderReview()
     const user = userEvent.setup()
     const input = screen.getByRole('textbox', { name: 'Review label' })
     const description = screen.getByText(/nothing is sent to the backend/i)
@@ -60,7 +61,7 @@ describe('interface review', () => {
   })
 
   it('traps dialog focus, closes with Escape, and restores trigger focus', async () => {
-    renderReview()
+    await renderReview()
     const user = userEvent.setup()
     const trigger = screen.getByRole('button', { name: 'Reset example' })
     await user.click(trigger)
@@ -87,7 +88,7 @@ describe('interface review', () => {
   })
 
   it('dismisses through the backdrop and restores scrolling and focus', async () => {
-    renderReview()
+    await renderReview()
     const user = userEvent.setup()
     const trigger = screen.getByRole('button', { name: 'Reset example' })
     const originalOverflow = document.body.style.overflow
@@ -102,7 +103,7 @@ describe('interface review', () => {
   })
 
   it('resets only local state after explicit confirmation', async () => {
-    renderReview()
+    await renderReview()
     const user = userEvent.setup()
     const input = screen.getByRole('textbox', { name: 'Review label' })
     await user.type(input, 'Temporary label')

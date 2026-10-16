@@ -1,7 +1,7 @@
-import { currentLocale } from '../../i18n'
+import { formatDate } from '../../i18n/format'
 export function time(value: string | null) {
   return value
-    ? new Date(value).toLocaleString(currentLocale(), {
+    ? formatDate(value, {
         dateStyle: 'medium',
         timeStyle: 'short',
       })

@@ -11,6 +11,7 @@ import { safeReturnTo } from '../shell/navigation'
 import { useAuth } from './auth-context'
 import { AuthError } from './auth-service'
 import { AuthPending, AuthUnavailable } from './AuthGuard'
+import { warmWorkspace } from '../../app/prefetch'
 
 export function LoginPage() {
   useLocale()
@@ -52,6 +53,7 @@ export function LoginPage() {
     const submittedPassword = password
     setPassword('')
     setPending(true)
+    warmWorkspace(safeReturnTo(location.state?.returnTo))
     try {
       await auth.login(email.trim().toLowerCase(), submittedPassword)
     } catch (error) {

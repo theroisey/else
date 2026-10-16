@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useQuery } from '@tanstack/react-query'
 import { z } from '../../lib/validation'
 import { APIError, authenticatedJSON } from '../../services/authenticated'
@@ -33,6 +34,8 @@ export function ScopeFilters({
   )
   const t = (s: string) => copy(s, 'operations')
   const [search, setSearch] = useState('')
+  const queryText = useDebouncedValue(search.trim())
+  const searching = queryText !== search.trim()
   const [brandCursor, setBrandCursor] = useState('')
   const [personCursor, setPersonCursor] = useState('')
   const [siteCursor, setSiteCursor] = useState('')
@@ -44,16 +47,16 @@ export function ScopeFilters({
     }),
   )
   const brands = useQuery({
-    queryKey: [...op.key, 'filter-brands', search, brandCursor],
+    queryKey: [...op.key, 'filter-brands', queryText, brandCursor],
     queryFn: ({ signal }) =>
       op.read(() =>
         clients.clients(
-          { q: search, status: 'all', tag: '', sort: 'id' },
+          { q: queryText, status: 'all', tag: '', sort: 'id' },
           brandCursor,
           signal,
         ),
       ),
-    enabled: open && !fixedBrand && clientAccess,
+    enabled: open && !fixedBrand && clientAccess && !searching,
   })
   const people = useQuery({
     queryKey: [...op.key, 'filter-people', brand, personCursor],
@@ -97,6 +100,7 @@ export function ScopeFilters({
     queryFn: ({ signal }) =>
       op.read(() => websites.list(brand, siteCursor, 'all', signal)),
   })
+  const brandRows = searching || brands.isError ? [] : (brands.data?.data ?? [])
   const pages = (
     cursor: string,
     next: string | null,
@@ -135,6 +139,7 @@ export function ScopeFilters({
             />
             <SelectField
               label={t('Brand')}
+              disabled={searching || brands.isFetching}
               value={brand}
               onChange={(e) => {
                 onChange({ brand: e.target.value, website: '', employee: '' })
@@ -143,10 +148,10 @@ export function ScopeFilters({
               }}
             >
               <option value="">{t('All authorized brands')}</option>
-              {brand && !brands.data?.data.some((v) => v.id === brand) ? (
+              {brand && !brandRows.some((v) => v.id === brand) ? (
                 <option value={brand}>{t('Selected brand')}</option>
               ) : null}
-              {brands.data?.data.map((v) => (
+              {brandRows.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.name}
                 </option>
@@ -154,9 +159,14 @@ export function ScopeFilters({
             </SelectField>
             {pages(
               brandCursor,
-              brands.data?.page.next_cursor ?? null,
+              searching ? null : (brands.data?.page.next_cursor ?? null),
               setBrandCursor,
             )}
+            {searching || brands.isFetching ? (
+              <p role="status" className="mt-2 text-xs text-muted">
+                {copy('Searching authorized clients…', 'common')}
+              </p>
+            ) : null}
             {brands.isError ? (
               <OperationsError
                 error={brands.error}

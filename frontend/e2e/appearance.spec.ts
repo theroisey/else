@@ -28,7 +28,8 @@ for (const preference of ['dark', 'system'])
             children: document.getElementById('root')?.childElementCount ?? -1,
           })),
         )
-        .toEqual({ dark: true, children: 0 })
+        .toEqual({ dark: true, children: 1 })
+      await expect(page.getByRole('progressbar', { name: 'Roisey Else' })).toBeVisible()
       expect(
         await page.evaluate(
           () =>

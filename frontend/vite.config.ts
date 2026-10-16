@@ -17,7 +17,24 @@ export default defineConfig({
   // Small font subsets must remain same-origin assets under the strict font-src policy.
   build: {
     assetsInlineLimit: 0,
-    rolldownOptions: { output: { codeSplitting: false } },
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: 'runtime',
+              test: /node_modules[\\/](?:react(?:-dom|-router|-i18next)?|scheduler|i18next|@tanstack|@fortawesome)[\\/]/,
+              includeDependenciesRecursively: false,
+            },
+            {
+              name: 'workspace-core',
+              test: /[\\/]src[\\/](?:app[\\/]|components[\\/]|i18n[\\/](?!locales[\\/](?:tr|ro|de|fr)(?:[\\/]|\.ts))|features[\\/](?:auth[\\/]|appearance[\\/]|clients[\\/]ClientRoute|shell[\\/](?:navigation|NavigationFocus))|services[\\/])/,
+              includeDependenciesRecursively: false,
+            },
+          ],
+        },
+      },
+    },
   },
   preview: { host: '127.0.0.1', strictPort: true, proxy: {} },
   test: {

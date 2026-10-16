@@ -1,5 +1,6 @@
 import { copy, useLocale } from '../../i18n/index'
 import { useEffect, useId, useState } from 'react'
+import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useLocation, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -47,14 +48,10 @@ function Commands({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [search, setSearch] = useState('')
-  const [queryText, setQueryText] = useState('')
+  const queryText = useDebouncedValue(search.trim())
   const [selected, setSelected] = useState(0)
   const listID = useId()
   const grants = operation.auth.session?.user.permissions ?? []
-  useEffect(() => {
-    const timer = window.setTimeout(() => setQueryText(search.trim()), 200)
-    return () => window.clearTimeout(timer)
-  }, [search])
   const query = useQuery({
     queryKey: [...operation.key, 'command-search', queryText],
     queryFn: ({ signal }) =>

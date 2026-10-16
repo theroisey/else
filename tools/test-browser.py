@@ -31,7 +31,7 @@ def run(args):
         directory.chmod(0o700)
         (directory / ".fixture-control").write_bytes(b"disposable-synthetic-browser-fixture")
         if not args.image:
-            shutil.copytree(ROOT / "frontend/dist", directory / "frontend")
+            shutil.copytree(args.frontend_directory, directory / "frontend")
         with socket.socket() as selected:
             selected.bind(("127.0.0.1", 0))
             port = selected.getsockname()[1]
@@ -74,7 +74,9 @@ def run(args):
                 node = os.environ.get("NODE", "node")
                 subprocess.run([node, str(ROOT / "frontend/scripts/check-runtime-security.mjs"), origin], cwd=ROOT, env=env, check=True)
                 command = [node, "node_modules/@playwright/test/cli.js", "test"]
-                if args.grep:
+                if args.performance_output:
+                    command = [node, "scripts/measure-performance.mjs", str(args.performance_output.resolve())]
+                elif args.grep:
                     command += ["--grep", args.grep]
                 subprocess.run(command, cwd=ROOT / "frontend", env=env, check=True)
             finally:
@@ -103,5 +105,7 @@ if __name__ == "__main__":
     parser.add_argument("--fixture-binary", type=Path, default=ROOT / "target/debug/examples/browser-fixture")
     parser.add_argument("--no-build", action="store_true")
     parser.add_argument("--grep")
+    parser.add_argument("--performance-output", type=Path, help="Run the synthetic production performance rehearsal and save aggregate metrics instead of the browser suite")
+    parser.add_argument("--frontend-directory", type=Path, default=ROOT / "frontend/dist", help="Use an explicitly selected production build for native before/after comparison")
     parser.add_argument("--image", help="Exercise this exact Docker image with the private native SQL fixture helper")
     run(parser.parse_args())

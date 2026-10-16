@@ -1,10 +1,11 @@
 import { currentLocale } from './locale.ts'
+import { dateFormatter, numberFormatter, relativeFormatter } from './formatters.ts'
 
 export function formatDate(
   value: string | Date,
   options: Intl.DateTimeFormatOptions = { dateStyle: 'medium' },
 ) {
-  return new Intl.DateTimeFormat(currentLocale(), options).format(
+  return dateFormatter(options).format(
     value instanceof Date ? value : new Date(value),
   )
 }
@@ -14,7 +15,7 @@ export function formatNumber(
 ) {
   // Intl accepts decimal strings exactly in modern browsers. Never coerce large
   // business values through Number, which discards integer/fraction precision.
-  return new Intl.NumberFormat(currentLocale(), options).format(value as number)
+  return numberFormatter(options).format(value as number)
 }
 export function formatDecimal(value: string, fractionDigits?: number) {
   if (!/^-?\d+(?:\.\d+)?$/.test(value))
@@ -45,9 +46,7 @@ export function formatRelative(
   value: number,
   unit: Intl.RelativeTimeFormatUnit,
 ) {
-  return new Intl.RelativeTimeFormat(currentLocale(), {
-    numeric: 'auto',
-  }).format(value, unit)
+  return relativeFormatter().format(value, unit)
 }
 export function formatCalendarDate(
   value: string,
@@ -78,7 +77,7 @@ export function formatPercent(value: string) {
 // second replaces its three-digit limit so no precision is silently discarded.
 export function formatPreciseTime(value: string, timezone: string) {
   const fraction = /\.(\d+)Z$/.exec(value)?.[1]?.replace(/0+$/, '') ?? ''
-  return new Intl.DateTimeFormat(currentLocale(), {
+  return dateFormatter({
     timeZone: timezone,
     year: 'numeric',
     month: 'short',

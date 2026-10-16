@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Roisey Else client operations platform." />
+    <link rel="preload" href="/node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="icon" type="image/svg+xml" href="/assets/roisey-r-v1.svg" />
     <link rel="icon" type="image/png" sizes="192x192" href="/assets/roisey-else-app-192-v2.png" />
     <link rel="apple-touch-icon" sizes="152x152" href="/assets/roisey-else-app-152-v2.png" />
@@ -20,7 +22,13 @@
     <title>Roisey Else</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="boot-loading" aria-busy="true">
+        <img src="/assets/roisey-r-v1.svg" width="32" height="32" alt="Roisey Else" />
+        <div class="boot-progress" role="progressbar" aria-label="Roisey Else"></div>
+      </main>
+    </div>
+    <noscript>Enable JavaScript to use Roisey Else.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

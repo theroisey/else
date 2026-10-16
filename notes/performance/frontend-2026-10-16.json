@@ -1,0 +1,611 @@
+{
+  "schema_version": 1,
+  "baseline_commit": "79f69428a3b87432ac1faaca8d1230a43fed24ff",
+  "build_index_sha256": {
+    "before": "be990bac7928cd8eedf100548a7c45f26e1718deaca03fdbe3338e0546847de6",
+    "after": "89125fc00ffdad073d6bee36bdcb6aa1b8c36d0a13771398ec989cc9d810fd92"
+  },
+  "build_budget": {
+    "initial_js_gzip_bytes": 187739,
+    "initial_js_requests": 6,
+    "total_js_bytes": 2045098,
+    "budgets": "passed"
+  },
+  "before": {
+    "environment": {
+      "browser": "151.0.7922.173",
+      "profiles": [
+        {
+          "name": "desktop",
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "cpu": 1,
+          "latency": 40,
+          "download": 1250000
+        },
+        {
+          "name": "mobile-lab",
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "cpu": 4,
+          "latency": 60,
+          "download": 400000
+        }
+      ],
+      "repetitions": 3,
+      "fixture": "isolated synthetic SQLite via native Pingora",
+      "note": "Lab samples and click-to-heading timings; not field p75 LCP/INP or a physical mobile benchmark."
+    },
+    "samples": [
+      {
+        "profile": "desktop",
+        "locale": "en",
+        "run": 1,
+        "cold": {
+          "lcp": 988,
+          "cls": 0.0002615188159079218,
+          "longTasks": 1,
+          "longTaskMs": 126,
+          "interactionMax": 0,
+          "fcp": 868,
+          "ready": 1126.3000000044703,
+          "jsBytes": 576170,
+          "jsRequests": 2
+        },
+        "scriptMs": 174.637,
+        "taskMs": 343.06399999999996,
+        "clientsMs": 51,
+        "settingsMs": 60,
+        "cachedClientsMs": 43,
+        "interactionMaxMs": 32,
+        "warmWorkspaceMs": 385.20000000298023,
+        "errors": 0
+      },
+      {
+        "profile": "desktop",
+        "locale": "en",
+        "run": 2,
+        "cold": {
+          "lcp": 904,
+          "cls": 0.0002615188159079218,
+          "longTasks": 1,
+          "longTaskMs": 91,
+          "interactionMax": 0,
+          "fcp": 804,
+          "ready": 1047.1000000014901,
+          "jsBytes": 576170,
+          "jsRequests": 2
+        },
+        "scriptMs": 126.73799999999999,
+        "taskMs": 260.378,
+        "clientsMs": 62,
+        "settingsMs": 62,
+        "cachedClientsMs": 41,
+        "interactionMaxMs": 32,
+        "warmWorkspaceMs": 373.79999999701977,
+        "errors": 0
+      },
+      {
+        "profile": "desktop",
+        "locale": "en",
+        "run": 3,
+        "cold": {
+          "lcp": 972,
+          "cls": 0.0002615188159079218,
+          "longTasks": 1,
+          "longTaskMs": 135,
+          "interactionMax": 0,
+          "fcp": 884,
+          "ready": 1106.6999999955297,
+          "jsBytes": 576170,
+          "jsRequests": 2
+        },
+        "scriptMs": 184.451,
+        "taskMs": 309.133,
+        "clientsMs": 47,
+        "settingsMs": 61,
+        "cachedClientsMs": 40,
+        "interactionMaxMs": 32,
+        "warmWorkspaceMs": 367.5,
+        "errors": 0
+      },
+      {
+        "profile": "desktop",
+        "locale": "tr",
+        "run": 1,
+        "cold": {
+          "lcp": 980,
+          "cls": 0.0002060129927019033,
+          "longTasks": 1,
+          "longTaskMs": 104,
+          "interactionMax": 0,
+          "fcp": 884,
+          "ready": 1117.2999999970198,
+          "jsBytes": 576170,
+          "jsRequests": 2
+        },
+        "scriptMs": 140.484,
+        "taskMs": 300.914,
+        "errors": 0
+      },
+      {
+        "profile": "desktop",
+        "locale": "tr",
+        "run": 2,
+        "cold": {
+          "lcp": 988,
+          "cls": 0.0002060129927019033,
+          "longTasks": 1,
+          "longTaskMs": 103,
+          "interactionMax": 0,
+          "fcp": 888,
+          "ready": 1134.7000000029802,
+          "jsBytes": 576170,
+          "jsRequests": 2
+        },
+        "scriptMs": 146.917,
+        "taskMs": 325.575,
+        "errors": 0
+      },
+      {
+        "profile": "desktop",
+        "locale": "tr",
+        "run": 3,
+        "cold": {
+          "lcp": 952,
+          "cls": 0.0002060129927019033,
+          "longTasks": 1,
+          "longTaskMs": 130,
+          "interactionMax": 0,
+          "fcp": 868,
+          "ready": 1094.8999999985099,
+          "jsBytes": 576170,
+          "jsRequests": 2
+        },
+        "scriptMs": 164.967,
+        "taskMs": 315.624,
+        "errors": 0
+      },
+      {
+        "profile": "mobile-lab",
+        "locale": "en",
+        "run": 1,
+        "cold": {
+          "lcp": 2632,
+          "cls": 0.0004871620652656568,
+          "longTasks": 3,
+          "longTaskMs": 562,
+          "interactionMax": 0,
+          "fcp": 2336,
+          "ready": 2888,
+          "jsBytes": 576170,
+          "jsRequests": 2
+        },
+        "scriptMs": 606.834,
+        "taskMs": 1045.025,
+        "clientsMs": 186,
+        "settingsMs": 175,
+        "cachedClientsMs": 132,
+        "interactionMaxMs": 64,
+        "warmWorkspaceMs": 797.5,
+        "errors": 0
+      },
+      {
+        "profile": "mobile-lab",
+        "locale": "en",
+        "run": 2,
+        "cold": {
+          "lcp": 2656,
+          "cls": 0.0004871620652656568,
+          "longTasks": 2,
+          "longTaskMs": 545,
+          "interactionMax": 0,
+          "fcp": 2384,
+          "ready": 2993.89999999851,
+          "jsBytes": 576170,
+          "jsRequests": 2
+        },
+        "scriptMs": 619.765,
+        "taskMs": 1134.216,
+        "clientsMs": 206,
+        "settingsMs": 153,
+        "cachedClientsMs": 149,
+        "interactionMaxMs": 216,
+        "warmWorkspaceMs": 1340,
+        "errors": 0
+      },
+      {
+        "profile": "mobile-lab",
+        "locale": "en",
+        "run": 3,
+        "cold": {
+          "lcp": 2872,
+          "cls": 0.0004871620652656568,
+          "longTasks": 4,
+          "longTaskMs": 792,
+          "interactionMax": 0,
+          "fcp": 2556,
+          "ready": 3121.4000000059605,
+          "jsBytes": 576170,
+          "jsRequests": 2
+        },
+        "scriptMs": 781.949,
+        "taskMs": 1268.829,
+        "clientsMs": 238,
+        "settingsMs": 236,
+        "cachedClientsMs": 160,
+        "interactionMaxMs": 72,
+        "warmWorkspaceMs": 1381.1999999955297,
+        "errors": 0
+      },
+      {
+        "profile": "mobile-lab",
+        "locale": "tr",
+        "run": 1,
+        "cold": {
+          "lcp": 2612,
+          "cls": 0.0004871620652656568,
+          "longTasks": 2,
+          "longTaskMs": 536,
+          "interactionMax": 0,
+          "fcp": 2336,
+          "ready": 2901,
+          "jsBytes": 576170,
+          "jsRequests": 2
+        },
+        "scriptMs": 581.5519999999999,
+        "taskMs": 1094.729,
+        "errors": 0
+      },
+      {
+        "profile": "mobile-lab",
+        "locale": "tr",
+        "run": 2,
+        "cold": {
+          "lcp": 2864,
+          "cls": 0.0004871620652656568,
+          "longTasks": 3,
+          "longTaskMs": 747,
+          "interactionMax": 0,
+          "fcp": 2536,
+          "ready": 3155.89999999851,
+          "jsBytes": 576170,
+          "jsRequests": 2
+        },
+        "scriptMs": 769.3449999999999,
+        "taskMs": 1317.0649999999998,
+        "errors": 0
+      },
+      {
+        "profile": "mobile-lab",
+        "locale": "tr",
+        "run": 3,
+        "cold": {
+          "lcp": 2724,
+          "cls": 0.0004871620652656568,
+          "longTasks": 3,
+          "longTaskMs": 668,
+          "interactionMax": 0,
+          "fcp": 2412,
+          "ready": 3002.2999999970198,
+          "jsBytes": 576170,
+          "jsRequests": 2
+        },
+        "scriptMs": 670.447,
+        "taskMs": 1147.988,
+        "errors": 0
+      }
+    ]
+  },
+  "after": {
+    "environment": {
+      "browser": "151.0.7922.173",
+      "profiles": [
+        {
+          "name": "desktop",
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "cpu": 1,
+          "latency": 40,
+          "download": 1250000
+        },
+        {
+          "name": "mobile-lab",
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "cpu": 4,
+          "latency": 60,
+          "download": 400000
+        }
+      ],
+      "repetitions": 3,
+      "fixture": "isolated synthetic SQLite via native Pingora",
+      "note": "Lab samples and click-to-heading timings; not field p75 LCP/INP or a physical mobile benchmark."
+    },
+    "samples": [
+      {
+        "profile": "desktop",
+        "locale": "en",
+        "run": 1,
+        "cold": {
+          "lcp": 628,
+          "cls": 0,
+          "longTasks": 1,
+          "longTaskMs": 55,
+          "interactionMax": 0,
+          "fcp": 304,
+          "ready": 681.3000000044703,
+          "jsBytes": 187270,
+          "jsRequests": 6
+        },
+        "scriptMs": 107.74499999999999,
+        "taskMs": 245.417,
+        "clientsMs": 67,
+        "settingsMs": 58,
+        "cachedClientsMs": 66,
+        "interactionMaxMs": 48,
+        "warmWorkspaceMs": 1059.3000000044703,
+        "errors": 0
+      },
+      {
+        "profile": "desktop",
+        "locale": "en",
+        "run": 2,
+        "cold": {
+          "lcp": 928,
+          "cls": 0,
+          "longTasks": 2,
+          "longTaskMs": 170,
+          "interactionMax": 0,
+          "fcp": 824,
+          "ready": 995.1999999955297,
+          "jsBytes": 187270,
+          "jsRequests": 6
+        },
+        "scriptMs": 184.18200000000002,
+        "taskMs": 497.171,
+        "clientsMs": 61,
+        "settingsMs": 59,
+        "cachedClientsMs": 42,
+        "interactionMaxMs": 48,
+        "warmWorkspaceMs": 950.6999999955297,
+        "errors": 0
+      },
+      {
+        "profile": "desktop",
+        "locale": "en",
+        "run": 3,
+        "cold": {
+          "lcp": 616,
+          "cls": 0,
+          "longTasks": 0,
+          "longTaskMs": 0,
+          "interactionMax": 0,
+          "fcp": 540,
+          "ready": 689.8999999985099,
+          "jsBytes": 187270,
+          "jsRequests": 6
+        },
+        "scriptMs": 102.935,
+        "taskMs": 274.106,
+        "clientsMs": 44,
+        "settingsMs": 61,
+        "cachedClientsMs": 43,
+        "interactionMaxMs": 56,
+        "warmWorkspaceMs": 939.3999999985099,
+        "errors": 0
+      },
+      {
+        "profile": "desktop",
+        "locale": "tr",
+        "run": 1,
+        "cold": {
+          "lcp": 692,
+          "cls": 0,
+          "longTasks": 0,
+          "longTaskMs": 0,
+          "interactionMax": 0,
+          "fcp": 280,
+          "ready": 788.7000000029802,
+          "jsBytes": 235922,
+          "jsRequests": 7
+        },
+        "scriptMs": 85.537,
+        "taskMs": 247.117,
+        "errors": 0
+      },
+      {
+        "profile": "desktop",
+        "locale": "tr",
+        "run": 2,
+        "cold": {
+          "lcp": 692,
+          "cls": 0,
+          "longTasks": 1,
+          "longTaskMs": 58,
+          "interactionMax": 0,
+          "fcp": 312,
+          "ready": 771.3999999985099,
+          "jsBytes": 235922,
+          "jsRequests": 7
+        },
+        "scriptMs": 110.25,
+        "taskMs": 260.15700000000004,
+        "errors": 0
+      },
+      {
+        "profile": "desktop",
+        "locale": "tr",
+        "run": 3,
+        "cold": {
+          "lcp": 676,
+          "cls": 0,
+          "longTasks": 0,
+          "longTaskMs": 0,
+          "interactionMax": 0,
+          "fcp": 324,
+          "ready": 766.3999999985099,
+          "jsBytes": 235922,
+          "jsRequests": 7
+        },
+        "scriptMs": 79.875,
+        "taskMs": 230.44899999999998,
+        "errors": 0
+      },
+      {
+        "profile": "mobile-lab",
+        "locale": "en",
+        "run": 1,
+        "cold": {
+          "lcp": 1304,
+          "cls": 0,
+          "longTasks": 2,
+          "longTaskMs": 186,
+          "interactionMax": 0,
+          "fcp": 1064,
+          "ready": 1433.5,
+          "jsBytes": 187270,
+          "jsRequests": 6
+        },
+        "scriptMs": 222.833,
+        "taskMs": 629.897,
+        "clientsMs": 181,
+        "settingsMs": 167,
+        "cachedClientsMs": 135,
+        "interactionMaxMs": 96,
+        "warmWorkspaceMs": 1254.8000000044703,
+        "errors": 0
+      },
+      {
+        "profile": "mobile-lab",
+        "locale": "en",
+        "run": 2,
+        "cold": {
+          "lcp": 1308,
+          "cls": 0,
+          "longTasks": 2,
+          "longTaskMs": 190,
+          "interactionMax": 0,
+          "fcp": 1128,
+          "ready": 1432.6000000014901,
+          "jsBytes": 187270,
+          "jsRequests": 6
+        },
+        "scriptMs": 245.917,
+        "taskMs": 695.01,
+        "clientsMs": 202,
+        "settingsMs": 221,
+        "cachedClientsMs": 132,
+        "interactionMaxMs": 96,
+        "warmWorkspaceMs": 1169.6000000014901,
+        "errors": 0
+      },
+      {
+        "profile": "mobile-lab",
+        "locale": "en",
+        "run": 3,
+        "cold": {
+          "lcp": 1276,
+          "cls": 0,
+          "longTasks": 2,
+          "longTaskMs": 179,
+          "interactionMax": 0,
+          "fcp": 496,
+          "ready": 1399.8999999985099,
+          "jsBytes": 187270,
+          "jsRequests": 6
+        },
+        "scriptMs": 223.572,
+        "taskMs": 635.7620000000001,
+        "clientsMs": 173,
+        "settingsMs": 198,
+        "cachedClientsMs": 126,
+        "interactionMaxMs": 80,
+        "warmWorkspaceMs": 1185.5,
+        "errors": 0
+      },
+      {
+        "profile": "mobile-lab",
+        "locale": "tr",
+        "run": 1,
+        "cold": {
+          "lcp": 1552,
+          "cls": 0,
+          "longTasks": 2,
+          "longTaskMs": 186,
+          "interactionMax": 0,
+          "fcp": 1360,
+          "ready": 1728,
+          "jsBytes": 235922,
+          "jsRequests": 7
+        },
+        "scriptMs": 242.09,
+        "taskMs": 792.811,
+        "errors": 0
+      },
+      {
+        "profile": "mobile-lab",
+        "locale": "tr",
+        "run": 2,
+        "cold": {
+          "lcp": 1588,
+          "cls": 0,
+          "longTasks": 2,
+          "longTaskMs": 204,
+          "interactionMax": 0,
+          "fcp": 1276,
+          "ready": 1765.5999999940395,
+          "jsBytes": 235922,
+          "jsRequests": 7
+        },
+        "scriptMs": 274.278,
+        "taskMs": 873.4699999999999,
+        "errors": 0
+      },
+      {
+        "profile": "mobile-lab",
+        "locale": "tr",
+        "run": 3,
+        "cold": {
+          "lcp": 1576,
+          "cls": 0,
+          "longTasks": 2,
+          "longTaskMs": 199,
+          "interactionMax": 0,
+          "fcp": 1264,
+          "ready": 1743.2000000029802,
+          "jsBytes": 235922,
+          "jsRequests": 7
+        },
+        "scriptMs": 271.372,
+        "taskMs": 733.306,
+        "errors": 0
+      }
+    ]
+  },
+  "formatting_microbenchmark": {
+    "environment": "Node 24.21.0, 2000 repeated currency + explicit-UTC date cells, five runs; synthetic formatting microbenchmark",
+    "before": [
+      175.650871,
+      215.47349300000002,
+      154.801291,
+      141.479875,
+      148.61670600000002
+    ],
+    "after": [
+      100.67190100000005,
+      10.338243999999918,
+      9.744884999999954,
+      10.441589000000022,
+      9.54123699999991
+    ]
+  }
+}

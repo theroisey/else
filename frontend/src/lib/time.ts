@@ -1,8 +1,8 @@
-import { currentLocale } from '../i18n/locale.ts'
+import { dateFormatter } from '../i18n/formatters.ts'
 export const deviceTimezone = () =>
   Intl.DateTimeFormat().resolvedOptions().timeZone
 export function formatTime(value: string, timezone = deviceTimezone()) {
-  return new Intl.DateTimeFormat(currentLocale(), {
+  return dateFormatter({
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: timezone,

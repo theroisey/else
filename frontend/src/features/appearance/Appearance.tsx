@@ -4,6 +4,12 @@ import { useAppearance } from './theme'
 import type { Appearance } from './theme'
 import { TextChoice } from '../../components/ui/TextChoice'
 
+// Keep browser-theme synchronization out of the route tree's render subscription.
+export function AppearanceSync() {
+  useAppearance()
+  return null
+}
+
 export function AppearanceControl({
   variant = 'select',
 }: {

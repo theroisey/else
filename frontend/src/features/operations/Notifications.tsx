@@ -1,5 +1,5 @@
 import { time } from './time'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { faBell } from '@fortawesome/free-solid-svg-icons'
@@ -37,6 +37,7 @@ const labels: Record<string, string> = {
 }
 export function NotificationControl() {
   useLocale()
+  const navigate = useNavigate()
   const op = useRecordOperations('operations')
   const actor = op.auth.session!.user.id
   const context = JSON.stringify(op.key)
@@ -82,7 +83,7 @@ export function NotificationControl() {
           notification.onclick = () => {
             if (!active) return
             window.focus()
-            window.location.assign('/app/notifications')
+            navigate('/app/notifications')
             notification?.close()
           }
         } catch {
@@ -96,7 +97,7 @@ export function NotificationControl() {
       active = false
       notification?.close()
     }
-  }, [actor, context, alerts.enabled, query.data])
+  }, [actor, context, alerts.enabled, query.data, navigate])
   return (
     <Link
       to="/app/notifications"
