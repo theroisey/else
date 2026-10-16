@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router'
@@ -7,6 +7,7 @@ import { App } from '../../app/App'
 import { createQueryClient } from '../../app/query-client'
 import type { Client } from './models'
 import type { Session } from '../auth/session'
+import { sessionKey } from '../auth/session'
 
 const id = '11111111-1111-4111-8111-111111111111'
 const other = '22222222-2222-4222-8222-222222222222'
@@ -63,9 +64,15 @@ function setup(
   const fetcher = vi.fn((url: string, init: RequestInit = {}) => {
     const custom = override(url, init)
     if (custom) return Promise.resolve(custom)
-    if (url.startsWith('/api/v1/notifications?') || url === '/api/v1/auth/preferences')
+    if (
+      url.startsWith('/api/v1/notifications?') ||
+      url === '/api/v1/auth/preferences'
+    )
       return Promise.resolve(json({ data: { locale: null } }))
-    if (url === '/api/v1/auth/refresh') return Promise.resolve(json({ error: { code: 'authentication_required' } }, 401))
+    if (url === '/api/v1/auth/refresh')
+      return Promise.resolve(
+        json({ error: { code: 'authentication_required' } }, 401),
+      )
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: session }))
     if (url.startsWith('/api/v1/clients?'))
@@ -127,7 +134,9 @@ it('denies wrong-client deep links before fetching with a scoped view grant', as
   expect(
     fetcher.mock.calls.every(
       ([path]) =>
-        path === '/api/v1/auth/session' || path.startsWith('/api/v1/notifications?') || path === '/api/v1/auth/preferences',
+        path === '/api/v1/auth/session' ||
+        path.startsWith('/api/v1/notifications?') ||
+        path === '/api/v1/auth/preferences',
     ),
   ).toBe(true)
   expect(
@@ -435,7 +444,7 @@ it('clears client queries and returns to sign-in when the real session expires',
 it('does not reuse a cached client list after grants shrink within the same identity', async () => {
   let reduced = false
   let reads = 0
-  setup('/app/clients', identity, (path) => {
+  const { cache } = setup('/app/clients', identity, (path) => {
     if (path === '/api/v1/auth/session')
       return json({
         data: reduced
@@ -471,17 +480,12 @@ it('does not reuse a cached client list after grants shrink within the same iden
     within(screen.getByRole('navigation', { name: 'Application' })).getByRole(
       'link',
       {
-        name: 'My access',
+        name: 'Portfolio',
       },
     ),
   )
   reduced = true
-  await u.click(await screen.findByRole('button', { name: 'Refresh access' }))
-  await waitFor(() =>
-    expect(
-      screen.getByRole('table', { name: 'Your effective permissions' }),
-    ).toHaveTextContent(id),
-  )
+  await act(() => cache.refetchQueries({ queryKey: sessionKey }))
   await u.click(
     within(screen.getByRole('navigation', { name: 'Application' })).getByRole(
       'link',

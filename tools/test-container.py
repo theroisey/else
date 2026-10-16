@@ -166,11 +166,15 @@ def run(args):
             assert gzip.decompress(theme) == (ROOT / "frontend/dist/assets/theme-init.js").read_bytes()
             for path, content_type in (("/app.webmanifest", "application/manifest+json; charset=utf-8"),
                                        ("/assets/roisey-else-app-v1.png", "image/png"),
-                                       ("/assets/roisey-else-app-v1.svg", "image/svg+xml")):
+                                       ("/assets/roisey-else-app-v1.svg", "image/svg+xml"),
+                                       ("/apple-touch-icon.png", "image/png"),
+                                       *((f"/assets/roisey-else-app-{size}-v2.png", "image/png") for size in (152, 167, 192, 512))):
                 mobile_asset, mobile_headers = request(path)
                 assert mobile_asset == (ROOT / "frontend/public" / path.lstrip("/")).read_bytes()
                 assert mobile_headers["Content-Type"] == content_type
                 assert mobile_headers["Cache-Control"] == "no-cache"
+            fallback, _ = request("/apple-touch-icon-precomposed.png")
+            assert fallback == (ROOT / "frontend/public/apple-touch-icon.png").read_bytes()
             request("/assets/missing.js", expected=404)
             request("/%2e%2e/private", expected=404)
             request("/api/v1/releases", expected=404)

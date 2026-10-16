@@ -63,7 +63,7 @@ describe('cookie session UI', () => {
           }),
       ),
     )
-    renderApp('/app/access')
+    renderApp('/app/portfolio')
     expect(screen.getByRole('status')).toHaveTextContent(
       'Checking your session',
     )
@@ -124,7 +124,7 @@ describe('cookie session UI', () => {
       .mockResolvedValueOnce(unauthorized())
       .mockResolvedValue(json(200, { data: identity }))
     vi.stubGlobal('fetch', fetchMock)
-    renderApp('/app/access')
+    const client = renderApp('/app/portfolio')
     await screen.findByRole('heading', { name: 'Sign in' })
     const user = userEvent.setup()
     await user.type(screen.getByLabelText('Email'), identity.user.email)
@@ -134,23 +134,16 @@ describe('cookie session UI', () => {
     )
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
     expect(
-      await screen.findByRole('heading', { name: 'My access' }),
+      await screen.findByRole('heading', { name: 'Operations workspace' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('table')).toHaveTextContent('clients.view')
+    expect(client.getQueryData(sessionKey)).toMatchObject({ session: identity })
     expect(screen.queryByText('roles.manage')).not.toBeInTheDocument()
     const navigation = within(
       screen.getByRole('navigation', { name: 'Application' }),
     )
     expect(
       navigation.getAllByRole('link').map((link) => link.textContent),
-    ).toEqual([
-      'Today',
-      'Notifications',
-      'Settings',
-      'Clients',
-      'Portfolio',
-      'My access',
-    ])
+    ).toEqual(['Today', 'Notifications', 'Settings', 'Clients', 'Portfolio'])
     expect(screen.getByRole('link', { name: 'Clients' })).toBeInTheDocument()
   })
 
@@ -243,12 +236,10 @@ describe('cookie session UI', () => {
   it('drops stale identity and grants on a later 401, then recovers through login', async () => {
     const fetchMock = vi.fn().mockResolvedValue(json(200, { data: identity }))
     vi.stubGlobal('fetch', fetchMock)
-    const client = renderApp('/app/access')
-    await screen.findByRole('table')
+    const client = renderApp('/app/portfolio')
+    await screen.findByRole('heading', { name: 'Operations workspace' })
     fetchMock.mockResolvedValue(unauthorized())
-    await userEvent
-      .setup()
-      .click(screen.getByRole('button', { name: 'Refresh access' }))
+    await act(() => client.refetchQueries({ queryKey: sessionKey }))
     expect(
       await screen.findByRole('heading', { name: 'Sign in' }),
     ).toBeInTheDocument()
@@ -267,7 +258,15 @@ describe('cookie session UI', () => {
     }
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation((path: string) => Promise.resolve(path === '/api/v1/auth/refresh' ? unauthorized() : json(200, { data: nearExpiry }))),
+      vi
+        .fn()
+        .mockImplementation((path: string) =>
+          Promise.resolve(
+            path === '/api/v1/auth/refresh'
+              ? unauthorized()
+              : json(200, { data: nearExpiry }),
+          ),
+        ),
     )
     renderApp()
     await screen.findByRole('heading', { name: 'Operations workspace' })
@@ -284,13 +283,11 @@ describe('cookie session UI', () => {
   it('hides cached private content when a later identity lookup fails', async () => {
     const fetchMock = vi.fn().mockResolvedValue(json(200, { data: identity }))
     vi.stubGlobal('fetch', fetchMock)
-    const client = renderApp('/app/access')
-    await screen.findByRole('table')
+    const client = renderApp('/app/portfolio')
+    await screen.findByRole('heading', { name: 'Operations workspace' })
     client.setQueryData(['private', 'fixture'], 'private fixture')
     fetchMock.mockRejectedValue(new Error('unsafe-test-detail'))
-    await userEvent
-      .setup()
-      .click(screen.getByRole('button', { name: 'Refresh access' }))
+    await act(() => client.refetchQueries({ queryKey: sessionKey }))
     expect(
       await screen.findByRole('heading', { name: 'Session check unavailable' }),
     ).toBeInTheDocument()
@@ -308,9 +305,11 @@ describe('cookie session UI', () => {
         }),
       ),
     )
-    renderApp('/app/access')
+    renderApp('/app/portfolio')
     expect(
-      await screen.findByRole('heading', { name: 'No permissions assigned' }),
+      await screen.findByRole('heading', {
+        name: 'Client access is not assigned',
+      }),
     ).toBeInTheDocument()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })

@@ -11,11 +11,10 @@ import { RolesPage } from '../features/administration/RolesPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { ApplicationShell } from '../features/shell/ApplicationShell'
 import { WorkspacePage } from '../features/shell/WorkspacePage'
-import { AccessPage } from '../features/shell/AccessPage'
 import { ClientRoute } from '../features/clients/ClientRoute'
 import { PaymentRecoveryBoundary } from '../features/billing/PaymentRecovery'
 import { CopyRecoveryBoundary } from '../features/pricing/CopyRecovery'
-import { NavigationTransitions } from '../features/shell/NavigationTransitions'
+import { NavigationFocus } from '../features/shell/NavigationFocus'
 
 const RecurringPage = lazy(() =>
   import('../features/operations/RecurringPage').then((m) => ({
@@ -227,13 +226,13 @@ function AuthArea() {
   useLocale()
   return (
     <AuthProvider>
-      <NavigationTransitions>
+      <NavigationFocus>
         <PaymentRecoveryBoundary>
           <CopyRecoveryBoundary>
             <Outlet />
           </CopyRecoveryBoundary>
         </PaymentRecoveryBoundary>
-      </NavigationTransitions>
+      </NavigationFocus>
     </AuthProvider>
   )
 }
@@ -386,7 +385,7 @@ export function App() {
                 </ClientRoute>
               }
             />
-            <Route path="access" element={<AccessPage />} />
+            <Route path="access" element={<Navigate to="/app" replace />} />
             <Route
               path="audit"
               element={

@@ -74,7 +74,6 @@ export const destinations: readonly Destination[] = [
   },
   { path: '/app/portfolio', label: 'Portfolio', icon: faBuilding },
   { path: '/app/settings', label: 'Settings', icon: faShieldHalved },
-  { path: '/app/access', label: 'My access', icon: faShieldHalved },
   {
     path: '/app/clients',
     label: 'Clients',

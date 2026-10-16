@@ -18,6 +18,16 @@ async function signIn(page: Page) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
 }
 
+// Exercise the existing reconnect refresh in foreground and background tabs.
+async function reconnectSession(page: Page) {
+  const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/auth/session' && response.request().method() === 'GET')
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('offline'))
+    window.dispatchEvent(new Event('online'))
+  })
+  await refreshed
+}
+
 async function markSyntheticScreenshot(page: Page) {
   await page.evaluate(() => {
     document.querySelector('[data-synthetic-verification]')?.remove()
@@ -46,7 +56,7 @@ async function markTaskScreenshot(page: Page) {
 }
 
 test('real login, cookie security, responsive keyboard navigation and CSRF logout', async ({ page, context }, testInfo) => {
-  await page.goto('/app/access')
+  await page.goto('/app/portfolio')
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('login.png'), fullPage: true })
   await page.getByLabel('Email', { exact: true }).fill('browser.fixture@example.com')
@@ -55,9 +65,11 @@ test('real login, cookie security, responsive keyboard navigation and CSRF logou
   await expect(page.getByRole('alert')).toHaveText('Email or password is incorrect.')
   await expect(page.getByLabel('Password', { exact: true })).toHaveValue('')
   await signIn(page)
-  await expect(page).toHaveURL(/\/app\/access$/)
-  await expect(page.getByRole('table')).toContainText('clients.view')
-  await expect(page.getByRole('table')).not.toContainText('roles.manage')
+  await expect(page).toHaveURL(/\/app\/portfolio$/)
+  await expect(page.getByRole('heading', { name: 'Operations workspace', exact: true })).toBeVisible()
+  await expect(page.locator('a[href="/app/access"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/app/clients"]')).not.toHaveCount(0)
+  await expect(page.locator('a[href="/app/roles"]')).toHaveCount(0)
   const cookies = await context.cookies()
   const flags = cookies.map(({ name, httpOnly, sameSite, path }) => ({ name, httpOnly, sameSite, path }))
   expect(flags.find((cookie) => cookie.name === 'else_session')).toMatchObject({ httpOnly: true, sameSite: 'Strict', path: '/' })
@@ -86,20 +98,20 @@ test('real login, cookie security, responsive keyboard navigation and CSRF logou
 })
 
 test('refresh tokens renew expired access across tabs, rotate cookies and deny replay', async ({ page, context }) => {
-  await page.goto('/app/access')
+  await page.goto('/app/portfolio')
   await signIn(page)
-  await expect(page.getByRole('table')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Operations workspace', exact: true })).toBeVisible()
   const original = await context.cookies()
   const deadline = database("SELECT max(expires_at) FROM session_refresh_tokens")
   const csrf = original.find(c => c.name === 'else_csrf')!.value
   const refresh = original.find(c => c.name === 'else_refresh')!
   const sibling = await context.newPage()
-  await sibling.goto('/app/access')
-  await expect(sibling.getByRole('table')).toBeVisible()
+  await sibling.goto('/app/portfolio')
+  await expect(sibling.getByRole('heading', { name: 'Operations workspace', exact: true })).toBeVisible()
   database("UPDATE sessions SET created_at=utc_shift(-60), expires_at=utc_shift(-1) WHERE revoked_at IS NULL")
-  await Promise.all([page.getByRole('button', { name: 'Refresh access', exact: true }).click(), sibling.getByRole('button', { name: 'Refresh access', exact: true }).click()])
-  await expect(page.getByRole('table')).toBeVisible()
-  await expect(sibling.getByRole('table')).toBeVisible()
+  await Promise.all([reconnectSession(page), reconnectSession(sibling)])
+  await expect(page.getByRole('heading', { name: 'Operations workspace', exact: true })).toBeVisible()
+  await expect(sibling.getByRole('heading', { name: 'Operations workspace', exact: true })).toBeVisible()
   await expect.poll(async () => (await context.cookies()).find(c => c.name === 'else_refresh')!.value).not.toBe(refresh.value)
   const renewed = await context.cookies()
   expect(Math.abs(renewed.find(c => c.name === 'else_refresh')!.expires - refresh.expires)).toBeLessThan(2)
@@ -108,7 +120,7 @@ test('refresh tokens renew expired access across tabs, rotate cookies and deny r
   expect(await page.evaluate(() => document.cookie.includes('else_refresh='))).toBe(false)
   const replay = await context.request.post('/api/v1/auth/refresh', { headers: { Cookie: `else_refresh=${refresh.value}; else_csrf=${csrf}`, Origin: new URL(page.url()).origin, 'X-CSRF-Token': csrf }, data: {} })
   expect(replay.status()).toBe(401)
-  await page.getByRole('button', { name: 'Refresh access', exact: true }).click()
+  await reconnectSession(page)
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
   await expect(page.getByRole('table')).toHaveCount(0)
   await sibling.close()
@@ -117,15 +129,15 @@ test('refresh tokens renew expired access across tabs, rotate cookies and deny r
 test('revoked backend grants disappear on refresh without adding placeholder destinations', async ({ page }) => {
   const createdBefore = BigInt(database("SELECT count(*) FROM audit_events WHERE event_name='session.created'"))
   const archivedBefore = BigInt(database("SELECT count(*) FROM audit_events WHERE event_name='session.archived'"))
-  await page.goto('/app/access')
+  await page.goto('/app/portfolio')
   await signIn(page)
-  await expect(page.getByRole('table')).toContainText('clients.view')
+  await expect(page.getByRole('heading', { name: 'Client portfolio', exact: true })).toBeVisible()
   database("UPDATE user_roles SET revoked_at=utc_now() WHERE id='33333333-3333-4333-8333-333333333333'")
-  await page.getByRole('button', { name: 'Refresh access', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'No permissions assigned', exact: true })).toBeVisible()
+  await reconnectSession(page)
+  await expect(page.getByRole('heading', { name: 'Client access is not assigned', exact: true })).toBeVisible()
   await expect(page.getByRole('table')).toHaveCount(0)
   const links = page.getByRole('navigation', { name: 'Application', exact: true }).getByRole('link')
-  await expect(links).toHaveText(['Today', 'Notifications', 'Settings', 'Portfolio', 'My access'])
+  await expect(links).toHaveText(['Today', 'Notifications', 'Settings', 'Portfolio'])
   await page.getByLabel('Account', { exact: true }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
@@ -211,11 +223,11 @@ test('administration creates and updates accounts, manages scoped roles and revo
   const managedContext = await browser.newContext()
   try {
     const managed = await managedContext.newPage()
-    await managed.goto(new URL('/app/access', page.url()).href)
+    await managed.goto(new URL('/app/portfolio', page.url()).href)
     await managed.getByLabel('Email', { exact: true }).fill('managed.fixture@example.com')
     await managed.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
     await managed.getByRole('button', { name: 'Sign in', exact: true }).click()
-    await expect(managed.getByRole('heading', { name: 'No permissions assigned', exact: true })).toBeVisible()
+    await expect(managed.getByRole('heading', { name: 'Client access is not assigned', exact: true })).toBeVisible()
     await managed.goto(new URL('/app/users', page.url()).href)
     await expect(managed.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Disable Managed Updated Fixture', exact: true }).click()
@@ -750,9 +762,9 @@ test('reminders preserve explicit timezone intent, historical references and imm
   await expect(page.getByRole('heading', { name: 'Synthetic overlap updated', exact: true })).toBeVisible()
   expect(database(`SELECT scheduled_at FROM reminders WHERE id='${recordID}'`)).toBe('2026-11-01T05:30:00.123456Z')
   database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${roleID}' AND permission_key IN ('tasks.view','planning.view'); UPDATE tasks SET archived_at=utc_now(),revision=revision+1,updated_at=utc_now() WHERE id='${taskID}'`)
-  await page.goto('/app/access')
-  await page.getByRole('button', { name: 'Refresh access', exact: true }).click()
-  await expect(page.getByRole('table')).not.toContainText('tasks.view')
+  await page.goto('/app/portfolio')
+  await reconnectSession(page)
+  expect((await (await page.request.get('/api/v1/auth/session')).json()).data.user.permissions.every((grant: { permission: string }) => grant.permission !== 'tasks.view')).toBe(true)
   const privateReads: string[] = []
   page.on('request', request => { const url=new URL(request.url()).pathname; if (url.endsWith('/tasks') || url.includes('/plans')) privateReads.push(url) })
   await page.goto(`${path}/${recordID}/edit`)
@@ -915,9 +927,9 @@ test('activity reads confirmed business events, paginates, refreshes and obeys c
   expect(reads.every(url => url === `/api/v1/clients/${clientID}/activity` || (url === '/api/v1/auth/session' || url === '/api/v1/auth/preferences' || url === '/api/v1/notifications'))).toBe(true)
 
   database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${roleID}' AND permission_key IN ('tasks.view','tasks.create','clients.update','clients.archive')`)
-  await page.goto('/app/access')
-  await page.getByRole('button', { name: 'Refresh access', exact: true }).click()
-  await expect(page.getByRole('cell', { name: 'tasks.view', exact: true })).toHaveCount(0)
+  await page.goto('/app/portfolio')
+  await reconnectSession(page)
+  await expect(page.locator('a[href="/app/tasks"]')).toHaveCount(0)
   await page.goto(path)
   await expect(feed.getByRole('listitem').first()).toContainText('Client archived.')
   await expect(feed).not.toContainText('Task created.')
@@ -1114,12 +1126,12 @@ test('pricing retains exact versions and immutable collections through lost-resp
   database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key='pricing.manage'`)
   await page.getByRole('button',{name:'Refresh agreement',exact:true}).click()
   // Session refresh explicitly updates the actor/grant query partition.
-  await page.goto('/app/access');await page.getByRole('button',{name:'Refresh access',exact:true}).click();await page.goto(path+'/'+sheet)
+  await page.goto('/app/portfolio');await reconnectSession(page);await page.goto(path+'/'+sheet)
   await expect(page.getByRole('heading',{name:'Pricing agreement',exact:true})).toBeVisible()
   await expect(page.getByText(/Internal aggregate cost/)).toHaveCount(0)
   await expect(page.getByRole('link',{name:'Create new version',exact:true})).toHaveCount(0)
   database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key='pricing.view'`)
-  await page.goto('/app/access');await page.getByRole('button',{name:'Refresh access',exact:true}).click();await page.goto(financial)
+  await page.goto('/app/portfolio');await reconnectSession(page);await page.goto(financial)
   await expect(page.getByRole('heading',{name:'Copied pricing terms',exact:true})).toBeVisible()
   await expect(page.getByRole('link',{name:'Open retained pricing version',exact:true})).toHaveCount(0)
   await expect(page.getByText('Synthetic private pricing note',{exact:true})).toHaveCount(0)

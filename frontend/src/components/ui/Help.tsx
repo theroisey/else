@@ -100,7 +100,7 @@ export function SectionHelp() {
                         ? 'notifications'
                         : pathname.includes('/audit')
                           ? 'audit'
-                          : /\/(users|roles|access)(\/|$)/.test(pathname)
+                          : /\/(users|roles)(\/|$)/.test(pathname)
                             ? 'access'
                             : /\/(analytics|commerce|marketing|integrations)(\/|$)/.test(
                                   pathname,

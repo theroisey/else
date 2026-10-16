@@ -19,7 +19,7 @@ try {
   attacker = createServer((request, response) => {
     if (request.url === '/frame') {
       response.setHeader('Content-Type', 'text/html')
-      response.end(`<iframe src="${origin.origin}/app/access"></iframe>`)
+      response.end(`<iframe src="${origin.origin}/app/portfolio"></iframe>`)
     } else {
       attackRequests += 1
       response.setHeader('Content-Type', 'application/javascript')
@@ -50,7 +50,7 @@ try {
     })
   })
   stage = 'built sign-in rendering'
-  await page.goto(`${origin.origin}/app/access`)
+  await page.goto(`${origin.origin}/app/portfolio`)
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
   stage = 'bundled icon CSS'
   await expect(page.locator('svg.svg-inline--fa').first()).toBeVisible()
@@ -63,61 +63,58 @@ try {
   assert.equal(iconStyle.height, iconStyle.fontSize)
   assert.equal(iconStyle.verticalAlign, -0.125 * iconStyle.fontSize)
   stage = 'mobile app icon metadata'
-  const mobileIconPath = '/assets/roisey-else-app-v1.png'
-  assert.equal(await page.locator('link[rel="apple-touch-icon"]').getAttribute('href'), mobileIconPath)
-  assert.equal(await page.locator('link[rel="apple-touch-icon"]').getAttribute('sizes'), '2048x2048')
+  const appleIcons = [[152, '/assets/roisey-else-app-152-v2.png'], [167, '/assets/roisey-else-app-167-v2.png'], [180, '/apple-touch-icon.png?v=2']]
   assert.equal(await page.locator('meta[name="apple-mobile-web-app-capable"]').getAttribute('content'), 'yes')
-  assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'), '/app.webmanifest')
+  for (const [size, path] of appleIcons) {
+    assert.equal(await page.locator(`link[rel="apple-touch-icon"][sizes="${size}x${size}"]`).getAttribute('href'), path)
+  }
+  assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'), '/app.webmanifest?v=2')
   stage = 'mobile manifest response'
-  const manifestResponse = await page.request.get(origin.origin + '/app.webmanifest')
+  const manifestResponse = await page.request.get(origin.origin + '/app.webmanifest?v=2')
   assert.equal(manifestResponse.status(), 200)
   assert.equal(manifestResponse.headers()['content-type'], 'application/manifest+json; charset=utf-8')
   assert.equal(manifestResponse.headers()['cache-control'], 'no-cache')
-  stage = 'mobile manifest contents'
   const manifest = await manifestResponse.json()
   assert.equal(manifest.id, '/app')
   assert.equal(manifest.start_url, '/app')
   assert.equal(manifest.scope, '/')
   assert.equal(manifest.display, 'standalone')
-  assert.deepEqual(manifest.icons, [{ src: '/assets/roisey-else-app-v1.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }])
-  stage = 'mobile icon original bytes'
-  const iconResponse = await page.request.get(origin.origin + mobileIconPath)
-  assert.equal(iconResponse.status(), 200)
-  assert.equal(iconResponse.headers()['content-type'], 'image/png')
-  assert.deepEqual(await iconResponse.body(), readFileSync(new URL('../public/assets/roisey-else-app-v1.png', import.meta.url)))
-  const scalableResponse = await page.request.get(origin.origin + '/assets/roisey-else-app-v1.svg')
-  assert.equal(scalableResponse.status(), 200)
-  assert.equal(scalableResponse.headers()['content-type'], 'image/svg+xml')
-  const embeddedPNG = (await scalableResponse.text()).match(/href="data:image\/png;base64,([A-Za-z0-9+/=]+)"/)
-  assert.ok(embeddedPNG)
-  assert.deepEqual(Buffer.from(embeddedPNG[1], 'base64'), await iconResponse.body())
-  stage = 'mobile icon browser decoding'
-  assert.deepEqual(await page.evaluate(async (path) => {
-    const image = new Image()
-    image.src = path
-    await image.decode()
-    return [image.naturalWidth, image.naturalHeight]
-  }, mobileIconPath), [2048, 2048])
-  assert.deepEqual(await page.evaluate(async () => {
-    const image = new Image()
-    image.src = '/assets/roisey-else-app-v1.svg'
-    await image.decode()
-    const canvas = document.createElement('canvas')
-    canvas.width = canvas.height = 512
-    const context = canvas.getContext('2d')
-    context.drawImage(image, 0, 0)
-    const pixels = context.getImageData(0, 0, 512, 512).data
-    let whitePixels = 0
-    for (let i = 0; i < pixels.length; i += 4) {
-      if (pixels[i] > 240 && pixels[i + 1] > 240 && pixels[i + 2] > 240 && pixels[i + 3] === 255) whitePixels += 1
-    }
-    return { width: image.naturalWidth, height: image.naturalHeight, artworkVisible: whitePixels > 1000 }
-  }), { width: 512, height: 512, artworkVisible: true })
+  assert.deepEqual(manifest.icons, [192, 512].map(size => ({ src: `/assets/roisey-else-app-${size}-v2.png`, sizes: `${size}x${size}`, type: 'image/png', purpose: 'any' })))
+  stage = 'platform PNG icon delivery and decoding'
+  for (const [size, path] of [...appleIcons, ...manifest.icons.map(icon => [Number(icon.sizes.split('x')[0]), icon.src])]) {
+    const response = await page.request.get(origin.origin + path)
+    assert.equal(response.status(), 200)
+    assert.equal(response.headers()['content-type'], 'image/png')
+    const body = await response.body()
+    assert.deepEqual(body, readFileSync(new URL(`../public${path.split('?')[0]}`, import.meta.url)))
+    assert.equal(body.readUInt32BE(16), size)
+    assert.equal(body.readUInt32BE(20), size)
+    assert.equal(await page.evaluate(async ({ path, size }) => {
+      const image = new Image()
+      image.src = path
+      await image.decode()
+      const canvas = document.createElement('canvas')
+      canvas.width = canvas.height = size
+      const context = canvas.getContext('2d')
+      context.drawImage(image, 0, 0)
+      const pixels = context.getImageData(0, 0, size, size).data
+      let white = 0
+      for (let i = 0; i < pixels.length; i += 4) {
+        if (pixels[i] > 240 && pixels[i + 1] > 240 && pixels[i + 2] > 240 && pixels[i + 3] === 255) white++
+      }
+      return image.naturalWidth === size && image.naturalHeight === size && white > size * size / 100 && pixels[3] === 255
+    }, { path, size }), true)
+  }
+  for (const fallback of ['/apple-touch-icon.png', '/apple-touch-icon-precomposed.png']) {
+    const response = await page.request.get(origin.origin + fallback)
+    assert.equal(response.status(), 200)
+    assert.deepEqual(await response.body(), readFileSync(new URL('../public/apple-touch-icon.png', import.meta.url)))
+  }
   const devtools = await page.context().newCDPSession(page)
   try {
     stage = 'native mobile manifest parsing'
     const parsed = await devtools.send('Page.getAppManifest')
-    assert.equal(parsed.url, origin.origin + '/app.webmanifest')
+    assert.equal(parsed.url, origin.origin + '/app.webmanifest?v=2')
     assert.deepEqual(parsed.errors, [])
     stage = 'native mobile icon suitability'
     const { installabilityErrors } = await devtools.send('Page.getInstallabilityErrors')

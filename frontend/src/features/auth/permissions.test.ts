@@ -139,7 +139,7 @@ describe('effective permissions', () => {
   })
 
   it('allows only implemented internal return destinations', () => {
-    expect(safeReturnTo('/app/access')).toBe('/app/access')
+    expect(safeReturnTo('/app/access')).toBe('/app')
     for (const value of [
       'https://invalid.example',
       '//invalid.example',

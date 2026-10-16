@@ -1,7 +1,7 @@
 import { copy, useLocale } from '../../i18n/index'
 import { LanguageControl } from '../../i18n/LanguageControl'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowRightFromBracket,
@@ -83,15 +83,6 @@ export function AccountMenu() {
         <p className="break-all text-sm text-muted">
           {`${auth.session?.user.display_name} · ${auth.session?.user.email}`}
         </p>
-        <Link
-          className="min-h-8 py-1 font-semibold underline underline-offset-4"
-          to="/app/access"
-          onClick={(event) => {
-            event.currentTarget.closest('details')?.removeAttribute('open')
-          }}
-        >
-          {copy('My access', 'common')}
-        </Link>
         <AppearanceControl />
         <LanguageControl />
         <Button

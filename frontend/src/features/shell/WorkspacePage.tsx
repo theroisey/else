@@ -73,7 +73,7 @@ export function WorkspacePage() {
               </h2>
               <p className="mt-3 text-muted">
                 {copy(
-                  'Review your effective permissions or contact your administrator for the access you need.',
+                  'Your session is active. Ask an administrator if you need access to additional capabilities.',
                   'common',
                 )}
               </p>
@@ -128,12 +128,6 @@ export function WorkspacePage() {
           <p className="mt-2 text-xs text-muted">
             {copy('Shown in your device’s timezone.', 'common')}
           </p>
-          <Link
-            className="mt-6 block text-xs underline underline-offset-4"
-            to="/app/access"
-          >
-            {copy('Review my access', 'common')}
-          </Link>
           <p className="mt-6 border-t border-line pt-5 text-xs leading-6 text-muted">
             {copy(
               'Navigation reflects your effective access. Every protected operation is verified by the server.',

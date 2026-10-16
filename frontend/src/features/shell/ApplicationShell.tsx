@@ -18,7 +18,6 @@ export function ApplicationShell() {
   const navigation = visibleDestinations(auth.session?.user.permissions ?? [])
   const advancedPaths = [
     '/app/portfolio',
-    '/app/access',
     '/app/users',
     '/app/roles',
     '/app/audit',

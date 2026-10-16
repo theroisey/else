@@ -187,7 +187,7 @@
   .client-navigation { @apply flex max-w-full flex-wrap gap-x-4 border-b border-line sm:gap-x-6; }
   .client-tab { @apply relative inline-flex min-h-11 shrink-0 items-center border-b-2 border-transparent pb-3 pt-1 text-xs font-medium text-muted transition-colors duration-150 hover:text-ink; }
   .client-tab.is-active { @apply border-accent text-ink; }
-  .client-more-sections { @apply flex flex-wrap gap-x-5 border-b border-line py-2; animation: workspace-entry 140ms ease-out; }
+  .client-more-sections { @apply flex flex-wrap gap-x-5 border-b border-line py-2; }
   .client-section-link { @apply inline-flex min-h-11 items-center text-sm text-muted underline-offset-8 transition-colors duration-150 hover:text-ink; }
   .client-section-link.is-active { @apply font-semibold text-ink underline; }
   .client-more-chevron { @apply text-[0.5rem]; transition: transform 140ms ease; }
@@ -291,12 +291,6 @@
     .appearance-option { padding: .5rem; }
   }
 }
-@keyframes dialog-entry { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes drawer-entry { from { opacity: 0; } to { opacity: 1; } }
-@layer components {
-  .ui-dialog[open] { animation: dialog-entry 150ms ease-out; }
-  .ui-dialog.drawer[open] { animation: drawer-entry 160ms ease-out; }
-}
 
 /* Row operations stay on one line inside a scrollable ledger. Detail actions can wrap. */
 .ui-table .record-actions { flex-wrap: nowrap; white-space: nowrap; }
@@ -339,15 +333,10 @@
 }
 
 /* Quiet, bounded motion shares the reduced-motion override above. */
-@keyframes workspace-entry { from { opacity: 0; } to { opacity: 1; } }
 @keyframes loading-breathe { 0%, 100% { opacity: .3; } 50% { opacity: .85; } }
 @keyframes loading-entry { from { opacity: 0; } to { opacity: 1; } }
-@keyframes panel-entry { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
 @layer components {
-  .workspace-main > section { animation: workspace-entry 160ms ease-out; }
-  .account-popup, details[open] > .sidebar-link { animation: panel-entry 140ms ease-out; }
   .sidebar-link::before { transition: background-color 140ms ease; }
-  .ui-button:not(:disabled):active { opacity: .85; }
   .ui-button { position: relative; }
   .button-progress { position: absolute; inset: auto .5rem 3px; height: 2px; overflow: hidden; opacity: 0; transition: opacity 160ms ease; pointer-events: none; }
   .button-progress > span { display: block; height: 100%; background: currentColor; }

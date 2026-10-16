@@ -81,7 +81,7 @@ test('refinement: browser permission is explicit, new private updates deliver on
   await expect(page.getByText('Browser alerts are enabled for this account on this browser.', { exact: true })).toBeVisible()
   const senderContext = await browser.newContext()
   const senderPage = await senderContext.newPage()
-  await login(senderPage, 'refinement.sender.fixture@example.com', '/app/access')
+  await login(senderPage, 'refinement.sender.fixture@example.com', '/app/portfolio')
   const result = await senderPage.evaluate(async (brand) => {
     const csrf = document.cookie.split('; ').find(c => c.startsWith('else_csrf='))!.slice(10)
     const response = await fetch(`/api/v1/clients/${brand}/requests`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: JSON.stringify({ command_id: crypto.randomUUID(), website_id: null, brand_wide: true, title: 'Synthetic private request title', description: 'Synthetic private description never allowed on a lock screen', category: 'bug', priority: 'normal', reference_url: '', evidence_ids: [] }) })
@@ -100,7 +100,7 @@ test('refinement: browser permission is explicit, new private updates deliver on
   await senderContext.close()
 })
 
-test('refinement: navigation fades out and in, restores focus and respects reduced motion', async ({
+test('refinement: navigation is immediate, restores focus and limits fades to loading', async ({
   page,
 }) => {
   await login(page)
@@ -116,10 +116,19 @@ test('refinement: navigation fades out and in, restores focus and respects reduc
     }
     Object.assign(window, { syntheticTransitions: frames })
   })
+  let releaseLoading: () => void = () => {}
+  const loading = new Promise<void>((resolve) => { releaseLoading = resolve })
+  await page.route('**/api/v1/clients?*', async (route) => {
+    await loading
+    await route.continue()
+  })
   await page
     .getByRole('navigation', { name: 'Application', exact: true })
     .getByRole('link', { name: 'Clients', exact: true })
     .click()
+  await expect(page.locator('.page-skeleton')).toBeVisible()
+  expect(await page.locator('.skeleton').first().evaluate(el => getComputedStyle(el).animationName)).toBe('loading-breathe')
+  releaseLoading()
   await expect(
     page.getByRole('heading', { name: 'Clients', exact: true }),
   ).toBeVisible()
@@ -131,10 +140,8 @@ test('refinement: navigation fades out and in, restores focus and respects reduc
         frames.map((frame) => Number(frame.opacity)),
       ),
     ),
-  ).toEqual([
-    [1, 0],
-    [0, 1],
-  ])
+  ).toEqual([])
+  expect(await page.locator('.workspace-main > section').evaluate(el => getComputedStyle(el).animationName)).toBe('none')
   await expect(page.locator('#workspace-content')).toBeFocused()
   await expect(page.locator('#workspace-content')).not.toHaveAttribute('inert')
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -151,5 +158,9 @@ test('refinement: navigation fades out and in, restores focus and respects reduc
         (window as unknown as { syntheticTransitions: unknown[] })
           .syntheticTransitions.length,
     ),
-  ).toBe(2)
+  ).toBe(0)
+  await page.goto('/app/access')
+  await expect(page).toHaveURL(/\/app$/)
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible()
+  await expect(page.locator('a[href="/app/access"]')).toHaveCount(0)
 })

@@ -4,6 +4,7 @@ import { z } from '../../lib/validation'
 import { authenticatedJSON } from '../../services/authenticated'
 import { Button, TextField, PageSkeleton } from '../../components/ui'
 import { copy, useLocale } from '../../i18n'
+import { LanguageSettings } from '../../i18n/LanguageControl'
 import { AppearanceSettings } from '../appearance/Appearance'
 import { BrowserAlerts } from './BrowserAlerts'
 import { hasPermission } from '../auth/permissions'
@@ -38,6 +39,7 @@ export function SettingsPage() {
     <section>
       <OperationsHeader title={copy('Settings', 'common')} />
       <AppearanceSettings />
+      <LanguageSettings />
       <BrowserAlerts />
       {preferences.isPending ? (
         <PageSkeleton label={copy('Loading preferences…', 'operations')} />

@@ -60,12 +60,12 @@ it('opens from the keyboard, searches only after two characters and navigates au
   vi.stubGlobal('fetch', fetcher)
   render(
     <QueryClientProvider client={createQueryClient()}>
-      <MemoryRouter initialEntries={['/app/access']}>
+      <MemoryRouter initialEntries={['/app/portfolio']}>
         <AuthProvider>
           <CommandSearch />
           <Routes>
             <Route
-              path="/app/access"
+              path="/app/portfolio"
               element={<button>Original focus</button>}
             />
             <Route

@@ -9,9 +9,15 @@
   "theme_color": "#f2f0ea",
   "icons": [
     {
-      "src": "/assets/roisey-else-app-v1.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/assets/roisey-else-app-192-v2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/roisey-else-app-512-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
     }
   ]

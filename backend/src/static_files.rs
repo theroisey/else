@@ -57,6 +57,11 @@ impl Assets {
                     "assets/roisey-r-v1.svg" => "image/svg+xml",
                     "assets/roisey-else-app-v1.png" => "image/png",
                     "assets/roisey-else-app-v1.svg" => "image/svg+xml",
+                    "apple-touch-icon.png"
+                    | "assets/roisey-else-app-152-v2.png"
+                    | "assets/roisey-else-app-167-v2.png"
+                    | "assets/roisey-else-app-192-v2.png"
+                    | "assets/roisey-else-app-512-v2.png" => "image/png",
                     value if value.starts_with("assets/") => {
                         match path.extension().and_then(|v| v.to_str()) {
                             Some("js") => "text/javascript; charset=utf-8",
@@ -143,6 +148,12 @@ impl Assets {
         if let Some(asset) = self.files.get(path) {
             return Ok(asset);
         }
+        if path == "/apple-touch-icon-precomposed.png" {
+            return self
+                .files
+                .get("/apple-touch-icon.png")
+                .ok_or(Error::NotFound);
+        }
         if matches!(
             path,
             "/" | "/login" | "/interface" | "/service-status" | "/app"
@@ -214,6 +225,11 @@ mod tests {
         )
         .unwrap();
         std::fs::write(
+            root.path().join("apple-touch-icon.png"),
+            b"synthetic touch icon",
+        )
+        .unwrap();
+        std::fs::write(
             root.path().join("assets/roisey-else-app-v1.svg"),
             "<svg xmlns=\"http://www.w3.org/2000/svg\"/>",
         )
@@ -228,11 +244,20 @@ mod tests {
             ),
             ("/assets/roisey-else-app-v1.png", "image/png"),
             ("/assets/roisey-else-app-v1.svg", "image/svg+xml"),
+            ("/apple-touch-icon.png", "image/png"),
+            ("/apple-touch-icon-precomposed.png", "image/png"),
         ] {
             let asset = assets.get(path).unwrap();
             assert_eq!(asset.content_type, content_type);
             assert!(!asset.immutable);
         }
+        assert_eq!(
+            assets.get("/apple-touch-icon.png").unwrap().body,
+            assets
+                .get("/apple-touch-icon-precomposed.png")
+                .unwrap()
+                .body
+        );
         for path in [
             "/api/v1/unknown",
             "/assets/missing.js",
