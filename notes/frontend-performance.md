@@ -8,11 +8,12 @@ The audit covered the route graph (45 existing page components), shared controls
 | --- | --- |
 | Entry, routes and locales | Forced single-file output disabled 41 existing lazy boundaries and included four unused language packs. Runtime/core are shared; 46 module loaders now defer pages/workspace and load one optional-language chunk. |
 | Navigation and recovery | Public-code intent loading overlaps session discovery and likely navigation. Ready modules render synchronously; a stable wrapper preserves drafts. Workspace and financial recovery controllers remain mounted across routes. Save Data/2G skip speculation. Hover performs no private-data read. |
+| Sign-in inputs | Native uncontrolled inputs avoid rerendering for each character and keep the password out of React state. A profiler test verifies zero typing commits and clearing before transport. |
 | Shell and appearance | Multiple subscriptions repeatedly synchronized the same theme. A single shared listener set and a separate synchronization component avoid route-tree updates from theme synchronization. |
 | Today, requests, teams, service finance and recurring work | Kept scoped, bounded server queries and polling. Brand search coalesces 200 ms of typing, hides obsolete candidates and shows immediate search feedback. Independent invalidations reconcile concurrently after a confirmed write. |
 | Clients, tasks, planning, reminders, administration, audit | Retained existing 25-row pagination, historical references, current permission checks and draft/revision recovery. Lazy routes share genuine skeleton/error boundaries; global admin load failures name the correct destination. |
 | Overview, analytics, commerce, marketing | Existing report tables already paginate at 25 rows and charts have bounded date ranges. Virtualization would add complexity without reducing their mounted row counts. Reused exact-number/date formatter configurations instead. |
-| Shared interaction system | 140/180 ms tokens coordinate transform-only entry, press, disclosure, drawer, error and mobile-menu feedback. No transition delays a route, guard or dismissal. Loading indicators alone fade. Reduced motion, focus trapping and immediate navigation remain. Mobile menu movement is vertical; drawer clipping contains entry motion. |
+| Shared interaction system | 140/180 ms tokens coordinate transform-only entry, press, disclosure, drawer, error and mobile-menu feedback. No transition delays a route, guard or dismissal. Loading indicators alone fade. Reduced motion, focus trapping and immediate navigation remain. Mobile menu movement is vertical; drawer clipping contains entry motion. A late-loaded workspace focuses its main region when it mounts, including with Save Data enabled. |
 | Assets and startup | Preload the two critical Latin fonts; retain Latin/extended-Latin UI glyph coverage and OFL notices. Initial HTML displays an accessible loading indicator before React. No animation library or new runtime dependency. |
 | Notifications | A native alert opens the live client-side route instead of reloading the document, preserving the workspace and financial recovery lifetime. |
 
@@ -32,37 +33,37 @@ All values below are medians of three samples.
 
 | Cold sign-in metric | Before | After |
 | --- | ---: | ---: |
-| Desktop English LCP | 0.972 s | 0.628 s |
-| Desktop Turkish LCP | 0.980 s | 0.692 s |
-| Mobile English LCP | 2.656 s | 1.304 s |
-| Mobile Turkish LCP | 2.724 s | 1.576 s |
+| Desktop English LCP | 0.972 s | 0.624 s |
+| Desktop Turkish LCP | 0.980 s | 0.672 s |
+| Mobile English LCP | 2.656 s | 1.396 s |
+| Mobile Turkish LCP | 2.724 s | 1.584 s |
 | English JavaScript transfer | 576.2 KB | 187.3 KB |
 | Turkish JavaScript transfer | 576.2 KB | 235.9 KB |
-| Mobile English script execution | 620 ms | 224 ms |
+| Mobile English script execution | 620 ms | 270 ms |
 | Mobile sign-in CLS | 0.00049 | 0.00000 |
 
 | Operational timing | Before | After |
 | --- | ---: | ---: |
-| Desktop first Clients navigation | 51 ms | 61 ms |
-| Desktop first Settings navigation | 61 ms | 59 ms |
-| Desktop cached Clients navigation | 41 ms | 43 ms |
-| Desktop authenticated /login → Today document visit | 374 ms | 951 ms |
-| Mobile lab first Clients navigation | 206 ms | 181 ms |
-| Mobile lab first Settings navigation | 175 ms | 198 ms |
-| Mobile lab cached Clients navigation | 149 ms | 132 ms |
-| Mobile lab authenticated /login → Today document visit | 1340 ms | 1186 ms |
+| Desktop first Clients navigation | 51 ms | 58 ms |
+| Desktop first Settings navigation | 61 ms | 64 ms |
+| Desktop cached Clients navigation | 41 ms | 54 ms |
+| Desktop authenticated /login → Today document visit | 374 ms | 962 ms |
+| Mobile lab first Clients navigation | 206 ms | 211 ms |
+| Mobile lab first Settings navigation | 175 ms | 205 ms |
+| Mobile lab cached Clients navigation | 149 ms | 164 ms |
+| Mobile lab authenticated /login → Today document visit | 1340 ms | 1231 ms |
 
-The largest observed Event Timing duration across the scripted English interactions was 216 ms before and 96 ms after. This small scripted sample is **not field INP or a p75 claim**. Both builds were already below the CLS goal in these sign-in samples. Cold English transfer fell 67.5%.
+The largest observed Event Timing duration across the scripted English interactions was 216 ms before and 144 ms after. This small scripted sample is **not field INP or a p75 claim**. Both builds were already below the CLS goal in these sign-in samples. Cold English transfer fell 67.5%.
 
-Trade-off: desktop full document visits through an authenticated `/login` are slower with deferred workspace code, although still below one second in the final median. The monolithic cached build had an advantage there. Internal desktop navigation remains around 60 ms; mobile cold startup, Clients navigation and warm document visits improved. Do not describe every metric as improved.
+Trade-off: desktop full document visits through an authenticated `/login` are slower with deferred workspace code, although still below one second in the final median. The monolithic cached build had an advantage there. Internal navigation remains close to the baseline (about 60 ms desktop and 200 ms mobile); some small regressions remain within this limited lab sample. Cold startup improved substantially. Do not describe every metric as improved.
 
 An isolated Node formatting microbenchmark (2,000 currency + explicit-UTC date cells, five runs, unchanged exact output) fell from 154.8 ms to 10.3 ms median. It includes the first cache/JIT warm-up sample and is not a whole-page or physical-device measurement.
 
 ## Verification and limits
 
-- Passed: 475 frontend tests across 50 files; TypeScript; ESLint; production build and bundle budgets.
-- Passed: 34 actual-browser scenarios, including login/rotation/replay, revocation, finance uncertainty, exact currencies, assignments, screenshot delivery/revision, recurring operations, localization, responsive themes and protected evidence.
-- Added browser checks for Save Data, no private fetch on hover, reuse of fresh query data, coalesced searches, recoverable chunk failure, native-alert SPA navigation and motion boundaries. Unit coverage protects both cold and prefetched page draft lifetimes.
+- Passed: 476 frontend tests across 50 files (36.55 seconds in the final full run); TypeScript; ESLint; production build and bundle budgets.
+- Passed: the complete 34-scenario browser run, including login/rotation/replay, revocation, finance uncertainty, exact currencies, assignments, screenshot delivery/revision, recurring operations, localization, responsive themes and protected evidence. The final cold-focus/input/asset-gate follow-ups use a targeted actual-image rerun rather than claiming that every full-suite case was repeated after each small change.
+- Added browser checks for cold-entry keyboard focus, Save Data, no private fetch on hover, reuse of fresh query data, coalesced searches, recoverable chunk failure, native-alert SPA navigation and motion boundaries. Unit coverage protects both cold and prefetched page draft lifetimes and sign-in input/render behavior. The reproduced cold-focus failure was fixed without delaying route changes. Container checks now validate every chunk’s bytes, MIME, compression/cache policy and initial/language budgets instead of requiring the retired single-file build.
 - Reviewed light/dark mobile screenshots, finance/client navigation and responsive controls. Browser layout assertions cover 360–1920 px. Physical phone rendering and installation were not measured.
 - An exploratory benchmark timed out waiting for the window load event. It is excluded from the paired results; the final identical DOM/input/font readiness protocol completed all 24 samples with zero page errors. This is a lab comparison, not a production availability claim.
 - Field p75 LCP/INP/CLS, a Lighthouse score, long-session heap profiles and physical-device frame pacing were not measured. No 60 FPS guarantee is claimed.

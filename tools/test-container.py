@@ -5,6 +5,7 @@ import gzip
 import http.cookiejar
 import json
 import os
+import re
 from pathlib import Path
 import socket
 import subprocess
@@ -156,14 +157,38 @@ def run(args):
             index, _ = request("/app/clients")
             assert index == (ROOT / "frontend/dist/index.html").read_bytes()
             scripts = sorted(path for path in (ROOT / "frontend/dist/assets").glob("*.js") if path.name != "theme-init.js")
-            assert len(scripts) == 1 and scripts[0].name.startswith("index-"), "production must contain one hashed application bundle"
-            asset = scripts[0].with_suffix(".js.gz")
-            encoded, headers = request("/assets/" + asset.name[:-3], headers={"Accept-Encoding": "gzip"})
-            assert headers["Content-Encoding"] == "gzip" and "immutable" in headers["Cache-Control"]
-            assert gzip.decompress(encoded) == asset.with_suffix("").read_bytes()
+            assert scripts, "production application chunks are missing"
+            encoded_sizes = {}
+            for script in scripts:
+                asset_path = "/assets/" + script.name
+                encoded, headers = request(asset_path, headers={"Accept-Encoding": "gzip"})
+                assert "immutable" in headers["Cache-Control"]
+                assert headers["Content-Type"] == "text/javascript; charset=utf-8"
+                if script.with_suffix(".js.gz").exists():
+                    assert headers["Content-Encoding"] == "gzip"
+                    assert gzip.decompress(encoded) == script.read_bytes()
+                else:
+                    assert headers.get("Content-Encoding") is None
+                    assert encoded == script.read_bytes()
+                encoded_sizes[asset_path] = len(encoded)
             theme, theme_headers = request("/assets/theme-init.js", headers={"Accept-Encoding": "gzip"})
             assert theme_headers["Cache-Control"] == "no-cache", "pre-paint theme bootstrap must stay fresh"
             assert gzip.decompress(theme) == (ROOT / "frontend/dist/assets/theme-init.js").read_bytes()
+            encoded_sizes["/assets/theme-init.js"] = len(theme)
+            initial = set()
+            for tag in re.findall(rb"<(?:script|link)\b[^>]*>", index):
+                if not tag.startswith(b"<script") and b'rel="modulepreload"' not in tag:
+                    continue
+                match = re.search(rb'(?:src|href)="(/assets/[^"/]+\.js)"', tag)
+                if match:
+                    initial.add(match[1].decode())
+            entrypoints = re.findall(rb'<script[^>]+type="module"[^>]+src="(/assets/index-[^"/]+\.js)"', index)
+            assert len(entrypoints) == 1, "production must have one module entrypoint"
+            assert sum(encoded_sizes[path] for path in initial) <= 250_000, "initial JS exceeds its gzip budget"
+            for language in ("tr", "ro", "de", "fr"):
+                chunks = [path for path in encoded_sizes if path.startswith("/assets/" + language + "-")]
+                assert len(chunks) == 1 and chunks[0] not in initial
+                assert encoded_sizes[chunks[0]] <= 70_000
             for path, content_type in (("/app.webmanifest", "application/manifest+json; charset=utf-8"),
                                        ("/assets/roisey-else-app-v1.png", "image/png"),
                                        ("/assets/roisey-else-app-v1.svg", "image/svg+xml"),

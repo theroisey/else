@@ -1,5 +1,5 @@
 import { copy, useLocale } from '../../i18n/index'
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { SectionHelp } from '../../components/ui/Help'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -14,6 +14,10 @@ import { preloadLink } from '../../app/prefetch'
 
 export function ApplicationShell() {
   useLocale()
+  // A cold layout chunk can mount after the route's first focus effect.
+  useLayoutEffect(() => {
+    document.getElementById('workspace-content')?.focus({ preventScroll: true })
+  }, [])
   const auth = useAuth()
   const location = useLocation()
   const navigation = visibleDestinations(auth.session?.user.permissions ?? [])

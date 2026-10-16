@@ -199,6 +199,7 @@ test('performance: bounded code preloading respects Save Data, cached reads are 
   await login(page)
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
   const nav = page.getByRole('navigation', { name: 'Application', exact: true })
+  await expect(page.locator('#workspace-content')).toBeFocused()
   await nav.getByRole('link', { name: 'Team', exact: true }).hover()
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
   expect(scripts.some(path => /\/TeamPage-/.test(path))).toBe(false)

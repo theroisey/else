@@ -19,8 +19,6 @@ export function LoginPage() {
   const location = useLocation()
   const emailRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [errors, setErrors] = useState({ email: '', password: '' })
   const [message, setMessage] = useState('')
   const [pending, setPending] = useState(false)
@@ -33,11 +31,14 @@ export function LoginPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (pending) return
+    const email = emailRef.current?.value ?? ''
+    const submittedPassword = passwordRef.current?.value ?? ''
     const invalidEmail =
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
       email.trim().length > 254
     const invalidPassword =
-      !password || new TextEncoder().encode(password).length > 128
+      !submittedPassword ||
+      new TextEncoder().encode(submittedPassword).length > 128
     setErrors({
       email: invalidEmail ? 'Enter your email address.' : '',
       password: invalidPassword
@@ -50,8 +51,7 @@ export function LoginPage() {
       else passwordRef.current?.focus()
       return
     }
-    const submittedPassword = password
-    setPassword('')
+    if (passwordRef.current) passwordRef.current.value = ''
     setPending(true)
     warmWorkspace(safeReturnTo(location.state?.returnTo))
     try {
@@ -123,8 +123,6 @@ export function LoginPage() {
               type="email"
               autoComplete="username"
               required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
               error={copy(errors.email, 'auth')}
               disabled={pending}
             />
@@ -135,8 +133,6 @@ export function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
               error={copy(errors.password, 'auth')}
               disabled={pending}
             />

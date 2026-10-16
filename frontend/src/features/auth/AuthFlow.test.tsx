@@ -1,4 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
+import { Profiler } from 'react'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
@@ -52,6 +53,54 @@ afterEach(() => {
 })
 
 describe('cookie session UI', () => {
+  it('keeps typing outside React state and clears the password before transport', async () => {
+    let commits = 0
+    let clearedAtTransport = false
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        if (String(input).endsWith('/api/v1/auth/login')) {
+          clearedAtTransport =
+            (screen.getByLabelText('Password') as HTMLInputElement).value === ''
+          return Promise.resolve(
+            json(401, { error: { code: 'invalid_credentials' } }),
+          )
+        }
+        return Promise.resolve(unauthorized())
+      }),
+    )
+    render(
+      <Profiler
+        id="sign-in"
+        onRender={() => {
+          commits++
+        }}
+      >
+        <QueryClientProvider client={createQueryClient()}>
+          <MemoryRouter initialEntries={['/login']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </Profiler>,
+    )
+    await screen.findByRole('heading', { name: 'Sign in' })
+    const user = userEvent.setup()
+    const baseline = commits
+    await user.type(
+      screen.getByLabelText('Email'),
+      'synthetic.fixture@example.com',
+    )
+    await user.type(screen.getByLabelText('Password'), 'synthetic input only')
+    expect(commits).toBe(baseline)
+    await user.click(
+      screen.getByRole('button', { name: 'Sign in' }),
+    )
+    expect(clearedAtTransport).toBe(true)
+    expect(screen.getByLabelText('Password')).toHaveValue('')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Email or password is incorrect.',
+    )
+  })
   it('hides protected content while checking and redirects unauthenticated deep links', async () => {
     let resolve: (response: Response) => void = () => {}
     vi.stubGlobal(
