@@ -94,6 +94,13 @@ it('shows exact finance, prioritized attention, real activity and honest integra
   ).toHaveLength(2)
   expect(screen.getByText('Client created.')).toBeVisible()
   expect(screen.getAllByText(/Europe\/Istanbul/)).toHaveLength(2)
+  const modules = within(
+    screen.getByRole('navigation', { name: 'Client modules' }),
+  )
+  expect(
+    modules.queryByRole('link', { name: 'Profile' }),
+  ).not.toBeInTheDocument()
+  await userEvent.setup().click(modules.getByRole('button', { name: 'More' }))
   expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute(
     'href',
     route + '/profile',
