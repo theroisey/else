@@ -1,5 +1,5 @@
 import { copy, useLocale } from '../../i18n/index'
-import { useLayoutEffect } from 'react'
+import { useLayoutEffect, useSyncExternalStore } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { SectionHelp } from '../../components/ui/Help'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -12,8 +12,19 @@ import { CommandSearch } from './CommandSearch'
 import { preloadLink } from '../../app/prefetch'
 import { MobileNavigation } from './MobileNavigation'
 
+const mobileQuery = '(max-width: 1023px)'
+function mobileLayout() {
+  return window.matchMedia?.(mobileQuery).matches ?? false
+}
+function subscribeLayout(onChange: () => void) {
+  const media = window.matchMedia?.(mobileQuery)
+  media?.addEventListener('change', onChange)
+  return () => media?.removeEventListener('change', onChange)
+}
+
 export function ApplicationShell() {
   useLocale()
+  const mobile = useSyncExternalStore(subscribeLayout, mobileLayout)
   // A cold layout chunk can mount after the route's first focus effect.
   useLayoutEffect(() => {
     document.getElementById('workspace-content')?.focus({ preventScroll: true })
@@ -280,7 +291,7 @@ export function ApplicationShell() {
           <Outlet />
         </main>
       </div>
-      <MobileNavigation navigation={navigation} />
+      {mobile ? <MobileNavigation navigation={navigation} /> : null}
     </div>
   )
 }

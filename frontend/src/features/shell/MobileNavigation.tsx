@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -31,16 +31,6 @@ export function MobileNavigation({
       location.pathname === item.path ||
       location.pathname.startsWith(item.path + '/'),
   )
-
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return
-    const desktop = window.matchMedia('(min-width: 1024px)')
-    const closeOnDesktop = () => {
-      if (desktop.matches) setOpenedAt(null)
-    }
-    desktop.addEventListener('change', closeOnDesktop)
-    return () => desktop.removeEventListener('change', closeOnDesktop)
-  }, [])
 
   function navigate() {
     setOpenedAt(null)
