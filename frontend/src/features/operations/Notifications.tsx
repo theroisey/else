@@ -77,7 +77,7 @@ export function NotificationControl() {
               'You have a new update. Open the panel to review it.',
               'help',
             ),
-            icon: '/assets/roisey-r-v1.svg',
+            icon: '/assets/roisey-logo.svg',
             tag: 'roisey-else-update',
           })
           notification.onclick = () => {

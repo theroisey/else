@@ -54,14 +54,14 @@ impl Assets {
                 let content_type = match relative.as_str() {
                     "index.html" => "text/html; charset=utf-8",
                     "app.webmanifest" => "application/manifest+json; charset=utf-8",
-                    "assets/roisey-r-v1.svg" => "image/svg+xml",
-                    "assets/roisey-else-app-v1.png" => "image/png",
-                    "assets/roisey-else-app-v1.svg" => "image/svg+xml",
+                    "assets/roisey-logo.svg" => "image/svg+xml",
                     "apple-touch-icon.png"
-                    | "assets/roisey-else-app-152-v2.png"
-                    | "assets/roisey-else-app-167-v2.png"
-                    | "assets/roisey-else-app-192-v2.png"
-                    | "assets/roisey-else-app-512-v2.png" => "image/png",
+                    | "assets/favicon-16.png"
+                    | "assets/favicon-32.png"
+                    | "assets/apple-touch-icon-152.png"
+                    | "assets/apple-touch-icon-167.png"
+                    | "assets/android-chrome-192.png"
+                    | "assets/android-chrome-512.png" => "image/png",
                     value if value.starts_with("assets/") => {
                         match path.extension().and_then(|v| v.to_str()) {
                             Some("js") => "text/javascript; charset=utf-8",
@@ -219,18 +219,27 @@ mod tests {
             "{\"name\":\"Synthetic app\"}",
         )
         .unwrap();
-        std::fs::write(
-            root.path().join("assets/roisey-else-app-v1.png"),
-            b"\x89PNG\r\n\x1a\nsynthetic icon",
-        )
-        .unwrap();
+        for name in [
+            "favicon-16.png",
+            "favicon-32.png",
+            "apple-touch-icon-152.png",
+            "apple-touch-icon-167.png",
+            "android-chrome-192.png",
+            "android-chrome-512.png",
+        ] {
+            std::fs::write(
+                root.path().join("assets").join(name),
+                b"\x89PNG\r\n\x1a\nsynthetic icon",
+            )
+            .unwrap();
+        }
         std::fs::write(
             root.path().join("apple-touch-icon.png"),
             b"synthetic touch icon",
         )
         .unwrap();
         std::fs::write(
-            root.path().join("assets/roisey-else-app-v1.svg"),
+            root.path().join("assets/roisey-logo.svg"),
             "<svg xmlns=\"http://www.w3.org/2000/svg\"/>",
         )
         .unwrap();
@@ -242,8 +251,13 @@ mod tests {
                 "/app.webmanifest",
                 "application/manifest+json; charset=utf-8",
             ),
-            ("/assets/roisey-else-app-v1.png", "image/png"),
-            ("/assets/roisey-else-app-v1.svg", "image/svg+xml"),
+            ("/assets/favicon-16.png", "image/png"),
+            ("/assets/favicon-32.png", "image/png"),
+            ("/assets/apple-touch-icon-152.png", "image/png"),
+            ("/assets/apple-touch-icon-167.png", "image/png"),
+            ("/assets/android-chrome-192.png", "image/png"),
+            ("/assets/android-chrome-512.png", "image/png"),
+            ("/assets/roisey-logo.svg", "image/svg+xml"),
             ("/apple-touch-icon.png", "image/png"),
             ("/apple-touch-icon-precomposed.png", "image/png"),
         ] {
@@ -262,6 +276,8 @@ mod tests {
             "/api/v1/unknown",
             "/assets/missing.js",
             "/assets/missing.png",
+            "/assets/roisey-else-app-v1.png",
+            "/assets/roisey-else-app-v1.svg",
             "/missing.webmanifest",
             "/../index.html",
             "/%2e%2e/index.html",

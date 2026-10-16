@@ -63,14 +63,27 @@ try {
   assert.equal(iconStyle.height, iconStyle.fontSize)
   assert.equal(iconStyle.verticalAlign, -0.125 * iconStyle.fontSize)
   stage = 'mobile app icon metadata'
-  const appleIcons = [[152, '/assets/roisey-else-app-152-v2.png'], [167, '/assets/roisey-else-app-167-v2.png'], [180, '/apple-touch-icon.png?v=2']]
+  const favicons = [[16, '/assets/favicon-16.png'], [32, '/assets/favicon-32.png']]
+  assert.equal(await page.locator('link[rel="icon"]').count(), favicons.length)
+  for (const [size, path] of favicons) {
+    assert.equal(await page.locator(`link[rel="icon"][sizes="${size}x${size}"]`).getAttribute('href'), path)
+    const response = await page.request.get(origin.origin + path)
+    assert.equal(response.status(), 200)
+    assert.equal(response.headers()['content-type'], 'image/png')
+    assert.equal(response.headers()['cache-control'], 'no-cache')
+    const body = await response.body()
+    assert.deepEqual(body, readFileSync(new URL(`../public${path}`, import.meta.url)))
+    assert.equal(body.readUInt32BE(16), size)
+    assert.equal(body.readUInt32BE(20), size)
+  }
+  const appleIcons = [[152, '/assets/apple-touch-icon-152.png'], [167, '/assets/apple-touch-icon-167.png'], [180, '/apple-touch-icon.png?v=3']]
   assert.equal(await page.locator('meta[name="apple-mobile-web-app-capable"]').getAttribute('content'), 'yes')
   for (const [size, path] of appleIcons) {
     assert.equal(await page.locator(`link[rel="apple-touch-icon"][sizes="${size}x${size}"]`).getAttribute('href'), path)
   }
-  assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'), '/app.webmanifest?v=2')
+  assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'), '/app.webmanifest?v=3')
   stage = 'mobile manifest response'
-  const manifestResponse = await page.request.get(origin.origin + '/app.webmanifest?v=2')
+  const manifestResponse = await page.request.get(origin.origin + '/app.webmanifest?v=3')
   assert.equal(manifestResponse.status(), 200)
   assert.equal(manifestResponse.headers()['content-type'], 'application/manifest+json; charset=utf-8')
   assert.equal(manifestResponse.headers()['cache-control'], 'no-cache')
@@ -79,7 +92,7 @@ try {
   assert.equal(manifest.start_url, '/app')
   assert.equal(manifest.scope, '/')
   assert.equal(manifest.display, 'standalone')
-  assert.deepEqual(manifest.icons, [192, 512].map(size => ({ src: `/assets/roisey-else-app-${size}-v2.png`, sizes: `${size}x${size}`, type: 'image/png', purpose: 'any' })))
+  assert.deepEqual(manifest.icons, [192, 512].map(size => ({ src: `/assets/android-chrome-${size}.png`, sizes: `${size}x${size}`, type: 'image/png', purpose: 'any' })))
   stage = 'platform PNG icon delivery and decoding'
   for (const [size, path] of [...appleIcons, ...manifest.icons.map(icon => [Number(icon.sizes.split('x')[0]), icon.src])]) {
     const response = await page.request.get(origin.origin + path)
@@ -114,7 +127,7 @@ try {
   try {
     stage = 'native mobile manifest parsing'
     const parsed = await devtools.send('Page.getAppManifest')
-    assert.equal(parsed.url, origin.origin + '/app.webmanifest?v=2')
+    assert.equal(parsed.url, origin.origin + '/app.webmanifest?v=3')
     assert.deepEqual(parsed.errors, [])
     stage = 'native mobile icon suitability'
     const { installabilityErrors } = await devtools.send('Page.getInstallabilityErrors')

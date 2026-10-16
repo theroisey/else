@@ -190,10 +190,11 @@ def run(args):
                 assert len(chunks) == 1 and chunks[0] not in initial
                 assert encoded_sizes[chunks[0]] <= 70_000
             for path, content_type in (("/app.webmanifest", "application/manifest+json; charset=utf-8"),
-                                       ("/assets/roisey-else-app-v1.png", "image/png"),
-                                       ("/assets/roisey-else-app-v1.svg", "image/svg+xml"),
+                                       ("/assets/favicon-16.png", "image/png"),
+                                       ("/assets/favicon-32.png", "image/png"),
                                        ("/apple-touch-icon.png", "image/png"),
-                                       *((f"/assets/roisey-else-app-{size}-v2.png", "image/png") for size in (152, 167, 192, 512))):
+                                       *((f"/assets/apple-touch-icon-{size}.png", "image/png") for size in (152, 167)),
+                                       *((f"/assets/android-chrome-{size}.png", "image/png") for size in (192, 512))):
                 mobile_asset, mobile_headers = request(path)
                 assert mobile_asset == (ROOT / "frontend/public" / path.lstrip("/")).read_bytes()
                 assert mobile_headers["Content-Type"] == content_type

@@ -28,7 +28,7 @@ Today is the operational starting point. Employees see their assigned brands, pe
 
 Create the client first, then add its independent properties in Websites. There is no primary website selector. Existing website records and historical values remain intact. On the sign-in page, appearance and language preferences are available as text buttons in the footer.
 
-On mobile, use your browser's Add to Home Screen or Install app action. Platform-sized PNG icons show the supplied black R + ELSE artwork on iOS and Android. The shortcut opens the authenticated workspace in its own window on supported browsers; it needs a network connection. After updating the deployment, existing shortcuts may need to be removed and added again to refresh the device's cached icon.
+Browser tabs use the supplied 16px and 32px favicons. On mobile, use your browser's Add to Home Screen or Install app action. Platform-sized PNG icons are resized directly from the original 2048px black R + ELSE artwork with Lanczos filtering and light sharpening for iOS and Android. The shortcut opens the authenticated workspace in its own window on supported browsers; it needs a network connection. After updating the deployment, existing shortcuts may need to be removed and added again to refresh the device's cached icon.
 
 Appearance and language are available in Settings and the account menu. Navigation is immediate; only loading indicators fade. The separate My Access page has been removed.
 
