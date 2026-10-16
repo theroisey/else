@@ -30,6 +30,8 @@ Create the client first, then add its independent properties in Websites. There 
 
 Browser tabs use the supplied 16px and 32px favicons. On mobile, use your browser's Add to Home Screen or Install app action. Platform-sized PNG icons are resized directly from the original 2048px black R + ELSE artwork with Lanczos filtering and light sharpening for iOS and Android. The shortcut opens the authenticated workspace in its own window on supported browsers; it needs a network connection. After updating the deployment, existing shortcuts may need to be removed and added again to refresh the device's cached icon.
 
+Production includes a service worker on HTTPS or loopback. It caches public scripts, styles and fonts as they load; pages, account data and writes still need a connection. Updates do not reload open work. Save your drafts and close all application tabs and installed windows to activate a waiting service worker update.
+
 Appearance and language are available in Settings and the account menu. Navigation is immediate; only loading indicators fade. The separate My Access page has been removed.
 
 The interface loads operational pages and optional languages as needed. Common destinations warm in the background without reading customer records; Save Data connections skip speculative downloads. Subtle movement provides interaction feedback and respects reduced-motion preferences. See the [frontend performance report](notes/frontend-performance.md) for measured results and verification limits.

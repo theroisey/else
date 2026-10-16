@@ -20,6 +20,8 @@ Normal startup logs: `application_starting`, `data_directory_ready`, `embedded_r
 
 Updates use `make update` or Compose pull/recreate and retain the fixed volume. `make down` never deletes it. Use compatible artifact rollback only after checking SQLite schema/provider compatibility; no automatic downgrade or deletion of retained history is permitted. CI promotes the saved tested image, signs/verifies its digest and source, then pulls and rechecks it. Publication does not authorize production deployment.
 
+Production frontend builds register `/sw.js` on secure origins. Waiting service worker updates activate after all controlled application tabs/windows close; no forced reload discards drafts. Browser Cache Storage contains only bounded public immutable assets, never customer records or queued writes. Changes to worker cache policy must increment its application-owned cache version. If removing service worker support later, ship a network-only replacement at the same `/sw.js` URL for installed clients rather than only deleting the script.
+
 ## Supported backup
 
 Use `make backup BACKUP_NAME=checkpoint` while serving. SQLite's online backup API creates a consistent standalone snapshot and validates integrity, foreign keys, exact payment/pricing histories, counts and authenticated ciphertext. The bundle includes `database.sqlite3`, `keyring.json` and `manifest.json`; it publishes atomically without replacing an existing checkpoint. Native invocations never copy the actively written main file as a backup.

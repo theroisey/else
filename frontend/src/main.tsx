@@ -6,6 +6,7 @@ import { BrowserRouter } from 'react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { App } from './app/App'
 import { createQueryClient } from './app/query-client'
+import { registerServiceWorker } from './app/service-worker'
 import './app/styles.css'
 
 await initializeLocale().catch(() => {
@@ -24,3 +25,5 @@ createRoot(root).render(
     </QueryClientProvider>
   </StrictMode>,
 )
+
+registerServiceWorker()

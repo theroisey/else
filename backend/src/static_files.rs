@@ -53,6 +53,7 @@ impl Assets {
                 }
                 let content_type = match relative.as_str() {
                     "index.html" => "text/html; charset=utf-8",
+                    "sw.js" => "text/javascript; charset=utf-8",
                     "app.webmanifest" => "application/manifest+json; charset=utf-8",
                     "assets/roisey-logo.svg" => "image/svg+xml",
                     "apple-touch-icon.png"

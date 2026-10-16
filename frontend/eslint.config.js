@@ -18,6 +18,7 @@ export default tseslint.config(
     },
   },
   { files: ['public/**/*.js'], languageOptions: { globals: globals.browser } },
+  { files: ['public/sw.js'], languageOptions: { globals: globals.serviceworker } },
   { files: ['eslint.config.js'], languageOptions: { globals: globals.node } },
   {
     files: ['src/**/*.{ts,tsx}'],
