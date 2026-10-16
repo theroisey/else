@@ -184,9 +184,14 @@
   .metric-cell { @apply min-w-0 border-line px-5 first:pl-0 sm:border-l sm:first:border-l-0; }
   .metric-cell h2 { @apply text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-muted; }
   .metric-cell > p:first-of-type { @apply mt-3 font-display text-3xl font-normal tabular-nums; }
-  .client-navigation { @apply mb-7 flex max-w-full gap-6 overflow-x-auto border-b border-line; scrollbar-width: thin; }
-  .client-tab { @apply relative inline-flex shrink-0 items-center border-b-2 border-transparent pb-3 pt-1 text-xs font-medium text-muted transition-colors duration-150 hover:text-ink; }
+  .client-navigation { @apply flex max-w-full flex-wrap gap-x-4 border-b border-line sm:gap-x-6; }
+  .client-tab { @apply relative inline-flex min-h-11 shrink-0 items-center border-b-2 border-transparent pb-3 pt-1 text-xs font-medium text-muted transition-colors duration-150 hover:text-ink; }
   .client-tab.is-active { @apply border-accent text-ink; }
+  .client-more-sections { @apply flex flex-wrap gap-x-5 border-b border-line py-2; animation: workspace-entry 140ms ease-out; }
+  .client-section-link { @apply inline-flex min-h-11 items-center text-sm text-muted underline-offset-8 transition-colors duration-150 hover:text-ink; }
+  .client-section-link.is-active { @apply font-semibold text-ink underline; }
+  .client-more-chevron { @apply text-[0.5rem]; transition: transform 140ms ease; }
+  .client-tab[aria-expanded="true"] .client-more-chevron { transform: rotate(180deg); }
   .shell-header { @apply sticky top-0 z-30 grid min-h-16 grid-cols-[auto_minmax(0,1fr)] border-b border-line bg-surface lg:grid-cols-[14.5rem_minmax(0,1fr)]; }
   .shell-brand { @apply flex items-center gap-3 px-5 lg:border-r lg:border-line lg:px-7; }
   .shell-toolbar { @apply flex min-w-0 items-center justify-between gap-4 px-4 sm:px-6 lg:px-9; }

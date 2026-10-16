@@ -60,6 +60,81 @@ test('operations: commercial payment, revenue share, internal transfer and audit
     'operations.owner.fixture@example.com',
     `/app/clients/${client}/finance`,
   )
+  await expect(
+    page.getByRole('button', { name: 'New service agreement', exact: true }),
+  ).toBeVisible()
+  const modules = page.getByRole('navigation', {
+    name: 'Client modules',
+    exact: true,
+  })
+  const more = modules.getByRole('button', { name: 'More', exact: true })
+  const profile = modules.getByRole('link', { name: 'Profile', exact: true })
+  for (const theme of ['light', 'dark']) {
+    await page.getByLabel('Account', { exact: true }).click()
+    await page.getByLabel('Appearance', { exact: true }).selectOption(theme)
+    await page.keyboard.press('Escape')
+    for (const width of [1440, 360, 390, 430]) {
+      await page.setViewportSize({ width, height: 1000 })
+      const ledger = page.getByRole('region', {
+        name: 'Billing periods',
+        exact: true,
+      })
+      if (width < 640) {
+        await ledger.focus()
+        await page.keyboard.press('ArrowRight')
+        await expect
+          .poll(() => ledger.evaluate((region) => region.scrollLeft))
+          .toBeGreaterThan(0)
+        await ledger.evaluate((region) => {
+          region.scrollLeft = 0
+        })
+      }
+      await more.focus()
+      await page.keyboard.press('Enter')
+      await expect(more).toHaveAttribute('aria-expanded', 'true')
+      await expect(profile).toBeVisible()
+      // Visibility alone misses descendants clipped by a scrolling tab bar.
+      expect(
+        await profile.evaluate((link) => {
+          const box = link.getBoundingClientRect()
+          return link.contains(
+            document.elementFromPoint(
+              box.x + box.width / 2,
+              box.y + box.height / 2,
+            ),
+          )
+        }),
+      ).toBe(true)
+      expect(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth ===
+            document.documentElement.clientWidth,
+        ),
+      ).toBe(true)
+      await page.screenshot({
+        path: info.outputPath(`client-more-${theme}-${width}.png`),
+        fullPage: true,
+        animations: 'disabled',
+      })
+      await profile.focus()
+      await page.keyboard.press('Escape')
+      await expect(more).toBeFocused()
+      await expect(more).toHaveAttribute('aria-expanded', 'false')
+      await expect(profile).toHaveCount(0)
+    }
+  }
+  // Follow an advanced destination with an actual click on mobile.
+  await more.click()
+  await profile.click()
+  await expect(page).toHaveURL(new RegExp(`/clients/${client}/profile$`))
+  await expect(
+    modules.getByRole('link', { name: 'Profile', exact: true }),
+  ).toHaveAttribute('aria-current', 'page')
+  await modules.getByRole('link', { name: 'Finance', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/clients/${client}/finance$`))
+  await expect(more).toHaveAttribute('aria-expanded', 'false')
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await page
     .getByRole('button', { name: 'Add advertising partner', exact: true })
     .click()

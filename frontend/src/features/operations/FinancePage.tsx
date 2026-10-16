@@ -10,6 +10,7 @@ import {
   Button,
   Dialog,
   SelectField,
+  Table,
   TextField,
   PageSkeleton,
 } from '../../components/ui'
@@ -294,54 +295,55 @@ function BrandFinance({ client }: { client: string }) {
         />
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table
-              aria-label={t('Billing periods')}
-              className="data-table w-full"
-            >
-              <thead>
-                <tr>
-                  {[
-                    'Service',
-                    'Period',
-                    'Contracted',
-                    'Collected',
-                    'Customer outstanding',
-                    'Internal balance',
-                  ].map((v) => (
-                    <th key={v}>{t(v)}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {periods.data.data.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      <Link
-                        className="underline underline-offset-4"
-                        to={`/app/clients/${client}/finance/${p.id}`}
-                      >
-                        {p.title}
-                      </Link>
-                    </td>
-                    <td>{p.period_key}</td>
-                    <td className="text-right tabular-nums">
-                      {money(p.amount_minor, p.currency)}
-                    </td>
-                    <td className="text-right tabular-nums">
-                      {money(p.paid_minor, p.currency)}
-                    </td>
-                    <td className="text-right tabular-nums">
-                      {money(p.outstanding_minor, p.currency)}
-                    </td>
-                    <td>
-                      <Internal p={p} />
-                    </td>
-                  </tr>
+          <Table caption={t('Billing periods')} className="w-full min-w-[48rem]">
+            <thead>
+              <tr>
+                {[
+                  'Service',
+                  'Period',
+                  'Contracted',
+                  'Collected',
+                  'Customer outstanding',
+                  'Internal balance',
+                ].map((v, index) => (
+                  <th
+                    key={v}
+                    scope="col"
+                    className={index >= 2 && index <= 4 ? 'numeric' : undefined}
+                  >
+                    {t(v)}
+                  </th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody>
+              {periods.data.data.map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    <Link
+                      className="underline underline-offset-4"
+                      to={`/app/clients/${client}/finance/${p.id}`}
+                    >
+                      {p.title}
+                    </Link>
+                  </td>
+                  <td>{p.period_key}</td>
+                  <td className="numeric whitespace-nowrap">
+                    {money(p.amount_minor, p.currency)}
+                  </td>
+                  <td className="numeric whitespace-nowrap">
+                    {money(p.paid_minor, p.currency)}
+                  </td>
+                  <td className="numeric whitespace-nowrap">
+                    {money(p.outstanding_minor, p.currency)}
+                  </td>
+                  <td>
+                    <Internal p={p} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
           {!periods.data.data.length ? (
             <p className="py-5 text-muted">
               {t(

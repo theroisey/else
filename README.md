@@ -24,7 +24,7 @@ Archival keeps authorized history available. Financial amounts stay exact and se
 
 ## Daily work
 
-Today is the operational starting point. Employees see their assigned brands, personal work and requests; developers see the shared technical queue; leaders see their authorized team's work. Owners retain management and finance access under their individual accounts. Inside a brand, Summary, Work, Websites, Finance and More keep daily actions close while preserving planning, analytics, integrations and audit tools. Finance appears only with the required permissions.
+Today is the operational starting point. Employees see their assigned brands, personal work and requests; developers see the shared technical queue; leaders see their authorized team's work. Owners retain management and finance access under their individual accounts. Inside a brand, Summary, Work, Websites, Finance and More keep daily actions close while preserving planning, analytics, integrations and audit tools. More expands a row of authorized advanced links that wraps on smaller screens; Escape closes it and returns focus to the button. Finance appears only with the required permissions.
 
 Create the client first, then add its independent properties in Websites. There is no primary website selector. Existing website records and historical values remain intact. On the sign-in page, appearance and language preferences are available as text buttons in the footer.
 

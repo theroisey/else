@@ -42,6 +42,8 @@ Actual-image browser workflows cover login/cookie/expiry/revocation/admin/client
 
 Authenticated current-grant refresh runs every 30 seconds in an active tab and on focus/reconnect; notification polling uses the same lightweight interval. Every API still enforces fresh authorization. Filters and long histories progressively disclose bounded paged queries. Before/after images lazy-load through protected same-origin requests. All five locales share strict operation DTO validation and accessible theme-aware controls.
 
+Client More uses an explicit disclosure button and in-flow advanced links, rather than an absolute popup inside an overflow-scrolling tab bar. Both rows wrap without clipping on mobile. Advanced destinations retain their active context; primary navigation closes the disclosure. Escape closes it and restores trigger focus. Current grants filter the links on every render. Browser verification must hit-test a revealed link before scrolling or clicking: DOM visibility alone cannot detect the original clipped-popup failure.
+
 Mutations disable duplicate submission and retain their original command, normalized payload and revision on uncertain outcomes. Reconciliation retries that command only; an explicit discard warns users to inspect history first. Brand/task/finance query invalidation connects existing collection screens and the new service-period views. Appearance/system bootstrap, original SVG, self-hosted typography and keyboard/mobile geometry remain shared.
 
 ## Refinement and session renewal

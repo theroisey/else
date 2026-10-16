@@ -1,6 +1,9 @@
 import { copy, useLocale } from '../../i18n/index'
 import { WebsiteNavigation } from '../websites/WebsiteNavigation'
 import { NavLink, useLocation, useParams } from 'react-router'
+import { useId, useRef, useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faChevronDown } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../auth/auth-context'
 import { hasPermission } from '../auth/permissions'
 
@@ -8,6 +11,12 @@ export function ClientNavigation({ clientID }: { clientID: string }) {
   useLocale()
   const { websiteID } = useParams()
   const { pathname } = useLocation()
+  const moreID = useId()
+  const moreButton = useRef<HTMLButtonElement>(null)
+  const [disclosure, setDisclosure] = useState<{
+    path: string
+    open: boolean
+  } | null>(null)
   const grants = useAuth().session?.user.permissions ?? []
   const base = `/app/clients/${clientID}`
   const allowed = (permission: string) =>
@@ -84,12 +93,14 @@ export function ClientNavigation({ clientID }: { clientID: string }) {
   const moreActive = advanced.some(
     ([, path, visible]) => visible && contains(path),
   )
+  const moreOpen = disclosure?.path === pathname ? disclosure.open : moreActive
   const workFirst = work.find(([, , visible]) => visible)
   const financeFirst = finance.find(([, , visible]) => visible)
   const tab = (label: string, path: string, active: boolean) => (
     <NavLink
       key={path}
       to={base + path}
+      onClick={() => setDisclosure({ path: pathname, open: false })}
       end={path === ''}
       className={() => (active ? 'client-tab is-active' : 'client-tab')}
     >
@@ -100,45 +111,69 @@ export function ClientNavigation({ clientID }: { clientID: string }) {
     <>
       <nav
         aria-label={copy('Client modules', 'clients')}
-        className="client-navigation flex-wrap"
+        className="mb-7"
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && moreOpen) {
+            event.preventDefault()
+            setDisclosure({ path: pathname, open: false })
+            moreButton.current?.focus()
+          }
+        }}
       >
-        {allowed('clients.view')
-          ? tab(copy('Summary', 'operations'), '', pathname === base)
-          : null}
-        {workFirst
-          ? tab(copy('Work', 'operations'), workFirst[1], workActive)
-          : null}
-        {allowed('clients.view')
-          ? tab(copy('Websites', 'clients'), '/websites', contains('/websites'))
-          : null}
-        {financeFirst
-          ? tab(copy('Finance', 'clients'), financeFirst[1], financeActive)
-          : null}
-        {advanced.some(([, , visible]) => visible) ? (
-          <details className="relative" open={moreActive || undefined}>
-            <summary
+        <div className="client-navigation">
+          {allowed('clients.view')
+            ? tab(copy('Summary', 'operations'), '', pathname === base)
+            : null}
+          {workFirst
+            ? tab(copy('Work', 'operations'), workFirst[1], workActive)
+            : null}
+          {allowed('clients.view')
+            ? tab(
+                copy('Websites', 'clients'),
+                '/websites',
+                contains('/websites'),
+              )
+            : null}
+          {financeFirst
+            ? tab(copy('Finance', 'clients'), financeFirst[1], financeActive)
+            : null}
+          {advanced.some(([, , visible]) => visible) ? (
+            <button
+              ref={moreButton}
+              type="button"
+              aria-expanded={moreOpen}
+              aria-controls={moreID}
+              onClick={() => setDisclosure({ path: pathname, open: !moreOpen })}
               className={
-                moreActive
-                  ? 'client-tab is-active cursor-pointer'
-                  : 'client-tab cursor-pointer'
+                moreActive ? 'client-tab is-active gap-2' : 'client-tab gap-2'
               }
             >
               {copy('More', 'operations')}
-            </summary>
-            <div className="absolute right-0 top-full z-20 min-w-48 border border-line bg-surface-elevated p-2 shadow-lg">
-              {advanced
-                .filter(([, , visible]) => visible)
-                .map(([label, path]) => (
-                  <NavLink
-                    key={path}
-                    to={base + path}
-                    className="block rounded-sm px-3 py-2 text-sm hover:bg-surface focus-visible:outline focus-visible:outline-accent"
-                  >
-                    {label}
-                  </NavLink>
-                ))}
-            </div>
-          </details>
+              <FontAwesomeIcon
+                icon={faChevronDown}
+                className="client-more-chevron"
+              />
+            </button>
+          ) : null}
+        </div>
+        {advanced.some(([, , visible]) => visible) ? (
+          <div id={moreID} hidden={!moreOpen} className="client-more-sections">
+            {advanced
+              .filter(([, , visible]) => visible)
+              .map(([label, path]) => (
+                <NavLink
+                  key={path}
+                  to={base + path}
+                  className={() =>
+                    contains(path)
+                      ? 'client-section-link is-active'
+                      : 'client-section-link'
+                  }
+                >
+                  {label}
+                </NavLink>
+              ))}
+          </div>
         ) : null}
       </nav>
       {workActive || financeActive ? (

@@ -282,6 +282,24 @@ it('shows no mutation controls to a scoped viewer and keeps unavailable modules 
   )
   expect(modules.getByRole('link', { name: 'Websites' })).toBeInTheDocument()
   expect(modules.queryAllByRole('link')).toHaveLength(3)
+  const more = modules.getByRole('button', { name: 'More' })
+  expect(more).toHaveAttribute('aria-expanded', 'true')
+  const u = userEvent.setup()
+  modules.getByRole('link', { name: 'Profile' }).focus()
+  await u.keyboard('{Escape}')
+  expect(more).toHaveFocus()
+  expect(more).toHaveAttribute('aria-expanded', 'false')
+  expect(
+    modules.queryByRole('link', { name: 'Profile' }),
+  ).not.toBeInTheDocument()
+  await u.keyboard('{Enter}')
+  expect(modules.getByRole('link', { name: 'Profile' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
+  expect(
+    modules.queryByRole('link', { name: 'Integrations' }),
+  ).not.toBeInTheDocument()
 })
 it('validates form fields, contacts and tags before sending normalized creation', async () => {
   const { fetcher } = setup('/app/clients/new')
