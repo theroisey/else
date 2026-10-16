@@ -27,3 +27,4 @@ createRoot(root).render(
 )
 
 registerServiceWorker()
+window.dispatchEvent(new Event('roisey:ready'))

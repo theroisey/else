@@ -156,21 +156,29 @@ def run(args):
             runtime = runtime_fixture.inspect(name)
             index, _ = request("/app/clients")
             assert index == (ROOT / "frontend/dist/index.html").read_bytes()
-            scripts = sorted(path for path in (ROOT / "frontend/dist/assets").glob("*.js") if path.name != "theme-init.js")
+            scripts = sorted(path for path in (ROOT / "frontend/dist/assets").iterdir() if path.suffix in (".js", ".css", ".woff2", ".woff", ".ttf") and path.name != "theme-init.js")
             assert scripts, "production application chunks are missing"
             encoded_sizes = {}
             for script in scripts:
                 asset_path = "/assets/" + script.name
                 encoded, headers = request(asset_path, headers={"Accept-Encoding": "gzip"})
                 assert "immutable" in headers["Cache-Control"]
-                assert headers["Content-Type"] == "text/javascript; charset=utf-8"
-                if script.with_suffix(".js.gz").exists():
+                assert headers["Content-Type"] == {".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf"}[script.suffix]
+                if script.with_suffix(script.suffix + ".gz").exists():
                     assert headers["Content-Encoding"] == "gzip"
                     assert gzip.decompress(encoded) == script.read_bytes()
                 else:
                     assert headers.get("Content-Encoding") is None
                     assert encoded == script.read_bytes()
                 encoded_sizes[asset_path] = len(encoded)
+                conditional, conditional_headers = request(asset_path, headers={"If-None-Match": headers["ETag"]}, expected=304)
+                assert conditional == b"" and conditional_headers["Vary"] == "Accept-Encoding"
+            for mutable in ("sw.js", "startup.js"):
+                value, headers = request("/" + mutable, headers={"Accept-Encoding": "gzip"})
+                decoded = gzip.decompress(value) if headers.get("Content-Encoding") == "gzip" else value
+                assert decoded == (ROOT / "frontend/dist" / mutable).read_bytes()
+                assert headers["Content-Type"] == "text/javascript; charset=utf-8" and headers["Cache-Control"] == "no-cache"
+                encoded_sizes["/" + mutable] = len(value)
             theme, theme_headers = request("/assets/theme-init.js", headers={"Accept-Encoding": "gzip"})
             assert theme_headers["Cache-Control"] == "no-cache", "pre-paint theme bootstrap must stay fresh"
             assert gzip.decompress(theme) == (ROOT / "frontend/dist/assets/theme-init.js").read_bytes()
@@ -179,7 +187,7 @@ def run(args):
             for tag in re.findall(rb"<(?:script|link)\b[^>]*>", index):
                 if not tag.startswith(b"<script") and b'rel="modulepreload"' not in tag:
                     continue
-                match = re.search(rb'(?:src|href)="(/assets/[^"/]+\.js)"', tag)
+                match = re.search(rb'(?:src|href)="((?:/assets/[^"/]+|/startup)\.js)"', tag)
                 if match:
                     initial.add(match[1].decode())
             entrypoints = re.findall(rb'<script[^>]+type="module"[^>]+src="(/assets/index-[^"/]+\.js)"', index)

@@ -53,7 +53,7 @@ impl Assets {
                 }
                 let content_type = match relative.as_str() {
                     "index.html" => "text/html; charset=utf-8",
-                    "sw.js" => "text/javascript; charset=utf-8",
+                    "sw.js" | "startup.js" => "text/javascript; charset=utf-8",
                     "app.webmanifest" => "application/manifest+json; charset=utf-8",
                     "assets/roisey-logo.svg" => "image/svg+xml",
                     "apple-touch-icon.png"
@@ -135,6 +135,20 @@ impl Assets {
         if !files.contains_key("/index.html") || files.len() < 2 {
             return Err(Error::Internal);
         }
+        let html = std::str::from_utf8(&files["/index.html"].body).map_err(|_| Error::Internal)?;
+        // Vite emits quoted root-relative references. A partial deployment must
+        // fail startup rather than advertise an HTML shell with missing assets.
+        for attribute in ["src=\"", "href=\""] {
+            for reference in html.split(attribute).skip(1) {
+                let value = reference.split('"').next().ok_or(Error::Internal)?;
+                if value.starts_with('/') {
+                    let path = value.split(['?', '#']).next().ok_or(Error::Internal)?;
+                    if !files.contains_key(path) {
+                        return Err(Error::Internal);
+                    }
+                }
+            }
+        }
         Ok(Self { files })
     }
 
@@ -158,7 +172,11 @@ impl Assets {
         if matches!(
             path,
             "/" | "/login" | "/interface" | "/service-status" | "/app"
-        ) || path.starts_with("/app/")
+        ) || (path.starts_with("/app/")
+            && path
+                .rsplit('/')
+                .next()
+                .is_some_and(|part| !part.contains('.')))
         {
             return self.files.get("/index.html").ok_or(Error::Internal);
         }
@@ -197,9 +215,45 @@ pub fn accepts_gzip(value: &str) -> bool {
     })
 }
 
+/// GET/HEAD If-None-Match uses weak comparison, including encoded variants.
+pub fn matches_etag(value: &str, etag: &str) -> bool {
+    let opaque = etag.strip_prefix("W/").unwrap_or(etag);
+    value.split(',').any(|tag| {
+        let tag = tag.trim();
+        tag == "*" || tag.strip_prefix("W/").unwrap_or(tag) == opaque
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn conditional_reads_compare_weak_and_identity_validators() {
+        for value in ["\"abc\"", "W/\"abc\"", "\"other\", W/\"abc\"", " * "] {
+            assert!(matches_etag(value, "\"abc\""));
+            assert!(matches_etag(value, "W/\"abc\""));
+        }
+        for value in ["abc", "\"other\"", "w/\"abc\"", "W/W/\"abc\""] {
+            assert!(!matches_etag(value, "\"abc\""));
+        }
+    }
+
+    #[test]
+    fn missing_entry_references_refuse_partial_deployments() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::write(root.path().join("startup.js"), "/* synthetic */").unwrap();
+        let index = root.path().join("index.html");
+        std::fs::write(
+            &index,
+            "<script src=\"/startup.js\"></script><link href=\"/assets/missing.css\"/>",
+        )
+        .unwrap();
+        assert!(Assets::load(root.path()).is_err());
+        std::fs::write(&index, "<script src=\"/startup.js?v=1\"></script>").unwrap();
+        let assets = Assets::load(root.path()).unwrap();
+        assert!(!assets.get("/startup.js").unwrap().immutable);
+    }
 
     #[test]
     fn static_artifact_routes_and_traversal_are_bounded() {
@@ -279,6 +333,8 @@ mod tests {
             "/assets/missing.png",
             "/assets/roisey-else-app-v1.png",
             "/assets/roisey-else-app-v1.svg",
+            "/app/assets/missing.js",
+            "/app/clients/missing.woff2",
             "/missing.webmanifest",
             "/../index.html",
             "/%2e%2e/index.html",

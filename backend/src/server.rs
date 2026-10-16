@@ -2,7 +2,7 @@ use crate::{
     api::{Api, Reply, Request},
     audit,
     error::{Error, Result},
-    static_files::{Assets, accepts_gzip},
+    static_files::{Assets, accepts_gzip, matches_etag},
 };
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -14,7 +14,7 @@ use pingora_core::{
 };
 use std::{
     sync::{
-        Arc,
+        Arc, OnceLock,
         atomic::{AtomicBool, Ordering},
     },
     time::{Duration, Instant},
@@ -200,10 +200,7 @@ impl Application {
         let not_modified = headers
             .get(header::IF_NONE_MATCH)
             .and_then(|v| v.to_str().ok())
-            .is_some_and(|v| {
-                v.split(',')
-                    .any(|tag| tag.trim() == etag || tag.trim() == "*")
-            });
+            .is_some_and(|value| matches_etag(value, &asset.etag));
         let content = if gzip {
             asset.gzip.as_ref().ok_or(Error::Internal)?
         } else {
@@ -404,15 +401,21 @@ fn json_response(reply: Reply, method: &Method) -> Result<Response<Bytes>> {
 }
 
 fn browser_headers(headers: &mut http::HeaderMap) {
-    for (key, value) in [
-        (
-            "content-security-policy",
-            "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
-        ),
-        ("x-frame-options", "DENY"),
-        ("x-content-type-options", "nosniff"),
-        ("referrer-policy", "no-referrer"),
-    ] {
-        headers.insert(key, HeaderValue::from_static(value));
-    }
+    static POLICY: OnceLock<http::HeaderMap> = OnceLock::new();
+    let policy = POLICY.get_or_init(|| {
+        let values: std::collections::BTreeMap<String, String> =
+            serde_json::from_str(include_str!("../internal/http/browser-headers.json"))
+                .expect("checked browser header policy");
+        values
+            .into_iter()
+            .map(|(name, value)| {
+                (
+                    http::header::HeaderName::from_bytes(name.as_bytes())
+                        .expect("checked header name"),
+                    HeaderValue::from_str(&value).expect("checked header value"),
+                )
+            })
+            .collect()
+    });
+    headers.extend(policy.clone());
 }

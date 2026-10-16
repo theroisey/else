@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Exercise the compiled Pingora process with disposable synthetic data."""
 import argparse
+import gzip
 import http.cookiejar
 import json
 import os
+import re
 from pathlib import Path
 import signal
 import socket
@@ -67,6 +69,26 @@ def run(binary: Path, frontend: Path, stop_signal: int) -> None:
                         assert time.monotonic() < deadline, "server readiness timed out"
                         time.sleep(0.05)
                 request("/api/v1/auth/session", expected=401)
+                public_html, _ = request("/login")
+                paths = set(re.findall(rb'(?:href|src)="(/(?:assets/[^"?]+|startup.js))', public_html))
+                for raw_path in paths | {b"/sw.js"}:
+                    path = raw_path.decode()
+                    if not path.endswith((".js", ".css", ".woff2")):
+                        continue
+                    value, headers = request(path, extra={"Cookie": "cf_clearance=synthetic", "Accept-Encoding": "identity"})
+                    expected_type = {".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".woff2": "font/woff2"}[Path(path).suffix]
+                    assert headers["Content-Type"] == expected_type
+                    assert value == (frontend / path.lstrip("/")).read_bytes()
+                    assert headers["Vary"] == "Accept-Encoding"
+                    assert headers["Cache-Control"] == ("no-cache" if path in ("/sw.js", "/startup.js", "/assets/theme-init.js") else "public, max-age=31536000, immutable")
+                    identity = headers["ETag"]
+                    encoded, compressed = request(path, extra={"Accept-Encoding": "gzip"})
+                    assert (gzip.decompress(encoded) if compressed.get("Content-Encoding") == "gzip" else encoded) == value
+                    for encoding, validator in [("gzip", identity), ("identity", compressed["ETag"]), ("gzip", '"unmatched", ' + identity)]:
+                        empty, conditional = request(path, extra={"Accept-Encoding": encoding, "If-None-Match": validator}, expected=304)
+                        assert empty == b"" and conditional["Vary"] == "Accept-Encoding"
+                    empty, head = request(path, "HEAD")
+                    assert empty == b"" and int(head["Content-Length"]) == len(value)
                 login, headers = request("/api/v1/auth/login", "POST", {"email": bootstrap["email"], "password": bootstrap["password"]})
                 assert login["data"]["user"]["email"] == bootstrap["email"]
                 assert len(headers.get_all("Set-Cookie")) == 3

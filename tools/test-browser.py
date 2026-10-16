@@ -79,6 +79,8 @@ def run(args):
                 elif args.grep:
                     command += ["--grep", args.grep]
                 subprocess.run(command, cwd=ROOT / "frontend", env=env, check=True)
+                if not args.performance_output:
+                    subprocess.run([node, str(ROOT / "frontend/scripts/check-public-cache.mjs"), origin], cwd=ROOT, env=env, check=True)
             finally:
                 if container:
                     try:

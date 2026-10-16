@@ -30,7 +30,7 @@ Create the client first, then add its independent properties in Websites. There 
 
 Browser tabs use the supplied 16px and 32px favicons. On mobile, use your browser's Add to Home Screen or Install app action. Platform-sized PNG icons are resized directly from the original 2048px black R + ELSE artwork with Lanczos filtering and light sharpening for iOS and Android. The shortcut opens the authenticated workspace in its own window on supported browsers; it needs a network connection. After updating the deployment, existing shortcuts may need to be removed and added again to refresh the device's cached icon.
 
-Production includes a service worker on HTTPS or loopback. It caches public scripts, styles and fonts as they load; pages, account data and writes still need a connection. Updates do not reload open work. Save your drafts and close all application tabs and installed windows to activate a waiting service worker update.
+Production includes a bounded service worker on HTTPS or loopback. It caches only verified public scripts, styles and fonts as they load; pages, account data and writes still need a connection. Updates do not reload open work. Save your drafts and close all application tabs and installed windows to activate a waiting update. If startup files are unavailable, the recovery screen explains whether to reload or close and reopen for an update.
 
 Appearance and language are available in Settings and the account menu. Navigation is immediate; only loading indicators fade. The separate My Access page has been removed.
 
@@ -97,7 +97,7 @@ docker compose pull
 docker compose up -d --wait --wait-timeout 60
 ```
 
-Take a verified backup before upgrading and review compatibility before rolling back code. Updates are explicit host operations. The application does not poll registries or deploy itself.
+Take a verified backup before upgrading and review compatibility before rolling back code. Save work and close existing application tabs after upgrading to let a waiting public-asset worker activate; reopen the panel and check the new build. See [static-delivery verification and recovery](notes/static-delivery.md) for release checks. Updates are explicit host operations. The application does not poll registries or deploy itself.
 
 ## Your data
 

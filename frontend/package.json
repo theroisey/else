@@ -11,10 +11,10 @@
     "dev": "vite --host 127.0.0.1",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && node scripts/service-worker.test.mjs",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "build": "npm run typecheck && vite build && node scripts/check-bundle-budget.mjs",
+    "build": "npm run typecheck && vite build && node scripts/prepare-service-worker.mjs && node scripts/check-bundle-budget.mjs",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {

@@ -149,6 +149,24 @@ try {
   stage += ` (${(await page.evaluate(() => window.syntheticCSPKinds)).join(', ')})`
   assert.deepEqual(legitimateViolations, [])
 
+  stage = 'optional Cloudflare beacon script and same-origin transport'
+  await page.route('https://static.cloudflareinsights.com/beacon.min.js', route => route.fulfill({
+    contentType: 'text/javascript', body: 'window.syntheticBeaconLoaded = true; navigator.sendBeacon("/cdn-cgi/rum", "synthetic timing");',
+  }))
+  await page.route(`${origin.origin}/cdn-cgi/rum`, route => route.fulfill({ status: 204 }))
+  const beacon = page.waitForRequest(`${origin.origin}/cdn-cgi/rum`)
+  await page.evaluate(() => {
+    const script = document.createElement('script')
+    script.src = 'https://static.cloudflareinsights.com/beacon.min.js'
+    document.head.append(script)
+  })
+  assert.equal((await beacon).method(), 'POST')
+  assert.equal(await page.evaluate(() => window.syntheticBeaconLoaded), true)
+  assert.deepEqual(await page.evaluate(() => window.syntheticCSPViolations), [])
+  const declared = JSON.parse(readFileSync(new URL('../../backend/internal/http/browser-headers.json', import.meta.url), 'utf8'))
+  const policy = (await page.request.get(origin.origin + '/login')).headers()['content-security-policy']
+  assert.equal(policy, declared['Content-Security-Policy'])
+
   // DevTools evaluation can bypass code-generation policy. A normal allowed
   // same-origin script must attempt eval for real browser enforcement proof.
   stage = 'eval denial from ordinary same-origin script'
@@ -164,6 +182,11 @@ try {
   assert.equal(await page.evaluate(() => window.syntheticUnsafeEvalRan), undefined)
 
   stage = 'inline and external script/style/base denial'
+  let unapprovedBeaconRequests = 0
+  await page.route('https://static.cloudflareinsights.com/unapproved.js', route => {
+    unapprovedBeaconRequests++
+    return route.fulfill({ contentType: 'text/javascript', body: 'window.syntheticUnsafeScriptRan = true' })
+  })
   await page.evaluate((hostile) => {
     const script = document.createElement('script')
     script.textContent = 'window.syntheticUnsafeScriptRan = true'
@@ -171,6 +194,9 @@ try {
     const external = document.createElement('script')
     external.src = `${hostile}/script.js`
     document.head.append(external)
+    const unapproved = document.createElement('script')
+    unapproved.src = 'https://static.cloudflareinsights.com/unapproved.js'
+    document.head.append(unapproved)
     const style = document.createElement('style')
     style.textContent = 'body { outline: 7px solid rgb(1, 2, 3) !important; }'
     document.head.append(style)
@@ -183,6 +209,7 @@ try {
   assert.notEqual(await page.evaluate(() => getComputedStyle(document.body).outlineWidth), '7px')
   assert.ok((await page.evaluate(() => document.baseURI)).startsWith(origin.origin))
   assert.equal(attackRequests, 0)
+  assert.equal(unapprovedBeaconRequests, 0)
 
   stage = 'cross-origin form denial'
   await page.evaluate((hostile) => {
@@ -205,7 +232,7 @@ try {
   await framing.goto(`${hostile}/frame`)
   await expect.poll(() => blockedFrame).toBe(true)
   assert.equal(framing.frames().some((frame) => frame.url().startsWith(origin.origin)), false)
-  console.log('Built UI/icon CSS and real same-origin API verified under declared CSP; eval/inline/external script, style, base, form and frame attacks blocked.')
+  console.log('Built UI/icons/API and optional Cloudflare beacon verified under declared CSP; eval/inline/unapproved script, style, base, form and frame attacks blocked.')
 } catch {
   console.error(`Built artifact CSP verification failed: ${stage}.`)
   process.exitCode = 1

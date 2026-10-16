@@ -70,7 +70,7 @@ An isolated Node formatting microbenchmark (2,000 currency + explicit-UTC date c
 
 ## Caching and safety decisions
 
-Native gzip, fingerprinted immutable assets and revalidated HTML already provide repeat-visit caching. A service worker was not justified by a measured additional benefit; it would add update/activation complexity to an authenticated application without providing authorized offline business workflows. No API responses, financial values, credentials or screenshots enter persistent browser caches. The application remains network-dependent.
+Native gzip, fingerprinted immutable assets and revalidated HTML already provide repeat-visit caching. At this measurement baseline no service worker was enabled. The later [static-delivery remediation](static-delivery.md) adds a bounded public-asset worker for deployment continuity, without claiming an additional measured speed improvement or offline business workflows. No API responses, financial values, credentials or screenshots enter persistent browser caches. The application remains network-dependent.
 
 Private query lifetimes, grant/actor partitions, fresh backend authorization and exact financial commands are unchanged. No optimistic financial or workflow success is fabricated. Formatter caches retain at most 64 public configurations per formatter kind, never amounts; implicit-device-timezone dates are not cached. No database/API/schema/authentication policy changes.
 
