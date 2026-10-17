@@ -43,7 +43,7 @@ pub async fn user(db: &Database, actor: Actor, id: String) -> Result<Value> {
     .await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct NewUser {
     email: String,
@@ -69,7 +69,7 @@ pub async fn create_user(auth: &Auth, actor: Actor, input: NewUser) -> Result<Mu
     }).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UserProfile {
     email: String,
@@ -197,7 +197,7 @@ pub async fn catalog(db: &Database, actor: Actor) -> Result<Value> {
     }).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct NewRole {
     display_name: String,
@@ -218,7 +218,7 @@ pub async fn create_role(db: &Database, actor: Actor, input: NewRole) -> Result<
     }).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReplacePermissions {
     permissions: Vec<String>,
@@ -265,7 +265,7 @@ pub async fn assignments(db: &Database, actor: Actor, user: String, query: Query
     }).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Assignment {
     role_id: String,
@@ -305,7 +305,7 @@ pub async fn assign(
     }).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Confirmation {
     pub confirm: bool,
@@ -364,7 +364,7 @@ fn control(
     client: Option<&str>,
 ) -> Result<()> {
     let allowed=match client {
-        Some(client)=>security::allowed_user(tx,&actor.user_id,permission,Some(client))?,
+        Some(client)=>security::allowed_actor(tx,actor,permission,Some(client))?,
         None=>tx.query_row("SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN role_permissions rp ON rp.role_id=ur.role_id WHERE ur.user_id=?1 AND ur.scope_kind='global' AND ur.revoked_at IS NULL AND rp.revoked_at IS NULL AND rp.permission_key=?2)",params![actor.user_id,permission],|r|r.get(0))?,
     };
     if allowed { Ok(()) } else { Err(Error::Denied) }

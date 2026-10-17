@@ -90,6 +90,28 @@ fn main() {
     assert!(status(pid, "Uid:").split_whitespace().all(|v| v == uid));
     assert!(status(1, "Uid:").split_whitespace().all(|v| v == uid));
     match action.as_str() {
+        "process-usage" => {
+            let stat = fs::read_to_string("/proc/1/stat").unwrap();
+            let fields: Vec<_> = stat
+                .rsplit_once(')')
+                .unwrap()
+                .1
+                .split_whitespace()
+                .collect();
+            let ticks = unsafe { libc::sysconf(libc::_SC_CLK_TCK) };
+            assert!(ticks > 0);
+            let cpu_ticks = fields[11].parse::<u64>().unwrap() + fields[12].parse::<u64>().unwrap();
+            let peak_kib = status(1, "VmHWM:")
+                .split_whitespace()
+                .next()
+                .unwrap()
+                .parse::<u64>()
+                .unwrap();
+            println!(
+                "{}",
+                serde_json::json!({"cpu_seconds":cpu_ticks as f64/ticks as f64,"peak_rss_bytes":peak_kib*1024,"scope":"Rust application process; Redis is excluded"})
+            );
+        }
         "kill" | "pause" | "resume" => {
             let signal = match action.as_str() {
                 "kill" => libc::SIGKILL,
@@ -120,6 +142,10 @@ fn main() {
             );
             assert!(fs::read_dir("/tmp").unwrap().next().is_none());
             println!("readonly_root_and_transient_cache_verified");
+        }
+        "cache-flush" => {
+            assert_eq!(command(&["FLUSHDB", "SYNC"]), "OK");
+            println!("owned_transient_report_cache_evicted");
         }
         "inspect" => {
             assert_eq!(command(&["PING"]), "PONG");

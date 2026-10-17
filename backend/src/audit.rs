@@ -148,7 +148,7 @@ pub(crate) fn storage_payload(kind: &str, before: &str, after: &str, metadata: &
             }
         }
         let metadata: Metadata = validation::json(metadata.as_bytes())?;
-        if !matches!(metadata.source.as_str(), "http" | "job" | "cli") {
+        if !matches!(metadata.source.as_str(), "http" | "job" | "cli" | "mcp") {
             return Err(Error::Internal);
         }
         Ok(())
@@ -171,7 +171,7 @@ pub fn append(tx: &Transaction<'_>, event: Event<'_>) -> Result<()> {
         _ => false,
     };
     if !action_valid
-        || !matches!(event.source, "http" | "job" | "cli")
+        || !matches!(event.source, "http" | "job" | "cli" | "mcp")
         || event.kind.is_empty()
         || event.kind.len() > 32
         || !event
@@ -198,6 +198,7 @@ pub fn append(tx: &Transaction<'_>, event: Event<'_>) -> Result<()> {
             return Err(Error::Internal);
         }
     }
+    crate::mcp::commands::commit(tx, &event)?;
     let before = serde_json::to_string(&event.before).map_err(|_| Error::Internal)?;
     let after = serde_json::to_string(&event.after).map_err(|_| Error::Internal)?;
     let metadata = serde_json::to_string(&serde_json::json!({"source":event.source}))

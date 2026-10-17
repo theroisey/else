@@ -38,8 +38,8 @@ fn describe(event: &str) -> Option<&'static str> {
 
 pub(crate) fn authorize(tx: &Transaction<'_>, actor: &Actor, client: &str) -> Result<()> {
     security::fresh(tx, actor)?;
-    if !security::allowed_user(tx, &actor.user_id, "clients.view", Some(client))?
-        || !security::allowed_user(tx, &actor.user_id, "activity.view", Some(client))?
+    if !security::allowed_actor(tx, actor, "clients.view", Some(client))?
+        || !security::allowed_actor(tx, actor, "activity.view", Some(client))?
     {
         return Err(Error::NotFound);
     }
@@ -53,9 +53,9 @@ pub(crate) fn project(
     boundary: Option<&Boundary>,
     limit: usize,
 ) -> Result<Vec<Value>> {
-    let tasks = security::allowed_user(tx, &actor.user_id, "tasks.view", Some(client))?;
-    let plans = security::allowed_user(tx, &actor.user_id, "planning.view", Some(client))?;
-    let reminders = security::allowed_user(tx, &actor.user_id, "reminders.view", Some(client))?;
+    let tasks = security::allowed_actor(tx, actor, "tasks.view", Some(client))?;
+    let plans = security::allowed_actor(tx, actor, "planning.view", Some(client))?;
+    let reminders = security::allowed_actor(tx, actor, "reminders.view", Some(client))?;
     let mut statement=tx.prepare("SELECT id,client_id,occurred_at,event_name AS event_type,resource_kind,resource_id FROM audit_events WHERE schema_version=1 AND client_id=?1 AND ((resource_kind IN ('client','website') AND event_name IN ('client.created','client.updated','client.archived','website.created','website.updated','website.archived')) OR (?2 AND resource_kind='task' AND event_name IN ('task.created','task.updated','task.archived','task.completed','task.cancelled')) OR (?3 AND resource_kind IN ('plan','milestone') AND event_name IN ('plan.created','plan.updated','plan.archived','milestone.created','milestone.updated','milestone.archived')) OR (?4 AND resource_kind='reminder' AND event_name IN ('reminder.created','reminder.updated','reminder.completed','reminder.dismissed'))) AND (?5 IS NULL OR (occurred_at,id)<(?5,?6)) ORDER BY occurred_at DESC,id DESC LIMIT ?7")?;
     let mut data = statement
         .query_map(

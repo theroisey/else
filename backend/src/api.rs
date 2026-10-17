@@ -109,6 +109,7 @@ impl Api {
             "operations-settings",
             "teams",
             "notifications",
+            "mcp",
         ]
         .contains(&route[0])
         {
@@ -189,6 +190,10 @@ impl Api {
             }
         }
         match route {
+            ["mcp", rest @ ..] => {
+                crate::mcp::management::dispatch(&self.db, &self.config, actor, rest, &request)
+                    .await
+            }
             ["clients", client, "recurring-tasks", rest @ ..] => {
                 self.recurring(&request, actor, validation::id(client)?, rest)
                     .await

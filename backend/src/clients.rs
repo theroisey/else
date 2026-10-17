@@ -11,7 +11,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::collections::BTreeSet;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Contact {
     name: String,
@@ -21,7 +21,7 @@ pub struct Contact {
     phone: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Profile {
     name: String,
@@ -105,9 +105,10 @@ pub async fn list(db: &Database, actor: Actor, query: Query) -> Result<Value> {
         security::fresh(tx,&actor)?;
         let any:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN role_permissions rp ON rp.role_id=ur.role_id WHERE ur.user_id=?1 AND ur.revoked_at IS NULL AND rp.revoked_at IS NULL AND rp.permission_key='clients.view')",[&actor.user_id],|r|r.get(0))?;
         if !any {return Err(Error::Denied);}
-        let sql=format!("SELECT {SUMMARY} FROM clients c WHERE (?1 IS NULL OR c.id {} ?1) AND (?2='all' OR (?2='active' AND c.archived_at IS NULL) OR (?2='archived' AND c.archived_at IS NOT NULL)) AND (?3='' OR instr(unicode_lower(c.name),unicode_lower(?3))>0) AND (?4='' OR EXISTS(SELECT 1 FROM client_tags WHERE client_id=c.id AND tag=?4)) AND EXISTS(SELECT 1 FROM user_roles ur JOIN role_permissions rp ON rp.role_id=ur.role_id WHERE ur.user_id=?5 AND ur.revoked_at IS NULL AND rp.revoked_at IS NULL AND rp.permission_key='clients.view' AND (ur.scope_kind='global' OR ur.client_id=c.id)) ORDER BY c.id {} LIMIT ?6",paging.comparison(),paging.order());
+        if actor.delegation().is_some_and(|d| !d.scopes.contains("clients:read")) {return Err(Error::Denied);}
+        let sql=format!("SELECT {SUMMARY} FROM clients c WHERE (?7 IS NULL OR c.id=?7) AND (?1 IS NULL OR c.id {} ?1) AND (?2='all' OR (?2='active' AND c.archived_at IS NULL) OR (?2='archived' AND c.archived_at IS NOT NULL)) AND (?3='' OR instr(unicode_lower(c.name),unicode_lower(?3))>0) AND (?4='' OR EXISTS(SELECT 1 FROM client_tags WHERE client_id=c.id AND tag=?4)) AND EXISTS(SELECT 1 FROM user_roles ur JOIN role_permissions rp ON rp.role_id=ur.role_id WHERE ur.user_id=?5 AND ur.revoked_at IS NULL AND rp.revoked_at IS NULL AND rp.permission_key='clients.view' AND (ur.scope_kind='global' OR ur.client_id=c.id)) ORDER BY c.id {} LIMIT ?6",paging.comparison(),paging.order());
         let mut statement=tx.prepare(&sql)?;
-        let data=statement.query_map(params![paging.cursor,status,search,tag,actor.user_id,(paging.limit+1) as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?;
+        let data=statement.query_map(params![paging.cursor,status,search,tag,actor.user_id,(paging.limit+1) as i64,actor.client_scope()],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?;
         paging.page(data)
     }).await
 }
@@ -155,7 +156,7 @@ pub async fn update(db: &Database, actor: Actor, id: String, profile: Profile) -
     }).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ConfirmRevision {
     pub expected_revision: i64,

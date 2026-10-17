@@ -85,6 +85,17 @@ pub(crate) const TABLES: &[&str] = &[
     "notification_preferences",
     "automation_failures",
     "automation_alerts",
+    "mcp_settings",
+    "mcp_applications",
+    "mcp_redirects",
+    "mcp_origins",
+    "mcp_grants",
+    "mcp_authorizations",
+    "mcp_codes",
+    "mcp_access_tokens",
+    "mcp_refresh_tokens",
+    "mcp_approvals",
+    "mcp_commands",
 ];
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -208,6 +219,31 @@ pub fn restore(bundle: &Path, database: &Path, key_file: &Path) -> Result<()> {
         backup.run_to_completion(256, Duration::from_millis(5), None)?;
     }
     target.pragma_update(None, "journal_mode", "DELETE")?;
+    if verify(&mut target, &Keyring::parse(&fresh)?)? != counts {
+        return Err(Error::Internal);
+    }
+    // A checkpoint must never resurrect delegated external authority. Receipts remain retained.
+    {
+        let tx = target.transaction()?;
+        let now = validation::now();
+        tx.execute(
+            "UPDATE mcp_settings SET enabled=0,revision=revision+1,updated_at=?1 WHERE id=1",
+            [&now],
+        )?;
+        tx.execute(
+            "UPDATE mcp_grants SET revoked_at=?1 WHERE revoked_at IS NULL",
+            [&now],
+        )?;
+        tx.execute(
+            "UPDATE mcp_authorizations SET consumed_at=?1 WHERE consumed_at IS NULL",
+            [&now],
+        )?;
+        tx.execute(
+            "UPDATE mcp_approvals SET state='revoked',decided_at=?1 WHERE state='pending'",
+            [&now],
+        )?;
+        tx.commit()?;
+    }
     if verify(&mut target, &Keyring::parse(&fresh)?)? != counts {
         return Err(Error::Internal);
     }

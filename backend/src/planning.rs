@@ -58,9 +58,9 @@ pub struct Profile {
     expected: Option<i64>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
-struct PlanInput {
+pub(crate) struct PlanInput {
     title: String,
     #[serde(default)]
     description: String,
@@ -69,9 +69,9 @@ struct PlanInput {
     expected_revision: Option<i64>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
-struct MilestoneInput {
+pub(crate) struct MilestoneInput {
     title: String,
     #[serde(default)]
     description: String,
@@ -273,7 +273,7 @@ pub async fn links(
     }).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Links {
     task_ids: Vec<String>,
@@ -304,7 +304,7 @@ pub async fn replace_links(
         let current=statement.query_map([&id],|r|r.get::<_,String>(0))?.collect::<std::result::Result<BTreeSet<_>,_>>()?;
         let now=validation::now();
         for task in selected.difference(&current) {
-            if !security::allowed_user(tx,&actor.user_id,"tasks.view",Some(&scope.client))? {return Err(Error::Invalid("invalid_task_link"));}
+            if !security::allowed_actor(tx,&actor,"tasks.view",Some(&scope.client))? {return Err(Error::Invalid("invalid_task_link"));}
             let valid:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM tasks WHERE id=?1 AND client_id=?2 AND archived_at IS NULL)",params![task,scope.client],|r|r.get(0))?;
             if !valid {return Err(Error::Invalid("invalid_task_link"));}
             tx.execute("INSERT INTO milestone_task_links VALUES (?1,?2,?3,?4,?5,?6,NULL)",params![validation::new_id(),id,scope.plan,scope.client,task,now])?;

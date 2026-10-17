@@ -27,6 +27,7 @@ pub struct Application {
     pub draining: Arc<AtomicBool>,
     redis: Arc<crate::embedded_redis::EmbeddedRedis>,
     requests: Semaphore,
+    mcp: crate::mcp::transport::Bridge,
     evidence_uploads: Arc<Semaphore>,
     options: HttpServerOptions,
 }
@@ -47,6 +48,7 @@ impl Application {
             draining,
             redis,
             requests: Semaphore::new(128),
+            mcp: crate::mcp::transport::Bridge::default(),
             evidence_uploads: Arc::new(Semaphore::new(2)),
             options,
         }
@@ -90,6 +92,14 @@ impl Application {
             .and_then(|a| a.as_inet())
             .map(|a| a.ip().to_string())
             .unwrap_or_else(|| "unknown".into());
+        let bridge_route = path == "/mcp"
+            || path.starts_with("/oauth/")
+            || path.starts_with("/.well-known/oauth-");
+        let _bridge_permit = if bridge_route {
+            Some(self.mcp.admit()?)
+        } else {
+            None
+        };
         let upload = method == Method::POST && Api::upload_route(&path).is_some();
         let admission = if upload {
             let permit = self
@@ -161,6 +171,25 @@ impl Application {
                 cookies: vec![],
             };
             return json_response(reply, &method);
+        }
+        if bridge_route {
+            return Ok(self
+                .mcp
+                .handle(
+                    &self.api,
+                    Request {
+                        upload_admission: None,
+                        method,
+                        path,
+                        query_present: session.req_header().uri.query().is_some(),
+                        query,
+                        headers,
+                        body,
+                        peer,
+                        request_id: correlation.into(),
+                    },
+                )
+                .await);
         }
         if path == "/api" || path.starts_with("/api/") {
             return json_response(
@@ -243,6 +272,23 @@ impl Application {
     ) -> Response<Bytes> {
         // An expired access cookie must not discard the independent refresh
         // credential before the browser can renew. Failed renewal/logout clears all.
+        if path == "/mcp" {
+            return crate::mcp::transport::failure(
+                &self.api,
+                &Request {
+                    upload_admission: None,
+                    method: method.clone(),
+                    path: path.into(),
+                    query: String::new(),
+                    query_present: false,
+                    headers: Default::default(),
+                    body: vec![],
+                    peer: String::new(),
+                    request_id: correlation.into(),
+                },
+                error,
+            );
+        }
         let cookies = if matches!(error, Error::Unauthorized)
             && matches!(path, "/api/v1/auth/refresh" | "/api/v1/auth/logout")
         {

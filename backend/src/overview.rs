@@ -34,23 +34,23 @@ fn attention(
 pub async fn read(db: &Database, actor: Actor, client: String) -> Result<Value> {
     db.read(move|tx| {
         security::fresh(tx,&actor)?;
-        if !security::allowed_user(tx,&actor.user_id,"clients.view",Some(&client))? {return Err(Error::NotFound);}
+        if !security::allowed_actor(tx,&actor,"clients.view",Some(&client))? {return Err(Error::NotFound);}
         let profile=tx.query_row("SELECT id,name,CASE WHEN archived_at IS NULL THEN 'active' ELSE 'archived' END AS status,archived_at FROM clients WHERE id=?1",[&client],row_json)?;
         let now=validation::now();
         let horizon=DateTime::parse_from_rfc3339(&now).map_err(|_|Error::Internal)?.with_timezone(&Utc).checked_add_signed(TimeDelta::hours(168)).ok_or(Error::Internal)?.to_rfc3339_opts(SecondsFormat::Micros,true);
         let mut view=serde_json::json!({"client":profile,"as_of":now,"horizon_end":horizon});
-        if security::allowed_user(tx,&actor.user_id,"billing.view",Some(&client))? {
+        if security::allowed_actor(tx,&actor,"billing.view",Some(&client))? {
             view["finance"]=serde_json::json!({"currencies":billing::summary_at(tx,&client,&now[..10])?});
         }
         let mut task_read=false;
-        for key in crate::tasks::READ_KEYS { task_read |= security::allowed_user(tx,&actor.user_id,key,Some(&client))?; }
+        for key in crate::tasks::READ_KEYS { task_read |= security::allowed_actor(tx,&actor,key,Some(&client))?; }
         if task_read {
             let sql=format!("SELECT t.id,t.title,t.status,t.priority,t.due_at FROM tasks t WHERE t.client_id=?1 AND {} AND t.archived_at IS NULL AND t.status NOT IN ('done','cancelled') AND t.due_at<=?3 AND (?2 IS NULL OR t.due_at>?2) ORDER BY t.due_at,t.id LIMIT 6",crate::tasks::visibility_sql("?4"));
             let read=|from:Option<&str>,until:&str|->Result<Value>{let mut stmt=tx.prepare(&sql)?;Ok(queue(stmt.query_map(params![client,from,until,actor.user_id],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?))};
             view["tasks"]=serde_json::json!({"overdue":read(None,&now)?,"due_soon":read(Some(&now),&horizon)?});
         }
         let mut request_read=false;
-        for key in ["tickets.read_all","tickets.read_team","tickets.read_own"]{request_read|=security::allowed_user(tx,&actor.user_id,key,Some(&client))?;}
+        for key in ["tickets.read_all","tickets.read_team","tickets.read_own"]{request_read|=security::allowed_actor(tx,&actor,key,Some(&client))?;}
         if request_read {
             let visible=crate::operations::requests::visibility_sql("?1");
             let mut counts:std::collections::BTreeMap<String,String>=crate::operations::requests::STATES.iter().map(|v|(v.to_string(),"0".into())).collect();
@@ -64,11 +64,11 @@ pub async fn read(db: &Database, actor: Actor, client: String) -> Result<Value> 
             let websites=queue(stmt.query_map([&client],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?);
             view["operations"]=serde_json::json!({"counts":counts,"requests":requests,"staff":staff,"websites":websites});
         }
-        if security::allowed_user(tx,&actor.user_id,"reminders.view",Some(&client))? {
+        if security::allowed_actor(tx,&actor,"reminders.view",Some(&client))? {
             const SQL:&str="SELECT id,title,scheduled_at,timezone FROM reminders WHERE client_id=?1 AND status='pending' AND scheduled_at<=?3 AND (?2 IS NULL OR scheduled_at>?2) ORDER BY scheduled_at,id LIMIT 6";
             view["reminders"]=serde_json::json!({"due":attention(tx,SQL,&client,None,&now)?,"upcoming":attention(tx,SQL,&client,Some(&now),&horizon)?});
         }
-        if security::allowed_user(tx,&actor.user_id,"activity.view",Some(&client))? {
+        if security::allowed_actor(tx,&actor,"activity.view",Some(&client))? {
             view["activity"]=queue(activity::project(tx,&actor,&client,None,6)?);
         }
         Ok(view)

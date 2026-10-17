@@ -24,8 +24,8 @@ pub(crate) fn authorize(
     writing: bool,
 ) -> Result<()> {
     security::fresh(tx, actor)?;
-    if !security::allowed_user(tx, &actor.user_id, "clients.view", Some(client))?
-        || !security::allowed_user(tx, &actor.user_id, permission, Some(client))?
+    if !security::allowed_actor(tx, actor, "clients.view", Some(client))?
+        || !security::allowed_actor(tx, actor, permission, Some(client))?
     {
         return Err(Error::NotFound);
     }

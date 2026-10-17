@@ -1,0 +1,11 @@
+# Independent interoperability client, never linked into the application image.
+[package]
+name = "else-mcp-interoperability"
+version = "0.1.0"
+edition = "2024"
+publish = false
+[workspace]
+[dependencies]
+rmcp = { version = "=3.5.1", default-features = false, features = ["client", "transport-streamable-http-client-reqwest", "reqwest"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-util", "io-std", "time"] }
+serde_json = "1"

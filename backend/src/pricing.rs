@@ -19,7 +19,7 @@ impl Serialize for Exact {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Profile {
     title: String,
@@ -32,7 +32,7 @@ pub struct Profile {
     expected_revision: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct LineInput {
     description: String,
@@ -388,7 +388,7 @@ fn insert_version(
 pub async fn list(db: &Database, actor: Actor, client: String, query: Query) -> Result<Value> {
     let paging = query.paging()?;
     db.read(move |tx| {
-        authorize(tx,&actor,&client,false)?;let costs=security::allowed_user(tx,&actor.user_id,"pricing.manage",Some(&client))?;
+        authorize(tx,&actor,&client,false)?;let costs=security::allowed_actor(tx,&actor,"pricing.manage",Some(&client))?;
         let mut statement=tx.prepare("SELECT id FROM pricing_sheets WHERE client_id=?1 AND (?2 IS NULL OR id>?2) ORDER BY id LIMIT ?3")?;
         let ids=statement.query_map(params![client,paging.cursor,(paging.limit+1) as i64],|r|r.get::<_,String>(0))?.collect::<std::result::Result<Vec<_>,_>>()?;
         let data=ids.into_iter().map(|id|sheet_document(tx,&client,&id,costs)).collect::<Result<Vec<_>>>()?;paging.page(data)
@@ -402,7 +402,7 @@ pub async fn read(db: &Database, actor: Actor, client: String, id: String) -> Re
             tx,
             &client,
             &id,
-            security::allowed_user(tx, &actor.user_id, "pricing.manage", Some(&client))?,
+            security::allowed_actor(tx, &actor, "pricing.manage", Some(&client))?,
         )
     })
     .await
@@ -417,7 +417,7 @@ pub async fn versions(
 ) -> Result<Value> {
     let paging = query.paging()?;
     db.read(move |tx| {
-        authorize(tx,&actor,&client,false)?;sheet_identity(tx,&client,&id)?;let costs=security::allowed_user(tx,&actor.user_id,"pricing.manage",Some(&client))?;
+        authorize(tx,&actor,&client,false)?;sheet_identity(tx,&client,&id)?;let costs=security::allowed_actor(tx,&actor,"pricing.manage",Some(&client))?;
         let mut statement=tx.prepare("SELECT id FROM pricing_versions WHERE sheet_id=?1 AND client_id=?2 AND (?3 IS NULL OR id>?3) ORDER BY id LIMIT ?4")?;
         let ids=statement.query_map(params![id,client,paging.cursor,(paging.limit+1) as i64],|r|r.get::<_,String>(0))?.collect::<std::result::Result<Vec<_>,_>>()?;
         let data=ids.into_iter().map(|version|version_document(tx,&client,&id,Some(&version),costs)).collect::<Result<Vec<_>>>()?;paging.page(data)
@@ -438,7 +438,7 @@ pub async fn version(
             &client,
             &id,
             Some(&version),
-            security::allowed_user(tx, &actor.user_id, "pricing.manage", Some(&client))?,
+            security::allowed_actor(tx, &actor, "pricing.manage", Some(&client))?,
         )
     })
     .await
@@ -509,7 +509,7 @@ fn omit_costs(document: &mut Value, allowed: bool) {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Copy {
     expected_revision: String,

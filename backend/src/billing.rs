@@ -23,7 +23,7 @@ const STATUS: &str = "CASE WHEN c.cancelled_at IS NOT NULL THEN 'cancelled' WHEN
 const COLUMNS: &str = "c.id,c.client_id,c.created_by,c.description,c.internal_note,CAST(c.amount_minor AS TEXT) AS amount_minor,CAST(c.paid_minor AS TEXT) AS paid_minor,CAST(CASE WHEN c.cancelled_at IS NULL THEN c.amount_minor-c.paid_minor ELSE 0 END AS TEXT) AS outstanding_minor,c.currency,c.currency_exponent,c.due_date,c.cancelled_at,CAST(c.revision AS TEXT) AS revision,c.created_at,c.updated_at";
 const PAYMENT_COLUMNS: &str = "id,client_id,collection_id,recorded_by,currency,CAST(amount_minor AS TEXT) AS amount_minor,paid_on,method,reference,note,command_id,CAST(collection_revision AS TEXT) AS collection_revision,recorded_at,collector,partner_id,(SELECT u.display_name FROM users u WHERE u.id=payments.recorded_by) AS recorded_by_name";
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Profile {
     description: String,
@@ -200,7 +200,7 @@ pub async fn update(
     }).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Payment {
     expected_revision: String,
@@ -269,14 +269,14 @@ pub async fn record_payment(
     }).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Cancellation {
     expected_revision: String,
     confirm: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Reversal {
     expected_revision: String,

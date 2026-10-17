@@ -44,13 +44,8 @@ pub enum Operation {
 
 fn authorize(tx: &Transaction<'_>, actor: &Actor, scope: &Scope) -> Result<()> {
     security::fresh(tx, actor)?;
-    if !security::allowed_user(tx, &actor.user_id, "clients.view", Some(&scope.client))?
-        || !security::allowed_user(
-            tx,
-            &actor.user_id,
-            "integrations.manage",
-            Some(&scope.client),
-        )?
+    if !security::allowed_actor(tx, actor, "clients.view", Some(&scope.client))?
+        || !security::allowed_actor(tx, actor, "integrations.manage", Some(&scope.client))?
     {
         return Err(Error::NotFound);
     }

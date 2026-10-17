@@ -17,7 +17,7 @@ pub async fn people(db: &Database, actor: Actor, q: Query) -> Result<Value> {
     let client = q.get("client_id").map(validation::id).transpose()?;
     db.read(move|tx|{
         security::fresh(tx,&actor)?;
-        let owner=security::allowed_user(tx,&actor.user_id,"staff.manage",None)?;
+        let owner=security::allowed_actor(tx,&actor,"staff.manage",None)?;
         if !owner{security::require(tx,&actor,"staff.read_team",None)?;}
         let mut stmt=tx.prepare("SELECT u.id,u.display_name FROM users u WHERE u.status='active' AND (?1 OR EXISTS(SELECT 1 FROM teams t JOIN team_memberships m ON m.team_id=t.id WHERE t.leader_id=?2 AND t.archived_at IS NULL AND m.revoked_at IS NULL AND m.user_id=u.id)) AND (?3 IS NULL OR EXISTS(SELECT 1 FROM brand_staff_assignments b WHERE b.user_id=u.id AND b.client_id=?3 AND b.revoked_at IS NULL)) AND (?4 IS NULL OR u.id>?4) AND instr(unicode_lower(u.display_name),unicode_lower(?5))>0 ORDER BY u.id LIMIT ?6")?;
         page.page(stmt.query_map(params![owner,actor.user_id,client,page.cursor,search,(page.limit+1)as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?)
@@ -25,7 +25,7 @@ pub async fn people(db: &Database, actor: Actor, q: Query) -> Result<Value> {
 }
 fn scope(tx: &Transaction<'_>, actor: &Actor, id: &str, write: bool) -> Result<Value> {
     security::fresh(tx, actor)?;
-    let owner = security::allowed_user(tx, &actor.user_id, "staff.manage", None)?;
+    let owner = security::allowed_actor(tx, actor, "staff.manage", None)?;
     if !owner {
         security::require(tx, actor, "staff.read_team", None).map_err(hidden)?;
     }
@@ -102,13 +102,13 @@ pub async fn list(db: &Database, actor: Actor, q: Query) -> Result<Value> {
     let paging = q.paging()?;
     db.read(move|tx|{
   security::fresh(tx,&actor)?;
-  let owner=security::allowed_user(tx,&actor.user_id,"staff.manage",None)?;
+  let owner=security::allowed_actor(tx,&actor,"staff.manage",None)?;
   if !owner{security::require(tx,&actor,"staff.read_team",None)?;}
   let mut stmt=tx.prepare("SELECT t.id,t.name,t.leader_id,u.display_name AS leader_name,CAST(t.revision AS TEXT) AS revision,t.created_at,t.updated_at,t.archived_at FROM teams t JOIN users u ON u.id=t.leader_id WHERE t.archived_at IS NULL AND (?1 OR t.leader_id=?2) AND (?3 IS NULL OR t.id>?3) ORDER BY t.id LIMIT ?4")?;
   paging.page(stmt.query_map(params![owner,actor.user_id,paging.cursor,(paging.limit+1) as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?)
  }).await
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Create {
     pub id: String,
@@ -158,7 +158,7 @@ pub async fn create(db: &Database, actor: Actor, input: Create) -> Result<Value>
 pub async fn read(db: &Database, actor: Actor, id: String) -> Result<Value> {
     db.read(move |tx| scope(tx, &actor, &id, false)).await
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Profile {
     pub expected_revision: String,
@@ -197,13 +197,13 @@ pub async fn members(db: &Database, actor: Actor, id: String, q: Query) -> Resul
     let paging = q.paging()?;
     db.read(move|tx|{
   scope(tx,&actor,&id,false)?;
-  let visible=grant_sql("?1","clients.view","b.client_id");
-  let work=super::today::task_visibility("?1");
+  let visible=crate::mcp::access::predicate(&actor,"clients:read","b.client_id",grant_sql("?1","clients.view","b.client_id"))?;
+  let work=crate::mcp::access::predicate(&actor,"tasks:read","t.client_id",super::today::task_visibility("?1"))?;
   let mut stmt=tx.prepare(&format!("SELECT m.id,m.team_id,m.user_id,u.display_name,u.status,m.assigned_at,m.revoked_at,CAST((SELECT count(*) FROM brand_staff_assignments b WHERE b.team_id=m.team_id AND b.user_id=m.user_id AND b.revoked_at IS NULL AND {visible}) AS TEXT) AS brands,CAST((SELECT count(*) FROM tasks t WHERE t.assignee_id=m.user_id AND t.archived_at IS NULL AND t.status NOT IN ('done','cancelled') AND {work}) AS TEXT) AS active_tasks FROM team_memberships m JOIN users u ON u.id=m.user_id WHERE m.team_id=?2 AND m.revoked_at IS NULL AND (?3 IS NULL OR m.id>?3) ORDER BY m.id LIMIT ?4"))?;
   paging.page(stmt.query_map(params![actor.user_id,id,paging.cursor,(paging.limit+1) as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?)
  }).await
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Membership {
     pub user_id: String,
@@ -304,12 +304,12 @@ fn revoke_assignment(tx: &Transaction<'_>, actor: &Actor, id: &str) -> Result<()
 pub async fn assignments(db: &Database, actor: Actor, id: String, q: Query) -> Result<Value> {
     let paging = q.paging()?;
     db.read(move|tx|{scope(tx,&actor,&id,false)?;
-  let allowed=grant_sql("?1","clients.view","b.client_id");
+  let allowed=crate::mcp::access::predicate(&actor,"clients:read","b.client_id",grant_sql("?1","clients.view","b.client_id"))?;
   let mut stmt=tx.prepare(&format!("SELECT b.id,b.team_id,b.client_id,c.name AS brand_name,b.user_id,u.display_name,b.responsibility,b.assigned_at,b.revoked_at FROM brand_staff_assignments b JOIN clients c ON c.id=b.client_id JOIN users u ON u.id=b.user_id WHERE b.team_id=?2 AND b.revoked_at IS NULL AND {allowed} AND (?3 IS NULL OR b.id>?3) ORDER BY b.id LIMIT ?4"))?;
   paging.page(stmt.query_map(params![actor.user_id,id,paging.cursor,(paging.limit+1) as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?)
  }).await
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Assignment {
     pub client_id: String,
@@ -325,7 +325,7 @@ pub async fn assign(db: &Database, actor: Actor, id: String, input: Assignment) 
     db.write(move|tx|{
   let team=scope(tx,&actor,&id,true)?;
   require(tx,&actor,"staff.assign_brands",&input.client_id,true)?;
-  if !security::allowed_user(tx,&actor.user_id,"staff.manage",None)? && team["leader_id"]!=actor.user_id{return Err(Error::NotFound)}
+  if !security::allowed_actor(tx,&actor,"staff.manage",None)? && team["leader_id"]!=actor.user_id{return Err(Error::NotFound)}
   bump(tx,&actor,&team,&input.expected_revision)?;
   if input.active{
    active(tx,&input.user_id)?;

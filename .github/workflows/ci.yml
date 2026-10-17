@@ -80,6 +80,13 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - run: cargo test --locked --workspace
+      - name: Compile and format the independent upstream MCP client (host only)
+        env:
+          CARGO_TARGET_DIR: target/mcp-client
+        run: |
+          cargo fmt --manifest-path tools/mcp-client/Cargo.toml --check
+          cargo build --locked --manifest-path tools/mcp-client/Cargo.toml
+          strip --strip-debug target/mcp-client/debug/else-mcp-interoperability
       - run: cargo build --locked --example browser-fixture
       - name: Compile the production static binary before Docker
         env:
@@ -92,6 +99,8 @@ jobs:
         run: |
           python3 backend/tests/http_smoke.py --binary build/roisey-else --frontend frontend/dist --signal TERM
           python3 backend/tests/http_smoke.py --binary build/roisey-else --frontend frontend/dist --signal INT
+      - name: Native OAuth and both MCP protocol eras with the independent client
+        run: python3 tools/test-mcp.py --binary build/roisey-else
       - name: Publication boundaries and pinned workflow validation
         run: |
           python3 tools/test-publication.py
@@ -105,6 +114,7 @@ jobs:
             build/ca-certificates.crt
             build/licenses/Rust-dependencies.txt
             target/debug/examples/browser-fixture
+            target/mcp-client/debug/else-mcp-interoperability
           if-no-files-found: error
           retention-days: 1
 
@@ -135,6 +145,7 @@ jobs:
         run: |
           python3 tools/test-rust-advisories.py
           python3 tools/check-rust-advisories.py
+          python3 tools/check-rust-advisories.py --mcp-client
 
   runtime-artifacts:
     name: Embedded runtime artifacts
@@ -186,6 +197,7 @@ jobs:
           chmod 0755 build/data
           chmod 0700 build/data/roisey-else
           chmod 0755 target/debug/examples/browser-fixture
+          chmod 0755 target/mcp-client/debug/else-mcp-interoperability
           chmod 0444 build/ca-certificates.crt
           docker build --network=none --build-arg BUILD_REVISION="$GITHUB_SHA" --build-arg BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --tag else-application:ci .
       - name: Real-image storage, control, database, keyring and frontend startup refusals
@@ -194,6 +206,8 @@ jobs:
         run: python3 tools/test-container.py --evidence "$RUNNER_TEMP/runtime.json"
       - name: Exact-image 500-client and 100-concurrent-user CRUD rehearsal
         run: python3 tools/test-capacity.py --evidence "$RUNNER_TEMP/capacity.json"
+      - name: Exact-image MCP clients, scoped OAuth and latency rehearsal
+        run: python3 tools/test-mcp.py --image else-application:ci --benchmark-output "$RUNNER_TEMP/mcp.json"
       - name: Actual single-service Compose, embedded child failure and durable recovery
         run: python3 tools/test-compose.py --evidence "$RUNNER_TEMP/compose.json"
       - name: Archive this exact tested image for browser verification and promotion
@@ -211,6 +225,7 @@ jobs:
           path: |
             ${{ runner.temp }}/runtime.json
             ${{ runner.temp }}/capacity.json
+            ${{ runner.temp }}/mcp.json
             ${{ runner.temp }}/compose.json
           if-no-files-found: error
           retention-days: 7

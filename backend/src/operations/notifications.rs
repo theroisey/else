@@ -26,14 +26,30 @@ pub(crate) fn emit_request(
     tx.execute(&format!("INSERT OR IGNORE INTO notifications(id,user_id,client_id,request_id,event_key,kind,created_at) SELECT lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-4'||substr(lower(hex(randomblob(2))),2)||'-8'||substr(lower(hex(randomblob(2))),2)||'-'||lower(hex(randomblob(6))),u.id,r.client_id,r.id,?3,?4,?5 FROM technical_requests r JOIN users u ON u.status='active' WHERE r.id=?1 AND u.id<>?2 AND {visible} AND {audience} AND {preference}"),params![id,actor.user_id,format!("request:{id}:{revision}"),kind,validation::now()])?;
     Ok(())
 }
-fn visible() -> String {
+fn visible(actor: &Actor) -> Result<String> {
     let finance = financial_visibility("?1", "n.client_id");
     let template = grant_sql("?1", "recurring.view", "n.client_id");
     let client = grant_sql("?1", "clients.view", "n.client_id");
-    format!(
+    let original = format!(
         "((n.request_id IS NOT NULL AND EXISTS(SELECT 1 FROM technical_requests r WHERE r.id=n.request_id AND r.client_id=n.client_id AND {})) OR (n.task_id IS NOT NULL AND EXISTS(SELECT 1 FROM tasks t WHERE t.id=n.task_id AND t.client_id=n.client_id AND {})) OR (n.period_id IS NOT NULL AND {finance} AND EXISTS(SELECT 1 FROM billing_periods b WHERE b.id=n.period_id AND b.client_id=n.client_id)) OR (n.agreement_id IS NOT NULL AND {finance} AND EXISTS(SELECT 1 FROM service_agreements a WHERE a.id=n.agreement_id AND a.client_id=n.client_id)) OR (n.template_id IS NOT NULL AND {template} AND {client} AND EXISTS(SELECT 1 FROM recurring_tasks r WHERE r.id=n.template_id AND r.client_id=n.client_id)))",
         requests::visibility_sql("?1"),
         crate::tasks::visibility_sql("?1")
+    );
+    let Some(d) = actor.delegation() else {
+        return Ok(original);
+    };
+    let filter = format!(
+        "((n.request_id IS NOT NULL AND {}) OR (n.task_id IS NOT NULL AND {}) OR ((n.period_id IS NOT NULL OR n.agreement_id IS NOT NULL) AND {}) OR (n.template_id IS NOT NULL AND {}))",
+        d.scopes.contains("requests:read"),
+        d.scopes.contains("tasks:read"),
+        d.scopes.contains("finance:read"),
+        d.scopes.contains("recurring:read")
+    );
+    crate::mcp::access::predicate(
+        actor,
+        "notifications:read",
+        "n.client_id",
+        format!("({original}) AND ({filter})"),
     )
 }
 pub async fn list(db: &Database, actor: Actor, q: Query) -> Result<Value> {
@@ -43,7 +59,7 @@ pub async fn list(db: &Database, actor: Actor, q: Query) -> Result<Value> {
     let purpose = hash(&("notifications-v1", &actor.user_id, &unread))?;
     let boundary = crate::history_cursor::decode(&purpose, q.get("cursor"))?;
     db.read(move|tx|{
-        security::fresh(tx,&actor)?;let condition=visible();
+        security::fresh(tx,&actor)?;let condition=visible(&actor)?;
         let count:i64=tx.query_row(&format!("SELECT count(*) FROM notifications n WHERE n.user_id=?1 AND n.read_at IS NULL AND {condition}"),[&actor.user_id],|r|r.get(0))?;
         let mut stmt=tx.prepare(&format!("SELECT n.id,n.client_id,n.request_id,n.task_id,n.period_id,n.agreement_id,n.template_id,n.kind,n.created_at,n.read_at FROM notifications n WHERE n.user_id=?1 AND {condition} AND (?2 IS NULL OR (n.created_at,n.id)<(?2,?3)) AND (?4='false' OR n.read_at IS NULL) ORDER BY n.created_at DESC,n.id DESC LIMIT ?5"))?;
         let mut items=stmt.query_map(params![actor.user_id,boundary.as_ref().map(|b|&b.time),boundary.as_ref().map(|b|&b.id),unread,(limit+1) as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?;
@@ -56,12 +72,13 @@ pub async fn list(db: &Database, actor: Actor, q: Query) -> Result<Value> {
 pub async fn mark(db: &Database, actor: Actor, id: Option<String>) -> Result<Value> {
     db.write(move|tx|{
         security::fresh(tx,&actor)?;
-        let visible=visible();
+        let visible=visible(&actor)?;
         if let Some(id)=&id {
             let exists:bool=tx.query_row(&format!("SELECT EXISTS(SELECT 1 FROM notifications n WHERE n.id=?2 AND n.user_id=?1 AND {visible})"),params![actor.user_id,id],|r|r.get(0))?;
             if !exists{return Err(Error::NotFound)}
         }
         tx.execute(&format!("UPDATE notifications AS n SET read_at=coalesce(read_at,?3) WHERE n.user_id=?1 AND (?2 IS NULL OR n.id=?2) AND {visible}"),params![actor.user_id,id,validation::now()])?;
+        if actor.command().is_some(){let id=id.as_ref().ok_or(Error::Denied)?;crate::audit::mutation(tx,&actor,"notification",id,None,"updated",(None,crate::audit::Snapshot{exists:Some(true),..Default::default()}))?;}
         Ok(json!({"marked":true}))
     }).await
 }

@@ -31,7 +31,7 @@ pub(crate) const READ_KEYS: &[&str] = &[
 
 const COLUMNS: &str = "t.id,t.client_id,t.created_by,t.assignee_id,t.title,t.status,t.priority,t.start_at,t.due_at,t.completed_at,t.cancelled_at,t.revision,t.created_at,t.updated_at,t.archived_at,(SELECT coalesce(json_group_array(tag),'[]') FROM (SELECT tag FROM task_tags WHERE task_id=t.id ORDER BY tag)) AS tags_json,(SELECT u.display_name FROM users u WHERE u.id=t.created_by) AS creator_name,(SELECT u.display_name FROM users u WHERE u.id=t.assignee_id) AS assignee_name,(SELECT c.name FROM clients c WHERE c.id=t.client_id) AS brand_name,(SELECT r.id FROM technical_requests r WHERE r.task_id=t.id) AS request_id";
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Profile {
     title: String,
@@ -107,7 +107,7 @@ pub async fn queue(db: &Database, actor: Actor, q: Query) -> Result<Value> {
     let overdue = q.choice("overdue", "false", &["false", "true"])? == "true";
     db.read(move|tx|{
         security::fresh(tx,&actor)?;
-        let visible=visibility_sql("?1");
+        let visible=crate::mcp::access::predicate(&actor,"tasks:read","t.client_id",visibility_sql("?1"))?;
         let mut stmt=tx.prepare(&format!("SELECT {COLUMNS} FROM tasks t WHERE {visible} AND t.archived_at IS NULL AND (?2 IS NULL OR t.client_id=?2) AND (?3 IS NULL OR t.id>?3) AND (?4='all' OR (?4='active' AND t.status NOT IN ('done','cancelled')) OR t.status=?4) AND (?5='' OR (?5='me' AND t.assignee_id=?1) OR (?5='unassigned' AND t.assignee_id IS NULL) OR t.assignee_id=?5) AND instr(unicode_lower(t.title),unicode_lower(?6))>0 AND (NOT ?7 OR (t.due_at<?8 AND t.status NOT IN ('done','cancelled'))) ORDER BY t.id LIMIT ?9"))?;
         page.page(stmt.query_map(params![actor.user_id,client,page.cursor,status,assignee,search,overdue,validation::now(),(page.limit+1)as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?)
     }).await
@@ -261,14 +261,14 @@ pub async fn update(
     }).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Status {
     pub status: String,
     pub expected_revision: i64,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Assignment {
     pub assignee_id: Option<String>,
@@ -330,7 +330,7 @@ pub async fn status(
     }
     db.write(move |tx| {
         security::fresh(tx,&actor)?;
-        let delegated=security::allowed_user(tx,&actor.user_id,"tasks.update",Some(&client))? || security::allowed_user(tx,&actor.user_id,"tasks.manage",Some(&client))?;
+        let delegated=security::allowed_actor(tx,&actor,"tasks.update",Some(&client))? || security::allowed_actor(tx,&actor,"tasks.manage",Some(&client))?;
         if delegated {authorize(tx,&actor,&client,Some("tasks.update"),true)?;}else {
             security::require(tx,&actor,"tasks.update_own",Some(&client)).map_err(hidden)?;
             own_read_scope(tx,&actor,&client,&id)?;

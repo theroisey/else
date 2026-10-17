@@ -85,3 +85,7 @@ Local `make check-changed` checks affected sources and related frontend tests; s
 Sign-in reads native, uncontrolled fields on submit, without React updates for individual keystrokes; the password clears synchronously before transport. A newly loaded workspace focuses its main region after mount so Save Data/cold chunks cannot strand keyboard focus. Exact-image checks verify all deferred script bytes, compression fallback, immutable caching and initial/language budgets.
 
 See [static delivery](static-delivery.md) for the public worker, credential preservation, cache bounds, safe waiting updates, startup recovery, asset validation and optional Cloudflare beacon CSP. The public worker adds no push or offline business operations.
+
+## AI connections
+
+Settings and `/app/mcp` share owner-only enable/registration/revocation and bounded diagnostics, plus each user’s own grants. OAuth consent survives sign-in through narrowly allowed UUID destinations; capabilities have localized labels and optional brand scope. Exact-payload approval uses the real browser session/CSRF and never executes a tool itself. Credentials never enter React/query state, storage, traces or screenshots. All five locales, appearance tokens and reduced motion remain. The client setup guide links to [MCP operations](mcp.md); no unimplemented SSE/stream or generic-client compatibility is advertised.

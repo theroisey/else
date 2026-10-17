@@ -14,14 +14,14 @@ use serde_json::Value;
 
 const COLUMNS: &str = "r.id,r.client_id,r.created_by,r.owner_id,r.title,r.status,r.scheduled_at,r.scheduled_local,r.timezone,r.utc_offset_seconds,r.completed_at,r.dismissed_at,r.revision,r.created_at,r.updated_at,(r.status='pending' AND r.scheduled_at<=?3) AS is_due,CASE WHEN r.task_id IS NOT NULL THEN json_object('kind','task','id',r.task_id) WHEN r.plan_id IS NOT NULL THEN json_object('kind','plan','id',r.plan_id) WHEN r.milestone_id IS NOT NULL THEN json_object('kind','milestone','id',r.milestone_id) ELSE 'null' END AS resource_json";
 
-#[derive(Deserialize, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Clone, PartialEq, Eq, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Resource {
     kind: String,
     id: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Profile {
     title: String,
@@ -225,7 +225,7 @@ pub async fn update(
     }).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Completion {
     pub expected_revision: i64,
@@ -333,7 +333,7 @@ fn resource(
     } else {
         "planning.view"
     };
-    if !retained && !security::allowed_user(tx, &actor.user_id, permission, Some(client))? {
+    if !retained && !security::allowed_actor(tx, actor, permission, Some(client))? {
         return Err(Error::Invalid("invalid_resource"));
     }
     if resource.kind == "milestone" {

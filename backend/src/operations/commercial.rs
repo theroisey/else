@@ -59,7 +59,7 @@ pub async fn partners(db: &Database, actor: Actor, client: String, q: Query) -> 
         page.page(stmt.query_map(params![page.cursor,(page.limit+1) as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?)
     }).await
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Partner {
     pub id: String,
@@ -115,7 +115,7 @@ pub async fn create_partner(
     })
     .await
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Terms {
     pub amount_minor: String,
@@ -145,7 +145,7 @@ impl Terms {
         Ok((amount, share))
     }
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Create {
     pub command_id: String,
@@ -268,7 +268,7 @@ pub async fn versions(
         page.page(stmt.query_map(params![id,page.cursor,(page.limit+1) as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?)
     }).await
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Change {
     pub command_id: String,
@@ -457,7 +457,7 @@ fn generate_at(
     )?;
     Ok(json!({"id":period,"replayed":false}))
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Generate {
     pub billing_date: String,
@@ -625,7 +625,7 @@ pub async fn period(db: &Database, actor: Actor, client: String, id: String) -> 
     })
     .await
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Settlement {
     pub command_id: String,
@@ -690,7 +690,7 @@ pub async fn settlements(
     }).await
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct VoidPeriod {
     command_id: String,

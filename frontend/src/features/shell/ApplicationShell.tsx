@@ -140,6 +140,16 @@ export function ApplicationShell() {
   const reportsContext = /\/(analytics|commerce|marketing)(?:\/|$)/.exec(
     location.pathname,
   )?.[1]
+  const mcpContext = /^\/app\/mcp(?:\/|$)/.test(location.pathname)
+    ? copy(
+        location.pathname.includes('/authorize/')
+          ? 'Authorize AI connection'
+          : location.pathname.includes('/approvals/')
+            ? 'Review requested change'
+            : 'AI connections',
+        'mcp',
+      )
+    : ''
   const clientContext =
     (reportsContext
       ? {
@@ -205,6 +215,7 @@ export function ApplicationShell() {
               ) : null}
               <li aria-current="page">
                 {clientContext ||
+                  mcpContext ||
                   copy(current?.label, 'common') ||
                   copy('Page not found', 'common')}
               </li>

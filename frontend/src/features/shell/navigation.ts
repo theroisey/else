@@ -119,6 +119,9 @@ export function safeReturnTo(value: unknown) {
     value === '/app/requests/new'
   )
     return value
+  if (value === '/app/mcp') return value
+  const mcp = /^\/app\/mcp\/(authorize|approvals)\/([^/]+)$/.exec(value)
+  if (mcp && isUUID(mcp[2])) return value
   const recurring =
     /^\/app\/clients\/([^/]+)\/recurring-tasks(?:\/([^/]+))?$/.exec(value)
   if (

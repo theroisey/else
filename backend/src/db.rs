@@ -13,7 +13,7 @@ use std::{
 use tokio::sync::Semaphore;
 
 pub(crate) const SCHEMA: &str = include_str!("../migrations/sqlite/000001_initial.sql");
-pub const SCHEMA_VERSION: u16 = 7;
+pub const SCHEMA_VERSION: u16 = 8;
 const SECOND_SCHEMA: &str = include_str!("../migrations/sqlite/000002_runtime_cleanup.sql");
 const OPERATIONS_SCHEMA: &str = include_str!("../migrations/sqlite/000003_operations.sql");
 const FINANCE_SCHEMA: &str = include_str!("../migrations/sqlite/000004_commercial_finance.sql");
@@ -21,6 +21,7 @@ const RECURRING_SCHEMA: &str = include_str!("../migrations/sqlite/000005_recurri
 const ATTENTION_SCHEMA: &str =
     include_str!("../migrations/sqlite/000006_dashboard_attention_indexes.sql");
 const REFRESH_SCHEMA: &str = include_str!("../migrations/sqlite/000007_session_refresh.sql");
+const MCP_SCHEMA: &str = include_str!("../migrations/sqlite/000008_mcp_bridge.sql");
 const MIGRATIONS: &[&str] = &[
     SCHEMA,
     SECOND_SCHEMA,
@@ -29,6 +30,7 @@ const MIGRATIONS: &[&str] = &[
     RECURRING_SCHEMA,
     ATTENTION_SCHEMA,
     REFRESH_SCHEMA,
+    MCP_SCHEMA,
 ];
 pub(crate) fn migration_records() -> Vec<(i64, String)> {
     MIGRATIONS
@@ -47,7 +49,7 @@ pub struct InitializationError {
 }
 
 #[derive(Clone)]
-pub struct Database(Arc<Pool>);
+pub struct Database(Arc<Pool>, Option<Arc<crate::security::Actor>>);
 
 struct Pool {
     connections: Mutex<Vec<Connection>>,
@@ -116,18 +118,29 @@ impl Database {
                 connection(path).map_err(|e| failure("database", "database_pool_failed", e))?,
             );
         }
-        Ok(Self(Arc::new(Pool {
-            connections: Mutex::new(connections),
-            // Avoid oversubscribing a quota-limited host with CPU-heavy
-            // cross-brand reads; leave execution budget for the writer.
-            slots: Arc::new(Semaphore::new(
-                std::thread::available_parallelism()
-                    .map(|n| n.get().saturating_sub(1))
-                    .unwrap_or(1)
-                    .clamp(1, CONNECTIONS - 1),
-            )),
-            writer: Arc::new(Semaphore::new(1)),
-        })))
+        Ok(Self(
+            Arc::new(Pool {
+                connections: Mutex::new(connections),
+                // Avoid oversubscribing a quota-limited host with CPU-heavy
+                // cross-brand reads; leave execution budget for the writer.
+                slots: Arc::new(Semaphore::new(
+                    std::thread::available_parallelism()
+                        .map(|n| n.get().saturating_sub(1))
+                        .unwrap_or(1)
+                        .clamp(1, CONNECTIONS - 1),
+                )),
+                writer: Arc::new(Semaphore::new(1)),
+            }),
+            None,
+        ))
+    }
+
+    /// Request-local commit proof; the pool and its admission/transaction rules are unchanged.
+    pub(crate) fn for_mcp_write(&self, actor: &crate::security::Actor) -> Self {
+        Self(
+            self.0.clone(),
+            actor.command().map(|_| Arc::new(actor.clone())),
+        )
     }
 
     pub async fn read<T, F>(&self, operation: F) -> Result<T>
@@ -176,6 +189,7 @@ impl Database {
                     .map_err(|_| Error::Busy)?,
             )
         };
+        let proof = if write { self.1.clone() } else { None };
         let pool = self.0.clone();
         tokio::task::spawn_blocking(move || {
             // Permits belong to actual work, including when the HTTP future is cancelled.
@@ -203,7 +217,13 @@ impl Database {
             } else {
                 TransactionBehavior::Deferred
             })?;
+            let before = transaction.total_changes();
             let output = operation(&transaction)?;
+            if let Some(actor) = proof
+                && transaction.total_changes() > before
+            {
+                crate::mcp::commands::verify_commit(&transaction, &actor)?;
+            }
             if write {
                 validate_new_history(&transaction)?;
             }
@@ -556,6 +576,11 @@ fn seed_catalog(connection: &mut Connection) -> Result<()> {
 }
 
 pub const PERMISSIONS: &[(&str, &str, &str)] = &[
+    (
+        "mcp.manage",
+        "global",
+        "Manage MCP availability and registered applications",
+    ),
     ("users.view", "global", "View user identities"),
     (
         "users.manage",

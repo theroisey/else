@@ -75,6 +75,9 @@ it('rejects malformed responses and exposes safe error messages instead of serve
     parseCatalog({ data: [{ permission: 'unknown.permission', description: 'Unknown' }] }),
   ).toThrow()
   expect(() => parseUser({ status: ['active'] })).toThrow()
+  const mcp = { permission: 'mcp.manage', scope: 'global', description: 'Manage MCP applications' }
+  expect(parseCatalog({ data: [mcp] })).toEqual([mcp])
+  expect(() => parseCatalog({ data: [{ ...mcp, scope: 'client' }] })).toThrow()
 })
 
 it('matches identity validation and refuses global escalation from a client grant', () => {
@@ -100,4 +103,9 @@ it('matches identity validation and refuses global escalation from a client gran
   expect(canAssign(grants, role, 'global', '')).toBe(false)
   expect(canAssign(grants, role, 'client', client)).toBe(true)
   expect(canAssign(grants, role, 'client', '33333333-3333-4333-8333-333333333333')).toBe(false)
+  const mcpRole = { ...role, permissions: ['mcp.manage'] }
+  expect(canAssign(grants, mcpRole, 'global', '')).toBe(false)
+  const manager = [...grants, { permission: 'mcp.manage', scope: 'global' as const }]
+  expect(canAssign(manager, mcpRole, 'global', '')).toBe(true)
+  expect(canAssign(manager, mcpRole, 'client', client)).toBe(false)
 })

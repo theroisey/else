@@ -20,8 +20,48 @@ enum Principal {
     Session,
     Operator,
     Job,
+    Mcp(
+        Box<crate::mcp::access::Delegation>,
+        Option<Box<crate::mcp::access::Command>>,
+    ),
 }
 impl Actor {
+    pub(crate) fn mcp(
+        user_id: String,
+        request_id: String,
+        delegation: crate::mcp::access::Delegation,
+    ) -> Self {
+        Self {
+            user_id,
+            session_id: String::new(),
+            csrf_hash: Vec::new(),
+            request_id,
+            principal: Principal::Mcp(Box::new(delegation), None),
+        }
+    }
+    pub fn delegation(&self) -> Option<&crate::mcp::access::Delegation> {
+        if let Principal::Mcp(value, _) = &self.principal {
+            Some(value)
+        } else {
+            None
+        }
+    }
+    pub(crate) fn command(&self) -> Option<&crate::mcp::access::Command> {
+        if let Principal::Mcp(_, value) = &self.principal {
+            value.as_deref()
+        } else {
+            None
+        }
+    }
+    pub(crate) fn with_command(mut self, command: crate::mcp::access::Command) -> Self {
+        if let Principal::Mcp(_, value) = &mut self.principal {
+            *value = Some(Box::new(command));
+        }
+        self
+    }
+    pub fn client_scope(&self) -> Option<&str> {
+        self.delegation().and_then(|v| v.client_id.as_deref())
+    }
     pub(crate) fn session(
         user_id: String,
         session_id: String,
@@ -58,6 +98,7 @@ impl Actor {
             Principal::Session => "http",
             Principal::Operator => "cli",
             Principal::Job => "job",
+            Principal::Mcp(_, _) => "mcp",
         }
     }
 }
@@ -71,6 +112,9 @@ pub struct Grant {
 }
 
 pub fn fresh(tx: &Transaction<'_>, actor: &Actor) -> Result<()> {
+    if let Some(delegation) = actor.delegation() {
+        return crate::mcp::access::fresh(tx, actor, delegation);
+    }
     if matches!(actor.principal, Principal::Operator | Principal::Job) {
         let active: bool = tx.query_row(
             "SELECT EXISTS(SELECT 1 FROM users WHERE id=?1 AND status='active')",
@@ -112,7 +156,7 @@ pub fn allowed_user(
 
 pub fn require(tx: &Transaction<'_>, actor: &Actor, key: &str, client: Option<&str>) -> Result<()> {
     fresh(tx, actor)?;
-    if allowed_user(tx, &actor.user_id, key, client)? {
+    if allowed_actor(tx, actor, key, client)? {
         Ok(())
     } else {
         Err(Error::Denied)
@@ -122,11 +166,26 @@ pub fn require(tx: &Transaction<'_>, actor: &Actor, key: &str, client: Option<&s
 pub fn require_any(tx: &Transaction<'_>, actor: &Actor, keys: &[&str], client: &str) -> Result<()> {
     fresh(tx, actor)?;
     for key in keys {
-        if allowed_user(tx, &actor.user_id, key, Some(client))? {
+        if allowed_actor(tx, actor, key, Some(client))? {
             return Ok(());
         }
     }
     Err(Error::Denied)
+}
+
+pub fn allowed_actor(
+    tx: &Transaction<'_>,
+    actor: &Actor,
+    key: &str,
+    client: Option<&str>,
+) -> Result<bool> {
+    if actor
+        .delegation()
+        .is_some_and(|d| !crate::mcp::access::permits(d, key, client))
+    {
+        return Ok(false);
+    }
+    allowed_user(tx, &actor.user_id, key, client)
 }
 
 pub fn grants(tx: &Transaction<'_>, user: &str) -> Result<Vec<Grant>> {

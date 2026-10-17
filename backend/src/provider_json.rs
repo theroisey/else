@@ -7,7 +7,7 @@ use serde::{
 use serde_json::{Map, Value};
 use std::fmt;
 
-struct Seed(usize);
+struct Seed(usize, bool);
 impl<'de> DeserializeSeed<'de> for Seed {
     type Value = Value;
     fn deserialize<D: de::Deserializer<'de>>(
@@ -34,8 +34,14 @@ impl<'de> Visitor<'de> for Seed {
     fn visit_u64<E: de::Error>(self, value: u64) -> std::result::Result<Value, E> {
         Ok(Value::from(value))
     }
-    fn visit_f64<E: de::Error>(self, _: f64) -> std::result::Result<Value, E> {
-        Err(E::custom("provider JSON unavailable"))
+    fn visit_f64<E: de::Error>(self, value: f64) -> std::result::Result<Value, E> {
+        if self.1 {
+            serde_json::Number::from_f64(value)
+                .map(Value::Number)
+                .ok_or_else(|| E::custom("invalid number"))
+        } else {
+            Err(E::custom("provider JSON unavailable"))
+        }
     }
     fn visit_str<E: de::Error>(self, value: &str) -> std::result::Result<Value, E> {
         Ok(Value::String(value.into()))
@@ -51,7 +57,7 @@ impl<'de> Visitor<'de> for Seed {
     }
     fn visit_seq<A: SeqAccess<'de>>(self, mut sequence: A) -> std::result::Result<Value, A::Error> {
         let mut result = Vec::new();
-        while let Some(value) = sequence.next_element_seed(Seed(self.0 + 1))? {
+        while let Some(value) = sequence.next_element_seed(Seed(self.0 + 1, self.1))? {
             result.push(value);
         }
         Ok(Value::Array(result))
@@ -62,14 +68,14 @@ impl<'de> Visitor<'de> for Seed {
             if result.contains_key(&key) {
                 return Err(de::Error::custom("provider JSON unavailable"));
             }
-            result.insert(key, object.next_value_seed(Seed(self.0 + 1))?);
+            result.insert(key, object.next_value_seed(Seed(self.0 + 1, self.1))?);
         }
         Ok(Value::Object(result))
     }
 }
 pub fn parse(raw: &[u8]) -> Result<Value> {
     let mut decoder = serde_json::Deserializer::from_slice(raw);
-    let value = Seed(0)
+    let value = Seed(0, false)
         .deserialize(&mut decoder)
         .map_err(|_| Error::Internal)?;
     decoder.end().map_err(|_| Error::Internal)?;
@@ -91,6 +97,18 @@ pub fn text<'a>(object: &'a Map<String, Value>, key: &str) -> Result<&'a str> {
 }
 pub fn decode<T: for<'de> Deserialize<'de>>(value: Value) -> Result<T> {
     serde_json::from_value(value).map_err(|_| Error::Internal)
+}
+
+/// MCP metadata permits finite numbers; business money DTOs still enforce strings.
+pub(crate) fn parse_protocol(raw: &[u8]) -> Result<Value> {
+    let mut decoder = serde_json::Deserializer::from_slice(raw);
+    let value = Seed(0, true)
+        .deserialize(&mut decoder)
+        .map_err(|_| Error::Invalid("invalid_request"))?;
+    decoder
+        .end()
+        .map_err(|_| Error::Invalid("invalid_request"))?;
+    Ok(value)
 }
 
 #[cfg(test)]

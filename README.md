@@ -18,6 +18,7 @@ Roisey Else brings the work around each client into one place. See what needs at
 - Generate daily, weekly, and monthly tasks and contractual billing periods automatically, with retained schedule/price versions and duplicate prevention.
 - Read GA4 analytics, WooCommerce order/refund reports, and Meta Ads performance for the selected client and reporting period.
 - Manage users, roles, and global or client-specific access; inspect audit history and authorized activity.
+- Connect compatible AI clients through the native MCP bridge, with scoped consent, current permissions and browser approval for sensitive changes.
 - Work in Light, Dark, or System appearance, with English, Turkish, Romanian, German, and French interfaces.
 
 Archival keeps authorized history available. Financial amounts stay exact and separated by currency. Provider reports distinguish measured, empty, stale, and unavailable data.
@@ -158,6 +159,12 @@ curl --fail http://localhost:8080/health
 curl --fail http://localhost:8080/ready
 ```
 
+## AI connections
+
+MCP is disabled until an authorized administrator enables it in Settings → AI connections. Register your client’s exact OAuth callback URLs, configure the `/mcp` endpoint and registered public client ID, then sign in and choose the capabilities and brands to delegate. Your current permissions always remain the ceiling. Sensitive changes require your exact approval in the browser before the assistant can execute them.
+
+The bridge supports 2026-07-28 discovery and 2025-11-25 initialization through JSON-response Streamable HTTP. It requires a client that supports pre-registered OAuth/PKCE applications; automatic dynamic registration, subscriptions and stdio are not provided. See [setup, security and proxy guidance](notes/mcp.md) and [verification evidence](notes/mcp-delivery.md). The existing single image and data volume remain unchanged.
+
 ## Development
 
 The frontend uses React and TypeScript; the backend uses Rust and Pingora with relational SQLite. Source builds need Node 24.21.0/npm 11.19.0, Rust 1.99.0, a C compiler, CMake, OpenSSL development tools, Docker, ELF/binutils utilities, and musl tooling for the static production target.
@@ -180,6 +187,6 @@ No public application license has been declared. Third-party dependency and font
 
 Use the question icon in the header for a short guide to the current section. Settings includes Light/Dark/System appearance and optional browser alerts. Alerts require browser permission and an open panel (background tabs are supported); private details remain inside the application. No closed-browser push provider is required.
 
-New sign-ins receive rotating, HttpOnly refresh cookies with a fixed seven-day limit. Access sessions retain their twelve-hour lifetime, renew automatically while authorized, and end on logout, account disablement, expiry or detected token reuse. Legacy sessions are not silently upgraded. Schema 7 is additive; take a verified checkpoint after upgrading and use a schema-compatible artifact for rollback. No production database reset is involved.
+New sign-ins receive rotating, HttpOnly refresh cookies with a fixed seven-day limit. Access sessions retain their twelve-hour lifetime, renew automatically while authorized, and end on logout, account disablement, expiry or detected token reuse. Legacy sessions are not silently upgraded. Schema 8 is additive; take a verified checkpoint after upgrading and use a schema-compatible artifact for rollback. No production database reset is involved.
 
-Production serves one hashed application JavaScript bundle, separate CSS/fonts and the small pre-paint theme script. For day-to-day development, `make check-changed` runs source-impact checks; the full `make check` and image/browser gates remain required before release.
+Production serves a small application entry with route and locale chunks, separate CSS/fonts and the small pre-paint theme script. For day-to-day development, `make check-changed` runs source-impact checks; the full `make check` and image/browser gates remain required before release.

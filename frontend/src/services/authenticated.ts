@@ -76,7 +76,7 @@ export async function authenticatedJSON(
   } = {},
 ) {
   if (
-    !/^\/api\/v1\/(users|roles|permissions|clients|audit-logs|requests|notifications|today|teams|tasks|operations-people|preferences|operations-settings)(?:[/?]|$)/.test(
+    !/^\/api\/v1\/(users|roles|permissions|clients|audit-logs|requests|notifications|today|teams|tasks|operations-people|preferences|operations-settings|mcp)(?:[/?]|$)/.test(
       path,
     ) ||
     /[\s#\\]/.test(path) ||

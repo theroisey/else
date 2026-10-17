@@ -14,7 +14,7 @@ use url::{Host, Url};
 
 const COLUMNS: &str = "id,client_id,name,url,domain,description,is_primary,needs_review,revision,created_at,updated_at,archived_at,CASE WHEN archived_at IS NULL THEN 'active' ELSE 'archived' END AS status";
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Profile {
     name: String,
@@ -93,11 +93,11 @@ fn authorize(
     writing: bool,
 ) -> Result<()> {
     security::fresh(tx, actor)?;
-    if !security::allowed_user(tx, &actor.user_id, "clients.view", Some(client))? {
+    if !security::allowed_actor(tx, actor, "clients.view", Some(client))? {
         return Err(Error::NotFound);
     }
     if let Some(permission) = permission
-        && !security::allowed_user(tx, &actor.user_id, permission, Some(client))?
+        && !security::allowed_actor(tx, actor, permission, Some(client))?
     {
         return Err(Error::NotFound);
     }
@@ -263,13 +263,13 @@ pub async fn connections(
     let paging = query.paging()?;
     db.read(move|tx| {
         authorize(tx,&actor,&client,None,false)?;document(tx,&client,&website)?;
-        if !security::allowed_user(tx,&actor.user_id,"integrations.view",Some(&client))? && !security::allowed_user(tx,&actor.user_id,"analytics.view",Some(&client))? {return Err(Error::NotFound);}
+        if !security::allowed_actor(tx,&actor,"integrations.view",Some(&client))? && !security::allowed_actor(tx,&actor,"analytics.view",Some(&client))? {return Err(Error::NotFound);}
         let mut stmt=tx.prepare("SELECT c.id,c.client_id,c.provider,c.state,CAST(c.revision AS TEXT) AS revision,c.created_at,c.updated_at FROM integration_connections c JOIN website_integrations b ON b.connection_id=c.id AND b.client_id=c.client_id WHERE b.client_id=?1 AND b.website_id=?2 AND (?3 IS NULL OR c.id>?3) ORDER BY c.id LIMIT ?4")?;
         let data=stmt.query_map(params![client,website,paging.cursor,(paging.limit+1)as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?;
         paging.page(data)
     }).await
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Binding {
     expected_revision: i64,

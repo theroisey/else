@@ -1,5 +1,7 @@
 // Public code only. No record or permission data is prefetched.
 export const routeLoaders = {
+  MCPPage: () =>
+    import('../features/mcp/MCPPage').then((m) => ({ default: m.MCPPage })),
   RecurringPage: () =>
     import('../features/operations/RecurringPage').then((m) => ({
       default: m.RecurringPage,

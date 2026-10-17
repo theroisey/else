@@ -68,8 +68,10 @@ def assess(report, metadata):
             sole_parent(matching[0], "pingora-core", "0.9.0")
 
 
-def main():
+def main(mcp_client=False):
     root = Path(__file__).resolve().parent.parent
+    if mcp_client:
+        root = root / "tools" / "mcp-client"
     cargo = os.environ.get("CARGO", "cargo")
     scanner = os.environ.get("CARGO_AUDIT", "cargo-audit")
     command = [scanner, "audit", "--deny", "unsound", "--deny", "yanked", "--format", "json"]
@@ -90,12 +92,14 @@ def main():
     findings(report)
     metadata = json.loads(subprocess.run([cargo, "metadata", "--locked", "--format-version", "1"], cwd=root, check=True, capture_output=True, text=True).stdout)
     assess(report, metadata)
-    print("Rust advisory gate passed; exact Pingora macro and unused configuration-parser maintenance dispositions remain visible.")
+    print("Independent MCP client advisory gate passed." if mcp_client else "Rust advisory gate passed; exact Pingora macro and unused configuration-parser maintenance dispositions remain visible.")
 
 
 if __name__ == "__main__":
     try:
-        main()
+        if sys.argv[1:] not in ([], ["--mcp-client"]):
+            raise ValueError("unsupported scanner selection")
+        main(mcp_client=sys.argv[1:] == ["--mcp-client"])
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
         print("Rust advisory gate failed. Review scanner diagnostics, vulnerabilities or changed advisory/dependency scope.", file=sys.stderr)
         sys.exit(1)

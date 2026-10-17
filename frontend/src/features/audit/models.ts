@@ -113,7 +113,7 @@ const detail = z
     ...summaryShape,
     before_state: snapshot.nullable(),
     after_state: snapshot.nullable(),
-    metadata: z.object({ source: z.enum(['http', 'job', 'cli']) }).strict(),
+    metadata: z.object({ source: z.enum(['http', 'job', 'cli', 'mcp']) }).strict(),
   })
   .strict()
   .refine(summaryValid)

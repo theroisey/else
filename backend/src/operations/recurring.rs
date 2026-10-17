@@ -36,7 +36,7 @@ pub async fn supervisors(db: &Database, actor: Actor, client: String, q: Query) 
         page.page(stmt.query_map(params![client,assignee,page.cursor,(page.limit+1)as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?)
     }).await
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Profile {
     pub title: String,
@@ -96,7 +96,7 @@ impl Profile {
         Ok(())
     }
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Create {
     pub command_id: String,
@@ -210,7 +210,7 @@ pub async fn list(db: &Database, actor: Actor, client: String, q: Query) -> Resu
         page.page(stmt.query_map(params![client,page.cursor,status,(page.limit+1) as i64],row_json)?.collect::<std::result::Result<Vec<_>,_>>()?)
     }).await
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Change {
     pub command_id: String,
@@ -373,7 +373,7 @@ fn generate_at(
     audit_change(tx, actor, client, id, Some(previous), next)?;
     Ok(json!({"id":task.id,"replayed":false}))
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Generate {
     pub scheduled_date: String,

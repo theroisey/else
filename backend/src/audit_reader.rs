@@ -140,7 +140,7 @@ impl Filter {
 fn authorize(tx: &Transaction<'_>, actor: &Actor, client: Option<&str>) -> Result<()> {
     security::require(tx, actor, "audit.view", None)?;
     if let Some(client) = client {
-        if !security::allowed_user(tx, &actor.user_id, "clients.view", Some(client))? {
+        if !security::allowed_actor(tx, actor, "clients.view", Some(client))? {
             return Err(Error::NotFound);
         }
         security::client(tx, client, false)?;
@@ -183,7 +183,7 @@ pub async fn read(db: &Database, actor: Actor, scope: Option<String>, id: String
             item[key]=project_snapshot(item[key].clone(),&kind)?;
         }
         let metadata=item.get("metadata").and_then(Value::as_object).ok_or(Error::Internal)?;
-        if metadata.len()!=1 || !matches!(metadata.get("source").and_then(Value::as_str),Some("http"|"job"|"cli")) {return Err(Error::Internal);}
+        if metadata.len()!=1 || !matches!(metadata.get("source").and_then(Value::as_str),Some("http"|"job"|"cli"|"mcp")) {return Err(Error::Internal);}
         Ok(item)
     }).await
 }

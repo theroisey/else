@@ -8,6 +8,7 @@ import type { Session } from './session'
 // Domain records share actor/grant checks and a partitioned query lifecycle.
 export function useRecordOperations(
   domain:
+    | 'mcp'
     | 'operations'
     | 'team'
     | 'agreements'

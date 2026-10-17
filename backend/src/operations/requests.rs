@@ -65,7 +65,7 @@ pub async fn list(db: &Database, actor: Actor, client: Option<String>, q: Query)
         paging.page(items)
     }).await
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Create {
     pub command_id: String,
@@ -174,7 +174,7 @@ fn event(
     )?;
     Ok(event)
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Action {
     pub command_id: String,
@@ -232,12 +232,7 @@ fn reviewer(tx: &Transaction<'_>, actor: &Actor, old: &Value, delivery: &str) ->
         return Err(Error::Denied);
     }
     if old["created_by"] == actor.user_id
-        || security::allowed_user(
-            tx,
-            &actor.user_id,
-            "tickets.read_all",
-            old["client_id"].as_str(),
-        )?
+        || security::allowed_actor(tx, actor, "tickets.read_all", old["client_id"].as_str())?
     {
         return Ok(());
     }
@@ -343,7 +338,7 @@ pub async fn read(db: &Database, actor: Actor, client: String, id: String) -> Re
             if action!="comment" && action!="assign" && transition(status,action).is_none() || action=="assign" && !["accepted","in_progress","revision_requested"].contains(&status) {continue}
             if !writable{continue}
             let cap=capability(action)?;
-            if !cap.is_empty() && !security::allowed_user(tx,&actor.user_id,cap,Some(&client))? {continue}
+            if !cap.is_empty() && !security::allowed_actor(tx,&actor,cap,Some(&client))? {continue}
             if ["start","deliver"].contains(&action) && v["assignee_id"]!=actor.user_id {continue}
             if ["approve","revise"].contains(&action) {
                 let delivery=v["deliveries"].as_array().and_then(|a|a.first()).and_then(|d|d["id"].as_str()).ok_or(Error::Internal)?;

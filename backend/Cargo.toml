@@ -25,6 +25,9 @@ mime = "0.3"
 percent-encoding = "2"
 pingora-core = { version = "=0.9.0", default-features = false }
 rand = "0.9"
+rmcp = { version = "=3.5.1", default-features = false, features = ["schemars"] }
+schemars = "1"
+oauth2 = { version = "=5.0.0", default-features = false }
 redis = {version="=1.7.1",default-features=false,features=["tokio-comp"]}
 ring = "0.17"
 rustls = {version="0.23.46",default-features=false,features=["ring","std","tls12"]}

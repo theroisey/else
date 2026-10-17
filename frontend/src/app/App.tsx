@@ -14,6 +14,7 @@ import { ClientRoute, WorkspaceRoute } from '../features/clients/ClientRoute'
 import { NavigationFocus } from '../features/shell/NavigationFocus'
 
 const RecurringPage = lazyPage(routeLoaders.RecurringPage)
+const MCPPage = lazyPage(routeLoaders.MCPPage)
 const SettingsPage = lazyPage(routeLoaders.SettingsPage)
 const FinancePage = lazyPage(routeLoaders.FinancePage)
 const TeamPage = lazyPage(routeLoaders.TeamPage)
@@ -71,7 +72,8 @@ function AuthArea() {
   useLocale()
   const { pathname } = useLocation()
   useEffect(() => {
-    if (pathname === '/app' || pathname.startsWith('/app/')) warmDestination(pathname)
+    if (pathname === '/app' || pathname.startsWith('/app/'))
+      warmDestination(pathname)
   }, [pathname])
   return (
     <AuthProvider>
@@ -256,6 +258,30 @@ function ApplicationRoutes() {
               element={
                 <ClientRoute>
                   <SettingsPage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="mcp"
+              element={
+                <ClientRoute>
+                  <MCPPage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="mcp/authorize/:authorizationID"
+              element={
+                <ClientRoute>
+                  <MCPPage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="mcp/approvals/:approvalID"
+              element={
+                <ClientRoute>
+                  <MCPPage />
                 </ClientRoute>
               }
             />

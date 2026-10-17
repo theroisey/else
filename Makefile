@@ -137,3 +137,12 @@ restore: ## Restore absolute BACKUP_SOURCE into EMPTY fixed storage on a recover
 clean: ## Remove generated assets, never application data
 	$(CARGO) clean
 	rm -rf build frontend/dist frontend/test-results frontend/playwright-report
+
+.PHONY: mcp-client test-mcp
+mcp-client: ## Build the independent upstream MCP interoperability client on the host
+	CARGO_TARGET_DIR="$(CURDIR)/target/mcp-client" $(CARGO) build --locked --manifest-path tools/mcp-client/Cargo.toml
+	$(CARGO) fmt --manifest-path tools/mcp-client/Cargo.toml --check
+
+test-mcp: frontend-build redis-artifacts mcp-client ## Verify native MCP, OAuth and scoped domain calls
+	$(CARGO) build --locked --bin roisey-else
+	$(PYTHON) tools/test-mcp.py --binary target/debug/roisey-else

@@ -6,6 +6,7 @@ import { Button, TextField, PageSkeleton } from '../../components/ui'
 import { copy, useLocale } from '../../i18n'
 import { LanguageSettings } from '../../i18n/LanguageControl'
 import { AppearanceSettings } from '../appearance/Appearance'
+import { MCPSettings } from '../mcp/MCPSettings'
 import { BrowserAlerts } from './BrowserAlerts'
 import { hasPermission } from '../auth/permissions'
 import { useRecordOperations } from '../auth/useRecordOperations'
@@ -41,6 +42,7 @@ export function SettingsPage() {
       <AppearanceSettings />
       <LanguageSettings />
       <BrowserAlerts />
+      <MCPSettings />
       {preferences.isPending ? (
         <PageSkeleton label={copy('Loading preferences…', 'operations')} />
       ) : preferences.isError ? (
