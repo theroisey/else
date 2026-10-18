@@ -168,11 +168,12 @@ def run(args):
                 response = connection.getresponse()
                 report = json.loads(response.read())
                 connection.close()
-                assert response.status == 200, "financial reporting request failed"
+                assert response.status == 200, f"financial reporting request failed: HTTP {response.status}"
                 assert report["data"]["position"]["outstanding_minor"] == str(10000 * 9007199254740993)
                 assert sum(int(row["amount_minor"]) for row in report["data"]["aging"]) == int(report["data"]["position"]["outstanding_minor"])
                 return time.monotonic() - tick
             financial_serial = [financial_read(i) for i in range(20)]
+            print(json.dumps({"financial_serial_p95_ms":percentile(financial_serial,.95),"mixed_read_p95_ms":percentile(reads,.95),"mixed_write_p95_ms":percentile(writes,.95)},sort_keys=True),flush=True)
             with ThreadPoolExecutor(max_workers=20) as pool:
                 financial_burst = list(pool.map(financial_read, range(20)))
             assert percentile(financial_serial, .95) < 2000, "global financial P95 exceeds two seconds"

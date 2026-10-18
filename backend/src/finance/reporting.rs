@@ -30,6 +30,16 @@ pub const KEYS: &[&str] = &[
     "cursor",
 ];
 const CAP: i64 = 50_000;
+const CAP_SQL: &str = "SELECT (SELECT count(*) FROM visible) AS obligations,(SELECT count(*) FROM payment_data) AS payments,(SELECT count(*) FROM reversal_data) AS reversals,(SELECT count(*) FROM settlement_data) AS settlements FROM f";
+fn check_caps(cap: &Value) -> Result<()> {
+    if ["obligations", "payments", "reversals", "settlements"]
+        .iter()
+        .any(|k| cap[k].as_i64().is_some_and(|n| n > CAP))
+    {
+        return Err(Error::Invalid("report_range_too_large"));
+    }
+    Ok(())
+}
 #[derive(Clone)]
 pub struct Filter {
     pub currency: String,
@@ -225,6 +235,12 @@ impl Context {
             "c.client_id",
             grant_sql("?1", "agreements.view", "c.client_id"),
         )?;
+        let settlement_access = crate::mcp::access::predicate(
+            actor,
+            "finance:read",
+            "s.client_id",
+            grant_sql("?1", "agreements.view", "s.client_id"),
+        )?;
         let cte=format!("WITH f AS (SELECT ?1 usr,?2 currency,?3 client,?4 start,?5 finish,?6 today,?7 service,?8 agreement,?9 partner,?10 state,?11 method,?12 collector,?13 due_from,?14 due_to,?15 previous_start,?16 previous_finish,?17 search,?18 page_size,?19 cursor,?20 year_start,?21 year_finish), visible AS MATERIALIZED (
   SELECT c.*,n.name AS client_name,CASE WHEN {terms} THEN coalesce(a.service_type,'unclassified') ELSE 'unclassified' END AS service_type,CASE WHEN {terms} THEN b.agreement_id END AS agreement_id,CASE WHEN {terms} THEN v.partner_id END AS partner_id,coalesce(b.billing_date,substr(c.created_at,1,10)) AS billed_on,CASE WHEN c.cancelled_at IS NOT NULL THEN 'cancelled' WHEN c.paid_minor=c.amount_minor THEN 'paid' WHEN c.due_date<?6 THEN 'overdue' WHEN c.paid_minor>0 THEN 'partially_paid' ELSE 'pending' END AS status
   FROM collections c JOIN clients n ON n.id=c.client_id LEFT JOIN billing_periods b ON b.collection_id=c.id LEFT JOIN service_agreements a ON a.id=b.agreement_id LEFT JOIN agreement_versions v ON v.id=b.version_id
@@ -232,21 +248,13 @@ impl Context {
   eligible AS MATERIALIZED (SELECT * FROM visible WHERE (?7='all' OR service_type=?7) AND (?8 IS NULL OR agreement_id=?8) AND (?9 IS NULL OR partner_id=?9) AND (?10='all' OR status=?10)),
   payment_data AS MATERIALIZED (SELECT p.id,p.collection_id,p.client_id,e.client_name,e.description,e.service_type,e.agreement_id,e.status,p.amount_minor,p.paid_on AS occurred_on,p.recorded_at,p.method,coalesce(p.collector,'unknown') AS collector,'payment' AS kind FROM payments p JOIN eligible e ON e.id=p.collection_id WHERE p.currency=?2 AND p.paid_on BETWEEN min(?15,?20) AND ?5 AND (?11='all' OR p.method=?11) AND (?12='all' OR coalesce(p.collector,'unknown')=?12) LIMIT 50001),
   reversal_data AS MATERIALIZED (SELECT r.id,r.collection_id,r.client_id,e.client_name,e.description,e.service_type,e.agreement_id,e.status,r.amount_minor,r.reversed_on AS occurred_on,r.recorded_at,p.method,coalesce(p.collector,'unknown') AS collector,'reversal' AS kind FROM payment_reversals r JOIN payments p ON p.id=r.payment_id JOIN eligible e ON e.id=r.collection_id WHERE r.currency=?2 AND r.reversed_on BETWEEN min(?15,?20) AND ?5 AND (?11='all' OR p.method=?11) AND (?12='all' OR coalesce(p.collector,'unknown')=?12) LIMIT 50001),
-  events AS (SELECT *,amount_minor AS signed_minor FROM payment_data UNION ALL SELECT *,-amount_minor AS signed_minor FROM reversal_data) ");
-        let ctx = Self {
+  events AS (SELECT *,amount_minor AS signed_minor FROM payment_data UNION ALL SELECT *,-amount_minor AS signed_minor FROM reversal_data), settlement_data AS MATERIALIZED (SELECT s.* FROM internal_settlements s JOIN billing_periods b ON b.id=s.period_id JOIN eligible e ON e.id=b.collection_id WHERE s.currency=?2 AND s.settled_on BETWEEN ?4 AND ?5 AND {settlement_access} LIMIT 50001) ");
+        Ok(Self {
             cte,
             args,
             filter,
             as_of,
-        };
-        let cap=ctx.rows(tx,"SELECT (SELECT count(*) FROM visible) AS obligations,(SELECT count(*) FROM payment_data) AS payments,(SELECT count(*) FROM reversal_data) AS reversals FROM f")?;
-        if ["obligations", "payments", "reversals"]
-            .iter()
-            .any(|k| cap[0][k].as_i64().is_some_and(|n| n > CAP))
-        {
-            return Err(Error::Invalid("report_range_too_large"));
-        }
-        Ok(ctx)
+        })
     }
     pub fn rows(&self, tx: &Transaction<'_>, sql: &str) -> Result<Vec<Value>> {
         let full = self.cte.clone() + sql;
@@ -315,7 +323,13 @@ pub async fn dashboard(db: &Database, actor: Actor, q: Query) -> Result<Value> {
 ];
  let mut queries=queries;
  queries.push(("prior_year",activity_sql(if ctx.filter.year_available{"occurred_on BETWEEN ?20 AND ?21"}else{"0"})));
+ queries.push(("source_caps",CAP_SQL.to_owned()));
+ queries.push(("commercial_periods",partner_sql(&actor)?));
+ queries.push(("settlements",format!("SELECT {} AS incoming_minor,{} AS outgoing_minor FROM settlement_data",sum("CASE WHEN direction='partner_to_roise' THEN amount_minor ELSE 0 END"),sum("CASE WHEN direction='roise_to_partner' THEN amount_minor ELSE 0 END"))));
+ queries.push(("customer_cash", "SELECT substr(occurred_on,1,7) AS period,exact_sum(signed_minor) AS amount_minor FROM events WHERE occurred_on BETWEEN ?4 AND ?5 AND collector='roise' GROUP BY period ORDER BY period LIMIT 367".into()));
+ queries.push(("settlement_cash", "SELECT substr(settled_on,1,7) AS period,direction,exact_sum(amount_minor) AS amount_minor FROM settlement_data GROUP BY period,direction ORDER BY period LIMIT 733".into()));
  let core=ctx.batch(tx,&queries)?;
+ check_caps(&core["source_caps"][0])?;
  let position=core["position"][0].clone();
  let activity=core["activity"][0].clone();
  let previous=core["previous"][0].clone();
@@ -333,22 +347,27 @@ pub async fn dashboard(db: &Database, actor: Actor, q: Query) -> Result<Value> {
  if trends.len()>366||client_nets.len()>10000{return Err(Error::Invalid("report_range_too_large"))}
  let positive=client_nets.iter().try_fold(0i128,|n,r|n.checked_add(integer(&r["net"])?.max(0)).ok_or(Error::Internal))?;
  let agreements=agreement_summary(tx,&actor,&ctx)?;
- let partners=partner_rows(tx,&actor,&ctx)?;
+ let partners=partner_rows(core["commercial_periods"].as_array().ok_or(Error::Internal)?.clone())?;
  let expenses=super::expenses::analytics(tx,&actor,&ctx)?;
- let settlements=settlement_activity(tx,&actor,&ctx)?;
- let cashflow=cashflow(tx,&actor,&ctx,&expenses)?;
+ let settlements=core["settlements"][0].clone();
+ let cashflow=cashflow(&ctx,&expenses,&core)?;
  let alerts=alerts(&aging,&concentration,&activity,&partners,&expenses,positive)?;
  Ok(json!({"as_of":ctx.as_of,"client_id":ctx.filter.client,"currency":ctx.filter.currency,"from":ctx.filter.from,"to":ctx.filter.to,"previous_from":ctx.filter.previous_from,"previous_to":ctx.filter.previous_to,"group":ctx.filter.group,"position":position,"activity":activity,"previous":previous,"prior_year":if ctx.filter.year_available{core["prior_year"][0].clone()}else{Value::Null},"year_from":ctx.filter.year_from,"year_to":ctx.filter.year_to,"aging":aging,"upcoming":upcoming,"trends":trends,"methods":methods,"collectors":collectors,"services":services,"attention":attention,"concentration":concentration,"partners":partners,"agreements":agreements,"positive_client_net_minor":positive.to_string(),"expenses":expenses,"settlements":settlements,"cashflow":cashflow,"alerts":alerts}))
 }).await
 }
-fn partner_rows(tx: &Transaction<'_>, actor: &Actor, ctx: &Context) -> Result<Vec<Value>> {
+fn partner_sql(actor: &Actor) -> Result<String> {
     let access = crate::mcp::access::predicate(
         actor,
         "finance:read",
         "b.client_id",
         grant_sql("?1", "agreements.view", "b.client_id"),
     )?;
-    let rows=ctx.rows(tx,&format!("{} JOIN eligible e ON e.id=b.collection_id WHERE {access} AND b.voided_at IS NULL AND v.partner_id IS NOT NULL ORDER BY b.id LIMIT 5001",commercial::PERIOD_SQL))?;
+    Ok(format!(
+        "{} JOIN eligible e ON e.id=b.collection_id WHERE {access} AND b.voided_at IS NULL AND v.partner_id IS NOT NULL ORDER BY b.id LIMIT 5001",
+        commercial::PERIOD_SQL
+    ))
+}
+fn partner_rows(rows: Vec<Value>) -> Result<Vec<Value>> {
     if rows.len() > 5000 {
         return Err(Error::Invalid("report_range_too_large"));
     }
@@ -398,18 +417,10 @@ pub fn add(v: &mut Value, key: &str, n: i128) -> Result<()> {
     );
     Ok(())
 }
-fn settlement_activity(tx: &Transaction<'_>, actor: &Actor, ctx: &Context) -> Result<Value> {
-    let access = crate::mcp::access::predicate(
-        actor,
-        "finance:read",
-        "s.client_id",
-        grant_sql("?1", "agreements.view", "s.client_id"),
-    )?;
-    ctx.one(tx,&format!("SELECT {} AS incoming_minor,{} AS outgoing_minor FROM internal_settlements s JOIN billing_periods b ON b.id=s.period_id JOIN eligible e ON e.id=b.collection_id WHERE s.currency=?2 AND s.settled_on BETWEEN ?4 AND ?5 AND {access}",sum("CASE WHEN s.direction='partner_to_roise' THEN s.amount_minor ELSE 0 END"),sum("CASE WHEN s.direction='roise_to_partner' THEN s.amount_minor ELSE 0 END")))
-}
 pub async fn details(db: &Database, actor: Actor, q: Query, report: String) -> Result<Value> {
     db.read(move|tx|{
  let ctx=Context::new(tx,&actor,&q)?;
+ check_caps(&ctx.one(tx,CAP_SQL)?)?;
  let sql=match report.as_str(){
  "receivables"=>"SELECT id,client_id,client_name,description,currency,service_type,agreement_id,CAST(amount_minor AS TEXT) AS amount_minor,CAST(paid_minor AS TEXT) AS paid_minor,CAST(CASE WHEN cancelled_at IS NULL THEN amount_minor-paid_minor ELSE 0 END AS TEXT) AS outstanding_minor,due_date,status,billed_on FROM eligible WHERE (?19 IS NULL OR id>?19) ORDER BY id LIMIT (?18+1)",
  "payments"=>"SELECT id,client_id,client_name,description,collection_id,service_type,agreement_id,CAST(amount_minor AS TEXT) AS amount_minor,occurred_on,recorded_at,method,collector,kind FROM events WHERE occurred_on BETWEEN ?4 AND ?5 AND (?19 IS NULL OR id>?19) ORDER BY id LIMIT (?18+1)",
@@ -444,7 +455,7 @@ fn agreement_summary(tx: &Transaction<'_>, actor: &Actor, ctx: &Context) -> Resu
     ctx.rows(tx,&(cte+"SELECT status AS label,CAST(count(*) AS TEXT) AS count,coalesce(exact_sum(CASE WHEN status='active' AND next_date BETWEEN ?6 AND date(?6,'+90 days') AND (end_date IS NULL OR next_date<=end_date) THEN amount_minor ELSE 0 END),'0') AS potential_next_minor FROM agreement_source GROUP BY status ORDER BY status"))
 }
 
-fn cashflow(tx: &Transaction<'_>, actor: &Actor, ctx: &Context, expenses: &Value) -> Result<Value> {
+fn cashflow(ctx: &Context, expenses: &Value, core: &Value) -> Result<Value> {
     let f = &ctx.filter;
     if expenses.is_null()
         || f.service != "all"
@@ -459,23 +470,34 @@ fn cashflow(tx: &Transaction<'_>, actor: &Actor, ctx: &Context, expenses: &Value
     {
         return Ok(Value::Null);
     }
-    let access = crate::mcp::access::predicate(
-        actor,
-        "finance:read",
-        "s.client_id",
-        grant_sql("?1", "agreements.view", "s.client_id"),
-    )?;
-    let cap=ctx.one(tx,&format!("SELECT count(*) AS count FROM (SELECT s.id FROM internal_settlements s JOIN billing_periods b ON b.id=s.period_id JOIN eligible e ON e.id=b.collection_id WHERE s.currency=?2 AND s.settled_on BETWEEN ?4 AND ?5 AND {access} LIMIT 50001)"))?;
-    if cap["count"].as_i64().is_some_and(|v| v > 50000) {
-        return Err(Error::Invalid("report_range_too_large"));
-    }
     let mut groups = std::collections::BTreeMap::<String, Value>::new();
     let mut merge = |period: &str, key: &str, n: i128| -> Result<()> {
         let row=groups.entry(period.to_owned()).or_insert_with(||json!({"period":period,"customer_minor":"0","incoming_minor":"0","outgoing_minor":"0","operating_minor":"0","net_minor":"0"}));
         add(row, key, n)
     };
-    for row in ctx.rows(tx,"SELECT substr(occurred_on,1,7) AS period,exact_sum(signed_minor) AS amount_minor FROM events WHERE occurred_on BETWEEN ?4 AND ?5 AND collector='roise' GROUP BY period ORDER BY period LIMIT 367")?{merge(row["period"].as_str().ok_or(Error::Internal)?,"customer_minor",integer(&row["amount_minor"])?)?;}
-    for row in ctx.rows(tx,&format!("SELECT substr(s.settled_on,1,7) AS period,s.direction,exact_sum(s.amount_minor) AS amount_minor FROM internal_settlements s JOIN billing_periods b ON b.id=s.period_id JOIN eligible e ON e.id=b.collection_id WHERE s.currency=?2 AND s.settled_on BETWEEN ?4 AND ?5 AND {access} GROUP BY period,s.direction ORDER BY period LIMIT 733"))?{merge(row["period"].as_str().ok_or(Error::Internal)?,if row["direction"]=="partner_to_roise"{"incoming_minor"}else{"outgoing_minor"},integer(&row["amount_minor"])?)?;}
+    let customers = core["customer_cash"].as_array().ok_or(Error::Internal)?;
+    let transfers = core["settlement_cash"].as_array().ok_or(Error::Internal)?;
+    if customers.len() > 366 || transfers.len() > 732 {
+        return Err(Error::Invalid("report_range_too_large"));
+    }
+    for row in customers {
+        merge(
+            row["period"].as_str().ok_or(Error::Internal)?,
+            "customer_minor",
+            integer(&row["amount_minor"])?,
+        )?;
+    }
+    for row in transfers {
+        merge(
+            row["period"].as_str().ok_or(Error::Internal)?,
+            if row["direction"] == "partner_to_roise" {
+                "incoming_minor"
+            } else {
+                "outgoing_minor"
+            },
+            integer(&row["amount_minor"])?,
+        )?;
+    }
     for row in expenses["trends"].as_array().ok_or(Error::Internal)? {
         merge(
             row["period"].as_str().ok_or(Error::Internal)?,

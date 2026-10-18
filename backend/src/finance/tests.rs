@@ -373,3 +373,33 @@ async fn aging_buckets_are_exclusive_with_due_today_and_missing_dates() {
     assert_eq!(report["position"]["overdue_minor"], "11");
     assert_eq!(report["upcoming"][0]["amount_minor"], "2");
 }
+
+#[tokio::test]
+async fn complete_reporting_refuses_oversized_sources_instead_of_partial_totals() {
+    let f = Fixture::new().await;
+    let actor = f.actor.user_id.clone();
+    let client = f.client.clone();
+    f.db.write(move |tx| {
+        tx.execute("WITH RECURSIVE seq(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM seq WHERE i<50001) INSERT INTO collections(id,client_id,created_by,description,amount_minor,currency,currency_exponent,revision,created_at,updated_at) SELECT 'fa111111-1111-4111-8111-'||printf('%012d',i),?1,?2,'Synthetic bounded source',1,'JPY',0,1,?3,?3 FROM seq",rusqlite::params![client,actor,validation::now()])?;
+        Ok(())
+    }).await.unwrap();
+    assert!(matches!(
+        reporting::dashboard(
+            &f.db,
+            f.actor.clone(),
+            Query::parse("currency=JPY", reporting::KEYS).unwrap()
+        )
+        .await,
+        Err(crate::error::Error::Invalid("report_range_too_large"))
+    ));
+    assert!(matches!(
+        reporting::details(
+            &f.db,
+            f.actor,
+            Query::parse("currency=JPY", reporting::KEYS).unwrap(),
+            "receivables".into()
+        )
+        .await,
+        Err(crate::error::Error::Invalid("report_range_too_large"))
+    ));
+}
