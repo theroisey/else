@@ -1,0 +1,782 @@
+{
+  "schema_version": 1,
+  "base_commit": "3f1cc0ec0c242f3ccc642110a494816e9a5bdd4c",
+  "source_commit": "b10118018e87eff7788991022bb98f9a2fe14005",
+  "artifact_scope": "Local exact-image rehearsal from this source commit; not a published registry artifact or production deployment. The delivery commit adds documentation/evidence only.",
+  "binary_sha256": "6648b26445b2a69fb41efafc7ebbae9213a68a7b7ee1d662c2502ab474a33a1b",
+  "frontend_index_sha256": "ed88710a8b9ce246d0f37b7d33c5c9bf608aff2d00d8c4420c273a6761f47979",
+  "build_budget": {
+    "initial_js_gzip_bytes": 196220,
+    "initial_js_requests": 7,
+    "total_js_bytes": 2245729,
+    "budgets": "passed"
+  },
+  "checks": {
+    "backend_tests": 119,
+    "frontend_tests": 483,
+    "frontend_files": 53,
+    "service_worker_tests": 5,
+    "browser_scenarios": 36,
+    "financial_locales": 5,
+    "financial_locale_keys": 271,
+    "startup_refusal_cases": 5,
+    "new_dependencies": 0
+  },
+  "browser": {
+    "financial_samples": [
+      {
+        "financial_filter_render_ms": 146,
+        "browser_heap_bytes": 9983694
+      }
+    ],
+    "viewports": [
+      360,
+      390,
+      430,
+      1280,
+      1440,
+      1920
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "limits": "Chromium on loopback, synthetic records. Filter-click time and sampled JS heap are diagnostics, not field INP or physical mobile-device evidence."
+  },
+  "runtime": {
+    "checks": "HTTP/static/gzip/auth/exact-finance/expense-reversal-retention/embedded-cache/readonly/persistence/ownership/TERM/INT/online-backup/fresh-key-restore/failed-recovery-startup-refusal",
+    "image_id": "sha256:91ff2b14d2f9446eab3336158c7b6a73e0cd05d56efe367d29419774b8b4bcab",
+    "pid1": "roisey-else",
+    "redis": {
+      "gid": "65532",
+      "pid1": "roisey-else",
+      "redis_config": {
+        "appendonly": "no",
+        "bind": "127.0.0.1",
+        "daemonize": "no",
+        "dir": "/tmp",
+        "logfile": "",
+        "maxmemory": "67108864",
+        "maxmemory-policy": "allkeys-lru",
+        "pidfile": "",
+        "port": "6379",
+        "protected-mode": "yes",
+        "save": ""
+      },
+      "redis_parent": 1,
+      "redis_pid": 8,
+      "root_files": [
+        ".dockerenv",
+        "app",
+        "dev",
+        "etc",
+        "lib",
+        "licenses",
+        "proc",
+        "redis-server",
+        "roisey-else",
+        "sys",
+        "tmp",
+        "usr",
+        "var"
+      ],
+      "uid": "65532"
+    },
+    "runtime_uid": 65532,
+    "size_bytes": 41706699
+  },
+  "capacity": {
+    "cache": "embedded loopback; bounded SQLite fallback",
+    "clients": 500,
+    "concurrent_users": 100,
+    "cpu_limit": 2,
+    "duration_seconds": 12.43,
+    "financial_burst_p95_ms": 1485.56,
+    "financial_burst_users": 20,
+    "financial_obligations": 10000,
+    "financial_query_plan": "5|0|61|SEARCH collections USING INDEX finance_collections_currency (currency=? AND client_id=?)",
+    "financial_serial_p95_ms": 77.92,
+    "image_id": "sha256:91ff2b14d2f9446eab3336158c7b6a73e0cd05d56efe367d29419774b8b4bcab",
+    "memory_limit_mib": 256,
+    "mixed_p99_ms": 699.09,
+    "observed_memory": "31.68MiB / 256MiB",
+    "read_p95_ms": 565.39,
+    "requests": 3000,
+    "write_p95_ms": 386.89,
+    "writes": 100
+  },
+  "compose": {
+    "checks": "fresh-single-service/health/UI/API/SQLite/owned-loopback-Redis/readiness-pause/restart/child-failure-whole-restart/recreate/online-backup/off-host-empty-target-restore",
+    "redis": {
+      "gid": "65532",
+      "pid1": "roisey-else",
+      "redis_config": {
+        "appendonly": "no",
+        "bind": "127.0.0.1",
+        "daemonize": "no",
+        "dir": "/tmp",
+        "logfile": "",
+        "maxmemory": "67108864",
+        "maxmemory-policy": "allkeys-lru",
+        "pidfile": "",
+        "port": "6379",
+        "protected-mode": "yes",
+        "save": ""
+      },
+      "redis_parent": 1,
+      "redis_pid": 7,
+      "root_files": [
+        ".dockerenv",
+        "app",
+        "dev",
+        "etc",
+        "lib",
+        "licenses",
+        "proc",
+        "redis-server",
+        "roisey-else",
+        "sys",
+        "tmp",
+        "usr",
+        "var"
+      ],
+      "uid": "65532"
+    },
+    "restart_count_after_failure": 1,
+    "source_image": "roisey-else:finance-worktree",
+    "startup_sequence": [
+      "application_starting",
+      "data_directory_ready",
+      "embedded_redis_starting",
+      "embedded_redis_ready",
+      "database_ready",
+      "migrations_ready",
+      "keyring_ready",
+      "frontend_ready",
+      "server_listening"
+    ]
+  },
+  "mcp": {
+    "image": "roisey-else:finance-worktree",
+    "image_id": "sha256:91ff2b14d2f9446eab3336158c7b6a73e0cd05d56efe367d29419774b8b4bcab",
+    "binary_sha256": null,
+    "fixture": {
+      "clients": 50,
+      "websites_per_target": 5,
+      "initial_tasks_per_target": 36,
+      "provider_data": "Explicit synthetic completed Meta report; no provider credentials or external requests.",
+      "measured_task_mutations": 100,
+      "additional_mutation_warmups": 6
+    },
+    "limits": "Short loopback rehearsal, 50 samples per case; p99 is the observed maximum. Not an SLA or live Cloudflare measurement. HTTP client and CPU scheduling overhead are included. CPU/RSS are cumulative counters for the Rust application process (Redis excluded); CPU has kernel clock-tick granularity. Default image nonroot UID is independently verified by the container gate; this test shares the host fixture UID.",
+    "measurements": [
+      {
+        "workload": "native_rest",
+        "expected_status": 200,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 1.78,
+        "p95_ms": 2.079,
+        "p99_ms": 3.776,
+        "throughput_rps": 505.61,
+        "before": {
+          "cpu_seconds": 0.44,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 0.5,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.607
+      },
+      {
+        "workload": "native_rest",
+        "expected_status": 200,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 8.583,
+        "p95_ms": 12.512,
+        "p99_ms": 17.637,
+        "throughput_rps": 798.47,
+        "before": {
+          "cpu_seconds": 0.5,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 0.55,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.798
+      },
+      {
+        "workload": "mcp_discovery",
+        "expected_status": 200,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 1.137,
+        "p95_ms": 1.563,
+        "p99_ms": 2.661,
+        "throughput_rps": 816.45,
+        "before": {
+          "cpu_seconds": 0.56,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 0.59,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.49
+      },
+      {
+        "workload": "mcp_discovery",
+        "expected_status": 200,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 5.483,
+        "p95_ms": 10.753,
+        "p99_ms": 18.214,
+        "throughput_rps": 1180.92,
+        "before": {
+          "cpu_seconds": 0.6,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 0.62,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.472
+      },
+      {
+        "workload": "mcp_tool_listing",
+        "expected_status": 200,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 5.276,
+        "p95_ms": 6.805,
+        "p99_ms": 9.315,
+        "throughput_rps": 181.22,
+        "before": {
+          "cpu_seconds": 0.64,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 0.84,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.725
+      },
+      {
+        "workload": "mcp_tool_listing",
+        "expected_status": 200,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 44.037,
+        "p95_ms": 58.92,
+        "p99_ms": 60.327,
+        "throughput_rps": 168.05,
+        "before": {
+          "cpu_seconds": 0.85,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 1.32,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 1.58
+      },
+      {
+        "workload": "mcp_resource_listing",
+        "expected_status": 200,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 1.331,
+        "p95_ms": 1.699,
+        "p99_ms": 2.379,
+        "throughput_rps": 703.63,
+        "before": {
+          "cpu_seconds": 1.32,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 1.34,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.281
+      },
+      {
+        "workload": "mcp_resource_listing",
+        "expected_status": 200,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 7.093,
+        "p95_ms": 13.108,
+        "p99_ms": 14.077,
+        "throughput_rps": 1038.11,
+        "before": {
+          "cpu_seconds": 1.34,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 1.38,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.83
+      },
+      {
+        "workload": "mcp_resource_read",
+        "expected_status": 200,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 1.779,
+        "p95_ms": 2.274,
+        "p99_ms": 2.41,
+        "throughput_rps": 538.48,
+        "before": {
+          "cpu_seconds": 1.38,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 1.44,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.646
+      },
+      {
+        "workload": "mcp_resource_read",
+        "expected_status": 200,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 9.483,
+        "p95_ms": 10.912,
+        "p99_ms": 11.139,
+        "throughput_rps": 787.42,
+        "before": {
+          "cpu_seconds": 1.44,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 1.51,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 1.102
+      },
+      {
+        "workload": "mcp_client",
+        "expected_status": 200,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 1.944,
+        "p95_ms": 2.507,
+        "p99_ms": 3.746,
+        "throughput_rps": 489.41,
+        "before": {
+          "cpu_seconds": 1.51,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 1.57,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.587
+      },
+      {
+        "workload": "mcp_client",
+        "expected_status": 200,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 10.442,
+        "p95_ms": 14.078,
+        "p99_ms": 16.663,
+        "throughput_rps": 705.23,
+        "before": {
+          "cpu_seconds": 1.57,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 1.64,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.987
+      },
+      {
+        "workload": "mcp_tasks",
+        "expected_status": 200,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 4.728,
+        "p95_ms": 5.385,
+        "p99_ms": 6.566,
+        "throughput_rps": 203.75,
+        "before": {
+          "cpu_seconds": 1.65,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 1.85,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.815
+      },
+      {
+        "workload": "mcp_tasks",
+        "expected_status": 200,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 30.796,
+        "p95_ms": 36.765,
+        "p99_ms": 37.356,
+        "throughput_rps": 242.41,
+        "before": {
+          "cpu_seconds": 1.86,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 2.1,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 1.164
+      },
+      {
+        "workload": "mcp_financial_dashboard",
+        "expected_status": 200,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 12.384,
+        "p95_ms": 14.76,
+        "p99_ms": 18.583,
+        "throughput_rps": 79.17,
+        "before": {
+          "cpu_seconds": 2.15,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 2.73,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.918
+      },
+      {
+        "workload": "mcp_financial_dashboard",
+        "expected_status": 200,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 91.973,
+        "p95_ms": 97.911,
+        "p99_ms": 103.14,
+        "throughput_rps": 85.36,
+        "before": {
+          "cpu_seconds": 2.76,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 3.36,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 1.024
+      },
+      {
+        "workload": "mcp_search_page",
+        "expected_status": 200,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 2.389,
+        "p95_ms": 3.152,
+        "p99_ms": 4.383,
+        "throughput_rps": 400.59,
+        "before": {
+          "cpu_seconds": 3.36,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 3.45,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.721
+      },
+      {
+        "workload": "mcp_search_page",
+        "expected_status": 200,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 13.064,
+        "p95_ms": 16.431,
+        "p99_ms": 17.874,
+        "throughput_rps": 565.86,
+        "before": {
+          "cpu_seconds": 3.45,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 3.55,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 1.132
+      },
+      {
+        "workload": "mcp_scope_denial",
+        "expected_status": 403,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 1.15,
+        "p95_ms": 1.528,
+        "p99_ms": 3.142,
+        "throughput_rps": 800.52,
+        "before": {
+          "cpu_seconds": 3.55,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 3.58,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.48
+      },
+      {
+        "workload": "mcp_scope_denial",
+        "expected_status": 403,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 6.283,
+        "p95_ms": 12.764,
+        "p99_ms": 15.024,
+        "throughput_rps": 1008.08,
+        "before": {
+          "cpu_seconds": 3.58,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 3.6,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.403
+      },
+      {
+        "workload": "mcp_revoked_token",
+        "expected_status": 401,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 1.091,
+        "p95_ms": 1.424,
+        "p99_ms": 1.974,
+        "throughput_rps": 867.52,
+        "before": {
+          "cpu_seconds": 3.6,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 3.63,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.521
+      },
+      {
+        "workload": "mcp_revoked_token",
+        "expected_status": 401,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 5.323,
+        "p95_ms": 12.68,
+        "p99_ms": 17.855,
+        "throughput_rps": 1063.42,
+        "before": {
+          "cpu_seconds": 3.64,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 3.66,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.425
+      },
+      {
+        "workload": "mcp_report_cache_hit",
+        "expected_status": 200,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 2.449,
+        "p95_ms": 3.028,
+        "p99_ms": 3.834,
+        "throughput_rps": 393.28,
+        "before": {
+          "cpu_seconds": 3.67,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 3.75,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.629
+      },
+      {
+        "workload": "mcp_report_cache_hit",
+        "expected_status": 200,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 12.239,
+        "p95_ms": 14.77,
+        "p99_ms": 15.336,
+        "throughput_rps": 602.65,
+        "before": {
+          "cpu_seconds": 3.76,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 3.84,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.964
+      },
+      {
+        "workload": "mcp_report_cache_miss",
+        "expected_status": 200,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 2.855,
+        "p95_ms": 3.71,
+        "p99_ms": 4.951,
+        "throughput_rps": 14.26,
+        "before": {
+          "cpu_seconds": 3.85,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 3.96,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "notes": "Owned cache eviction is excluded from latency; wall throughput includes eviction. Serialized cold-cache runs only.",
+        "server_cpu_fraction": 0.031
+      },
+      {
+        "workload": "mcp_task_mutation",
+        "expected_status": 200,
+        "concurrency": 1,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 3.402,
+        "p95_ms": 4.412,
+        "p99_ms": 4.832,
+        "throughput_rps": 283.32,
+        "before": {
+          "cpu_seconds": 3.96,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 4.1,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 0.793
+      },
+      {
+        "workload": "mcp_task_mutation",
+        "expected_status": 200,
+        "concurrency": 8,
+        "requests": 50,
+        "failures": 0,
+        "p50_ms": 21.99,
+        "p95_ms": 26.55,
+        "p99_ms": 27.372,
+        "throughput_rps": 346.95,
+        "before": {
+          "cpu_seconds": 4.11,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "after": {
+          "cpu_seconds": 4.28,
+          "peak_rss_bytes": 43786240,
+          "scope": "Rust application process; Redis is excluded"
+        },
+        "server_cpu_fraction": 1.18
+      }
+    ],
+    "overload": {
+      "accepted": 25,
+      "shed": 39,
+      "unexpected": 0,
+      "concurrency": 64
+    }
+  },
+  "tuning_history": [
+    "An initial worktree returned read-admission 503s during the 20-report global burst.",
+    "Intermediate worktrees accepted the burst but exceeded its two-second P95 bound.",
+    "The final sample passed unchanged thresholds after shared source scans, bounded working projections, immutable layout/plan reuse and single-pass deadline aggregation."
+  ],
+  "measurement_limits": "Short controlled synthetic rehearsals on two CPUs and 256 MiB container memory; no production data, external provider traffic, bank balance, field SLA or physical device claim."
+}
