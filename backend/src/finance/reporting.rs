@@ -270,11 +270,31 @@ impl Context {
     /// One statement shares the eligible obligation and event materializations
     /// across all core aggregates. Column names come only from compiled queries.
     pub fn batch(&self, tx: &Transaction<'_>, queries: &[(&str, String)]) -> Result<Value> {
+        // These are compiled result-column names, independent of actors, grants,
+        // parameters and rows. All chart intervals keep the same projection.
+        // Never cache a permission decision or financial result here.
+        static COLUMNS: std::sync::OnceLock<std::collections::BTreeMap<String, Vec<String>>> =
+            std::sync::OnceLock::new();
+        if COLUMNS.get().is_none() {
+            let mut metadata = std::collections::BTreeMap::new();
+            for (name, sql) in queries {
+                let stmt = tx.prepare(&(self.cte.clone() + sql))?;
+                metadata.insert(
+                    (*name).to_owned(),
+                    stmt.column_names()
+                        .iter()
+                        .map(|s| (*s).to_owned())
+                        .collect(),
+                );
+            }
+            let _ = COLUMNS.set(metadata);
+        }
+        let metadata = COLUMNS.get().ok_or(Error::Internal)?;
         let mut selections = Vec::new();
         for (name, sql) in queries {
-            let stmt = tx.prepare(&(self.cte.clone() + sql))?;
-            let fields = stmt
-                .column_names()
+            let fields = metadata
+                .get(*name)
+                .ok_or(Error::Internal)?
                 .iter()
                 .map(|c| format!("'{c}',r.\"{c}\""))
                 .collect::<Vec<_>>()
@@ -312,7 +332,7 @@ pub async fn dashboard(db: &Database, actor: Actor, q: Query) -> Result<Value> {
  let bucket=match ctx.filter.group.as_str(){"day"=>"occurred_on" ,"week"=>"date(occurred_on,'-'||((CAST(strftime('%w',occurred_on) AS INTEGER)+6)%7)||' days')","month"=>"substr(occurred_on,1,7)","quarter"=>"substr(occurred_on,1,4)||'-Q'||((CAST(substr(occurred_on,6,2) AS INTEGER)+2)/3)",_=>"substr(occurred_on,1,4)"};
 
  let queries:Vec<(&str,String)>=vec![
-("position",("SELECT coalesce(exact_sum(CASE WHEN cancelled_at IS NULL THEN amount_minor ELSE 0 END),'0') AS amount_minor,coalesce(exact_sum(CASE WHEN cancelled_at IS NULL THEN paid_minor ELSE 0 END),'0') AS paid_minor,coalesce(exact_sum(CASE WHEN cancelled_at IS NULL THEN amount_minor-paid_minor ELSE 0 END),'0') AS outstanding_minor,coalesce(exact_sum(CASE WHEN status='overdue' THEN amount_minor-paid_minor ELSE 0 END),'0') AS overdue_minor,coalesce(exact_sum(CASE WHEN cancelled_at IS NOT NULL THEN amount_minor ELSE 0 END),'0') AS cancelled_amount_minor,coalesce(exact_sum(CASE WHEN cancelled_at IS NOT NULL THEN paid_minor ELSE 0 END),'0') AS cancelled_paid_minor,coalesce(exact_sum(CASE WHEN billed_on BETWEEN ?4 AND ?5 AND cancelled_at IS NULL THEN amount_minor ELSE 0 END),'0') AS issued_minor,CAST(count(*) AS TEXT) AS count,CAST(count(CASE WHEN cancelled_at IS NULL AND paid_minor=amount_minor THEN 1 END) AS TEXT) AS paid_count,CAST(count(CASE WHEN cancelled_at IS NULL AND paid_minor>0 AND paid_minor<amount_minor THEN 1 END) AS TEXT) AS partial_count,CAST(count(CASE WHEN cancelled_at IS NULL AND paid_minor=0 THEN 1 END) AS TEXT) AS unpaid_count,CAST(count(CASE WHEN status='overdue' THEN 1 END) AS TEXT) AS overdue_count,CAST(count(CASE WHEN cancelled_at IS NOT NULL THEN 1 END) AS TEXT) AS cancelled_count,CAST(count(DISTINCT CASE WHEN cancelled_at IS NULL AND paid_minor<amount_minor THEN client_id END) AS TEXT) AS debtor_count,coalesce(exact_sum(CASE WHEN cancelled_at IS NULL AND paid_minor=amount_minor THEN amount_minor ELSE 0 END),'0') AS fully_paid_minor,coalesce(exact_sum(CASE WHEN cancelled_at IS NULL AND paid_minor>0 AND paid_minor<amount_minor THEN amount_minor-paid_minor ELSE 0 END),'0') AS partial_outstanding_minor,coalesce(exact_sum(CASE WHEN cancelled_at IS NULL AND paid_minor=0 THEN amount_minor ELSE 0 END),'0') AS unpaid_minor FROM eligible").to_owned()),
+("position",("SELECT coalesce(exact_sum(amount_minor) FILTER (WHERE cancelled_at IS NULL AND (amount_minor)<>0),'0') AS amount_minor,coalesce(exact_sum(paid_minor) FILTER (WHERE cancelled_at IS NULL AND (paid_minor)<>0),'0') AS paid_minor,coalesce(exact_sum(amount_minor-paid_minor) FILTER (WHERE status='overdue' AND (amount_minor-paid_minor)<>0),'0') AS overdue_minor,coalesce(exact_sum(amount_minor) FILTER (WHERE cancelled_at IS NOT NULL AND (amount_minor)<>0),'0') AS cancelled_amount_minor,coalesce(exact_sum(paid_minor) FILTER (WHERE cancelled_at IS NOT NULL AND (paid_minor)<>0),'0') AS cancelled_paid_minor,coalesce(exact_sum(amount_minor) FILTER (WHERE billed_on BETWEEN ?4 AND ?5 AND cancelled_at IS NULL AND (amount_minor)<>0),'0') AS issued_minor,CAST(count(*) AS TEXT) AS count,CAST(count(CASE WHEN cancelled_at IS NULL AND paid_minor=amount_minor THEN 1 END) AS TEXT) AS paid_count,CAST(count(CASE WHEN cancelled_at IS NULL AND paid_minor>0 AND paid_minor<amount_minor THEN 1 END) AS TEXT) AS partial_count,CAST(count(CASE WHEN cancelled_at IS NULL AND paid_minor=0 THEN 1 END) AS TEXT) AS unpaid_count,CAST(count(CASE WHEN status='overdue' THEN 1 END) AS TEXT) AS overdue_count,CAST(count(CASE WHEN cancelled_at IS NOT NULL THEN 1 END) AS TEXT) AS cancelled_count,CAST(count(DISTINCT CASE WHEN cancelled_at IS NULL AND paid_minor<amount_minor THEN client_id END) AS TEXT) AS debtor_count,coalesce(exact_sum(amount_minor) FILTER (WHERE cancelled_at IS NULL AND paid_minor=amount_minor AND (amount_minor)<>0),'0') AS fully_paid_minor,coalesce(exact_sum(amount_minor-paid_minor) FILTER (WHERE cancelled_at IS NULL AND paid_minor>0 AND paid_minor<amount_minor AND (amount_minor-paid_minor)<>0),'0') AS partial_outstanding_minor,coalesce(exact_sum(amount_minor) FILTER (WHERE cancelled_at IS NULL AND paid_minor=0 AND (amount_minor)<>0),'0') AS unpaid_minor FROM eligible").to_owned()),
 ("activity",(activity_sql("occurred_on BETWEEN ?4 AND ?5")).to_owned()),
 ("previous",(activity_sql(if ctx.filter.from=="0001-01-01"{"0"}else{"occurred_on BETWEEN ?15 AND ?16"})).to_owned()),
 ("aging",("SELECT bucket,coalesce(exact_sum(outstanding),'0') AS amount_minor,CAST(count(*) AS TEXT) AS count,CAST(count(DISTINCT client_id) AS TEXT) AS clients FROM (SELECT client_id,amount_minor-paid_minor AS outstanding,CASE WHEN due_date IS NULL THEN 'undated' WHEN due_date>?6 THEN 'future' WHEN due_date=?6 THEN 'today' WHEN julianday(?6)-julianday(due_date)<=7 THEN '1_7' WHEN julianday(?6)-julianday(due_date)<=15 THEN '8_15' WHEN julianday(?6)-julianday(due_date)<=30 THEN '16_30' WHEN julianday(?6)-julianday(due_date)<=60 THEN '31_60' WHEN julianday(?6)-julianday(due_date)<=90 THEN '61_90' ELSE 'over_90' END AS bucket FROM eligible WHERE cancelled_at IS NULL AND paid_minor<amount_minor) GROUP BY bucket ORDER BY CASE bucket WHEN 'future' THEN 0 WHEN 'today' THEN 1 WHEN '1_7' THEN 2 WHEN '8_15' THEN 3 WHEN '16_30' THEN 4 WHEN '31_60' THEN 5 WHEN '61_90' THEN 6 WHEN 'over_90' THEN 7 ELSE 8 END").to_owned()),
@@ -320,7 +340,7 @@ pub async fn dashboard(db: &Database, actor: Actor, q: Query) -> Result<Value> {
 ("trends",(format!("SELECT {bucket} AS period,{} AS gross_minor,{} AS reversed_minor,{} AS net_minor,CAST(count(CASE WHEN kind='payment' THEN 1 END) AS TEXT) AS count FROM events WHERE occurred_on BETWEEN ?4 AND ?5 GROUP BY period ORDER BY period LIMIT 367",sum("CASE WHEN kind='payment' THEN amount_minor ELSE 0 END"),sum("CASE WHEN kind='reversal' THEN amount_minor ELSE 0 END"),sum("signed_minor"))).to_owned()),
 ("methods",("SELECT method AS label,coalesce(exact_sum(signed_minor),'0') AS amount_minor,CAST(count(CASE WHEN kind='payment' THEN 1 END) AS TEXT) AS count FROM events WHERE occurred_on BETWEEN ?4 AND ?5 GROUP BY method ORDER BY method").to_owned()),
 ("collectors",("SELECT collector AS label,coalesce(exact_sum(signed_minor),'0') AS amount_minor,CAST(count(CASE WHEN kind='payment' THEN 1 END) AS TEXT) AS count FROM events WHERE occurred_on BETWEEN ?4 AND ?5 GROUP BY collector ORDER BY collector").to_owned()),
-("services",("SELECT service_type AS label,coalesce(exact_sum(CASE WHEN cancelled_at IS NULL THEN amount_minor ELSE 0 END),'0') AS amount_minor,coalesce(exact_sum(CASE WHEN cancelled_at IS NULL THEN paid_minor ELSE 0 END),'0') AS paid_minor,coalesce(exact_sum(CASE WHEN cancelled_at IS NULL THEN amount_minor-paid_minor ELSE 0 END),'0') AS outstanding_minor,CAST(count(*) AS TEXT) AS count,coalesce((SELECT exact_sum(ev.signed_minor) FROM events ev WHERE ev.service_type=eligible.service_type AND ev.occurred_on BETWEEN ?4 AND ?5),'0') AS activity_minor FROM eligible GROUP BY service_type ORDER BY service_type").to_owned()),
+("services",("SELECT service_type AS label,coalesce(exact_sum(amount_minor) FILTER (WHERE cancelled_at IS NULL AND (amount_minor)<>0),'0') AS amount_minor,coalesce(exact_sum(paid_minor) FILTER (WHERE cancelled_at IS NULL AND (paid_minor)<>0),'0') AS paid_minor,CAST(count(*) AS TEXT) AS count,coalesce((SELECT exact_sum(ev.signed_minor) FROM events ev WHERE ev.service_type=eligible.service_type AND ev.occurred_on BETWEEN ?4 AND ?5),'0') AS activity_minor FROM eligible GROUP BY service_type ORDER BY service_type").to_owned()),
 ("attention",("SELECT id,client_id,client_name,description,due_date,status,CAST(amount_minor-paid_minor AS TEXT) AS outstanding_minor FROM eligible WHERE cancelled_at IS NULL AND paid_minor<amount_minor ORDER BY due_date IS NULL,due_date,id LIMIT 10").to_owned()),
 ("concentration",("SELECT client_id,client_name,coalesce(exact_sum(signed_minor),'0') AS net_minor FROM events WHERE occurred_on BETWEEN ?4 AND ?5 GROUP BY client_id,client_name ORDER BY (net_minor NOT LIKE '-%') DESC,CASE WHEN net_minor LIKE '-%' THEN -length(net_minor) ELSE length(net_minor) END DESC,net_minor DESC,client_id LIMIT 10").to_owned()),
 ("client_nets",("SELECT exact_sum(signed_minor) AS net FROM events WHERE occurred_on BETWEEN ?4 AND ?5 GROUP BY client_id LIMIT 10001").to_owned())
@@ -334,7 +354,8 @@ pub async fn dashboard(db: &Database, actor: Actor, q: Query) -> Result<Value> {
  queries.push(("settlement_cash", "SELECT substr(settled_on,1,7) AS period,direction,exact_sum(amount_minor) AS amount_minor FROM settlement_data GROUP BY period,direction ORDER BY period LIMIT 733".into()));
  let core=ctx.batch(tx,&queries)?;
  check_caps(&core["source_caps"][0])?;
- let position=core["position"][0].clone();
+ let mut position=core["position"][0].clone();
+ position["outstanding_minor"]=json!(integer(&position["amount_minor"])?.checked_sub(integer(&position["paid_minor"]) ?).ok_or(Error::Internal)?.to_string());
  let activity=core["activity"][0].clone();
  let previous=core["previous"][0].clone();
  let aging=core["aging"].as_array().ok_or(Error::Internal)?.clone();
@@ -344,7 +365,8 @@ pub async fn dashboard(db: &Database, actor: Actor, q: Query) -> Result<Value> {
  if cumulative!=integer(&activity["net_minor"])?{return Err(Error::Internal)}
  let methods=core["methods"].as_array().ok_or(Error::Internal)?.clone();
  let collectors=core["collectors"].as_array().ok_or(Error::Internal)?.clone();
- let services=core["services"].as_array().ok_or(Error::Internal)?.clone();
+ let mut services=core["services"].as_array().ok_or(Error::Internal)?.clone();
+ for row in &mut services {row["outstanding_minor"]=json!(integer(&row["amount_minor"])?.checked_sub(integer(&row["paid_minor"]) ?).ok_or(Error::Internal)?.to_string());}
  let attention=core["attention"].as_array().ok_or(Error::Internal)?.clone();
  let concentration=core["concentration"].as_array().ok_or(Error::Internal)?.clone();
  let client_nets=core["client_nets"].as_array().ok_or(Error::Internal)?.clone();
@@ -428,7 +450,7 @@ pub async fn details(db: &Database, actor: Actor, q: Query, report: String) -> R
  let sql=match report.as_str(){
  "receivables"=>"SELECT id,client_id,client_name,description,currency,service_type,agreement_id,CAST(amount_minor AS TEXT) AS amount_minor,CAST(paid_minor AS TEXT) AS paid_minor,CAST(CASE WHEN cancelled_at IS NULL THEN amount_minor-paid_minor ELSE 0 END AS TEXT) AS outstanding_minor,due_date,status,billed_on FROM eligible WHERE (?19 IS NULL OR id>?19) ORDER BY id LIMIT (?18+1)",
  "payments"=>"SELECT id,client_id,client_name,description,collection_id,service_type,agreement_id,CAST(amount_minor AS TEXT) AS amount_minor,occurred_on,recorded_at,method,collector,kind FROM events WHERE occurred_on BETWEEN ?4 AND ?5 AND (?19 IS NULL OR id>?19) ORDER BY id LIMIT (?18+1)",
- "clients"=>"SELECT client_id AS id,client_name,coalesce(exact_sum(CASE WHEN cancelled_at IS NULL THEN amount_minor ELSE 0 END),'0') AS amount_minor,coalesce(exact_sum(CASE WHEN cancelled_at IS NULL THEN paid_minor ELSE 0 END),'0') AS paid_minor,coalesce(exact_sum(CASE WHEN cancelled_at IS NULL THEN amount_minor-paid_minor ELSE 0 END),'0') AS outstanding_minor,coalesce(exact_sum(CASE WHEN status='overdue' THEN amount_minor-paid_minor ELSE 0 END),'0') AS overdue_minor,CAST(count(*) AS TEXT) AS count,min(CASE WHEN cancelled_at IS NULL AND paid_minor<amount_minor THEN due_date END) AS next_due,(SELECT max(p.paid_on) FROM payments p JOIN eligible src ON src.id=p.collection_id WHERE p.client_id=eligible.client_id) AS last_payment_on,coalesce((SELECT exact_sum(ev.signed_minor) FROM events ev WHERE ev.client_id=eligible.client_id AND ev.occurred_on BETWEEN ?4 AND ?5),'0') AS activity_minor FROM eligible WHERE (?19 IS NULL OR client_id>?19) GROUP BY client_id,client_name ORDER BY client_id LIMIT (?18+1)",
+ "clients"=>"SELECT client_id AS id,client_name,coalesce(exact_sum(amount_minor) FILTER (WHERE cancelled_at IS NULL AND (amount_minor)<>0),'0') AS amount_minor,coalesce(exact_sum(paid_minor) FILTER (WHERE cancelled_at IS NULL AND (paid_minor)<>0),'0') AS paid_minor,coalesce(exact_sum(amount_minor-paid_minor) FILTER (WHERE cancelled_at IS NULL AND amount_minor<>paid_minor),'0') AS outstanding_minor,coalesce(exact_sum(amount_minor-paid_minor) FILTER (WHERE status='overdue' AND (amount_minor-paid_minor)<>0),'0') AS overdue_minor,CAST(count(*) AS TEXT) AS count,min(CASE WHEN cancelled_at IS NULL AND paid_minor<amount_minor THEN due_date END) AS next_due,(SELECT max(p.paid_on) FROM payments p JOIN eligible src ON src.id=p.collection_id WHERE p.client_id=eligible.client_id) AS last_payment_on,coalesce((SELECT exact_sum(ev.signed_minor) FROM events ev WHERE ev.client_id=eligible.client_id AND ev.occurred_on BETWEEN ?4 AND ?5),'0') AS activity_minor FROM eligible WHERE (?19 IS NULL OR client_id>?19) GROUP BY client_id,client_name ORDER BY client_id LIMIT (?18+1)",
  _=>return Err(Error::NotFound)};
  let page=q.paging()?.page(ctx.rows(tx,sql)?)?;
  Ok(json!({"as_of":ctx.as_of,"client_id":ctx.filter.client,"currency":ctx.filter.currency,"from":ctx.filter.from,"to":ctx.filter.to,"report":report,"data":page["data"],"page":page["page"]}))

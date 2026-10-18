@@ -68,6 +68,17 @@ test('financial intelligence: exact reporting, expense corrections, exports, mob
   const dashboardResponse = await dash.json()
   expect(dash.status(), dashboardResponse.error?.code).toBe(200)
   const data = dashboardResponse.data
+  for (const group of ['day', 'week', 'month', 'quarter', 'year']) {
+    const response = await api(
+      page,
+      `finance/dashboard?currency=EUR&client_id=${client}&group=${group}`,
+    )
+    expect(response.status()).toBe(200)
+    const report = (await response.json()).data
+    expect(report.group).toBe(group)
+    expect(report.position.outstanding_minor).toBe('35000')
+    expect(report.trends.at(-1).cumulative_minor).toBe('35000')
+  }
   expect(data.position.outstanding_minor).toBe('35000')
   expect(data.activity.unknown_minor).toBe('35000')
   expect(

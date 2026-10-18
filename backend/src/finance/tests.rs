@@ -19,6 +19,13 @@ async fn exact_position_activity_aging_and_export_reconcile() {
     assert_eq!(report["position"]["outstanding_minor"], "35000");
     assert_eq!(report["activity"]["net_minor"], "35000");
     assert_eq!(report["activity"]["unknown_minor"], "35000");
+    assert_eq!(report["services"][0]["amount_minor"], "70000");
+    assert_eq!(report["services"][0]["paid_minor"], "35000");
+    assert_eq!(report["services"][0]["outstanding_minor"], "35000");
+    let clients = reporting::details(&f.db, f.actor.clone(), query(), "clients".into())
+        .await
+        .unwrap();
+    assert_eq!(clients["data"][0]["outstanding_minor"], "35000");
     assert_eq!(report["aging"][0]["amount_minor"], "35000");
     assert!(
         report["alerts"]
