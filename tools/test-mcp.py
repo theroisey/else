@@ -170,6 +170,23 @@ def run(args):
             denied=rpc('tools/call',{'name':'else_clients_get','arguments':{'client_id':other}},limited)['result']
             assert denied['isError'] is True
             assert rpc('tools/call',{'name':'else_finance_summary','arguments':args_client},limited,expected=403)['error']['data']['reason']=='insufficient_scope'
+            # Financial reads traverse real OAuth/JSON-RPC and keep the brand ceiling.
+            charge=api(f'clients/{client}/billing','POST',{'description':'Synthetic MCP financial source','currency':'EUR','amount_minor':'70000'},201)['data']
+            api(f'clients/{other}/billing','POST',{'description':'Unrelated synthetic financial source','currency':'EUR','amount_minor':'99000'},201)
+            api(f"clients/{client}/billing/{charge['id']}/payments",'POST',{'command_id':str(uuid.uuid4()),'expected_revision':'1','amount_minor':'35000','currency':'EUR','paid_on':datetime.now(timezone.utc).date().isoformat(),'method':'bank_transfer'})
+            financial=authorize('clients:read finance:read',client)
+            financial_args={'query':{'currency':'EUR'}}
+            for tool in ('else_financial_dashboard','else_financial_receivables','else_financial_payments','else_financial_clients'):
+                result=rpc('tools/call',{'name':tool,'arguments':financial_args},financial)['result']
+                assert result.get('isError') is not True, f'{tool} failed'
+                report=result['structuredContent']['data']
+                assert report['client_id']==client
+                if tool=='else_financial_dashboard':
+                    assert report['position']['amount_minor']=='70000' and report['position']['outstanding_minor']=='35000'
+                else:
+                    assert len(report['data'])==1
+                    assert (report['data'][0]['id'] if tool=='else_financial_clients' else report['data'][0]['client_id'])==client
+            assert rpc('tools/call',{'name':'else_financial_dashboard','arguments':financial_args},limited,expected=403)['error']['data']['reason']=='insufficient_scope'
             # Full upstream client supplies its own framing, request context and decoders.
             subprocess.run([str(args.client.resolve())],input=json.dumps({'endpoint':origin+'/mcp','access_token':token['access_token'],'client_id':client}),text=True,check=True,timeout=35)
             # Retrying a real mutation over HTTP returns the same retained receipt.
@@ -221,6 +238,7 @@ def run(args):
                     ('mcp_resource_read',lambda:rpc('resources/read',{'uri':'else://clients/'+client}),200,None,[1,8]),
                     ('mcp_client',lambda:rpc('tools/call',{'name':'else_clients_get','arguments':args_client}),200,None,[1,8]),
                     ('mcp_tasks',lambda:rpc('tools/call',{'name':'else_tasks_list','arguments':args_client}),200,None,[1,8]),
+                    ('mcp_financial_dashboard',lambda:rpc('tools/call',{'name':'else_financial_dashboard','arguments':financial_args},financial),200,None,[1,8]),
                     ('mcp_search_page',lambda:rpc('tools/call',{'name':'else_clients_list','arguments':search_args}),200,None,[1,8]),
                     ('mcp_scope_denial',lambda:rpc('tools/call',{'name':'else_finance_summary','arguments':args_client},limited,expected=403),403,None,[1,8]),
                     ('mcp_revoked_token',lambda:rpc('ping',credentials=revoked,expected=401),401,None,[1,8]),

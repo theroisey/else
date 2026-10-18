@@ -197,6 +197,11 @@ export function ExpenseWorkspace({
           'Operating payables are independent of customer charges and partner transfers. Paid expenses are recorded transactions, not pricing estimates or complete accounting costs.',
         )}
       </p>
+      <p className="text-sm text-muted mb-6">
+        {t(
+          'This table shows the current position for the selected record attributes, independent of the payment activity date range.',
+        )}
+      </p>
       {creating ? (
         <form
           className="finance-form"
