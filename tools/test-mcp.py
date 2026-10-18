@@ -173,7 +173,7 @@ def run(args):
             # Financial reads traverse real OAuth/JSON-RPC and keep the brand ceiling.
             charge=api(f'clients/{client}/billing','POST',{'description':'Synthetic MCP financial source','currency':'EUR','amount_minor':'70000'},201)['data']
             api(f'clients/{other}/billing','POST',{'description':'Unrelated synthetic financial source','currency':'EUR','amount_minor':'99000'},201)
-            api(f"clients/{client}/billing/{charge['id']}/payments",'POST',{'command_id':str(uuid.uuid4()),'expected_revision':'1','amount_minor':'35000','currency':'EUR','paid_on':datetime.now(timezone.utc).date().isoformat(),'method':'bank_transfer'})
+            api(f"clients/{client}/billing/{charge['id']}/payments",'POST',{'command_id':str(uuid.uuid4()),'expected_revision':'1','amount_minor':'35000','currency':'EUR','paid_on':datetime.now(timezone.utc).date().isoformat(),'method':'bank_transfer'},201)
             financial=authorize('clients:read finance:read',client)
             financial_args={'query':{'currency':'EUR'}}
             for tool in ('else_financial_dashboard','else_financial_receivables','else_financial_payments','else_financial_clients'):

@@ -241,10 +241,14 @@ impl Context {
             "s.client_id",
             grant_sql("?1", "agreements.view", "s.client_id"),
         )?;
-        let cte=format!("WITH f AS (SELECT ?1 usr,?2 currency,?3 client,?4 start,?5 finish,?6 today,?7 service,?8 agreement,?9 partner,?10 state,?11 method,?12 collector,?13 due_from,?14 due_to,?15 previous_start,?16 previous_finish,?17 search,?18 page_size,?19 cursor,?20 year_start,?21 year_finish), visible AS MATERIALIZED (
-  SELECT c.*,n.name AS client_name,CASE WHEN {terms} THEN coalesce(a.service_type,'unclassified') ELSE 'unclassified' END AS service_type,CASE WHEN {terms} THEN b.agreement_id END AS agreement_id,CASE WHEN {terms} THEN v.partner_id END AS partner_id,coalesce(b.billing_date,substr(c.created_at,1,10)) AS billed_on,CASE WHEN c.cancelled_at IS NOT NULL THEN 'cancelled' WHEN c.paid_minor=c.amount_minor THEN 'paid' WHEN c.due_date<?6 THEN 'overdue' WHEN c.paid_minor>0 THEN 'partially_paid' ELSE 'pending' END AS status
-  FROM collections c JOIN clients n ON n.id=c.client_id LEFT JOIN billing_periods b ON b.collection_id=c.id LEFT JOIN service_agreements a ON a.id=b.agreement_id LEFT JOIN agreement_versions v ON v.id=b.version_id
-  WHERE c.currency=?2 AND (?3 IS NULL OR c.client_id=?3) AND {base} AND (?13 IS NULL OR c.due_date>=?13) AND (?14 IS NULL OR c.due_date<=?14) AND (?17='' OR instr(unicode_lower(n.name||' '||c.description),unicode_lower(?17))>0) LIMIT 50001),
+        // Authorize each brand once, then join its obligations. Multiple fees
+        // for the same brand must not repeat identical grant subqueries.
+        let client_base = base.replace("c.client_id", "n.id");
+        let client_terms = terms.replace("c.client_id", "n.id");
+        let cte=format!("WITH f AS (SELECT ?1 usr,?2 currency,?3 client,?4 start,?5 finish,?6 today,?7 service,?8 agreement,?9 partner,?10 state,?11 method,?12 collector,?13 due_from,?14 due_to,?15 previous_start,?16 previous_finish,?17 search,?18 page_size,?19 cursor,?20 year_start,?21 year_finish), authorized_clients AS MATERIALIZED (SELECT n.id,n.name,({client_terms}) AS can_read_terms FROM clients n WHERE (?3 IS NULL OR n.id=?3) AND {client_base} AND EXISTS(SELECT 1 FROM collections c0 WHERE c0.client_id=n.id AND c0.currency=?2)), visible AS MATERIALIZED (
+  SELECT c.*,n.name AS client_name,CASE WHEN n.can_read_terms THEN coalesce(a.service_type,'unclassified') ELSE 'unclassified' END AS service_type,CASE WHEN n.can_read_terms THEN b.agreement_id END AS agreement_id,CASE WHEN n.can_read_terms THEN v.partner_id END AS partner_id,coalesce(b.billing_date,substr(c.created_at,1,10)) AS billed_on,CASE WHEN c.cancelled_at IS NOT NULL THEN 'cancelled' WHEN c.paid_minor=c.amount_minor THEN 'paid' WHEN c.due_date<?6 THEN 'overdue' WHEN c.paid_minor>0 THEN 'partially_paid' ELSE 'pending' END AS status
+  FROM collections c JOIN authorized_clients n ON n.id=c.client_id LEFT JOIN billing_periods b ON b.collection_id=c.id LEFT JOIN service_agreements a ON a.id=b.agreement_id LEFT JOIN agreement_versions v ON v.id=b.version_id
+  WHERE c.currency=?2 AND (?3 IS NULL OR c.client_id=?3) AND (?13 IS NULL OR c.due_date>=?13) AND (?14 IS NULL OR c.due_date<=?14) AND (?17='' OR instr(unicode_lower(n.name||' '||c.description),unicode_lower(?17))>0) LIMIT 50001),
   eligible AS MATERIALIZED (SELECT * FROM visible WHERE (?7='all' OR service_type=?7) AND (?8 IS NULL OR agreement_id=?8) AND (?9 IS NULL OR partner_id=?9) AND (?10='all' OR status=?10)),
   payment_data AS MATERIALIZED (SELECT p.id,p.collection_id,p.client_id,e.client_name,e.description,e.service_type,e.agreement_id,e.status,p.amount_minor,p.paid_on AS occurred_on,p.recorded_at,p.method,coalesce(p.collector,'unknown') AS collector,'payment' AS kind FROM payments p JOIN eligible e ON e.id=p.collection_id WHERE p.currency=?2 AND p.paid_on BETWEEN min(?15,?20) AND ?5 AND (?11='all' OR p.method=?11) AND (?12='all' OR coalesce(p.collector,'unknown')=?12) LIMIT 50001),
   reversal_data AS MATERIALIZED (SELECT r.id,r.collection_id,r.client_id,e.client_name,e.description,e.service_type,e.agreement_id,e.status,r.amount_minor,r.reversed_on AS occurred_on,r.recorded_at,p.method,coalesce(p.collector,'unknown') AS collector,'reversal' AS kind FROM payment_reversals r JOIN payments p ON p.id=r.payment_id JOIN eligible e ON e.id=r.collection_id WHERE r.currency=?2 AND r.reversed_on BETWEEN min(?15,?20) AND ?5 AND (?11='all' OR p.method=?11) AND (?12='all' OR coalesce(p.collector,'unknown')=?12) LIMIT 50001),
@@ -258,7 +262,7 @@ impl Context {
     }
     pub fn rows(&self, tx: &Transaction<'_>, sql: &str) -> Result<Vec<Value>> {
         let full = self.cte.clone() + sql;
-        let mut stmt = tx.prepare(&full)?;
+        let mut stmt = tx.prepare_cached(&full)?;
         Ok(stmt
             .query_map(params_from_iter(self.args.iter()), row_json)?
             .collect::<std::result::Result<Vec<_>, _>>()?)
