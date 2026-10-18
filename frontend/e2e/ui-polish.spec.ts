@@ -37,33 +37,39 @@ test('keeps long account titles, shared button contrast and keyboard focus usabl
         new StorageEvent('storage', { key: 'roisey-else.appearance' }),
       )
     }, theme)
+    await expect(page.locator('html')).toHaveAttribute('data-appearance', theme)
     for (const width of [360, 390, 430, 820, 1280, 1920]) {
       await page.setViewportSize({ width, height: 844 })
-      const geometry = await dialog
-        .locator('.ui-dialog-panel')
-        .evaluate((element) => {
-          const header = element.firstElementChild!
-          const title = header.querySelector('h2')!
-          const range = document.createRange()
-          range.selectNodeContents(title)
-          const text = range.getBoundingClientRect()
-          const bounds = element.getBoundingClientRect()
-          return {
-            pageOverflow: document.documentElement.scrollWidth > innerWidth,
-            panelOverflow: element.scrollWidth - element.clientWidth,
-            textLeft: text.left,
-            textRight: text.right,
-            left: bounds.left,
-            right: bounds.right,
-          }
+      // Resizing resolves before every browser has painted its responsive layout.
+      // Keep the same bounds, but wait for the requested viewport and reflow.
+      await expect
+        .poll(
+          () =>
+            dialog.locator('.ui-dialog-panel').evaluate((element) => {
+              const title = element.firstElementChild!.querySelector('h2')!
+              const range = document.createRange()
+              range.selectNodeContents(title)
+              const text = range.getBoundingClientRect()
+              const bounds = element.getBoundingClientRect()
+              return {
+                viewport: innerWidth,
+                pageOverflow: Math.max(
+                  0,
+                  document.documentElement.scrollWidth - innerWidth,
+                ),
+                panelContained: element.scrollWidth - element.clientWidth <= 1,
+                textContained:
+                  text.left >= bounds.left && text.right <= bounds.right,
+              }
+            }),
+          { message: `${theme}/${width} responsive dialog bounds` },
+        )
+        .toEqual({
+          viewport: width,
+          pageOverflow: 0,
+          panelContained: true,
+          textContained: true,
         })
-      expect(geometry.pageOverflow, `${theme}/${width}`).toBe(false)
-      expect(
-        geometry.panelOverflow,
-        `${theme}/${width} panel`,
-      ).toBeLessThanOrEqual(1)
-      expect(geometry.textLeft).toBeGreaterThanOrEqual(geometry.left)
-      expect(geometry.textRight).toBeLessThanOrEqual(geometry.right)
       if (width === 390 || width === 1280)
         await page.screenshot({
           path: info.outputPath(`long-dialog-${theme}-${width}.png`),
