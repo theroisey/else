@@ -12,8 +12,8 @@
   "Activity": "Activité",
   "Application": "Application",
   "Application root is missing.": "La racine de l’application est absente.",
-  "ArrowDown": "ArrowDown",
-  "ArrowUp": "ArrowUp",
+  "ArrowDown": "Flèche vers le bas",
+  "ArrowUp": "Flèche vers le haut",
   "At least one active administrator must remain.": "Au moins un administrateur actif doit subsister.",
   "Attention": "Points d’attention",
   "Audit": "Audit",
@@ -164,7 +164,7 @@
   "Status examples": "Exemples de statuts",
   "Status treatments": "Présentation des statuts",
   "Submit an in-memory label to review help, error, success, and button states.": "Envoyez une étiquette en mémoire pour vérifier les états d’aide, d’erreur, de succès et des boutons.",
-  "Tab": "Tab",
+  "Tab": "Tabulation",
   "Table": "Tableau",
   "Task": "Tâche",
   "Task details": "Détails de la tâche",
@@ -301,5 +301,6 @@
   "Check the original payment, available refundable amount, currency and refund date.": "Vérifiez le paiement initial, le montant remboursable, la devise et la date.",
   "Requests": "Demandes",
   "Choose a page.": "Choisissez une page.",
-  "Financial Dashboard": "Tableau de bord financier"
+  "Financial Dashboard": "Tableau de bord financier",
+  "Settings": "Paramètres"
 }

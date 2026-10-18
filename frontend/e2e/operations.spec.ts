@@ -266,7 +266,9 @@ test('operations: commercial payment, revenue share, internal transfer and audit
   await page
     .getByLabel('Contract collector', { exact: true })
     .selectOption('partner')
-  await page.getByLabel('Actual payment collector', { exact: true }).selectOption('partner')
+  await page
+    .getByLabel('Actual payment collector', { exact: true })
+    .selectOption('partner')
   await page
     .getByLabel('Payment status', { exact: true })
     .selectOption('partially_paid')
@@ -697,6 +699,7 @@ test('operations: team leader scope, brand assignment and dynamic removal', asyn
   await expect(row).toHaveCount(0)
   expect((await api(member, `/api/v1/clients/${teamBrand}`)).status()).toBe(404)
   await member.reload()
+  await member.getByRole('tab', { name: 'Notifications', exact: true }).click()
   await expect(
     member.getByRole('link', { name: /Synthetic team brand/ }),
   ).toHaveCount(0)
@@ -921,12 +924,29 @@ test('operations: real recurring worker, monthly maintenance, personal preferenc
     }),
   ).toBeVisible()
   await member.goto('/app/settings')
+  await expect(member.getByRole('tab')).toHaveText([
+    'Workspace',
+    'Notifications',
+    'AI connections',
+  ])
+  await expect(
+    member.getByRole('tab', { name: 'Organization', exact: true }),
+  ).toHaveCount(0)
+  await member.getByRole('tab', { name: 'Notifications', exact: true }).click()
   await member
     .getByRole('checkbox', {
       name: 'Task deadlines and recurrence',
       exact: true,
     })
     .uncheck()
+  await member.getByRole('tab', { name: 'Workspace', exact: true }).click()
+  await member.getByRole('tab', { name: 'Notifications', exact: true }).click()
+  await expect(
+    member.getByRole('checkbox', {
+      name: 'Task deadlines and recurrence',
+      exact: true,
+    }),
+  ).not.toBeChecked()
   await member.getByRole('button', { name: 'Save', exact: true }).click()
   await expect
     .poll(
@@ -935,6 +955,7 @@ test('operations: real recurring worker, monthly maintenance, personal preferenc
     )
     .toBe(false)
   await member.reload()
+  await member.getByRole('tab', { name: 'Notifications', exact: true }).click()
   await expect(
     member.getByRole('checkbox', {
       name: 'Task deadlines and recurrence',
@@ -944,6 +965,7 @@ test('operations: real recurring worker, monthly maintenance, personal preferenc
   await expect(
     member.getByRole('button', { name: 'Save', exact: true }),
   ).toBeEnabled()
+  await member.getByRole('tab', { name: 'Workspace', exact: true }).click()
   for (const theme of ['light', 'dark']) {
     await member
       .getByRole('radio', {

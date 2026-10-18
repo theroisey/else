@@ -489,37 +489,6 @@ export async function details<R extends Report>(
         : ClientPosition)[]
   }
 }
-export type ExportReport =
-  | Report
-  | 'services'
-  | 'partners'
-  | 'aging'
-  | 'cashflow'
-  | 'expenses'
-export async function exportPage(
-  report: ExportReport,
-  filters: Filters,
-  cursor = '',
-) {
-  return checked(
-    z
-      .object({
-        data: z
-          .object({
-            csv: z.string().max(524288),
-            next_cursor: uuid.nullable(),
-            as_of: instant,
-            currency,
-            report: z.literal(report),
-          })
-          .strict(),
-      })
-      .strict(),
-    await authenticatedJSON(
-      `/api/v1/finance/exports/${report}?${query(filters, cursor)}`,
-    ),
-  ).data
-}
 export const expenseSchema = z
   .object({
     id: uuid,
@@ -716,37 +685,4 @@ export interface ExpenseFilters {
   status: string
   category_id: string
   q: string
-}
-export async function exportExpenses(
-  currency: string,
-  client: string,
-  filters: ExpenseFilters,
-  cursor: string,
-) {
-  const q = new URLSearchParams({
-    currency,
-    ...(client ? { client_id: uuid.parse(client) } : {}),
-    ...(cursor ? { cursor: uuid.parse(cursor) } : {}),
-    ...(filters.status !== 'all' ? { status: filters.status } : {}),
-    ...(filters.category_id
-      ? { category_id: uuid.parse(filters.category_id) }
-      : {}),
-    ...(filters.q ? { q: filters.q } : {}),
-  })
-  return checked(
-    z
-      .object({
-        data: z
-          .object({
-            csv: z.string().max(524288),
-            next_cursor: uuid.nullable(),
-            as_of: instant,
-            currency: z.literal(currency),
-            report: z.literal('expenses'),
-          })
-          .strict(),
-      })
-      .strict(),
-    await authenticatedJSON('/api/v1/finance/exports/expenses?' + q),
-  ).data
 }

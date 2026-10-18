@@ -15,7 +15,7 @@ Roisey Else brings the work around each client into one place. See what needs at
 - Assign tasks, organize plans and milestones, and schedule reminders with explicit timezones.
 - Track collections, partial payments, overdue balances, and immutable pricing agreements.
 - Record service agreements, the actual collecting party, consulting allocations, internal settlements, and audited payment reversals.
-- Open a separate Financial Dashboard for exact collections, receivables aging, client/service comparisons, partner balances, recorded operating expenses, cash movement and bounded CSV reports.
+- Open a separate Financial Dashboard for exact collections, receivables aging, client/service comparisons, partner balances, recorded operating expenses and cash movement.
 - Generate daily, weekly, and monthly tasks and contractual billing periods automatically, with retained schedule/price versions and duplicate prevention.
 - Read GA4 analytics, WooCommerce order/refund reports, and Meta Ads performance for the selected client and reporting period.
 - Manage users, roles, and global or client-specific access; inspect audit history and authorized activity.
@@ -42,7 +42,7 @@ The interface loads operational pages and optional languages as needed. Common d
 
 An employee selects a brand and website, explains an issue and attaches a screenshot. A developer accepts or rejects it with a recorded decision, assigns accepted work and submits a delivery. The requester or authorized leader reviews the result, approves it or requests a reasoned revision. Before/after evidence and every delivery version stay attached to the original request. Developers cannot approve their own deliveries.
 
-Create real accounts through Users, then create a team, add its leader and employees, and assign brand responsibilities through Team. Use the dedicated advertising employee role rather than the legacy Viewer role, which retains its historical finance permissions. The second owner needs a separate account with the authorized full administrator role; no additional people or customer records are seeded. Settings includes personal notification preferences and the owner-managed business timezone.
+Create real accounts through Users, then create a team, add its leader and employees, and assign brand responsibilities through Team. Use the dedicated advertising employee role rather than the legacy Viewer role, which retains its historical finance permissions. The second owner needs a separate account with the authorized full administrator role; no additional people or customer records are seeded. Settings groups appearance and language under Workspace, personal delivery preferences under Notifications, assistant access under AI connections, and the authorized business timezone under Organization. Switching categories preserves unsaved entries while Settings remains open.
 
 ## Service finances and automation
 
@@ -58,7 +58,7 @@ Open **Financial Dashboard** directly from navigation; existing Finance and clie
 
 Company reporting requires `finance.read_company`; every contributing client still requires current client and billing access. Contract terms and partner positions require agreement access. Operating expenses have separate `expenses.view` / `expenses.manage` permissions and retained positive payments, linked reversals and original-command reconciliation. Only the designated full administrator receives the new permissions automatically.
 
-CSV exports recheck authorization, preserve currency and exact minor-unit strings, escape spreadsheet formulas, and identify their date basis. Large reports are bounded and exports provide continuation pages where needed. Keep monetary columns as text when importing very large values into spreadsheet software. Known cash movement is not a bank balance or accounting profit; unknown historical collectors and unrecorded spending are disclosed. Forecasts do not issue customer charges. See [financial intelligence definitions and operations](notes/financial-intelligence.md).
+The panel focuses on interactive reports and does not show CSV export controls. Existing secured export API endpoints remain compatible. Known cash movement is not a bank balance or accounting profit; unknown historical collectors and unrecorded spending are disclosed. Forecasts do not issue customer charges. See [financial intelligence definitions and operations](notes/financial-intelligence.md).
 
 ## Quick start
 

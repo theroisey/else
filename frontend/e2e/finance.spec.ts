@@ -35,11 +35,12 @@ async function api(page: Page, path: string, body?: unknown) {
     ...(body ? { data: body } : {}),
   })
 }
-test('financial intelligence: exact reporting, expense corrections, exports, mobile themes and real permission denial', async ({
+test('financial intelligence: exact reporting, expense corrections, API exports, mobile themes and real permission denial', async ({
   page,
 }, info) => {
   test.setTimeout(150000)
   await login(page)
+  await expect(page.getByRole('button', { name: /CSV|Export/i })).toHaveCount(0)
   const create = await api(page, `clients/${client}/billing`, {
     description: 'Synthetic EUR obligation',
     amount_minor: '70000',
@@ -116,6 +117,7 @@ test('financial intelligence: exact reporting, expense corrections, exports, mob
   await expect(
     page.getByRole('region', { name: 'Receivables report', exact: true }),
   ).toContainText('Synthetic EUR obligation')
+  await expect(page.getByRole('button', { name: /CSV|Export/i })).toHaveCount(0)
   const csv = await api(
     page,
     `finance/exports/receivables?client_id=${client}&currency=EUR`,
@@ -142,6 +144,7 @@ test('financial intelligence: exact reporting, expense corrections, exports, mob
   await page
     .getByLabel('Category', { exact: true })
     .selectOption({ label: 'Synthetic cloud cost' })
+  await expect(page.getByRole('button', { name: /CSV|Export/i })).toHaveCount(0)
   await page.getByLabel('Amount', { exact: true }).fill('100')
   await page
     .getByRole('button', { name: 'Review expense command', exact: true })

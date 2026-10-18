@@ -399,5 +399,6 @@
   "Actual payment collector": "Encaisseur effectif du paiement",
   "This report exceeds its safe size. Narrow the client, currency or date selection, or choose a broader trend interval.": "Ce rapport dépasse la taille autorisée. Restreignez le client, la devise ou les dates, ou choisissez un intervalle de tendance plus large.",
   "Choose a valid reporting period ending no later than today.": "Choisissez une période valide se terminant au plus tard aujourd’hui.",
-  "This expense has retained payment history. Use a linked reversal instead of cancellation.": "Cette dépense possède un historique de paiements conservé. Utilisez une annulation de paiement liée plutôt que l’annulation de la dépense."
+  "This expense has retained payment history. Use a linked reversal instead of cancellation.": "Cette dépense possède un historique de paiements conservé. Utilisez une annulation de paiement liée plutôt que l’annulation de la dépense.",
+  "More partners": "Autres partenaires"
 }

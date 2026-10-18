@@ -491,12 +491,6 @@ export function FinancialDashboard() {
               timeStyle: 'short',
             })}
           </p>
-          <SectionExport
-            key={section + JSON.stringify(filters)}
-            filters={filters}
-            section={section}
-            cashAvailable={data.cashflow !== null}
-          />
           {section === 'Overview' ? (
             <Overview data={data} currency={currency} select={setSection} />
           ) : null}
@@ -1141,35 +1135,12 @@ function Outlook({
 function Details({ report, filters }: { report: Report; filters: Filters }) {
   const op = useRecordOperations('finance')
   const [cursor, setCursor] = useState('')
-  const [exporting, setExporting] = useState(false)
-  const [exportError, setExportError] = useState(''),
-    [sort, setSort] = useState('source')
+  const [sort, setSort] = useState('source')
   const q = useQuery({
     queryKey: [...op.key, report, filters, cursor],
     queryFn: ({ signal }) =>
       op.read(() => api.details(report, filters, cursor, signal)),
   })
-  async function download() {
-    setExporting(true)
-    setExportError('')
-    try {
-      const v = await op.read(() => api.exportPage(report, filters, cursor))
-      const url = URL.createObjectURL(
-        new Blob([v.csv], { type: 'text/csv;charset=utf-8' }),
-      )
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `roisey-${report}-${v.currency}-${filters.from}-${filters.to}.csv`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch {
-      setExportError(
-        t('Unable to export this page. Retry after checking access.'),
-      )
-    } finally {
-      setExporting(false)
-    }
-  }
   if (q.isPending) return <PageSkeleton />
   if (q.isError)
     return <OperationsError error={q.error} retry={() => void q.refetch()} />
@@ -1337,89 +1308,8 @@ function Details({ report, filters }: { report: Report; filters: Filters }) {
         >
           {t('Next page')}
         </Button>
-        <Button disabled={exporting} onClick={() => void download()}>
-          {t('Export this page (CSV)')}
-        </Button>
       </div>
-      <p className="text-xs text-muted">
-        {t(
-          'Exports contain this bounded page only. Continue to the next page for additional records. Exact amounts are exported in integer minor units.',
-        )}
-      </p>
-      {exportError ? <p role="alert">{exportError}</p> : null}
     </>
-  )
-}
-
-function SectionExport({
-  filters,
-  section,
-  cashAvailable,
-}: {
-  filters: Filters
-  section: Section
-  cashAvailable: boolean
-}) {
-  const op = useRecordOperations('finance'),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState('')
-  const reports: Partial<Record<Section, api.ExportReport>> = {
-    Services: 'services',
-    Partners: 'partners',
-    Outlook: 'aging',
-    Overview: 'cashflow',
-  }
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const report = reports[section]
-  const expenseAccess = hasPermission(op.auth.session?.user.permissions ?? [], {
-    permission: 'expenses.view',
-    scope: 'global',
-  })
-  if (
-    !report ||
-    (section === 'Overview' && !cashAvailable) ||
-    (section === 'Expenses' && !expenseAccess)
-  )
-    return null
-  async function download(cursor = '') {
-    if (!report) return
-    setBusy(true)
-    setError('')
-    try {
-      const result = await op.read(() =>
-        api.exportPage(report, filters, cursor),
-      )
-      setNextCursor(result.next_cursor)
-      const url = URL.createObjectURL(
-        new Blob([result.csv], { type: 'text/csv;charset=utf-8' }),
-      )
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `roisey-${report}-${result.currency}.csv`
-      link.click()
-      URL.revokeObjectURL(url)
-    } catch {
-      setError(t('Unable to export this page. Retry after checking access.'))
-    } finally {
-      setBusy(false)
-    }
-  }
-  return (
-    <div className="flex flex-wrap justify-end gap-3 py-3">
-      <Button disabled={busy} onClick={() => void download()}>
-        {t('Export section (CSV)')}
-      </Button>
-      {nextCursor ? (
-        <Button disabled={busy} onClick={() => void download(nextCursor)}>
-          {t('Export next CSV page')}
-        </Button>
-      ) : null}
-      {error ? (
-        <p role="alert" className="text-sm">
-          {error}
-        </p>
-      ) : null}
-    </div>
   )
 }
 

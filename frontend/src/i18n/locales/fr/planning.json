@@ -35,7 +35,7 @@
   "Description": "Description",
   "Draft": "Brouillon",
   "Due": "Échéance",
-  "Due time": "Échéance",
+  "Due time": "Date et heure limites",
   "Due time must not precede start time.": "L’échéance ne peut pas précéder l’heure de début.",
   "Edit ": "Modifier ",
   "Edit {{value1}}": "Modifier {{value1}}",
@@ -144,5 +144,6 @@
   "milestones": "jalons",
   "plans": "plans",
   "Due time must be inside the supplied plan dates. Dates do not change status automatically.": "L’échéance doit se situer dans la période du plan. Les dates ne modifient pas automatiquement le statut.",
-  "Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically.": "La modification des dates du plan doit préserver les échéances de tous les jalons non archivés. Les dates ne modifient pas automatiquement le statut."
+  "Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically.": "La modification des dates du plan doit préserver les échéances de tous les jalons non archivés. Les dates ne modifient pas automatiquement le statut.",
+  "Task links saved.": "Liens vers les tâches enregistrés."
 }

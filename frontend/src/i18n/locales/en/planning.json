@@ -144,5 +144,6 @@
   "milestones": "milestones",
   "plans": "plans",
   "Due time must be inside the supplied plan dates. Dates do not change status automatically.": "Due time must be inside the supplied plan dates. Dates do not change status automatically.",
-  "Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically.": "Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically."
+  "Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically.": "Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically.",
+  "Task links saved.": "Task links saved."
 }

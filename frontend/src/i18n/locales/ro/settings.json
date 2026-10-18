@@ -3,13 +3,18 @@
   "Choose the light or dark workspace, or follow your device. Your preference is saved in this browser.": "Alege spațiul luminos sau întunecat ori urmează setarea dispozitivului. Preferința este salvată în acest browser.",
   "Choose your interface language. Your account preference follows you across devices. Financial currencies and your own content remain unchanged.": "Alege limba interfeței. Preferința contului se păstrează pe toate dispozitivele. Monedele financiare și conținutul tău rămân neschimbate.",
   "Dark": "Întunecat",
-  "Following your device · {{value1}} theme": "Urmează dispozitivul · tema {{value1}}",
+  "Following your device · {{value1}} theme": "Setarea dispozitivului · temă: {{value1}}",
   "Language": "Limbă",
   "Light": "Luminos",
   "Personal preferences": "Preferințe personale",
   "System": "Sistem",
   "The language preference could not be saved to your account. Your browser selection is retained.": "Preferința de limbă nu a putut fi salvată în cont. Alegerea din browser este păstrată.",
   "Workspace appearance": "Aspectul spațiului de lucru",
-  "{{value1}} theme selected": "Tema {{value1}} este selectată",
-  "Unable to load this language. Try again.": "Această limbă nu a putut fi încărcată. Încercați din nou."
+  "{{value1}} theme selected": "Temă selectată: {{value1}}",
+  "Unable to load this language. Try again.": "Această limbă nu a putut fi încărcată. Încercați din nou.",
+  "Settings categories": "Categorii de setări",
+  "Workspace": "Spațiu de lucru",
+  "Notifications": "Notificări",
+  "AI connections": "Conexiuni AI",
+  "Organization": "Organizație"
 }

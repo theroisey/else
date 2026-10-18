@@ -59,8 +59,7 @@ export function ExpenseWorkspace({
       category_id: '',
       q: '',
     }),
-    [draftFilters, setDraftFilters] = useState(filters),
-    [exporting, setExporting] = useState(false)
+    [draftFilters, setDraftFilters] = useState(filters)
   const grants = op.auth.session?.user.permissions ?? [],
     allowed = hasPermission(grants, {
       permission: 'expenses.view',
@@ -102,27 +101,6 @@ export function ExpenseWorkspace({
       setCategoryName('')
       setCategoryId(crypto.randomUUID())
       setCategoryCursor('')
-    }
-  }
-  async function exportPage() {
-    setExporting(true)
-    setError('')
-    try {
-      const result = await op.read(() =>
-        api.exportExpenses(currency, client, filters, cursor),
-      )
-      const url = URL.createObjectURL(
-        new Blob([result.csv], { type: 'text/csv;charset=utf-8' }),
-      )
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `roisey-expenses-${currency}.csv`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch {
-      setError(t('Unable to export this page. Retry after checking access.'))
-    } finally {
-      setExporting(false)
     }
   }
   return (
@@ -177,9 +155,6 @@ export function ExpenseWorkspace({
           }
         />
         <Button type="submit">{t('Apply filters')}</Button>
-        <Button disabled={exporting} onClick={() => void exportPage()}>
-          {t('Export this page (CSV)')}
-        </Button>
       </form>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
         <h2 className="text-lg">{t('Operating expenses')}</h2>

@@ -12,8 +12,8 @@
   "Activity": "Activitate",
   "Application": "Aplicație",
   "Application root is missing.": "Lipsește rădăcina aplicației.",
-  "ArrowDown": "ArrowDown",
-  "ArrowUp": "ArrowUp",
+  "ArrowDown": "Săgeată în jos",
+  "ArrowUp": "Săgeată în sus",
   "At least one active administrator must remain.": "Trebuie să rămână cel puțin un administrator activ.",
   "Attention": "Atenție",
   "Audit": "Audit",
@@ -78,7 +78,7 @@
   "Enter": "Enter",
   "Enter a review label before saving this local example.": "Introduceți o etichetă de verificare înainte de a salva acest exemplu local.",
   "Enter a valid local date and time.": "Introduceți o dată și o oră locale valide.",
-  "Escape": "Escape",
+  "Escape": "Esc",
   "Example label": "Etichetă exemplu",
   "Finance": "Finanțe",
   "Find or go to…": "Căutați sau accesați…",
@@ -301,5 +301,6 @@
   "Check the original payment, available refundable amount, currency and refund date.": "Verifică plata inițială, suma rambursabilă, moneda și data.",
   "Requests": "Cereri",
   "Choose a page.": "Alegeți o pagină.",
-  "Financial Dashboard": "Tablou financiar"
+  "Financial Dashboard": "Tablou financiar",
+  "Settings": "Setări"
 }

@@ -234,6 +234,11 @@
   .appearance-control { @apply flex items-center justify-between gap-4 text-xs text-muted; }
   .appearance-control select { @apply min-h-9 rounded-sm border border-line-strong bg-surface px-2 text-xs text-ink; }
   .settings-section { @apply mb-8 mt-0 grid gap-6 border-b border-line py-7 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.15fr)]; }
+  .settings-categories { @apply grid grid-cols-2 gap-1 border-b border-line pb-3 sm:flex sm:flex-wrap sm:gap-x-5; }
+  .settings-categories [role="tab"] { @apply min-h-11 border-b-2 border-transparent px-2 py-2 text-left text-sm text-muted; }
+  .settings-categories [role="tab"][aria-selected="true"] { @apply border-ink font-semibold text-ink; }
+  .settings-categories [role="tab"]:hover { @apply text-ink; }
+  .settings-category-panel { @apply min-w-0 pt-4; }
   .appearance-options { @apply grid grid-cols-3 gap-3; }
   .appearance-option { @apply grid cursor-pointer gap-3 rounded-md border border-line bg-surface p-3 text-xs font-medium transition-colors duration-150 hover:border-accent; }
   .appearance-option.is-selected { @apply border-accent; }

@@ -35,7 +35,7 @@
   "Description": "Descriere",
   "Draft": "Ciornă",
   "Due": "Scadență",
-  "Due time": "Data-limită",
+  "Due time": "Data și ora limită",
   "Due time must not precede start time.": "Data-limită nu poate preceda data de început.",
   "Edit ": "Editați ",
   "Edit {{value1}}": "Editați {{value1}}",
@@ -144,5 +144,6 @@
   "milestones": "repere",
   "plans": "planuri",
   "Due time must be inside the supplied plan dates. Dates do not change status automatically.": "Scadența trebuie să fie în intervalul datelor planului. Datele nu schimbă automat starea.",
-  "Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically.": "Schimbarea datelor planului trebuie să păstreze scadențele tuturor reperelor nearhivate. Datele nu schimbă automat starea."
+  "Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically.": "Schimbarea datelor planului trebuie să păstreze scadențele tuturor reperelor nearhivate. Datele nu schimbă automat starea.",
+  "Task links saved.": "Legăturile către sarcini au fost salvate."
 }

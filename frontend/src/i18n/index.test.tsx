@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { destinations } from '../features/shell/navigation'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import {
@@ -162,6 +164,16 @@ it('does not apply a response from a session that has been cancelled', async () 
   expect(currentLocale()).toBe('en')
 })
 
+// Runtime catalog descriptions and dynamic navigation labels must be registered,
+// not merely translated when an identical key happens to exist already.
+const permissionSource = readFileSync('../backend/src/db.rs', 'utf8')
+  .split('pub const PERMISSIONS:')[1]!
+  .split('#[cfg(test)]')[0]!
+const ownedDescriptions = [
+  ...permissionSource.matchAll(
+    /\(\s*"[^"]+",\s*"(?:global|client)",\s*"([^"]+)"/g,
+  ),
+].map((match) => match[1]!)
 // Completion gate: every translated domain has full key and placeholder parity.
 const english = import.meta.glob('./locales/en/*.json', {
   eager: true,
@@ -174,6 +186,22 @@ describe('complete domain catalogs', () => {
     '%s has every source message and preserves interpolation',
     async (locale) => {
       await setLocale(locale, false)
+      const sources = new Set(
+        Object.values(english).flatMap((catalog) => Object.keys(catalog)),
+      )
+      for (const message of [
+        ...ownedDescriptions,
+        ...destinations.map((d) => d.label),
+        'More partners',
+        'Task links saved.',
+      ]) {
+        expect(
+          sources.has(message),
+          `Unregistered owned message: ${message}`,
+        ).toBe(true)
+        if (ownedDescriptions.includes(message) || message === 'Settings')
+          expect(copy(message), `${locale}: ${message}`).not.toBe(message)
+      }
       for (const [path, source] of Object.entries(english)) {
         const ns = path.split('/').at(-1)!.replace('.json', '')
         const target = i18n.getResourceBundle(locale, ns) as Record<

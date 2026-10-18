@@ -399,5 +399,6 @@
   "Actual payment collector": "Tahsilatın alındığı taraf",
   "This report exceeds its safe size. Narrow the client, currency or date selection, or choose a broader trend interval.": "Rapor güvenli boyutu aşıyor. Müşteri, para birimi veya tarih seçimini daraltın ya da daha geniş grafik aralığı seçin.",
   "Choose a valid reporting period ending no later than today.": "Bitişi bugünü geçmeyen geçerli bir rapor dönemi seçin.",
-  "This expense has retained payment history. Use a linked reversal instead of cancellation.": "Bu giderin korunan ödeme geçmişi var. İptal yerine ilgili ödemeye bağlı iade kullanın."
+  "This expense has retained payment history. Use a linked reversal instead of cancellation.": "Bu giderin korunan ödeme geçmişi var. İptal yerine ilgili ödemeye bağlı iade kullanın.",
+  "More partners": "Diğer iş ortakları"
 }

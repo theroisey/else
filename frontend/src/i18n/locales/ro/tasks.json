@@ -39,7 +39,7 @@
   "Description": "Descriere",
   "Done": "Finalizat",
   "Due": "Scadență",
-  "Due time": "Data-limită",
+  "Due time": "Data și ora limită",
   "Due time must not precede start time.": "Data-limită nu poate preceda data de început.",
   "Due within 24 hours": "Scadente în 24 de ore",
   "Edit task": "Editează sarcina",

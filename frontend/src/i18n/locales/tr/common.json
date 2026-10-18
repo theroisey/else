@@ -12,8 +12,8 @@
   "Activity": "Hareketler",
   "Application": "Uygulama",
   "Application root is missing.": "Uygulama kökü eksik.",
-  "ArrowDown": "ArrowDown",
-  "ArrowUp": "ArrowUp",
+  "ArrowDown": "Aşağı ok",
+  "ArrowUp": "Yukarı ok",
   "At least one active administrator must remain.": "En az bir etkin yönetici kalmalıdır.",
   "Attention": "Dikkat gerekenler",
   "Audit": "Denetim",
@@ -78,7 +78,7 @@
   "Enter": "Enter",
   "Enter a review label before saving this local example.": "Bu yerel örneği kaydetmeden önce bir inceleme etiketi girin.",
   "Enter a valid local date and time.": "Geçerli bir yerel tarih ve saat girin.",
-  "Escape": "Escape",
+  "Escape": "Esc",
   "Example label": "Örnek etiketi",
   "Finance": "Finans",
   "Find or go to…": "Bul veya git…",
@@ -301,5 +301,6 @@
   "Check the original payment, available refundable amount, currency and refund date.": "İlk ödemeyi, iade edilebilir tutarı, para birimini ve iade tarihini kontrol edin.",
   "Requests": "Talepler",
   "Choose a page.": "Bir sayfa seçin.",
-  "Financial Dashboard": "Finans Paneli"
+  "Financial Dashboard": "Finans Paneli",
+  "Settings": "Ayarlar"
 }

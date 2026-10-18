@@ -35,7 +35,7 @@
   "Description": "Açıklama",
   "Draft": "Taslak",
   "Due": "Son tarih",
-  "Due time": "Bitiş zamanı",
+  "Due time": "Son teslim zamanı",
   "Due time must not precede start time.": "Bitiş zamanı başlangıç zamanından önce olamaz.",
   "Edit ": "Düzenle: ",
   "Edit {{value1}}": "{{value1}} düzenle",
@@ -98,7 +98,7 @@
   "Saving {{value1}}": "{{value1}} kaydediliyor",
   "Search {{value1}}": "{{value1}} ara",
   "Search task candidates": "Uygun görevleri ara",
-  "Search tasks": "Görevler ara",
+  "Search tasks": "Görev ara",
   "Select up to 50 tasks.": "En fazla 50 görev seçin.",
   "Selected task references · {{value1}}/50": "Seçilen görev referansları · {{value1}}/50",
   "Start": "Başlangıç",
@@ -144,5 +144,6 @@
   "milestones": "kilometre taşları",
   "plans": "planlar",
   "Due time must be inside the supplied plan dates. Dates do not change status automatically.": "Son tarih, belirtilen plan tarihleri içinde olmalıdır. Tarihler durumu otomatik olarak değiştirmez.",
-  "Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically.": "Plan tarihleri değiştirilirken arşivlenmemiş tüm kilometre taşlarının son tarihleri korunmalıdır. Tarihler durumu otomatik olarak değiştirmez."
+  "Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically.": "Plan tarihleri değiştirilirken arşivlenmemiş tüm kilometre taşlarının son tarihleri korunmalıdır. Tarihler durumu otomatik olarak değiştirmez.",
+  "Task links saved.": "Görev bağlantıları kaydedildi."
 }

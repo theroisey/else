@@ -98,6 +98,46 @@ test('refinement: browser permission is explicit, new private updates deliver on
   })
   await login(page)
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+  const categories = page.getByRole('tablist', { name: 'Settings categories', exact: true })
+  await expect(categories.getByRole('tab')).toHaveText(['Workspace', 'Notifications', 'AI connections', 'Organization'])
+  await categories.getByRole('tab', { name: 'Workspace', exact: true }).focus()
+  await page.keyboard.press('End')
+  await expect(categories.getByRole('tab', { name: 'Organization', exact: true })).toBeFocused()
+  const originalTimezone = await page.getByLabel('Timezone', { exact: true }).inputValue()
+  await page.getByLabel('Timezone', { exact: true }).fill('Europe/Istanbul')
+  await page.keyboard.press('Home') // A field must keep its own Home-key behavior.
+  await categories.getByRole('tab', { name: 'Workspace', exact: true }).click()
+  await categories.getByRole('tab', { name: 'Organization', exact: true }).click()
+  await expect(page.getByLabel('Timezone', { exact: true })).toHaveValue('Europe/Istanbul')
+  await page.getByLabel('Timezone', { exact: true }).fill(originalTimezone)
+  await categories.getByRole('tab', { name: 'Workspace', exact: true }).click()
+  // Switch through the real language control without reloading or losing category state.
+  for (const [locale, heading, tabs] of [
+    ['tr', 'Ayarlar', ['Çalışma alanı', 'Bildirimler', 'Yapay zekâ bağlantıları', 'Şirket']],
+    ['ro', 'Setări', ['Spațiu de lucru', 'Notificări', 'Conexiuni AI', 'Organizație']],
+    ['de', 'Einstellungen', ['Arbeitsbereich', 'Benachrichtigungen', 'KI-Verbindungen', 'Organisation']],
+    ['fr', 'Paramètres', ['Espace de travail', 'Notifications', 'Connexions IA', 'Organisation']],
+    ['en', 'Settings', ['Workspace', 'Notifications', 'AI connections', 'Organization']],
+  ] as const) {
+    await page.locator('.settings-category-panel:not([hidden]) select').selectOption(locale)
+    await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible()
+    await expect(page.getByRole('tab')).toHaveText([...tabs])
+    await expect(page.locator('.settings-category-panel:not([hidden]) select')).toBeEnabled()
+    for (const theme of ['light', 'dark']) {
+      await page.getByRole('radio', { name: locale === 'tr' ? (theme === 'dark' ? 'Koyu' : 'Açık') : locale === 'ro' ? (theme === 'dark' ? 'Întunecat' : 'Luminos') : locale === 'de' ? (theme === 'dark' ? 'Dunkel' : 'Hell') : locale === 'fr' ? (theme === 'dark' ? 'Sombre' : 'Clair') : (theme === 'dark' ? 'Dark' : 'Light'), exact: true }).check()
+      for (const width of [360, 390, 430, 1440]) {
+        await page.setViewportSize({ width, height: 1000 })
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      }
+    }
+    if (locale === 'de') await page.screenshot({ path: info.outputPath('settings-categories-dark-desktop.png'), fullPage: true })
+  }
+  await page.setViewportSize({ width: 390, height: 1000 })
+  await page.screenshot({ path: info.outputPath('settings-categories-dark-mobile.png'), fullPage: true })
+  await page.getByRole('tab', { name: 'Workspace', exact: true }).focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(page.getByRole('tab', { name: 'Notifications', exact: true })).toBeFocused()
+  await expect(page.getByRole('tab', { name: 'Notifications', exact: true })).toHaveAttribute('aria-selected', 'true')
   expect(await page.evaluate(() => (window as unknown as { syntheticAlerts: { prompts: number } }).syntheticAlerts.prompts)).toBe(0)
   await page.getByRole('button', { name: 'Enable browser alerts' }).click()
   await expect(page.getByText('Browser alerts are enabled for this account on this browser.', { exact: true })).toBeVisible()
@@ -120,8 +160,10 @@ test('refinement: browser permission is explicit, new private updates deliver on
   await page.evaluate(() => (window as unknown as { syntheticAlerts: { open(): void } }).syntheticAlerts.open())
   await expect(page.getByRole('heading', { name: 'Notifications', exact: true })).toBeVisible()
   expect(documents).toEqual([])
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await page.getByRole('navigation', { name: 'Application', exact: true }).getByRole('link', { name: 'Settings', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+  await page.getByRole('tab', { name: 'Notifications', exact: true }).click()
   await page.getByRole('button', { name: 'Disable browser alerts' }).click()
   await page.getByText('Synthetic refinement owner', { exact: true }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()

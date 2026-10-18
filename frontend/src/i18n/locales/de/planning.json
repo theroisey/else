@@ -144,5 +144,6 @@
   "milestones": "Meilensteine",
   "plans": "Pläne",
   "Due time must be inside the supplied plan dates. Dates do not change status automatically.": "Der Fälligkeitszeitpunkt muss innerhalb der angegebenen Plandaten liegen. Datumsangaben ändern den Status nicht automatisch.",
-  "Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically.": "Bei Änderungen der Plandaten müssen die Fälligkeiten aller nicht archivierten Meilensteine berücksichtigt werden. Datumsangaben ändern den Status nicht automatisch."
+  "Changing plan dates must preserve all nonarchived milestone due dates. Dates do not change status automatically.": "Bei Änderungen der Plandaten müssen die Fälligkeiten aller nicht archivierten Meilensteine berücksichtigt werden. Datumsangaben ändern den Status nicht automatisch.",
+  "Task links saved.": "Aufgabenverknüpfungen gespeichert."
 }
