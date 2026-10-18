@@ -5,6 +5,7 @@ import { buttonStyles } from '../src/components/ui/button-styles'
 test('keeps long account titles, shared button contrast and keyboard focus usable across themes', async ({
   page,
 }, info) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   const name = 'W'.repeat(100)
   database(
     `INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT 'a9977777-7777-4777-8777-777777777777','css.layout.owner.fixture@example.com','Synthetic CSS owner',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444'; INSERT INTO user_roles(id,user_id,role_id,scope_kind,assigned_at) VALUES('a9966666-6666-4666-8666-666666666666','a9977777-7777-4777-8777-777777777777','00000000-0000-4000-8000-000000000001','global',utc_now()); INSERT INTO users(id,email,display_name,password_hash,status,created_at,updated_at) SELECT 'a9988888-8888-4888-8888-888888888888','css.review.fixture@example.com','${name}',password_hash,'active',utc_now(),utc_now() FROM users WHERE id='44444444-4444-4444-8444-444444444444';`,
@@ -112,9 +113,20 @@ test('keeps long account titles, shared button contrast and keyboard focus usabl
       )
     }, theme)
     await expect(page.locator('html')).toHaveAttribute('data-appearance', theme)
-    // Use reduced motion to measure final colors instead of a theme transition frame.
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.evaluate(() => new Promise(requestAnimationFrame))
+    // A frame callback can precede even a reduced-motion transition's final paint.
+    // Measure settled production colors rather than interpolated theme colors.
+    await page.evaluate(async () => {
+      await Promise.allSettled(
+        document
+          .getAnimations()
+          .filter(
+            (animation) =>
+              animation.playState === 'running' &&
+              animation.effect?.getComputedTiming().endTime !== Infinity,
+          )
+          .map((animation) => animation.finished),
+      )
+    })
     const contrasts = await page
       .locator('#css-variant-probe button')
       .evaluateAll((buttons) => {
