@@ -1,10 +1,15 @@
+import { readFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 
-for (const preference of ['dark', 'system'])
+const officialPath = /\s+d="([^"]+)"/.exec(
+  readFileSync('src/components/brand/Brand.tsx', 'utf8'),
+)![1]!
+
+for (const preference of ['light', 'dark', 'system'])
   test(`applies ${preference} appearance before the application bundle renders under CSP`, async ({
     page,
     context,
-  }) => {
+  }, info) => {
     await page.emulateMedia({ colorScheme: 'dark' })
     await context.addInitScript(
       (preference) =>
@@ -28,8 +33,54 @@ for (const preference of ['dark', 'system'])
             children: document.getElementById('root')?.childElementCount ?? -1,
           })),
         )
-        .toEqual({ dark: true, children: 1 })
-      await expect(page.getByRole('progressbar', { name: 'Roisey Else' })).toBeVisible()
+        .toEqual({ dark: preference !== 'light', children: 1 })
+      await expect(
+        page.getByRole('progressbar', { name: 'Roisey Else' }),
+      ).toBeVisible()
+      const mark = page.locator('.boot-loading > svg')
+      await expect(mark).toHaveAttribute('viewBox', '0 0 46 64')
+      await expect(mark.locator('path')).toHaveAttribute('d', officialPath)
+      await expect(mark.locator('rect, image')).toHaveCount(0)
+      await expect(page.locator('.boot-loading img')).toHaveCount(0)
+      await expect(mark.locator('path')).toHaveAttribute('fill', 'currentColor')
+      const standalone = await (
+        await page.request.get('/assets/roisey-logo.svg')
+      ).text()
+      expect(standalone).toContain(officialPath)
+      expect(standalone).toContain('viewBox="0 0 46 64"')
+      expect(standalone).not.toMatch(/<rect|<image|transform=/)
+      for (const width of [360, 390, 430, 1280, 1920]) {
+        await page.setViewportSize({ width, height: 844 })
+        const shape = await mark.evaluate((element) => {
+          const bounds = element.getBoundingClientRect()
+          return {
+            ratio: bounds.width / bounds.height,
+            center: bounds.left + bounds.width / 2,
+            color: getComputedStyle(element).color,
+            expected: getComputedStyle(document.body).color,
+            background: getComputedStyle(element).backgroundColor,
+            bodyOverflow: document.documentElement.scrollWidth > innerWidth,
+          }
+        })
+        expect(shape.ratio).toBeCloseTo(46 / 64, 3)
+        expect(shape.center).toBeCloseTo(width / 2, 0)
+        expect(shape.color).toBe(shape.expected)
+        expect(shape.background).toBe('rgba(0, 0, 0, 0)')
+        expect(shape.bodyOverflow).toBe(false)
+        if (width === 390 || width === 1280)
+          await page.screenshot({
+            path: info.outputPath(`startup-${preference}-${width}.png`),
+          })
+      }
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      expect(
+        await page
+          .locator('.boot-progress')
+          .evaluate((element) =>
+            parseFloat(getComputedStyle(element).animationDuration),
+          ),
+      ).toBeLessThanOrEqual(0.001)
+
       expect(
         await page.evaluate(
           () =>
@@ -43,7 +94,13 @@ for (const preference of ['dark', 'system'])
       ).toBeVisible()
       await expect(
         page.getByRole('button', { name: 'Appearance', exact: true }),
-      ).toContainText(preference === 'dark' ? 'Dark' : 'System')
+      ).toContainText(
+        preference === 'dark'
+          ? 'Dark'
+          : preference === 'light'
+            ? 'Light'
+            : 'System',
+      )
     } finally {
       release()
     }
@@ -104,11 +161,15 @@ test('keeps public login usable at narrow widths in both themes', async ({
         // body finishes; capture a settled frame rather than a mid-fade image.
         for (let frame = 0; frame < 8; frame++) {
           await new Promise(requestAnimationFrame)
-          const active = document.getAnimations().filter(a =>
-            a.playState === 'running' && a.effect?.getComputedTiming().endTime !== Infinity,
-          )
+          const active = document
+            .getAnimations()
+            .filter(
+              (a) =>
+                a.playState === 'running' &&
+                a.effect?.getComputedTiming().endTime !== Infinity,
+            )
           if (!active.length) break
-          await Promise.allSettled(active.map(a => a.finished))
+          await Promise.allSettled(active.map((a) => a.finished))
         }
       })
       if ([390, 1280].includes(width))

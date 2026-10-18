@@ -55,6 +55,17 @@ async function markTaskScreenshot(page: Page) {
   })
 }
 
+async function expectAlignedMetricRows(page: Page, width: number) {
+  const starts = await page.locator('.metric-strip').evaluate((element) => {
+    const left = element.getBoundingClientRect().left
+    return [...element.querySelectorAll('.metric-cell')]
+      .filter((cell) => Math.abs(cell.getBoundingClientRect().left - left) < 1)
+      .map((cell) => cell.querySelector('h2')!.getBoundingClientRect().left)
+  })
+  expect(starts.length).toBeGreaterThan(0)
+  expect(Math.max(...starts) - Math.min(...starts), `metric row alignment at ${width}`).toBeLessThanOrEqual(1)
+}
+
 test('real login, cookie security, responsive keyboard navigation and CSRF logout', async ({ page, context }, testInfo) => {
   await page.goto('/app/portfolio')
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
@@ -1509,10 +1520,12 @@ test('GA4 rejects invalid credentials, clears private input and reads independen
   await expect(page.getByRole('img', { name: 'Daily active users bar chart', exact: true })).toBeVisible()
   await expect(page.getByText('9,007,199,254,740,993', { exact: true })).toHaveCount(5)
   await expect(page.getByText('1.3333333333333333', { exact: true })).toHaveCount(5)
-  for (const width of [1440, 390]) {
+  for (const width of [390, 820, 1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 1000 }); await markTaskScreenshot(page)
     expect(await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true)
-    await page.screenshot({ path: testInfo.outputPath(`ga4-synthetic-reports-${width}.png`), fullPage: true })
+    await expectAlignedMetricRows(page, width)
+    if (width === 390 || width === 1440)
+      await page.screenshot({ path: testInfo.outputPath(`ga4-synthetic-reports-${width}.png`), fullPage: true })
   }
   database(`UPDATE role_permissions SET revoked_at=utc_now() WHERE role_id='${role}' AND permission_key IN ('integrations.view','integrations.manage')`)
   await page.reload()
@@ -1639,10 +1652,12 @@ test('Meta creates audited pending setup, clears its token and reads exact store
   await expect(page.getByRole('table', { name: 'Daily account observations', exact: true })).toBeVisible()
   await expect(page.getByText('1.980198%', { exact: true })).toBeVisible()
   await expect(page.getByRole('img', { name: 'Daily observed Meta spend', exact: true })).toBeVisible()
-  for (const width of [1440, 390]) {
+  for (const width of [390, 820, 1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 1000 }); await markTaskScreenshot(page)
     expect(await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true)
-    await page.screenshot({ path: testInfo.outputPath(`meta-synthetic-reports-${width}.png`), fullPage: true })
+    await expectAlignedMetricRows(page, width)
+    if (width === 390 || width === 1440)
+      await page.screenshot({ path: testInfo.outputPath(`meta-synthetic-reports-${width}.png`), fullPage: true })
   }
   await page.getByLabel('End date', { exact: true }).fill('2026-10-01')
   await page.getByRole('button', { name: 'Load stored reports', exact: true }).click()

@@ -133,10 +133,11 @@
   .page-title { @apply mt-2 break-words font-display text-[2.25rem] font-normal leading-[1.12] tracking-[-0.015em]; }
   .page-description { @apply mt-3 max-w-2xl text-sm leading-6 text-muted; }
   .page-actions { @apply flex flex-wrap items-center gap-2; }
-  .ui-button { @apply inline-flex items-center justify-center gap-2 rounded-sm border font-medium leading-5 transition-colors duration-150 disabled:opacity-45; touch-action: manipulation; padding-block: .5rem; }
+  .ui-button { max-inline-size: 100%; overflow-wrap: anywhere; text-align: center; @apply inline-flex items-center justify-center gap-2 rounded-sm border font-medium leading-5 transition-colors duration-150 disabled:opacity-45; touch-action: manipulation; padding-block: .5rem; }
   .ui-button-default { min-height: var(--control-height); }
   .ui-button-compact { min-height: var(--control-compact-height); padding-block: .25rem; }
-  .ui-button svg { @apply text-xs; }
+  .ui-button > span { min-inline-size: 0; }
+  .ui-button svg { @apply shrink-0 text-xs; }
   .ui-button[aria-busy="true"] { cursor: progress; }
   .ui-input { @apply w-full min-w-0 rounded-sm border border-line-strong bg-surface px-3 text-sm text-ink shadow-none transition-colors duration-150 placeholder:text-muted hover:border-accent disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-muted; max-inline-size: 100%; min-height: var(--control-height); padding-block: .5rem; font-weight: 400; line-height: 1.25rem; }
   /* Keep the native picker, but remove iOS's intrinsic date-control appearance/width. */
@@ -148,7 +149,7 @@
   select.ui-input { appearance: auto; padding-block: 0; }
   .ui-input:focus-visible { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 2px; }
   .ui-field, label:has(> .ui-input) { display: grid; min-width: 0; align-content: start; gap: var(--field-label-gap); font-size: .875rem; font-weight: 600; line-height: 1.25rem; }
-  .ui-label { font-size: .875rem; font-weight: 600; line-height: 1.25rem; color: var(--text-primary); }
+  .ui-label { overflow-wrap: anywhere; font-size: .875rem; font-weight: 600; line-height: 1.25rem; color: var(--text-primary); }
   .ui-field-body { display: grid; min-width: 0; align-content: start; gap: var(--field-label-gap); }
   .field-grid { display: grid; gap: 1rem; }
   .field-grid > .ui-field, .field-grid > label:has(> .ui-input), .filter-grid > .ui-field, .filter-grid > label:has(> .ui-input) { grid-row: span 2; grid-template-rows: subgrid; align-content: stretch; }
@@ -175,8 +176,8 @@
   .ui-table .ui-button:hover { @apply border-line bg-surface-subtle; }
   .ui-dialog { @apply fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100%-2rem))] overflow-visible border-0 bg-transparent p-0 text-ink; }
   .ui-dialog::backdrop { background: var(--overlay); }
-  .ui-dialog-panel { @apply grid max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-md border border-line-strong bg-surface-elevated p-5 shadow-dialog sm:p-7; }
-  .ui-dialog-panel > div:first-child { @apply border-b border-line pb-5; }
+  .ui-dialog-panel { grid-template-columns: minmax(0, 1fr); @apply grid max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-md border border-line-strong bg-surface-elevated p-5 shadow-dialog sm:p-7; }
+  .ui-dialog-panel > div:first-child { overflow-wrap: anywhere; @apply border-b border-line pb-5; }
   .ui-dialog-panel h2 { @apply font-display text-[1.75rem] font-normal leading-tight; }
   .ui-dialog.drawer { @apply bottom-0 left-auto right-0 top-0 m-0 h-dvh max-h-dvh max-w-none w-[min(38rem,100%)]; }
   .ui-dialog.sheet { inset: auto 0 0; margin: 0 auto; width: min(38rem, 100%); max-height: 85dvh; }
@@ -190,7 +191,16 @@
   .empty-state { @apply border-y border-line py-10; }
   .empty-state h2 { @apply font-display text-2xl font-normal; }
   .metric-strip { @apply my-6 grid gap-y-5 border-y border-line py-5 sm:grid-cols-2 xl:grid-cols-4; }
-  .metric-cell { @apply min-w-0 border-line px-5 first:pl-0 sm:border-l sm:first:border-l-0; }
+  .metric-cell { @apply min-w-0 border-line; }
+  @media (min-width: 640px) {
+    .metric-cell { padding-inline: 1.25rem; border-inline-start: 1px solid var(--border); }
+  }
+  @media (640px <= width < 1280px) {
+    .metric-strip > .metric-cell:nth-child(2n + 1) { border-inline-start-width: 0; padding-inline-start: 0; }
+  }
+  @media (min-width: 1280px) {
+    .metric-strip > .metric-cell:nth-child(4n + 1) { border-inline-start-width: 0; padding-inline-start: 0; }
+  }
   .metric-cell h2 { @apply text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-muted; }
   .metric-cell > p:first-of-type { @apply mt-3 font-display text-3xl font-normal tabular-nums; }
   .client-navigation { @apply flex max-w-full flex-wrap gap-x-4 border-b border-line sm:gap-x-6; }
@@ -370,7 +380,8 @@
 @keyframes loading-breathe { 0%, 100% { opacity: .3; } 50% { opacity: .85; } }
 @keyframes loading-entry { from { opacity: 0; } to { opacity: 1; } }
 @layer components {
-  .boot-loading { display: flex; min-height: 100dvh; align-items: center; justify-content: center; flex-direction: column; gap: 1.5rem; animation: loading-entry var(--motion-fast) ease-out; }
+  .boot-loading { display: flex; min-height: 100dvh; padding: max(1.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(1.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left)); align-items: center; justify-content: center; flex-direction: column; gap: 1.5rem; animation: loading-entry var(--motion-fast) ease-out; }
+  .loading-mark { display: block; width: auto; height: 3rem; flex-shrink: 0; color: var(--text-primary); }
   .boot-progress { width: 6rem; height: 2px; background: var(--text-primary); animation: loading-breathe 1400ms ease-in-out infinite; }
   .workspace-main > section { animation: workspace-arrive var(--motion-enter) var(--motion-ease); }
   .account-popup, .client-more-sections, details[open] > .filter-grid, details[open] > .grid { animation: panel-arrive var(--motion-fast) var(--motion-ease); }
@@ -389,7 +400,6 @@
   .help-trigger { @apply inline-flex min-h-8 min-w-8 shrink-0 items-center justify-center rounded-sm text-muted hover:bg-surface-subtle hover:text-ink; transition: background-color 140ms ease, color 140ms ease; }
   .ui-field p { font-weight: 400; }
   .filter-grid { row-gap: .75rem; }
-  @media (max-width: 639px) { .metric-cell { padding-inline: 0; } }
 }
 
 @layer components {

@@ -2,6 +2,7 @@ import { copy, useLocale } from '../../i18n/index'
 import type { ReactNode } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { Button } from '../../components/ui'
+import { AppLoading } from '../../components/brand/AppLoading'
 import { useAuth } from './auth-context'
 import { hasPermission } from './permissions'
 import type { PermissionRequirement } from './permissions'
@@ -21,11 +22,7 @@ export function AuthGuard() {
 
 export function AuthPending() {
   useLocale()
-  return (
-    <main className="mx-auto max-w-lg px-6 py-16" aria-busy="true">
-      <p role="status">{copy('Checking your session…', 'auth')}</p>
-    </main>
-  )
+  return <AppLoading label={copy('Checking your session…', 'auth')} />
 }
 
 export function AuthUnavailable() {

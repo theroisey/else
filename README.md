@@ -36,7 +36,7 @@ Browser tabs use the supplied 16px and 32px favicons. On mobile, use your browse
 
 Production includes a bounded service worker on HTTPS or loopback. It caches only verified public scripts, styles and fonts as they load; pages, account data and writes still need a connection. Updates do not reload open work. Save your drafts and close all application tabs and installed windows to activate a waiting update. If startup files are unavailable, the recovery screen explains whether to reload or close and reopen for an update.
 
-Appearance and language are available in Settings and the account menu. Navigation is immediate; only loading indicators fade. The separate My Access page has been removed.
+Appearance and language are available in Settings and the account menu. Startup and session loading show the original unframed Roisey mark in both themes. Navigation is immediate; only loading indicators fade. Long dialog titles wrap within the screen, and metric summaries keep consistent alignment across responsive rows. The separate My Access page has been removed.
 
 The interface loads operational pages and optional languages as needed. Common destinations warm in the background without reading customer records; Save Data connections skip speculative downloads. Subtle movement provides interaction feedback and respects reduced-motion preferences. See the [frontend performance report](notes/frontend-performance.md) for measured results and verification limits.
 

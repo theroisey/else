@@ -3,6 +3,7 @@ import { Component, Suspense } from 'react'
 import type { ReactNode } from 'react'
 import { useLocation } from 'react-router'
 import { Button, PageSkeleton } from '../../components/ui'
+import { AppLoading } from '../../components/brand/AppLoading'
 
 class PageLoadBoundary extends Component<
   { children: ReactNode; name: string },
@@ -64,11 +65,7 @@ export function WorkspaceRoute({ children }: { children: ReactNode }) {
   return (
     <PageLoadBoundary name={copy('Workspace', 'common')}>
       <Suspense
-        fallback={
-          <main className="mx-auto max-w-3xl px-6 py-16">
-            <PageSkeleton />
-          </main>
-        }
+        fallback={<AppLoading label={copy('Loading workspace…', 'common')} />}
       >
         {children}
       </Suspense>
