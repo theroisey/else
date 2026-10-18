@@ -119,59 +119,57 @@ test('keeps long account titles, shared button contrast and keyboard focus usabl
       )
     }, theme)
     await expect(page.locator('html')).toHaveAttribute('data-appearance', theme)
-    // A frame callback can precede even a reduced-motion transition's final paint.
-    // Measure settled production colors rather than interpolated theme colors.
-    await page.evaluate(async () => {
-      await Promise.allSettled(
-        document
-          .getAnimations()
-          .filter(
-            (animation) =>
-              animation.playState === 'running' &&
-              animation.effect?.getComputedTiming().endTime !== Infinity,
-          )
-          .map((animation) => animation.finished),
-      )
-    })
-    const contrasts = await page
-      .locator('#css-variant-probe button')
-      .evaluateAll((buttons) => {
-        const luminance = (color: string) => {
-          const rgb = color
-            .match(/[\d.]+/g)!
-            .slice(0, 3)
-            .map(Number)
-            .map((n) => {
-              const channel = n / 255
-              return channel <= 0.04045
-                ? channel / 12.92
-                : ((channel + 0.055) / 1.055) ** 2.4
+    // Check the rendered result with a bounded retry. Headless browsers can delay
+    // frames after resizing; an Animation.finished promise is not a reliable gate.
+    const buttons = page.locator('#css-variant-probe button')
+    await expect(buttons).toHaveCount(variants.length)
+    await expect
+      .poll(
+        async () => {
+          const contrasts = await buttons.evaluateAll((buttons) => {
+            const luminance = (color: string) => {
+              const rgb = color
+                .match(/[\d.]+/g)!
+                .slice(0, 3)
+                .map(Number)
+                .map((n) => {
+                  const channel = n / 255
+                  return channel <= 0.04045
+                    ? channel / 12.92
+                    : ((channel + 0.055) / 1.055) ** 2.4
+                })
+              return 0.2126 * rgb[0]! + 0.7152 * rgb[1]! + 0.0722 * rgb[2]!
+            }
+            return buttons.map((button) => {
+              const ink = luminance(getComputedStyle(button).color)
+              let surface: Element | null = button
+              let background = ''
+              while (surface) {
+                background = getComputedStyle(surface).backgroundColor
+                if (
+                  background !== 'rgba(0, 0, 0, 0)' &&
+                  background !== 'transparent'
+                )
+                  break
+                surface = surface.parentElement
+              }
+              const paper = luminance(background)
+              return {
+                name: button.textContent,
+                ratio:
+                  (Math.max(ink, paper) + 0.05) / (Math.min(ink, paper) + 0.05),
+              }
             })
-          return 0.2126 * rgb[0]! + 0.7152 * rgb[1]! + 0.0722 * rgb[2]!
-        }
-        return buttons.map((button) => {
-          const ink = luminance(getComputedStyle(button).color)
-          let surface: Element | null = button
-          let background = ''
-          while (surface) {
-            background = getComputedStyle(surface).backgroundColor
-            if (
-              background !== 'rgba(0, 0, 0, 0)' &&
-              background !== 'transparent'
-            )
-              break
-            surface = surface.parentElement
-          }
-          const paper = luminance(background)
-          return {
-            name: button.textContent,
-            ratio:
-              (Math.max(ink, paper) + 0.05) / (Math.min(ink, paper) + 0.05),
-          }
-        })
-      })
-    for (const row of contrasts)
-      expect(row.ratio, `${theme}/${row.name}`).toBeGreaterThanOrEqual(4.5)
+          })
+          return Object.fromEntries(
+            contrasts
+            .filter(({ ratio }) => !Number.isFinite(ratio) || ratio < 4.5)
+              .map(({ name, ratio }) => [name, ratio]),
+          )
+        },
+        { message: `${theme} button contrast must reach 4.5:1` },
+      )
+      .toEqual({})
   }
   await page
     .locator('#css-variant-probe')
