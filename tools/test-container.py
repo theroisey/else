@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Verify the exact runtime image on owned volumes, including real recovery."""
+from datetime import datetime, timezone
 import argparse
 import gzip
 import http.cookiejar
@@ -223,6 +224,22 @@ def run(args):
             assert len(overview["data"]["tasks"]["overdue"]["items"]) == 1
             collision = operator(original, "serve", expected=1)
             assert "application_is_running" in collision.stderr, "shared-volume ownership was not refused"
+            financial_category = str(uuid.uuid4())
+            request("/api/v1/finance/expense-categories", "POST", {"id": financial_category, "name": "Synthetic retained infrastructure"}, 201)
+            financial_date = datetime.now(timezone.utc).date().isoformat()
+            expense, _ = request("/api/v1/finance/expenses", "POST", {"command_id": str(uuid.uuid4()), "client_id": client["data"]["id"], "category_id": financial_category, "title": "Synthetic retained expense", "vendor": "", "description": "", "currency": "EUR", "amount_minor": "10000", "expense_date": financial_date, "due_date": None}, 201)
+            expense_id = expense["data"]["expense"]["id"]
+            expense_path = "/api/v1/finance/expenses/" + expense_id
+            payment_command = {"command_id": str(uuid.uuid4()), "expected_revision": "1", "payment_id": None, "amount_minor": "6000", "occurred_on": financial_date, "method": "bank_transfer", "reason": ""}
+            paid_expense, _ = request(expense_path + "/events", "POST", payment_command)
+            replay, _ = request(expense_path + "/events", "POST", payment_command)
+            assert replay["data"]["replayed"] is True
+            reversal_command = {"command_id": str(uuid.uuid4()), "expected_revision": "2", "payment_id": paid_expense["data"]["event_id"], "amount_minor": "1000", "occurred_on": financial_date, "method": "bank_transfer", "reason": "Synthetic retained correction"}
+            expense_position, _ = request(expense_path + "/events", "POST", reversal_command)
+            assert expense_position["data"]["expense"]["paid_minor"] == "5000"
+            financial_report, _ = request("/api/v1/finance/dashboard?currency=EUR")
+            assert financial_report["data"]["position"]["outstanding_minor"] == "9007199254740993"
+            assert financial_report["data"]["expenses"]["activity"]["net_minor"] == "5000"
             docker("exec", "-e", f"BACKUP_DIRECTORY={DATA}/backups/verified", name, "/roisey-else", "backup", stdout=subprocess.DEVNULL)
             operator(original, "backup", ("-e", f"BACKUP_DIRECTORY={DATA}/backups/verified"), expected=1)
             key_before = json.loads(copied(name, DATA + "/.control/integration-keyring.json", directory / "key-before.json").read_text())
@@ -251,6 +268,13 @@ def run(args):
             recovered_overview, _ = request(root + "/overview")
             assert recovered_overview["data"]["finance"] == overview["data"]["finance"]
             assert recovered_overview["data"]["tasks"] == overview["data"]["tasks"]
+            recovered_expense, _ = request(expense_path)
+            assert recovered_expense["data"] == expense_position["data"]["expense"]
+            recovered_expense_events, _ = request(expense_path + "/events")
+            assert len(recovered_expense_events["data"]) == 2
+            recovered_finance, _ = request("/api/v1/finance/dashboard?currency=EUR")
+            for key in ("position", "activity", "expenses", "aging", "cashflow"):
+                assert recovered_finance["data"][key] == financial_report["data"][key]
             audit, _ = request(root + "/audit-logs")
             assert len(audit["data"]) >= 3
             key_after = json.loads(copied(recovered, DATA + "/.control/integration-keyring.json", directory / "key-after.json").read_text())
@@ -266,7 +290,7 @@ def run(args):
             for logs in operator_logs:
                 assert all(value not in logs for value in private), "private input appeared in operator output"
             evidence = {"image_id": config["Id"], "size_bytes": config["Size"], "pid1": "roisey-else", "runtime_uid": 65532,
-                        "redis": runtime, "checks": "HTTP/static/gzip/auth/exact-finance/embedded-cache/readonly/persistence/ownership/TERM/INT/online-backup/fresh-key-restore/failed-recovery-startup-refusal"}
+                        "redis": runtime, "checks": "HTTP/static/gzip/auth/exact-finance/expense-reversal-retention/embedded-cache/readonly/persistence/ownership/TERM/INT/online-backup/fresh-key-restore/failed-recovery-startup-refusal"}
             print(json.dumps(evidence, sort_keys=True))
             if args.evidence:
                 args.evidence.parent.mkdir(parents=True, exist_ok=True)

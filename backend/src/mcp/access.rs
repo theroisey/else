@@ -169,9 +169,11 @@ pub fn scope_permission(key: &str) -> Option<&'static str> {
             "requests:develop"
         }
         "tickets.approve" | "tickets.request_revision" => "requests:review",
-        "billing.view" | "pricing.view" | "agreements.view" | "finance.read_company" => {
-            "finance:read"
-        }
+        "expenses.view"
+        | "billing.view"
+        | "pricing.view"
+        | "agreements.view"
+        | "finance.read_company" => "finance:read",
         "billing.manage"
         | "billing.create"
         | "billing.update"

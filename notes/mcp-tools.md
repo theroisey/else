@@ -125,3 +125,14 @@ All tools call the existing domain service; discovery is filtered by current aut
 | `else_websites_get` | `clients:read` | Read only |
 | `else_websites_list` | `clients:read` | Read only |
 | `else_websites_update` | `clients:write` | Command receipt |
+
+## Financial intelligence reads
+
+| Tool | Scope | Current authority |
+| --- | --- | --- |
+| `else_financial_dashboard` | finance:read | Current client + billing view; company permission for an unfiltered company view |
+| `else_financial_receivables` | finance:read | Same scope and bounded receivable pages |
+| `else_financial_payments` | finance:read | Same scope and bounded business-date payment/reversal pages |
+| `else_financial_clients` | finance:read | Same scope and bounded client position pages |
+
+Query filters match the native financial reports. Each call rechecks delegation, current resource authority and its brand ceiling. Operating-expense authority remains separate; no new write tool is added.

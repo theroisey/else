@@ -13,7 +13,7 @@ use std::{
 use tokio::sync::Semaphore;
 
 pub(crate) const SCHEMA: &str = include_str!("../migrations/sqlite/000001_initial.sql");
-pub const SCHEMA_VERSION: u16 = 8;
+pub const SCHEMA_VERSION: u16 = 9;
 const SECOND_SCHEMA: &str = include_str!("../migrations/sqlite/000002_runtime_cleanup.sql");
 const OPERATIONS_SCHEMA: &str = include_str!("../migrations/sqlite/000003_operations.sql");
 const FINANCE_SCHEMA: &str = include_str!("../migrations/sqlite/000004_commercial_finance.sql");
@@ -22,6 +22,8 @@ const ATTENTION_SCHEMA: &str =
     include_str!("../migrations/sqlite/000006_dashboard_attention_indexes.sql");
 const REFRESH_SCHEMA: &str = include_str!("../migrations/sqlite/000007_session_refresh.sql");
 const MCP_SCHEMA: &str = include_str!("../migrations/sqlite/000008_mcp_bridge.sql");
+const FINANCIAL_INTELLIGENCE_SCHEMA: &str =
+    include_str!("../migrations/sqlite/000009_financial_intelligence.sql");
 const MIGRATIONS: &[&str] = &[
     SCHEMA,
     SECOND_SCHEMA,
@@ -31,6 +33,7 @@ const MIGRATIONS: &[&str] = &[
     ATTENTION_SCHEMA,
     REFRESH_SCHEMA,
     MCP_SCHEMA,
+    FINANCIAL_INTELLIGENCE_SCHEMA,
 ];
 pub(crate) fn migration_records() -> Vec<(i64, String)> {
     MIGRATIONS
@@ -576,6 +579,12 @@ fn seed_catalog(connection: &mut Connection) -> Result<()> {
 }
 
 pub const PERMISSIONS: &[(&str, &str, &str)] = &[
+    ("expenses.view", "global", "Read operating expenses"),
+    (
+        "expenses.manage",
+        "global",
+        "Manage operating expenses and retained payments",
+    ),
     (
         "mcp.manage",
         "global",

@@ -12,6 +12,7 @@ pub mod credentials;
 pub mod db;
 pub mod embedded_redis;
 pub mod error;
+pub mod finance;
 mod history_cursor;
 pub mod integration_catalog;
 pub mod integrations;

@@ -1228,3 +1228,77 @@ async fn all_reviewed_read_tools_reach_real_services_and_restore_revokes_delegat
         .unwrap();
     assert_eq!(counts, (1, 1, 0));
 }
+
+#[tokio::test]
+async fn financial_intelligence_reads_intersect_brand_ceiling_and_finance_scope() {
+    let f = Fixture::new().await;
+    let other = crate::clients::create(
+        &f.db,
+        f.actor.clone(),
+        crate::validation::json(br#"{"name":"Synthetic finance-only foreign brand"}"#).unwrap(),
+    )
+    .await
+    .unwrap()
+    .id;
+    for client in [&f.client, &other] {
+        crate::billing::create(&f.db,f.actor.clone(),client.clone(),crate::validation::json(br#"{"description":"Synthetic report charge","amount_minor":"70000","currency":"EUR"}"#).unwrap()).await.unwrap();
+    }
+    let (actor, _) = delegated(&f, "clients:read finance:read", Some(f.client.clone())).await;
+    let service = api(&f);
+    let report = super::registry::call(
+        &service,
+        actor.clone(),
+        "else_financial_dashboard",
+        json!({"query":{"currency":"EUR"}}),
+    )
+    .await
+    .unwrap();
+    assert_eq!(report["position"]["amount_minor"], "70000");
+    assert!(report["expenses"].is_null());
+    assert!(
+        super::registry::call(
+            &service,
+            actor.clone(),
+            "else_financial_receivables",
+            json!({"query":{"client_id":other}})
+        )
+        .await
+        .is_err()
+    );
+    let category = crate::validation::new_id();
+    crate::finance::expenses::category(
+        &f.db,
+        f.actor.clone(),
+        crate::finance::expenses::Category {
+            id: category.clone(),
+            name: "Synthetic scoped expense category".into(),
+        },
+    )
+    .await
+    .unwrap();
+    crate::finance::expenses::create(&f.db,f.actor.clone(),crate::validation::json(&serde_json::to_vec(&json!({"command_id":crate::validation::new_id(),"client_id":f.client,"category_id":category,"title":"Synthetic private brand expense","vendor":"","description":"","currency":"EUR","amount_minor":"10000","expense_date":crate::billing::today(),"due_date":null})).unwrap()).unwrap()).await.unwrap();
+    let (finance_only, _) = delegated(&f, "finance:read", None).await;
+    let finance_only = super::registry::call(
+        &service,
+        finance_only,
+        "else_financial_dashboard",
+        json!({"query":{"currency":"EUR"}}),
+    )
+    .await
+    .unwrap();
+    assert_eq!(finance_only["expenses"]["position"]["recorded_minor"], "0");
+    assert_eq!(finance_only["position"]["amount_minor"], "0");
+    let (limited, _) = delegated(&f, "clients:read", Some(f.client.clone())).await;
+    assert!(
+        super::registry::call(&service, limited, "else_financial_dashboard", json!({}))
+            .await
+            .is_err()
+    );
+    let user = f.actor.user_id.clone();
+    f.db.write(move|tx|{tx.execute("UPDATE role_permissions SET revoked_at=?1 WHERE permission_key='billing.view' AND role_id IN(SELECT role_id FROM user_roles WHERE user_id=?2)",rusqlite::params![crate::validation::now(),user])?;Ok(())}).await.unwrap();
+    assert!(
+        super::registry::call(&service, actor, "else_financial_dashboard", json!({}))
+            .await
+            .is_err()
+    );
+}

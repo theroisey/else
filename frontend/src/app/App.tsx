@@ -16,6 +16,7 @@ import { NavigationFocus } from '../features/shell/NavigationFocus'
 const RecurringPage = lazyPage(routeLoaders.RecurringPage)
 const MCPPage = lazyPage(routeLoaders.MCPPage)
 const SettingsPage = lazyPage(routeLoaders.SettingsPage)
+const FinancialDashboard = lazyPage(routeLoaders.FinancialDashboard)
 const FinancePage = lazyPage(routeLoaders.FinancePage)
 const TeamPage = lazyPage(routeLoaders.TeamPage)
 const WebsitesPage = lazyPage(routeLoaders.WebsitesPage)
@@ -210,6 +211,14 @@ function ApplicationRoutes() {
               element={
                 <ClientRoute>
                   <RequestCreatePage />
+                </ClientRoute>
+              }
+            />
+            <Route
+              path="finance/dashboard"
+              element={
+                <ClientRoute>
+                  <FinancialDashboard />
                 </ClientRoute>
               }
             />

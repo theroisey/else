@@ -396,5 +396,8 @@
   "Apply filters": "Apply filters",
   "Clear filters": "Clear filters",
   "No billing periods match these filters.": "No billing periods match these filters.",
-  "Actual payment collector": "Actual payment collector"
+  "Actual payment collector": "Actual payment collector",
+  "This report exceeds its safe size. Narrow the client, currency or date selection, or choose a broader trend interval.": "This report exceeds its safe size. Narrow the client, currency or date selection, or choose a broader trend interval.",
+  "Choose a valid reporting period ending no later than today.": "Choose a valid reporting period ending no later than today.",
+  "This expense has retained payment history. Use a linked reversal instead of cancellation.": "This expense has retained payment history. Use a linked reversal instead of cancellation."
 }

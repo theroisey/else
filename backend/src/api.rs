@@ -73,6 +73,7 @@ pub struct Api {
 
 mod billing_routes;
 mod commercial_routes;
+mod finance_routes;
 mod integration_routes;
 mod operations_routes;
 mod planning_routes;
@@ -109,6 +110,7 @@ impl Api {
             "operations-settings",
             "teams",
             "notifications",
+            "finance",
             "mcp",
         ]
         .contains(&route[0])
@@ -190,6 +192,7 @@ impl Api {
             }
         }
         match route {
+            ["finance", rest @ ..] => self.financial(&request, actor, rest).await,
             ["mcp", rest @ ..] => {
                 crate::mcp::management::dispatch(&self.db, &self.config, actor, rest, &request)
                     .await

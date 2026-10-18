@@ -67,7 +67,11 @@ function FinanceBrands() {
   if (!allowed) return <AccessDenied />
   return (
     <section>
-      <OperationsHeader title={t('Finance')} />
+      <OperationsHeader title={t('Finance')}>
+        <Link className="underline text-sm" to="/app/finance/dashboard">
+          {copy('Financial Dashboard', 'finance')}
+        </Link>
+      </OperationsHeader>
       <TextField
         label={t('Find brand')}
         value={search}
@@ -295,7 +299,10 @@ function BrandFinance({ client }: { client: string }) {
         />
       ) : (
         <>
-          <Table caption={t('Billing periods')} className="w-full min-w-[48rem]">
+          <Table
+            caption={t('Billing periods')}
+            className="w-full min-w-[48rem]"
+          >
             <thead>
               <tr>
                 {[

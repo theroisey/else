@@ -300,5 +300,6 @@
   "This task belongs to a technical request. Change status and assignment through that request.": "Cette tâche relève d’une demande technique. Modifiez son statut et son responsable dans la demande.",
   "Check the original payment, available refundable amount, currency and refund date.": "Vérifiez le paiement initial, le montant remboursable, la devise et la date.",
   "Requests": "Demandes",
-  "Choose a page.": "Choisissez une page."
+  "Choose a page.": "Choisissez une page.",
+  "Financial Dashboard": "Tableau de bord financier"
 }

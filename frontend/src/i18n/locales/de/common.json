@@ -300,5 +300,6 @@
   "This task belongs to a technical request. Change status and assignment through that request.": "Diese Aufgabe gehört zu einer technischen Anfrage. Ändern Sie Status und Zuweisung dort.",
   "Check the original payment, available refundable amount, currency and refund date.": "Prüfen Sie ursprüngliche Zahlung, Erstattungsbetrag, Währung und Datum.",
   "Requests": "Anfragen",
-  "Choose a page.": "Wählen Sie eine Seite."
+  "Choose a page.": "Wählen Sie eine Seite.",
+  "Financial Dashboard": "Finanzübersicht"
 }

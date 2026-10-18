@@ -4,6 +4,8 @@ import type { Grant } from './session'
 // Mirrors the documented catalog, not role names. Unknown keys fail closed.
 const permissionScopes: Record<string, 'global' | 'client'> = {
   'mcp.manage': 'global',
+  'expenses.view': 'global',
+  'expenses.manage': 'global',
   'users.view': 'global',
   'users.manage': 'global',
   'roles.view': 'global',

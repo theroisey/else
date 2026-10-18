@@ -300,5 +300,6 @@
   "This task belongs to a technical request. Change status and assignment through that request.": "Bu görev teknik talebe bağlı. Durumunu ve sorumlusunu talep üzerinden değiştirin.",
   "Check the original payment, available refundable amount, currency and refund date.": "İlk ödemeyi, iade edilebilir tutarı, para birimini ve iade tarihini kontrol edin.",
   "Requests": "Talepler",
-  "Choose a page.": "Bir sayfa seçin."
+  "Choose a page.": "Bir sayfa seçin.",
+  "Financial Dashboard": "Finans Paneli"
 }

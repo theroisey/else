@@ -89,3 +89,7 @@ See [static delivery](static-delivery.md) for the public worker, credential pres
 ## AI connections
 
 Settings and `/app/mcp` share owner-only enable/registration/revocation and bounded diagnostics, plus each user’s own grants. OAuth consent survives sign-in through narrowly allowed UUID destinations; capabilities have localized labels and optional brand scope. Exact-payload approval uses the real browser session/CSRF and never executes a tool itself. Credentials never enter React/query state, storage, traces or screenshots. All five locales, appearance tokens and reduced motion remain. The client setup guide links to [MCP operations](mcp.md); no unimplemented SSE/stream or generic-client compatibility is advertised.
+
+## Financial intelligence
+
+`features/finance` owns the separate lazy `/app/finance/dashboard` route. Executive collections/current receivables precede optional reconciliation, recorded-cash and payment-composition disclosures. Detailed client, obligation, payment, service, partner, expense and outlook sections use exact validated DTOs and current actor/grant/filter query partitions. Charts scale only presentation coordinates; their accessible values remain exact. Expense command recovery lives above routes, preserves original amounts/payloads/revisions across navigation and resets with authority changes. A background refresh cannot silently replace an expense edit revision. Appearance, five locales, loader-only fades, fixed mobile navigation and contained tables remain shared.

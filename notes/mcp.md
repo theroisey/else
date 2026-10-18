@@ -33,7 +33,7 @@ Single request envelopes only: no JSON-RPC batches. Duplicate JSON keys, excessi
 
 ## Capability inventory
 
-There are **121 statically reviewed tools** ([complete inventory](mcp-tools.md)). Names, input/output JSON schemas, risk, required scopes, permission hints, side effects and retry guidance are discoverable. The registry is compiled once; authorization is recalculated for each request and disclosure is paged (24 descriptors). No REST loopback or generic database dispatcher is used.
+There are **125 statically reviewed tools** ([complete inventory](mcp-tools.md)). Names, input/output JSON schemas, risk, required scopes, permission hints, side effects and retry guidance are discoverable. The registry is compiled once; authorization is recalculated for each request and disclosure is paged (24 descriptors). No REST loopback or generic database dispatcher is used.
 
 | Tool family | Native behavior reused |
 | --- | --- |
@@ -128,3 +128,5 @@ python3 tools/test-browser.py --no-build --grep 'MCP consent'
 ```
 
 The image benchmark additionally needs the existing host `browser-fixture` and static `build/runtime-fixture` helpers; neither is shipped. It explicitly seeds a synthetic completed provider report without credentials or external jobs. Fifty samples per case report p50/p95/p99, throughput, cumulative Rust-process CPU/peak RSS (Redis excluded) and errors at concurrency 1/8 plus an overload burst. The 500-client/100-user capacity, native HTTP, actual-image recovery and Compose checks remain separate. Short loopback results are not an SLA, soak test or live-provider measurement. CI retains all six required jobs and promotes the same checked image, not a rebuild.
+
+Financial intelligence adds four read-only operations: `else_financial_dashboard`, `else_financial_receivables`, `else_financial_payments` and `else_financial_clients`. All use finance:read, current underlying client/billing permissions and the optional delegated brand ceiling; a company-wide view additionally requires finance.read_company. They do not grant cost visibility or financial writes. Brand-scoped grants exclude internal company expenses. See [metric definitions](financial-intelligence.md).

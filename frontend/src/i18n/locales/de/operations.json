@@ -396,5 +396,8 @@
   "Apply filters": "Filter anwenden",
   "Clear filters": "Filter zurücksetzen",
   "No billing periods match these filters.": "Keine Abrechnungszeiträume entsprechen diesen Filtern.",
-  "Actual payment collector": "Tatsächlicher Zahlungsempfänger"
+  "Actual payment collector": "Tatsächlicher Zahlungsempfänger",
+  "This report exceeds its safe size. Narrow the client, currency or date selection, or choose a broader trend interval.": "Der Bericht überschreitet die sichere Größe. Kunde, Währung oder Zeitraum eingrenzen oder ein gröberes Trendintervall wählen.",
+  "Choose a valid reporting period ending no later than today.": "Gültigen Berichtszeitraum wählen, der spätestens heute endet.",
+  "This expense has retained payment history. Use a linked reversal instead of cancellation.": "Diese Ausgabe hat einen aufbewahrten Zahlungsverlauf. Eine verknüpfte Zahlungsstornierung statt Aufhebung verwenden."
 }

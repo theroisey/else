@@ -1,5 +1,9 @@
 // Public code only. No record or permission data is prefetched.
 export const routeLoaders = {
+  FinancialDashboard: () =>
+    import('../features/finance/FinancialDashboard').then((m) => ({
+      default: m.FinancialDashboard,
+    })),
   MCPPage: () =>
     import('../features/mcp/MCPPage').then((m) => ({ default: m.MCPPage })),
   RecurringPage: () =>

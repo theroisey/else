@@ -141,5 +141,7 @@
   "Remove {{value1}}": "{{value1}} kaydını kaldır",
   "{{value1}} for {{value2}}": "{{value2}} için {{value1}}",
   "Edit {{value1}}": "{{value1}} düzenle",
-  "Disable {{value1}}": "{{value1}} hesabını devre dışı bırak"
+  "Disable {{value1}}": "{{value1}} hesabını devre dışı bırak",
+  "Read operating expenses": "İşletme giderlerini görüntüle",
+  "Manage operating expenses and retained payments": "İşletme giderlerini ve korunan ödemeleri yönet"
 }

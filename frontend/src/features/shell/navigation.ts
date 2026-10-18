@@ -55,6 +55,12 @@ export const destinations: readonly Destination[] = [
     icon: faClockRotateLeft,
   },
   {
+    path: '/app/finance/dashboard',
+    label: 'Financial Dashboard',
+    icon: faBuilding,
+    required: { permission: 'finance.read_company', scope: 'global' },
+  },
+  {
     path: '/app/finance',
     label: 'Finance',
     icon: faBuilding,

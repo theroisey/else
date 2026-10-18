@@ -141,5 +141,7 @@
   "Remove {{value1}}": "Eliminați {{value1}}",
   "{{value1}} for {{value2}}": "{{value1}} pentru {{value2}}",
   "Edit {{value1}}": "Editați {{value1}}",
-  "Disable {{value1}}": "Dezactivați {{value1}}"
+  "Disable {{value1}}": "Dezactivați {{value1}}",
+  "Read operating expenses": "Vizualizează cheltuielile operaționale",
+  "Manage operating expenses and retained payments": "Gestionează cheltuielile operaționale și plățile păstrate"
 }

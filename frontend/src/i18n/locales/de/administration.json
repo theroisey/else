@@ -141,5 +141,7 @@
   "Remove {{value1}}": "{{value1}} entfernen",
   "{{value1}} for {{value2}}": "{{value1}} für {{value2}}",
   "Edit {{value1}}": "{{value1}} bearbeiten",
-  "Disable {{value1}}": "{{value1}} deaktivieren"
+  "Disable {{value1}}": "{{value1}} deaktivieren",
+  "Read operating expenses": "Betriebliche Ausgaben anzeigen",
+  "Manage operating expenses and retained payments": "Betriebliche Ausgaben und aufbewahrte Zahlungen verwalten"
 }

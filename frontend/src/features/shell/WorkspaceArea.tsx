@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { warmWorkspace } from '../../app/prefetch'
 import { PaymentRecoveryBoundary } from '../billing/PaymentRecovery'
 import { CopyRecoveryBoundary } from '../pricing/CopyRecovery'
+import { ExpenseRecoveryBoundary } from '../finance/ExpenseRecovery'
 import { ApplicationShell } from './ApplicationShell'
 
 // The authenticated layout stays mounted across routes, including uncertain writes.
@@ -10,7 +11,9 @@ export function WorkspaceArea() {
   return (
     <PaymentRecoveryBoundary>
       <CopyRecoveryBoundary>
-        <ApplicationShell />
+        <ExpenseRecoveryBoundary>
+          <ApplicationShell />
+        </ExpenseRecoveryBoundary>
       </CopyRecoveryBoundary>
     </PaymentRecoveryBoundary>
   )

@@ -78,6 +78,8 @@ def run(args):
         environment = {**os.environ, "AUTH_TEST_DIRECTORY": temporary}
         seeded = subprocess.run([str(args.fixture_binary.resolve())], input=fixtures(), text=True, capture_output=True, env=environment, check=True, timeout=60)
         assert seeded.stdout.strip().splitlines() == ["50000", "20000", "10000", "5000", "1500"]
+        plan = subprocess.run([str(args.fixture_binary.resolve())], input="EXPLAIN QUERY PLAN SELECT id,amount_minor,paid_minor FROM collections WHERE currency='EUR' AND client_id='" + CLIENT + "' ORDER BY id LIMIT 26;", text=True, capture_output=True, env=environment, check=True).stdout.strip()
+        assert "finance_collections_currency" in plan, "financial read should use its currency/client index"
         with socket.socket() as selected:
             selected.bind(("127.0.0.1", 0))
             port = selected.getsockname()[1]
@@ -117,7 +119,7 @@ def run(args):
             barrier = threading.Barrier(100, timeout=15)
             root = "/api/v1/clients/" + CLIENT
             paths = ["/api/v1/clients?limit=25", "/api/v1/today", "/api/v1/tasks?limit=25&status=active", root + "/overview", root + "/tasks?limit=25", root + "/reminders?limit=25",
-                     root + "/billing?limit=25", root + "/pricing?limit=25", root + "/activity?limit=25", root + "/audit-logs?limit=25",
+                     "/api/v1/finance/dashboard?currency=EUR&client_id=" + CLIENT, root + "/billing?limit=25", root + "/pricing?limit=25", root + "/activity?limit=25", root + "/audit-logs?limit=25",
                      root + "/analytics/" + CONNECTION + "?since=2026-10-01&until=2026-10-03", root + "/plans?limit=25"]
 
             def user_work(user):
@@ -157,11 +159,30 @@ def run(args):
             assert percentile(reads, .95) < 2000, "dashboard/read P95 exceeds two seconds"
             assert percentile(writes, .95) < 2000, "CRUD P95 exceeds two seconds"
             assert percentile(reads + writes, .99) < 3000, "mixed P99 exceeds three seconds"
+            # Global finance is a different workload from a client-scoped dossier.
+            # Measure both cold, uncached read performance and a bounded burst.
+            def financial_read(user):
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                tick = time.monotonic()
+                connection.request("GET", "/api/v1/finance/dashboard?currency=EUR", headers={"Cookie": sessions[user][0]})
+                response = connection.getresponse()
+                report = json.loads(response.read())
+                connection.close()
+                assert response.status == 200, "financial reporting request failed"
+                assert report["data"]["position"]["outstanding_minor"] == str(10000 * 9007199254740993)
+                assert sum(int(row["amount_minor"]) for row in report["data"]["aging"]) == int(report["data"]["position"]["outstanding_minor"])
+                return time.monotonic() - tick
+            financial_serial = [financial_read(i) for i in range(20)]
+            with ThreadPoolExecutor(max_workers=20) as pool:
+                financial_burst = list(pool.map(financial_read, range(20)))
+            assert percentile(financial_serial, .95) < 2000, "global financial P95 exceeds two seconds"
+            assert percentile(financial_burst, .95) < 2000, "global financial burst P95 exceeds two seconds"
             final = subprocess.run([str(args.fixture_binary.resolve())], input="SELECT count(*) FROM tasks; SELECT count(*) FROM audit_events WHERE event_name='task.created';", text=True, capture_output=True, env=environment, check=True)
             assert final.stdout.strip().splitlines() == ["50100", "20100"], "concurrent writes/audits did not reconcile"
             stats = json.loads(docker("stats", "--no-stream", "--format", "{{json .}}", name, capture_output=True, text=True).stdout)
             evidence = {"clients": 500, "concurrent_users": 100, "requests": 3000, "writes": 100, "cpu_limit": 2, "memory_limit_mib": 256,
                         "image_id": json.loads(docker("image", "inspect", args.image, capture_output=True, text=True).stdout)[0]["Id"],
+                        "financial_query_plan": plan, "financial_serial_p95_ms": percentile(financial_serial, .95), "financial_burst_users": 20, "financial_burst_p95_ms": percentile(financial_burst, .95), "financial_obligations": 10000,
                         "duration_seconds": round(elapsed, 2), "read_p95_ms": percentile(reads, .95), "write_p95_ms": percentile(writes, .95),
                         "mixed_p99_ms": percentile(reads + writes, .99), "observed_memory": stats["MemUsage"], "cache": "embedded loopback; bounded SQLite fallback"}
             print(json.dumps(evidence, sort_keys=True))

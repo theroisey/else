@@ -8,6 +8,7 @@ import type { Session } from './session'
 // Domain records share actor/grant checks and a partitioned query lifecycle.
 export function useRecordOperations(
   domain:
+    | 'finance'
     | 'mcp'
     | 'operations'
     | 'team'
@@ -77,6 +78,8 @@ export function useRecordOperations(
     try {
       const result = await read(action)
       const invalidations = [[domain, actor]]
+      if (['billing', 'agreements', 'finance', 'pricing'].includes(domain))
+        invalidations.push(['finance', actor])
       if (
         domain === 'tasks' ||
         domain === 'billing' ||

@@ -15,6 +15,7 @@ Roisey Else brings the work around each client into one place. See what needs at
 - Assign tasks, organize plans and milestones, and schedule reminders with explicit timezones.
 - Track collections, partial payments, overdue balances, and immutable pricing agreements.
 - Record service agreements, the actual collecting party, consulting allocations, internal settlements, and audited payment reversals.
+- Open a separate Financial Dashboard for exact collections, receivables aging, client/service comparisons, partner balances, recorded operating expenses, cash movement and bounded CSV reports.
 - Generate daily, weekly, and monthly tasks and contractual billing periods automatically, with retained schedule/price versions and duplicate prevention.
 - Read GA4 analytics, WooCommerce order/refund reports, and Meta Ads performance for the selected client and reporting period.
 - Manage users, roles, and global or client-specific access; inspect audit history and authorized activity.
@@ -50,6 +51,14 @@ A 1,000 USD maintenance obligation remains separate from a 700 EUR consulting ob
 The default split recognizes collected funds proportionally: collecting 350 EUR recognizes 100 EUR for ROISE and 250 EUR for the partner, with 350 EUR still due from the customer. An explicitly selected contractual policy can use the agreed full allocation instead. Refunds retain original payments and adjust the customer's and internal balances; advertising media spend stays independent. This is operational financial tracking, not legal tax invoicing.
 
 Active schedules run inside the existing application process; no extra container or external cron is required. Each task occurrence and service billing period has a durable unique identity. Monthly schedules clamp short months to their last day and return to the original anchor afterward. Pause/resume affects future generation, and historical terms remain intact. The worker rechecks its configured manager's current authority and exposes failures for authorized reconciliation. See the [operations platform guide](notes/operations-platform.md) for limits, permissions and recovery.
+
+## Financial intelligence
+
+Open **Financial Dashboard** directly from navigation; existing Finance and client billing pages retain their operational workflows. Select one currency and reporting period, then investigate clients, services, partners, payment events, expenses or collection outlook. Current balances are labelled separately from historical payment activity. Comparisons use equal-length previous periods and the corresponding prior-year dates; missing positive baselines never produce a percentage. Charts include exact accessible tables and a cumulative collections view.
+
+Company reporting requires `finance.read_company`; every contributing client still requires current client and billing access. Contract terms and partner positions require agreement access. Operating expenses have separate `expenses.view` / `expenses.manage` permissions and retained positive payments, linked reversals and original-command reconciliation. Only the designated full administrator receives the new permissions automatically.
+
+CSV exports recheck authorization, preserve currency and exact minor-unit strings, escape spreadsheet formulas, and identify their date basis. Large reports are bounded and exports provide continuation pages where needed. Keep monetary columns as text when importing very large values into spreadsheet software. Known cash movement is not a bank balance or accounting profit; unknown historical collectors and unrecorded spending are disclosed. Forecasts do not issue customer charges. See [financial intelligence definitions and operations](notes/financial-intelligence.md).
 
 ## Quick start
 

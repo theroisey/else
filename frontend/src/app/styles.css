@@ -386,3 +386,25 @@
   .filter-grid { row-gap: .75rem; }
   @media (max-width: 639px) { .metric-cell { padding-inline: 0; } }
 }
+
+@layer components {
+ .finance-dashboard { @apply min-w-0; }
+ .finance-sections { @apply flex gap-x-6 gap-y-1 flex-wrap border-b border-line; }
+ .finance-sections button { @apply py-3 text-sm text-muted border-b-2 border-transparent; }
+ .finance-sections button[aria-current] { @apply text-ink border-accent; }
+ .finance-executive { @apply grid border-y border-line bg-surface mb-7 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]; }
+ .finance-lead { @apply p-5 sm:p-7 min-w-0; }
+ .finance-total { @apply block mt-4 font-display text-4xl lg:text-5xl leading-tight text-left; overflow-wrap:anywhere; }
+ .finance-support { @apply grid divide-y divide-line lg:border-l lg:border-line; }
+ .finance-metric { @apply p-5 min-w-0; overflow-wrap:anywhere; }
+ .finance-two-column { @apply grid gap-6 xl:grid-cols-2; }
+ .finance-chart { @apply min-w-0 border-y border-line py-5; }
+ .finance-chart-values { @apply mt-3 text-xs divide-y divide-line; }
+ .finance-chart-values > div { @apply flex justify-between gap-5 py-2; }
+ .finance-chart-values dd { @apply text-right tabular-nums; overflow-wrap:anywhere; }
+ .finance-form { @apply border-y border-line bg-surface p-5 sm:p-6 my-5; }
+}
+@layer components {
+ .finance-disclosure { @apply border-b border-line py-4; }
+ .finance-disclosure > summary { @apply cursor-pointer text-sm font-medium; }
+}

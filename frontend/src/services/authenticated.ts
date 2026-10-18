@@ -2,6 +2,10 @@ import { AuthError, csrfToken } from '../features/auth/auth-service'
 import { isRecord } from '../features/auth/session'
 
 const messages: Record<string, string> = {
+  report_range_too_large: 'This report exceeds its safe size. Narrow the client, currency or date selection, or choose a broader trend interval.',
+  invalid_report_period: 'Choose a valid reporting period ending no later than today.',
+  expense_has_transactions: 'This expense has retained payment history. Use a linked reversal instead of cancellation.',
+
   occurrence_not_due:
     'This occurrence is not due, is paused or exceeds the safe recovery window. Review the schedule before generating work.',
   period_not_due:
@@ -76,7 +80,7 @@ export async function authenticatedJSON(
   } = {},
 ) {
   if (
-    !/^\/api\/v1\/(users|roles|permissions|clients|audit-logs|requests|notifications|today|teams|tasks|operations-people|preferences|operations-settings|mcp)(?:[/?]|$)/.test(
+    !/^\/api\/v1\/(users|roles|permissions|clients|finance|audit-logs|requests|notifications|today|teams|tasks|operations-people|preferences|operations-settings|mcp)(?:[/?]|$)/.test(
       path,
     ) ||
     /[\s#\\]/.test(path) ||

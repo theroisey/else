@@ -141,5 +141,7 @@
   "Remove {{value1}}": "Remove {{value1}}",
   "{{value1}} for {{value2}}": "{{value1}} for {{value2}}",
   "Edit {{value1}}": "Edit {{value1}}",
-  "Disable {{value1}}": "Disable {{value1}}"
+  "Disable {{value1}}": "Disable {{value1}}",
+  "Read operating expenses": "Read operating expenses",
+  "Manage operating expenses and retained payments": "Manage operating expenses and retained payments"
 }

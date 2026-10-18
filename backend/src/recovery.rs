@@ -85,6 +85,10 @@ pub(crate) const TABLES: &[&str] = &[
     "notification_preferences",
     "automation_failures",
     "automation_alerts",
+    "expense_categories",
+    "expenses",
+    "expense_events",
+    "expense_commands",
     "mcp_settings",
     "mcp_applications",
     "mcp_redirects",
@@ -371,6 +375,7 @@ pub(crate) fn verify(connection: &mut Connection, ring: &Keyring) -> Result<BTre
     db::validate_history(&tx, false)?;
     crate::operations::evidence::verify(&tx)?;
     crate::operations::integrity::verify(&tx)?;
+    crate::finance::expenses::verify(&tx)?;
     crate::pricing::verify_lines(&tx)?;
     let invalid:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM collections c WHERE CAST(c.paid_minor AS TEXT)<>(SELECT exact_sum(amount) FROM (SELECT amount_minor AS amount FROM payments p WHERE p.collection_id=c.id UNION ALL SELECT -amount_minor FROM payment_reversals rv WHERE rv.collection_id=c.id)) OR c.revision<coalesce((SELECT max(collection_revision) FROM payments p WHERE p.collection_id=c.id),1) OR c.revision<coalesce((SELECT max(collection_revision) FROM payment_reversals rv WHERE rv.collection_id=c.id),1))",[],|r|r.get(0))?;
     if invalid {

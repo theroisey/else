@@ -49,6 +49,7 @@ function destination(path: string): RouteName | undefined {
     '/app/requests/new': 'RequestCreatePage',
     '/app/notifications': 'NotificationsPage',
     '/app/finance': 'FinancePage',
+    '/app/finance/dashboard': 'FinancialDashboard',
     '/app/users': 'UsersPage',
     '/app/roles': 'RolesPage',
     '/app/audit': 'AuditPage',

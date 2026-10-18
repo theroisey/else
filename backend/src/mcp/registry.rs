@@ -214,6 +214,110 @@ pub fn definitions() -> &'static [Definition] {
     ALL.get_or_init(|| {
         vec![
             definition(
+                "else_financial_dashboard",
+                "finance:read",
+                "finance.read_company|billing.view",
+                &["query"],
+                &[
+                    "currency",
+                    "from",
+                    "to",
+                    "client_id",
+                    "service_type",
+                    "agreement_id",
+                    "partner_id",
+                    "status",
+                    "method",
+                    "collector",
+                    "due_from",
+                    "due_to",
+                    "group",
+                    "q",
+                    "limit",
+                    "cursor",
+                ],
+                None,
+                ("", false),
+            ),
+            definition(
+                "else_financial_receivables",
+                "finance:read",
+                "finance.read_company|billing.view",
+                &["query"],
+                &[
+                    "currency",
+                    "from",
+                    "to",
+                    "client_id",
+                    "service_type",
+                    "agreement_id",
+                    "partner_id",
+                    "status",
+                    "method",
+                    "collector",
+                    "due_from",
+                    "due_to",
+                    "group",
+                    "q",
+                    "limit",
+                    "cursor",
+                ],
+                None,
+                ("", false),
+            ),
+            definition(
+                "else_financial_payments",
+                "finance:read",
+                "finance.read_company|billing.view",
+                &["query"],
+                &[
+                    "currency",
+                    "from",
+                    "to",
+                    "client_id",
+                    "service_type",
+                    "agreement_id",
+                    "partner_id",
+                    "status",
+                    "method",
+                    "collector",
+                    "due_from",
+                    "due_to",
+                    "group",
+                    "q",
+                    "limit",
+                    "cursor",
+                ],
+                None,
+                ("", false),
+            ),
+            definition(
+                "else_financial_clients",
+                "finance:read",
+                "finance.read_company|billing.view",
+                &["query"],
+                &[
+                    "currency",
+                    "from",
+                    "to",
+                    "client_id",
+                    "service_type",
+                    "agreement_id",
+                    "partner_id",
+                    "status",
+                    "method",
+                    "collector",
+                    "due_from",
+                    "due_to",
+                    "group",
+                    "q",
+                    "limit",
+                    "cursor",
+                ],
+                None,
+                ("", false),
+            ),
+            definition(
                 "else_periods_list",
                 "finance:read",
                 "agreements.view",
@@ -1674,8 +1778,15 @@ pub async fn call(api: &Api, actor: Actor, name: &str, raw: Value) -> Result<Val
             }
             form.append_pair(k, text);
         }
-        if matches!(name, "else_today" | "else_tasks_queue")
-            && let Some(bound) = actor.client_scope()
+        if matches!(
+            name,
+            "else_today"
+                | "else_tasks_queue"
+                | "else_financial_dashboard"
+                | "else_financial_receivables"
+                | "else_financial_payments"
+                | "else_financial_clients"
+        ) && let Some(bound) = actor.client_scope()
         {
             if qobject
                 .get("client_id")
@@ -1710,6 +1821,18 @@ pub async fn call(api: &Api, actor: Actor, name: &str, raw: Value) -> Result<Val
     let db = &guarded_db;
     let operation = async {
         let data = match name {
+            "else_financial_dashboard" => {
+                crate::finance::reporting::dashboard(db, actor, q).await?
+            }
+            "else_financial_receivables" => {
+                crate::finance::reporting::details(db, actor, q, "receivables".into()).await?
+            }
+            "else_financial_payments" => {
+                crate::finance::reporting::details(db, actor, q, "payments".into()).await?
+            }
+            "else_financial_clients" => {
+                crate::finance::reporting::details(db, actor, q, "clients".into()).await?
+            }
             "else_periods_list" => {
                 crate::operations::commercial::periods(db, actor, client, None, q).await?
             }

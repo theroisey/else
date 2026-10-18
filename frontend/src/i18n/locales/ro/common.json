@@ -300,5 +300,6 @@
   "This task belongs to a technical request. Change status and assignment through that request.": "Sarcina aparține unei cereri tehnice. Modifică starea și responsabilul din cerere.",
   "Check the original payment, available refundable amount, currency and refund date.": "Verifică plata inițială, suma rambursabilă, moneda și data.",
   "Requests": "Cereri",
-  "Choose a page.": "Alegeți o pagină."
+  "Choose a page.": "Alegeți o pagină.",
+  "Financial Dashboard": "Tablou financiar"
 }
