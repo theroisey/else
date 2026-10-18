@@ -699,7 +699,6 @@ test('operations: team leader scope, brand assignment and dynamic removal', asyn
   await expect(row).toHaveCount(0)
   expect((await api(member, `/api/v1/clients/${teamBrand}`)).status()).toBe(404)
   await member.reload()
-  await member.getByRole('tab', { name: 'Notifications', exact: true }).click()
   await expect(
     member.getByRole('link', { name: /Synthetic team brand/ }),
   ).toHaveCount(0)
