@@ -368,7 +368,9 @@ async fn aging_buckets_are_exclusive_with_due_today_and_missing_dates() {
         let due = delta.map(|d| (today - chrono::Duration::days(d)).to_string());
         billing::create(&f.db,f.actor.clone(),f.client.clone(),input(json!({"description":"Synthetic aging boundary","amount_minor":"1","currency":"EUR","due_date":due}))).await.unwrap();
     }
-    let report = reporting::dashboard(&f.db, f.actor, query()).await.unwrap();
+    let report = reporting::dashboard(&f.db, f.actor.clone(), query())
+        .await
+        .unwrap();
     let rows = report["aging"].as_array().unwrap();
     assert_eq!(rows.len(), 9);
     assert_eq!(
@@ -379,6 +381,14 @@ async fn aging_buckets_are_exclusive_with_due_today_and_missing_dates() {
     );
     assert_eq!(report["position"]["overdue_minor"], "11");
     assert_eq!(report["upcoming"][0]["amount_minor"], "2");
+    for days in [7, 8] {
+        let due = (today + chrono::Duration::days(days)).to_string();
+        billing::create(&f.db,f.actor.clone(),f.client.clone(),input(json!({"description":"Synthetic upcoming boundary","amount_minor":"100","currency":"EUR","due_date":due}))).await.unwrap();
+    }
+    let next = reporting::dashboard(&f.db, f.actor, query()).await.unwrap();
+    assert_eq!(next["upcoming"][0]["amount_minor"], "102");
+    assert_eq!(next["upcoming"][1]["amount_minor"], "202");
+    assert_eq!(next["upcoming"][4]["amount_minor"], "202");
 }
 
 #[tokio::test]

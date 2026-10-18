@@ -176,6 +176,7 @@ def run(args):
             print(json.dumps({"financial_serial_p95_ms":percentile(financial_serial,.95),"mixed_read_p95_ms":percentile(reads,.95),"mixed_write_p95_ms":percentile(writes,.95)},sort_keys=True),flush=True)
             with ThreadPoolExecutor(max_workers=20) as pool:
                 financial_burst = list(pool.map(financial_read, range(20)))
+            print(json.dumps({"financial_burst_p95_ms":percentile(financial_burst,.95),"financial_burst_max_ms":max(financial_burst)*1000},sort_keys=True),flush=True)
             assert percentile(financial_serial, .95) < 2000, "global financial P95 exceeds two seconds"
             assert percentile(financial_burst, .95) < 2000, "global financial burst P95 exceeds two seconds"
             final = subprocess.run([str(args.fixture_binary.resolve())], input="SELECT count(*) FROM tasks; SELECT count(*) FROM audit_events WHERE event_name='task.created';", text=True, capture_output=True, env=environment, check=True)
