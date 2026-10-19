@@ -166,7 +166,7 @@ test('operations: commercial payment, revenue share, internal transfer and audit
   await drawer
     .getByLabel('Advertising partner', { exact: true })
     .selectOption({ label: 'Synthetic commercial partner' })
-  await drawer.getByLabel('ROISE share included in total').fill('200')
+  await drawer.getByLabel('Roisey share included in total').fill('200')
   await drawer.getByLabel('Collector', { exact: true }).selectOption('partner')
   await drawer.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(drawer).toHaveCount(0)

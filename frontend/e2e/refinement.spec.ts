@@ -29,6 +29,11 @@ test('refinement: inset filters, keyboard section guides and reduced motion in b
     for (const width of [360, 390, 430, 640, 768, 820, 1024, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 1000 })
       if (width < 1024) await expect(page.locator('.mobile-navigation a[aria-current="page"]')).toHaveAttribute('href', '/app/clients')
+      if (width < 1024) await expect.poll(() => page.evaluate(() => {
+        const mark = document.querySelector('.shell-brand svg')!.getBoundingClientRect()
+        const main = document.querySelector('.workspace-main')!
+        return Math.abs(mark.left - main.getBoundingClientRect().left - parseFloat(getComputedStyle(main).paddingLeft))
+      }), { message: `Header and content left alignment at ${width}px` }).toBeLessThanOrEqual(1)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
       const targets = await page.locator('.shell-header button, .shell-header summary, .shell-header a.ui-button').evaluateAll(elements => elements.filter(el => el.getClientRects().length).map(el => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, height: r.height } }))
       for (const target of targets) { expect(target.left).toBeGreaterThanOrEqual(0); expect(target.right).toBeLessThanOrEqual(width); if (width < 640) expect(target.height).toBeGreaterThanOrEqual(44) }
@@ -42,6 +47,13 @@ test('refinement: inset filters, keyboard section guides and reduced motion in b
       expect(inset.background).not.toBe('rgba(0, 0, 0, 0)')
       if ([390, 1440].includes(width)) await page.screenshot({ path: info.outputPath(`refinement-${theme}-${width}.png`), fullPage: true })
     }
+    const wrongCursors = await page.locator('a[href], button:enabled, summary, select:enabled, input:is([type="checkbox"], [type="radio"]):enabled').evaluateAll(elements => elements.filter(el => el.getClientRects().length && el.getAttribute('aria-busy') !== 'true' && getComputedStyle(el).cursor !== 'pointer').map(el => ({ tag: el.tagName, classes: el.className, cursor: getComputedStyle(el).cursor })))
+    expect(wrongCursors, `${theme} actionable controls`).toEqual([])
+    const help = page.getByRole('button', { name: 'Help for this section' })
+    await page.mouse.move(0, 0)
+    await expect(help).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await help.hover()
+    await expect(help).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   }
   // Exercise real CSS env() insets rather than assuming all phones have zero safe area.
   const device = await page.context().newCDPSession(page)

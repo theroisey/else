@@ -29,7 +29,7 @@ See [financial policy](financial-intelligence.md) for exact definitions and boun
 - Client and service reports distinguish current exposure from selected-period payment activity. Restricted commercial terms remain unclassified.
 - Partner receivables/payables reuse immutable period allocations and real internal settlements. Customer payments and internal transfers are separate.
 - Expense obligations, actual paid/reversed spending, vendor/category and monthly summaries come from the independent retained expense ledger.
-- Recorded cash movement includes known ROISE customer receipts, signed internal transfers and recorded paid operating expenses. Unknown collectors are disclosed and excluded; restricted or incompatible cohorts make the cash report unavailable.
+- Recorded cash movement includes known Roisey customer receipts, signed internal transfers and recorded paid operating expenses. Unknown collectors are disclosed and excluded; restricted or incompatible cohorts make the cash report unavailable.
 - Attention rules cover old/undated debt, positive-client concentration, reversal ratio, unknown collector attribution, internal balances and near-term expense obligations.
 
 ## Backend/API and MCP

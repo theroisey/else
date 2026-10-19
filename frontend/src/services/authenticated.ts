@@ -13,7 +13,7 @@ const messages: Record<string, string> = {
   invalid_manager:
     'Choose an active manager with current brand access and the required generation permissions.',
   invalid_allocation:
-    'The ROISE share must be included in the total. Check the partner, collector and allocation policy.',
+    'The Roisey share must be included in the total. Check the partner, collector and allocation policy.',
   period_has_transactions:
     'This period has payment or transfer history. Use retained reversals instead of voiding it.',
   commercial_period_workflow:

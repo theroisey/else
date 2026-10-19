@@ -397,9 +397,9 @@ function Internal({ p }: { p: Period }) {
       {money(String(n < 0n ? -n : n), p.currency)} ·{' '}
       {t(
         n > 0n
-          ? 'Partner owes ROISE'
+          ? 'Partner owes Roisey'
           : n < 0n
-            ? 'ROISE owes partner'
+            ? 'Roisey owes partner'
             : 'Settled',
       )}
     </span>
@@ -490,7 +490,7 @@ function AgreementDetail({
                     {money(v.amount_minor, v.currency)}
                   </p>
                   <p className="mt-2 text-sm">
-                    ROISE · {money(v.roise_share_minor, v.currency)} ·{' '}
+                    Roisey · {money(v.roise_share_minor, v.currency)} ·{' '}
                     {v.partner_name ?? t('No partner')} ·{' '}
                     {money(
                       String(
@@ -502,7 +502,7 @@ function AgreementDetail({
                   <p className="mt-2 text-sm text-muted">
                     {t('Collector')}:{' '}
                     {t(
-                      v.collector === 'roise' ? 'ROISE' : 'Advertising partner',
+                      v.collector === 'roise' ? 'Roisey' : 'Advertising partner',
                     )}{' '}
                     · {t(v.allocation_policy)}
                   </p>
@@ -671,7 +671,7 @@ function PeriodDetail({ client, id }: { client: string; id: string }) {
           ['Contracted', p.amount_minor],
           ['Collected', p.paid_minor],
           ['Customer outstanding', p.outstanding_minor],
-          ['ROISE share', p.roise_share_minor],
+          ['Roisey share', p.roise_share_minor],
           ['Partner share', p.partner_share_minor],
         ].map(([label, amount]) => (
           <div key={label}>
@@ -679,11 +679,11 @@ function PeriodDetail({ client, id }: { client: string; id: string }) {
             <p className="mt-2 font-display text-3xl tabular-nums">
               {money(amount!, p.currency)}
             </p>
-            {label === 'ROISE share' || label === 'Partner share' ? (
+            {label === 'Roisey share' || label === 'Partner share' ? (
               <p className="mt-2 text-xs text-muted">
                 {t('Allocated now')}:{' '}
                 {money(
-                  label === 'ROISE share'
+                  label === 'Roisey share'
                     ? p.roise_recognized_minor
                     : p.partner_recognized_minor,
                   p.currency,
@@ -702,12 +702,12 @@ function PeriodDetail({ client, id }: { client: string; id: string }) {
       <p className="mt-5 text-sm">
         {t('Advertising partner')}: {p.partner_name ?? t('No partner')} ·{' '}
         {t('Collector')}:{' '}
-        {t(p.collector === 'roise' ? 'ROISE' : 'Advertising partner')} ·{' '}
+        {t(p.collector === 'roise' ? 'Roisey' : 'Advertising partner')} ·{' '}
         {t(p.allocation_policy)}
       </p>
       <p className="mt-2 text-sm text-muted">
         {t(
-          'The ROISE share is included in the consulting fee. Internal transfers do not charge the customer again.',
+          'The Roisey share is included in the consulting fee. Internal transfers do not charge the customer again.',
         )}
       </p>
       <div className="mt-6 flex flex-wrap gap-3">
@@ -765,7 +765,7 @@ function PeriodDetail({ client, id }: { client: string; id: string }) {
                 <p>
                   {money(v.amount_minor, v.currency)} · {v.paid_on} ·{' '}
                   {t(
-                    v.collector === 'partner' ? 'Advertising partner' : 'ROISE',
+                    v.collector === 'partner' ? 'Advertising partner' : 'Roisey',
                   )}
                 </p>
                 <MaskedReference
@@ -800,8 +800,8 @@ function PeriodDetail({ client, id }: { client: string; id: string }) {
                 {money(v.amount_minor, v.currency)} · {v.settled_on} ·{' '}
                 {t(
                   v.direction === 'partner_to_roise'
-                    ? 'Partner to ROISE'
-                    : 'ROISE to partner',
+                    ? 'Partner to Roisey'
+                    : 'Roisey to partner',
                 )}
               </li>
             ))}
@@ -1244,7 +1244,7 @@ function FinanceEditor({
                   <TextField
                     inputMode="decimal"
                     required
-                    label={t('ROISE share included in total')}
+                    label={t('Roisey share included in total')}
                     value={share}
                     onChange={(e) => setShare(e.target.value)}
                   />
@@ -1255,7 +1255,7 @@ function FinanceEditor({
                       setCollector(e.target.value as 'roise' | 'partner')
                     }
                   >
-                    <option value="roise">ROISE</option>
+                    <option value="roise">Roisey</option>
                     <option value="partner">{t('Advertising partner')}</option>
                   </SelectField>
                   <SelectField
@@ -1309,7 +1309,7 @@ function FinanceEditor({
                 setCollector(e.target.value as 'roise' | 'partner')
               }
             >
-              <option value="roise">ROISE</option>
+              <option value="roise">Roisey</option>
               <option value="partner">{t('Advertising partner')}</option>
             </SelectField>
           ) : null}

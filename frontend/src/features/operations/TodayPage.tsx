@@ -247,13 +247,13 @@ export function TodayPage() {
               {v.internal_finance.map((f) => (
                 <dl key={f.currency} className="mt-3 text-sm">
                   <dt className="text-muted">
-                    {copy('Partner owes ROISE', 'operations')}
+                    {copy('Partner owes Roisey', 'operations')}
                   </dt>
                   <dd className="mt-1 tabular-nums">
                     {money(f.receivable_minor, f.currency)}
                   </dd>
                   <dt className="mt-2 text-muted">
-                    {copy('ROISE owes partner', 'operations')}
+                    {copy('Roisey owes partner', 'operations')}
                   </dt>
                   <dd className="mt-1 tabular-nums">
                     {money(f.payable_minor, f.currency)}

@@ -155,7 +155,7 @@ export function NotificationsPage() {
               >
                 <div>
                   <Link
-                    className={n.read_at ? 'text-muted' : 'font-medium'}
+                    className={`${n.read_at ? 'text-muted' : 'font-medium'} hover:text-accent`}
                     to={
                       n.request_id
                         ? `/app/clients/${n.client_id}/requests/${n.request_id}`

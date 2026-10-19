@@ -70,11 +70,12 @@ function Detail({ client, id }: { client: string; id: string }) {
           href={api.evidenceURL(client, file.id)}
           target="_blank"
           rel="noreferrer"
+          className="group block"
         >
           <img
             src={api.evidenceURL(client, file.id)}
             alt={file.filename}
-            className="max-h-80 w-full border border-line object-contain"
+            className="max-h-80 w-full border border-line object-contain transition-colors group-hover:border-accent"
             loading="lazy"
           />
         </a>

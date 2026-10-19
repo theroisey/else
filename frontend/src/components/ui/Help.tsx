@@ -18,7 +18,7 @@ const guidance = {
   plans:
     'Plans organize milestones and linked tasks. Completing a task or milestone does not automatically complete the plan. Open a milestone to manage its own dates and work.',
   finance:
-    'Agreed fees, customer payments and internal transfers are separate. The ROISE share is included in the consulting total, never added as another customer charge. Keep currencies separate and check who collected each payment.',
+    'Agreed fees, customer payments and internal transfers are separate. The Roisey share is included in the consulting total, never added as another customer charge. Keep currencies separate and check who collected each payment.',
   billing:
     'Record only actual customer payments. Partial payments reduce the remaining balance; internal partner transfers belong in service finance. Corrections preserve the original payment history. Currencies are never combined.',
   pricing:

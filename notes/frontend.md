@@ -16,6 +16,8 @@ Light/Dark/System preferences persist and System follows prefers-color-scheme. A
 
 TextField/SelectField/Button share label/body/help/error geometry and CSS subgrids for the tallest localized label. Desktop controls are 40px, compact actions 32px, coarse/mobile targets 44px with 16px inputs. Preserve loading labels, visible focus, native selection, zoom, reduced motion, semantic named tables and local keyboard scrolling. Drawers/dialogs trap focus, close on Escape and restore it; destructive confirmation starts at Cancel.
 
+Interactive native controls share pointer cursors, while text entry, disabled controls and busy actions retain their appropriate cursors. Plain links, disclosures and financial section controls have theme-aware hover feedback; shared button/input hover states exclude disabled controls. Mobile/tablet shell branding uses the same horizontal gutter as workspace content, including safe-area insets. Existing responsive browser scenarios check alignment, actionable cursors and toolbar hover feedback in both themes.
+
 Dialog panels use a shrinkable grid column, and their headers wrap long account/client identifiers without widening the form. Shared field labels and button text can wrap within their available width; icons retain their proportions. Responsive metric strips reset padding and separators at each row start for their one-, two- and four-column layouts. Browser regressions cover a maximum-length unbroken account name, preserved dialog focus, button contrast and GA4/Meta row alignment; synthetic provider snapshots do not demonstrate external provider access.
 
 ## Service worker policy
@@ -41,6 +43,8 @@ Financial values stay exact strings/BigInt through input/display. Number is limi
 Task/planning dates use stated device IANA zone; unchanged values preserve exact original microseconds and later fold occurrences. Changed spring gaps fail; changed overlaps use the documented first occurrence. Reminders retain explicit wall/zone/offset and require Earlier/Later choices for new ambiguous schedules. Use plain time text rather than native datetime-local that discards precision. Calendar dates remain calendar dates; application instants use reviewed locale/timezone display.
 
 English is canonical, with complete Turkish, Romanian, German and French namespaces. Translate UI/static errors/definitions, never arbitrary customer text, machine IDs, currencies or IANA zone names. Locale formatting preserves exact money and interpolation. Persist nonsecret appearance/language; own-account language changes use current auth/CSRF and late-response ordering. Keep long translated labels/domain/client/email stress behavior and no document overflow.
+
+Use Roisey consistently in visible financial labels, validation/help copy and documentation. The established lowercase financial API/storage identifiers remain compatible; a copy correction never renames historical keys or changes calculations.
 
 Catalog verification includes the backend's actual permission descriptions and registered navigation labels, not only parity among JSON files. App-owned source copy such as Settings, additional partner paging and task-link confirmation must be registered. Distinguish action labels from states: finance Open means an outstanding status, not the action to open a record. Due dates and task deadlines retain their respective financial/operational meaning. Product names, permission identifiers and customer content remain unchanged.
 

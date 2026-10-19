@@ -87,7 +87,7 @@ export function PeriodFiltersPanel({
               onChange={(e) => set('collector', e.target.value)}
             >
               <option value="">{t('All collectors')}</option>
-              <option value="roise">ROISE</option>
+              <option value="roise">Roisey</option>
               <option value="partner">{t('Advertising partner')}</option>
             </SelectField>
             <SelectField
@@ -96,7 +96,7 @@ export function PeriodFiltersPanel({
               onChange={(e) => set('payment_collector', e.target.value)}
             >
               <option value="">{t('All collectors')}</option>
-              <option value="roise">ROISE</option>
+              <option value="roise">Roisey</option>
               <option value="partner">{t('Advertising partner')}</option>
             </SelectField>
             <SelectField

@@ -9,6 +9,7 @@ import {
   SelectField,
   TextField,
   PageSkeleton,
+  buttonStyles,
 } from '../../components/ui'
 import { copy, useLocale } from '../../i18n'
 import { useRecordOperations } from '../auth/useRecordOperations'
@@ -144,7 +145,7 @@ function TeamDetail({ id }: { id: string }) {
   return (
     <section>
       <OperationsHeader title={team.name}>
-        <Link to="/app/team" className="ui-button">
+        <Link to="/app/team" className={buttonStyles()}>
           {t('All teams')}
         </Link>
         {owner && !team.archived_at ? (

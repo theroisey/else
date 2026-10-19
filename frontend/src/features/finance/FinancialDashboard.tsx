@@ -412,7 +412,7 @@ export function FinancialDashboard() {
                     v === 'all'
                       ? 'All collectors'
                       : v === 'roise'
-                        ? 'ROISE'
+                        ? 'Roisey'
                         : v === 'partner'
                           ? 'Partner'
                           : 'Unknown',
@@ -541,16 +541,16 @@ export function FinancialDashboard() {
             <>
               <Explanation>
                 {t(
-                  'Current signed reconciliation uses original contractual terms and net collections. Positive balances are due to ROISE; negative balances are payable. Transfers are never customer income.',
+                  'Current signed reconciliation uses original contractual terms and net collections. Positive balances are due to Roisey; negative balances are payable. Transfers are never customer income.',
                 )}
               </Explanation>
               <SummaryTable
                 title="Partner reconciliation"
                 headers={[
                   'Partner',
-                  'Contracted allocation · ROISE',
+                  'Contracted allocation · Roisey',
                   'Contracted allocation · partner',
-                  'Recognized allocation · ROISE',
+                  'Recognized allocation · Roisey',
                   'Recognized allocation · partner',
                   'Internal receivable',
                   'Internal payable',
@@ -893,7 +893,7 @@ function Overview({
           headers={['Movement', 'Amount']}
           rows={[
             [
-              t('Customer net receipts collected by ROISE'),
+              t('Customer net receipts collected by Roisey'),
               amount(d.activity.roise_minor, c),
             ],
             [
@@ -1252,7 +1252,7 @@ function Details({ report, filters }: { report: Report; filters: Filters }) {
               copy(methodLabels[r.method], 'billing'),
               t(
                 r.collector === 'roise'
-                  ? 'ROISE'
+                  ? 'Roisey'
                   : r.collector === 'partner'
                     ? 'Partner'
                     : 'Unknown',
