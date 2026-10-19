@@ -30,7 +30,8 @@ REPORT_CLIENT='ca111111-1111-4111-8111-111111111111'
 REPORT_CONNECTION='ca222222-2222-4222-8222-222222222222'
 def report_fixture():
     """Explicitly synthetic completed Meta report; no credentials or provider job is queued."""
-    stamp=datetime.now(timezone.utc).isoformat(timespec='microseconds').replace('+00:00','Z')
+    # Stored provider observations require canonical UTC fractional seconds.
+    stamp=datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f').rstrip('0').rstrip('.')+'Z'
     workspace={'report':{'client_id':REPORT_CLIENT,'connection_id':REPORT_CONNECTION,'graph_version':'v26.0','currency':'USD','timezone':'Europe/Istanbul','since':'2026-10-01','until':'2026-10-06','days':[],'totals':{'spend_decimal':'0','impressions':'0','clicks':'0','ctr_percent':None,'cpc_decimal':None,'cpm_decimal':None},'attribution_status':'unavailable'},'collected_from':stamp,'collected_through':stamp}
     raw=json.dumps(workspace,separators=(',',':'))
     quote=lambda value:"'"+value.replace("'","''")+"'"
@@ -221,7 +222,9 @@ def run(args):
                             sock.sendall(b'*2\r\n$7\r\nFLUSHDB\r\n$4\r\nSYNC\r\n')
                             assert sock.recv(128)==b'+OK\r\n'
                 report_args={'client_id':client,'id':REPORT_CONNECTION,'provider':'meta_ads','from':'2026-10-01','to':'2026-10-06'}
-                measured=rpc('tools/call',{'name':'else_analytics_report','arguments':report_args})['result']['structuredContent']['data']
+                measured_result=rpc('tools/call',{'name':'else_analytics_report','arguments':report_args})['result']
+                assert measured_result.get('isError') is not True, 'Synthetic stored analytics fixture failed: '+measured_result.get('structuredContent',{}).get('data',{}).get('error',{}).get('code','malformed_result')
+                measured=measured_result['structuredContent']['data']
                 assert measured['status']['state']=='succeeded' and measured['data']['totals']['spend_decimal']=='0'
                 assert measured['data']['totals']['ctr_percent'] is None
                 search_args={'query':{'q':'benchmark','limit':'5'}}
