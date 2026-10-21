@@ -27,7 +27,7 @@ SMTP supports mandatory STARTTLS or implicit TLS with certificate verification, 
 | `make check` | Passed: types, lint, Rust format/Clippy, **485 frontend tests / 53 files**, **132 Rust tests** |
 | Service-worker tests | **5 passed**, including OTP request/verification bypass |
 | Publication/advisory gate regression tests | **11 + 10 passed** |
-| Production frontend build | Passed; initial JS **198,454 bytes gzip**, 7 initial JS requests; total JS **2,271,162 bytes**, within existing budgets |
+| Production frontend build | Passed with patched Vite 8.3.5; initial JS **198,522 bytes gzip**, 7 initial JS requests; total JS **2,271,134 bytes**, within existing budgets |
 | Static musl production build | Passed with the pinned Rust toolchain |
 | Actual Pingora HTTP smoke | Passed with both SIGTERM and SIGINT, including malformed input, foreign Origin, browser binding, rate limits, replay, mailbox-update rejection and SMTP-based session creation |
 | Browser workflows | **39 passed natively; 39 passed against the final exact image**; light/dark, mobile widths, five locales, refresh, permissions, finance, requests/deliveries, recurrence, MCP and cache/CSP checks |
@@ -36,15 +36,17 @@ SMTP supports mandatory STARTTLS or implicit TLS with certificate verification, 
 | Actual production Compose file with isolated fixture overrides | Passed: one service, readiness, child-failure restart, recreation, backup and off-host restore |
 | MCP interoperability | Passed natively and in the image for both 2026-07-28 and 2025-11-25 using the official rmcp 3.5.1 independent client; isolated cache/overload benchmark passed |
 | Capacity rehearsal | Passed: **500 clients, 100 users authenticated by email code, 3,000 requests / 100 writes**, 2 CPUs / 256 MiB; read P95 **609.07 ms**, write P95 **371.81 ms**, 20-user financial burst P95 **1,594.61 ms**, observed memory **33.58 MiB** |
-| Genuine dependency scans | Application and independent client: **zero vulnerabilities** against RustSec database `4b587f00996ebe5c05a73eaef105ef241e876414` (1,348 advisories); two existing scoped Pingora maintenance advisories remain visible |
+| Genuine dependency scans | Complete npm development/production audit: **zero vulnerabilities** after a clean install. Application and independent client: **zero vulnerabilities** against RustSec database `4b587f00996ebe5c05a73eaef105ef241e876414` (1,348 advisories); two existing scoped Pingora maintenance advisories remain visible |
 
 Security tests cover leading zeros, digest binding, failed guesses, expiration, replay, concurrent consumption, resend/supersession, active-user changes, durable budgets after database reopen, queue admission, account enumeration semantics, audit rollback, encrypted delivery failures, abandoned claims and legacy schema/session/grant preservation. Recovery tests include queued OTP ciphertext and verify that the source checkpoint remains unchanged while restored mail is invalidated. SMTP and browser fixtures are unshipped, explicitly synthetic and private; unrelated workflow scenarios reset only their own fixture counters. Dedicated security tests exercise real limiting.
 
-The scan discovered and fixed RUSTSEC-2026-0382 in `rustls-webpki` (0.103.15 → 0.103.16), and related RUSTSEC-2026-0383 in the independent client's `webpki-root-certs` (1.0.9 → 1.0.10). No advisory or required CI context was disabled.
+The scan discovered and fixed RUSTSEC-2026-0382 in `rustls-webpki` (0.103.15 → 0.103.16), and related RUSTSEC-2026-0383 in the independent client's `webpki-root-certs` (1.0.9 → 1.0.10). A fresh npm audit subsequently identified development-editor findings GHSA-698v-4r3x-3vcv, GHSA-r825-w8mm-5pxw and GHSA-587h-7wmj-h5pm in inherited Vite 8.3.1. The follow-up pins patched Vite 8.3.5 and matching locked build dependencies; frontend lint/types, all 485 unit tests, five worker tests, production build and exact-image runtime/browser checks were repeated. No advisory or required CI context was disabled.
 
 ## Local artifact evidence and limits
 
-Final local test image: `sha256:e85a7785d2cf94d2aa654efbfcd5bff90f3314dde6cf9d55db1d60fb2853effd`, **42,345,061 bytes** (40.38 MiB). Static application SHA-256: `0078373758972209c6e40e40e01336c9031d83838bad558fe3c3722170f4c6da`. The local image is labeled `otp-local-worktree`; it is not evidence of registry publication or a production rollout. CI must separately build, test and attest its saved artifact from the pushed commit.
+The complete initial integration run used local image `sha256:e85a7785d2cf94d2aa654efbfcd5bff90f3314dde6cf9d55db1d60fb2853effd`, **42,345,061 bytes** (40.38 MiB), including startup, browser, runtime/recovery, MCP, Compose and capacity gates. The Vite-only follow-up image is `sha256:9a94ff2f00d2cc87689ab5a81a413e3ff58c3dbb8020e8afcd4737183e645c79`, **42,344,976 bytes**, with repeated runtime/recovery and all 39 browser scenarios. The unchanged static application SHA-256 is `0078373758972209c6e40e40e01336c9031d83838bad558fe3c3722170f4c6da`; capacity, MCP, Compose and startup measurements above belong to the initial image. Both local images are labeled `otp-local-worktree`; neither demonstrates registry publication or a production rollout. CI must separately build, test and attest its saved artifact from the pushed commit.
+
+Implementation commit `6b48929df9c42656e4d6c6a6c0baa46b0c5f3b60` was pushed and verified on remote `main`. Its [GitHub Actions run](https://github.com/theroisey/else/actions/runs/39593844900) failed before assigning a runner: frontend, dependency and embedded-runtime jobs contain no steps and no runner; dependent jobs were skipped. No source tests ran there. The connected API cannot retrieve check annotations, so the platform-side cause remains unestablished. This is separate from the successful local checks and fixed npm findings; no CI/publishing success is claimed.
 
 Real SMTP credentials, sending-domain ownership, SPF, DKIM, DMARC, provider reputation/quotas and delivery into production mailboxes were **not configured or verified**. Configure these before deploying; completely absent SMTP settings leave new sign-ins unavailable while existing sessions continue normally. No production users were created or changed. Physical iOS/Android and live-provider delivery were not tested. Email OTP is not phishing-resistant. Synthetic short workload measurements are not a production SLA.
 
@@ -99,6 +101,8 @@ Real SMTP credentials, sending-domain ownership, SPF, DKIM, DMARC, provider repu
 - [frontend/e2e/refinement.spec.ts](../frontend/e2e/refinement.spec.ts)
 - [frontend/e2e/ui-polish.spec.ts](../frontend/e2e/ui-polish.spec.ts)
 - [frontend/e2e/websites.spec.ts](../frontend/e2e/websites.spec.ts)
+- [frontend/package.json](../frontend/package.json)
+- [frontend/package-lock.json](../frontend/package-lock.json)
 - [frontend/scripts/check-runtime-security.mjs](../frontend/scripts/check-runtime-security.mjs)
 - [frontend/scripts/measure-performance.mjs](../frontend/scripts/measure-performance.mjs)
 - [frontend/scripts/otp-fixture.d.mts](../frontend/scripts/otp-fixture.d.mts)
