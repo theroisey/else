@@ -6,7 +6,7 @@ Repository `theroisey/else`, branch `main`, baseline `1efe1a22a0c64605748494a02f
 
 `backend/src/auth/mail.rs` adds explicit `SMTP_AUTH_MODE=trusted_relay`. Absent/blank mode retains `credentials`. New `SMTP_RELAY_IP` has no default: trusted relay requires an exact RFC1918 IPv4 and an explicitly configured SMTP port; credentials mode forbids that IP setting. Trusted relay rejects every nonempty username, password and password-file setting and all plaintext/opportunistic transports. The socket connects directly to the pinned private IP; mandatory STARTTLS/implicit TLS still verifies the DNS name in `SMTP_HOST` using the ordinary native CA roots. No AUTH exchange is attempted. Other SMTP defaults and local loopback fixtures remain compatible.
 
-The encrypted bounded outbox, asynchronous worker, delivery deadlines, message templates, account eligibility, OTP security, atomic session creation, refresh families and RBAC remain unchanged. No dependency, frontend, database schema or data migration is introduced.
+The encrypted bounded outbox, asynchronous worker, delivery deadlines, message templates, account eligibility, OTP security, atomic session creation, refresh families and RBAC remain unchanged. No dependency, frontend UI, database schema or data migration is introduced. The browser security preflight gains bounded failure diagnostics containing only fixed error/status categories, locale and surface booleans; no raw page content, credential or exception is printed and no assertion/CSP rule is relaxed.
 
 ## Server authorization and deployment examples
 
@@ -27,7 +27,7 @@ The [setup guide](stalwart-relay.md) supplies version identification, network/su
 | Static musl production build | Passed with the pinned Rust toolchain |
 | Final exact-image startup refusals | **11 passed**, including relay credentials, public destination and plaintext rejection before Redis starts |
 | Final exact-image runtime/recovery | Passed: real HTTP/static/gzip/auth/finance, nonroot PID 1/owned Redis, read-only root, persistence, both shutdown signals, online backup and fresh-key restore |
-| Pinned actual Stalwart 0.16.27 | **15 checks passed**: valid credential-free TLS handoff, forged/null sender denial, plaintext denial, wrong source, forged PROXY, recipient/message/advertised-size limits, oversize actual DATA, concurrency, shared-interface exclusion, public-listener relay denial, ordinary submission AUTH requirement, authenticated submission, reconnect rate, and actual Else encrypted OTP handoff without session creation |
+| Pinned actual Stalwart 0.16.27 | **16 checks passed**: valid credential-free TLS handoff, forged/null sender denial, plaintext denial, wrong source, forged PROXY from unauthorized and authorized sources, recipient/message/advertised-size limits, oversize actual DATA, concurrency, shared-interface exclusion, public-listener relay denial, ordinary submission AUTH requirement, authenticated submission, reconnect rate, and actual Else encrypted OTP handoff without session creation |
 | Final exact-image browser workflows | **39 passed**; real login/refresh/revocation, permissions, financial and operational workflows, all themes/locales, mobile, cache and CSP |
 | Final exact-image Compose and MCP | Passed: actual production single-service Compose/restart/recovery and independent rmcp 3.5.1 clients for both supported protocol eras |
 | Final exact-image capacity rehearsal | Passed: **500 clients, 100 OTP-authenticated concurrent users, 3,000 requests / 100 writes**, 2 CPUs / 256MiB. Read P95 **546.77ms**, write P95 **364.23ms**, 20-user financial burst P95 **1,515.23ms**, observed memory **30.72MiB** |
@@ -40,9 +40,13 @@ Final local image: `sha256:b58a1bdc21078d29696d155cd4b5fe904c4c0b887218b4d36f3ee
 
 The user's live Stalwart version/configuration is inaccessible here. The guide is verified against upstream 0.16.27/source `aa47d8ef7bfba7200d3293198ac2592747b20e73` and image `sha256:c429b311c93db5606598abc1c68225a85a6953183848ae01bee9c6a98885836c`; another version requires a matching schema review or the existing authenticated SMTP fallback. The generator refuses other versions. Public SMTP tests exercise a controlled clone's public-listener policy from another network; they are not an internet scan or proof of the live host firewall. No production port-25 mapping or policy was changed.
 
+The final policy uses `::1/128` as its nonempty PROXY override on the IPv4-bound private listener. This prevents global trust inheritance and cannot match any real peer of that socket, avoiding reliance on an unassigned IPv4 sentinel. Actual tests reject a forged PROXY line from both source classes. For services with existing explicit-only network memberships, the guide instructs removing the example default entry and retaining the original networks.
+
 Private IP ownership is network authorization, not cryptographic service authentication. Host/Docker administrators and anyone able to attach/replace the authorized endpoint or reuse its address are trusted. If isolation/source identity cannot be guaranteed, retain authenticated SMTP. Domain ownership, SPF/DKIM/DMARC, outbound connectivity, PTR/reputation, bounce handling, certificate renewal and delivery into real user inboxes require operator verification. SMTP acceptance means handoff, not inbox arrival.
 
 Capacity results are a short synthetic rehearsal, not a production mail-delivery or application SLA. Live Stalwart policies, external connectivity and physical devices were not verified. Repository CI performs its own build and full publication gates after push; local results do not imply that this new commit's remote run has already passed.
+
+[CI run 39635404516](https://github.com/theroisey/else/actions/runs/39635404516) for implementation `729c1778d4066bf379344c0580d2c4aac3123a01` passed all six contexts and publication on attempt 2. Its initial browser preflight failed waiting for the sign-in heading, before the UI suite started. The downloaded CI assets were byte-identical to the local build, and the CI-built binary/assets passed the unchanged preflight and passwordless scenario locally on Chromium 151 and Chrome 156; the same tested image passed the strict CI retry on Chromium 153. The initial timing/environment cause remains unestablished. Follow-up diagnostics preserve the failure visibility and avoid printing sensitive content. The final PROXY-hardening follow-up receives its own CI run.
 
 ## Operator setup checklist
 
@@ -54,6 +58,8 @@ Capacity results are a short synthetic rehearsal, not a production mail-delivery
 6. Enable explicit Else relay mode without credentials, then verify one controlled real email-code sign-in and replay denial. Keep the documented authenticated route available for rollback.
 
 ## Modified files
+
+- [frontend/scripts/check-runtime-security.mjs](../frontend/scripts/check-runtime-security.mjs)
 
 - [.env.example](../.env.example)
 - [.github/workflows/ci.yml](../.github/workflows/ci.yml)

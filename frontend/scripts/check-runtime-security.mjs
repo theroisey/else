@@ -8,6 +8,9 @@ import { chromium, expect } from '@playwright/test'
 let stage = 'private origin'
 let browser
 let attacker
+let page
+const pageErrorKinds = new Set()
+const failedResponses = new Map()
 try {
   const origin = new URL(process.argv[2])
   assert.equal(origin.protocol, 'http:')
@@ -34,7 +37,20 @@ try {
   browser = await chromium.launch({
     ...(process.env.CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.CHROMIUM_EXECUTABLE_PATH } : {}),
   })
-  const page = await browser.newPage()
+  page = await browser.newPage()
+  page.on('pageerror', error => {
+    const known = ['Error', 'TypeError', 'SyntaxError', 'ReferenceError', 'EvalError', 'RangeError', 'AbortError', 'TimeoutError', 'SecurityError']
+    pageErrorKinds.add(known.includes(error.name) ? error.name : 'OtherError')
+  })
+  page.on('response', response => {
+    if (response.status() < 400) return
+    const path = new URL(response.url()).pathname
+    const kind = ['/api/v1/auth/session', '/api/v1/auth/refresh'].includes(path)
+      ? path : path.startsWith('/assets/') ? 'public-asset' : 'other'
+    const key = `${kind}:${response.status()}`
+    if (failedResponses.size < 12 || failedResponses.has(key))
+      failedResponses.set(key, Math.min(99, (failedResponses.get(key) ?? 0) + 1))
+  })
   // Test-only ordinary script, fulfilled at a same-origin URL. It executes under
   // the real page's CSP without adding a probe to production image artifacts.
   await page.route(`${origin.origin}/assets/_security-test-eval.js`, (route) => route.fulfill({
@@ -237,6 +253,24 @@ try {
   console.log('Built UI/icons/API and optional Cloudflare beacon verified under declared CSP; eval/inline/unapproved script, style, base, form and frame attacks blocked.')
 } catch {
   console.error(`Built artifact CSP verification failed: ${stage}.`)
+  // Fixed categories/booleans only: no body, heading, URL parameters, mailbox,
+  // credential, raw exception, screenshot or browser storage is disclosed.
+  if (page) {
+    try {
+      const surface = await page.evaluate(() => ({
+        documentReady: ['loading', 'interactive', 'complete'].includes(document.readyState) ? document.readyState : 'other',
+        knownRoute: ['/login', '/app/portfolio'].includes(location.pathname),
+        locale: ['en', 'tr', 'ro', 'de', 'fr'].includes(document.documentElement.lang) ? document.documentElement.lang : 'other',
+        signIn: [...document.querySelectorAll('h1')].some(node => node.textContent === 'Sign in'),
+        sessionUnavailable: [...document.querySelectorAll('h1')].some(node => node.textContent === 'Session check unavailable'),
+        emailField: Boolean(document.querySelector('input[name="email"]')),
+        codeField: Boolean(document.querySelector('input[name="code"]')),
+        statusSurface: Boolean(document.querySelector('[role="status"]')),
+        csp: (window.syntheticCSPViolations ?? []).slice(0, 12).map(value => /^[a-z-]{1,40}$/.test(value) ? value : 'other'),
+      }))
+      console.error(JSON.stringify({ diagnostic: 'built-ui-preflight', surface, pageErrorKinds: [...pageErrorKinds], failedResponses: Object.fromEntries(failedResponses) }))
+    } catch { console.error('Built UI preflight surface unavailable.') }
+  }
   process.exitCode = 1
 } finally {
   await browser?.close()
