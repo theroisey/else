@@ -48,6 +48,8 @@ The complete initial integration run used local image `sha256:e85a7785d2cf94d2aa
 
 Implementation commit `6b48929df9c42656e4d6c6a6c0baa46b0c5f3b60` was pushed and verified on remote `main`. Its [GitHub Actions run](https://github.com/theroisey/else/actions/runs/39593844900) failed before assigning a runner: frontend, dependency and embedded-runtime jobs contain no steps and no runner; dependent jobs were skipped. No source tests ran there. The connected API cannot retrieve check annotations, so the platform-side cause remains unestablished. This is separate from the successful local checks and fixed npm findings; no CI/publishing success is claimed.
 
+Subsequent verified result: [run 39595839719, attempt 2](https://github.com/theroisey/else/actions/runs/39595839719) for `1efe1a22a0c64605748494a02fa9f09396ef7179` completed successfully. All six required contexts and image publication passed, including attestation/signature checks and pulling the immutable published artifact for recovery verification. The initial runner blocker was therefore resolved for that release; this does not establish production deployment or real mailbox delivery.
+
 Real SMTP credentials, sending-domain ownership, SPF, DKIM, DMARC, provider reputation/quotas and delivery into production mailboxes were **not configured or verified**. Configure these before deploying; completely absent SMTP settings leave new sign-ins unavailable while existing sessions continue normally. No production users were created or changed. Physical iOS/Android and live-provider delivery were not tested. Email OTP is not phishing-resistant. Synthetic short workload measurements are not a production SLA.
 
 ## Significant module ownership

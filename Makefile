@@ -15,7 +15,7 @@ DEV_ORIGIN ?= http://127.0.0.1:5173
 BACKUP_NAME ?= backup-$(shell date -u +%Y%m%dT%H%M%SZ)
 BACKUP_PATH ?= /var/lib/roisey-else/backups/$(BACKUP_NAME)
 
-.PHONY: help install dev dev-bootstrap frontend frontend-build backend backend-release build test test-http test-browser test-container test-capacity test-compose test-cache redis-artifacts runtime-fixture lint fmt check check-changed docker up down restart logs clean migrate bootstrap key-inventory rotate-credentials update backup restore
+.PHONY: help install dev dev-bootstrap frontend frontend-build backend backend-release build test test-http test-browser test-container test-capacity test-compose test-stalwart test-cache redis-artifacts runtime-fixture lint fmt check check-changed docker up down restart logs clean migrate bootstrap key-inventory rotate-credentials update backup restore
 
 help: ## List the supported workflows
 	@awk 'BEGIN {FS=":.*## ";print "Roisey Else workflows"} /^[a-z-]+:.*## / {printf "  %-18s %s\n",$$1,$$2}' $(MAKEFILE_LIST)
@@ -51,6 +51,7 @@ build: frontend-build backend-release redis-artifacts ## Prepare all production 
 test: redis-artifacts ## Run meaningful frontend and Rust unit/domain tests
 	cd frontend && $(NODE) node_modules/vitest/vitest.mjs run
 	$(CARGO) test --locked --workspace
+	$(PYTHON) tools/test-stalwart-policy.py
 
 check-changed: ## Check affected local source; shared changes retain full tests
 	$(PYTHON) tools/check-changed.py
@@ -72,6 +73,10 @@ test-capacity: ## Rehearse 500 clients and 100 users against IMAGE
 
 test-compose: runtime-fixture ## Verify actual single-service Compose on private test storage
 	$(PYTHON) tools/test-compose.py --image '$(IMAGE)'
+
+test-stalwart: ## Verify pinned isolated Stalwart authorization and IMAGE OTP handoff
+	$(PYTHON) tools/test-stalwart-policy.py
+	$(PYTHON) tools/test-stalwart-relay.py --image '$(IMAGE)'
 
 redis-artifacts: ## Prepare pinned embedded Redis, minimal libraries and notices
 	$(PYTHON) tools/prepare-redis.py

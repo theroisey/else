@@ -8,9 +8,12 @@ use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
     message::{Mailbox, MultiPart},
     transport::smtp::authentication::Credentials,
+    transport::smtp::client::{Tls, TlsParameters},
 };
 use pingora_core::{server::ShutdownWatch, services::background::BackgroundService};
-use std::{collections::BTreeMap, env, path::PathBuf, time::Duration as StdDuration};
+use std::{
+    collections::BTreeMap, env, net::Ipv4Addr, path::PathBuf, time::Duration as StdDuration,
+};
 use zeroize::Zeroizing;
 
 #[derive(Clone)]
@@ -23,6 +26,9 @@ pub struct MailConfig {
     name: String,
     security: String,
     timeout: u64,
+    relay: Option<Ipv4Addr>,
+    #[cfg(test)]
+    roots: Vec<lettre::transport::smtp::client::Certificate>,
 }
 fn variable(
     settings: &BTreeMap<String, String>,
@@ -50,6 +56,8 @@ impl MailConfig {
             "SMTP_FROM_NAME",
             "SMTP_SECURITY",
             "SMTP_TIMEOUT_SECONDS",
+            "SMTP_AUTH_MODE",
+            "SMTP_RELAY_IP",
         ];
         let mut settings = BTreeMap::new();
         for name in names {
@@ -91,6 +99,46 @@ impl MailConfig {
         }
         let security =
             variable(settings, "SMTP_SECURITY", 16)?.unwrap_or_else(|| "starttls".into());
+        let mode =
+            variable(settings, "SMTP_AUTH_MODE", 16)?.unwrap_or_else(|| "credentials".into());
+        let relay = match mode.as_str() {
+            "credentials" => {
+                if variable(settings, "SMTP_RELAY_IP", 15)?.is_some() {
+                    return Err("invalid_smtp_configuration");
+                }
+                None
+            }
+            "trusted_relay" => {
+                let ip = variable(settings, "SMTP_RELAY_IP", 15)?
+                    .ok_or("invalid_smtp_configuration")?
+                    .parse::<Ipv4Addr>()
+                    .map_err(|_| "invalid_smtp_configuration")?;
+                // Pin the exact private destination, with the separately verified TLS name.
+                // No DNS result or entire subnet confers service authorization.
+                if !ip.is_private()
+                    || variable(settings, "SMTP_PORT", 5)?.is_none()
+                    || host.parse::<std::net::IpAddr>().is_ok()
+                    || !host.contains('.')
+                    || !host.split('.').all(|label| {
+                        !label.is_empty()
+                            && label.len() <= 63
+                            && !label.starts_with('-')
+                            && !label.ends_with('-')
+                            && label
+                                .bytes()
+                                .all(|c| c.is_ascii_alphanumeric() || c == b'-')
+                    })
+                    || !matches!(security.as_str(), "starttls" | "tls")
+                    || ["SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_PASSWORD_FILE"]
+                        .iter()
+                        .any(|name| settings.get(*name).is_some_and(|value| !value.is_empty()))
+                {
+                    return Err("invalid_smtp_configuration");
+                }
+                Some(ip)
+            }
+            _ => return Err("invalid_smtp_configuration"),
+        };
         if !matches!(security.as_str(), "tls" | "starttls")
             && !(security == "none" && local && matches!(host.as_str(), "127.0.0.1" | "::1"))
         {
@@ -116,7 +164,7 @@ impl MailConfig {
             direct
         };
         if username.is_some() != password.is_some()
-            || (!local && username.is_none())
+            || (!local && relay.is_none() && username.is_none())
             || (security == "none" && username.is_some())
         {
             return Err("invalid_smtp_configuration");
@@ -143,19 +191,42 @@ impl MailConfig {
             name,
             security,
             timeout,
+            relay,
+            #[cfg(test)]
+            roots: Vec::new(),
         }))
     }
     fn transport(&self) -> Result<AsyncSmtpTransport<Tokio1Executor>> {
-        let builder = match self.security.as_str() {
-            "tls" => AsyncSmtpTransport::<Tokio1Executor>::relay(&self.host)
-                .map_err(|_| Error::Internal)?,
-            "starttls" => AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&self.host)
-                .map_err(|_| Error::Internal)?,
-            "none" => AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&self.host),
+        let tls = match self.security.as_str() {
+            "starttls" | "tls" => {
+                let parameters = TlsParameters::builder(self.host.clone());
+                // Isolated tests trust only their own generated certificate. There is
+                // no application option for disabling certificate/name verification.
+                #[cfg(test)]
+                let parameters = self
+                    .roots
+                    .iter()
+                    .fold(parameters, |p, root| p.add_root_certificate(root.clone()));
+                let parameters = parameters.build_rustls().map_err(|_| Error::Internal)?;
+                if self.security == "starttls" {
+                    Tls::Required(parameters)
+                } else {
+                    Tls::Wrapper(parameters)
+                }
+            }
+            "none" if self.relay.is_none() => Tls::None,
             _ => return Err(Error::Internal),
-        }
-        .port(self.port)
-        .timeout(Some(StdDuration::from_secs(self.timeout)));
+        };
+        let destination = self
+            .relay
+            .map(|ip| ip.to_string())
+            .unwrap_or_else(|| self.host.clone());
+        // This constructor's plaintext default is always replaced before build.
+        // Relay TCP is pinned to the private IP; TLS still verifies SMTP_HOST.
+        let builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(destination)
+            .tls(tls)
+            .port(self.port)
+            .timeout(Some(StdDuration::from_secs(self.timeout)));
         let builder = if let (Some(user), Some(password)) = (&self.username, &self.password) {
             builder.credentials(Credentials::new(user.clone(), password.to_string()))
         } else {

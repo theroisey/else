@@ -21,6 +21,58 @@ fn settings() -> BTreeMap<String, String> {
     .map(|(k, v)| (k.into(), v.into()))
     .collect()
 }
+fn relay_settings() -> BTreeMap<String, String> {
+    let mut values = settings();
+    values.remove("SMTP_USERNAME");
+    values.remove("SMTP_PASSWORD");
+    values.insert("SMTP_AUTH_MODE".into(), "trusted_relay".into());
+    values.insert("SMTP_RELAY_IP".into(), "10.203.41.2".into());
+    values.insert("SMTP_PORT".into(), "10025".into());
+    values
+}
+#[test]
+fn trusted_relay_is_explicit_pinned_private_encrypted_and_credential_free() {
+    for security in ["starttls", "tls"] {
+        let mut values = relay_settings();
+        values.insert("SMTP_SECURITY".into(), security.into());
+        let config = MailConfig::parse(false, &values).unwrap().unwrap();
+        assert_eq!(config.relay, Some("10.203.41.2".parse().unwrap()));
+        assert!(config.username.is_none() && config.password.is_none());
+    }
+    for (field, value) in [
+        ("SMTP_AUTH_MODE", "anonymous"),
+        ("SMTP_AUTH_MODE", ""),
+        ("SMTP_RELAY_IP", ""),
+        ("SMTP_PORT", ""),
+        ("SMTP_RELAY_IP", "8.8.8.8"),
+        ("SMTP_RELAY_IP", "127.0.0.1"),
+        ("SMTP_RELAY_IP", "169.254.169.254"),
+        ("SMTP_RELAY_IP", "100.64.0.1"),
+        ("SMTP_RELAY_IP", "10.1.1.0/24"),
+        ("SMTP_RELAY_IP", "::ffff:10.1.1.1"),
+        ("SMTP_HOST", "10.203.41.2"),
+        ("SMTP_HOST", "localhost"),
+        ("SMTP_HOST", "-mail.example.com"),
+        ("SMTP_HOST", "mail..example.com"),
+        ("SMTP_SECURITY", "none"),
+        ("SMTP_SECURITY", "opportunistic"),
+        ("SMTP_USERNAME", "unexpected"),
+        ("SMTP_PASSWORD", "unexpected"),
+        ("SMTP_PASSWORD_FILE", "/synthetic-unread-secret"),
+    ] {
+        let mut values = relay_settings();
+        values.insert(field.into(), value.into());
+        assert!(MailConfig::parse(false, &values).is_err(), "field {field}");
+    }
+    let mut values = settings();
+    values.insert("SMTP_RELAY_IP".into(), "10.203.41.2".into());
+    assert!(MailConfig::parse(false, &values).is_err());
+    for field in ["SMTP_HOST", "SMTP_FROM_ADDRESS"] {
+        let mut values = relay_settings();
+        values.remove(field);
+        assert!(MailConfig::parse(false, &values).is_err());
+    }
+}
 fn local(port: u16) -> MailConfig {
     MailConfig {
         host: "127.0.0.1".into(),
@@ -31,8 +83,12 @@ fn local(port: u16) -> MailConfig {
         name: "Roisey Else".into(),
         security: "none".into(),
         timeout: 1,
+        relay: None,
+        roots: Vec::new(),
     }
 }
+
+mod tls;
 #[test]
 fn configuration_rejects_plaintext_downgrades_invalid_sender_and_unsafe_secrets() {
     assert!(

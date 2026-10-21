@@ -18,7 +18,8 @@ def docker(*args, **options):
 
 def run(image):
     results = []
-    for case in ("ownership", "control_readonly", "database", "keyring", "frontend", "smtp_configuration", "otp_policy", "https_cookies"):
+    relay_cases = ("relay_credentials", "relay_destination", "relay_plaintext")
+    for case in ("ownership", "control_readonly", "database", "keyring", "frontend", "smtp_configuration", "otp_policy", "https_cookies", *relay_cases):
         identity = "else-startup-test-" + uuid.uuid4().hex
         created_volume = created_container = False
         try:
@@ -34,6 +35,12 @@ def run(image):
                 args += ["-e","AUTH_PUBLIC_ORIGIN=https://signin.example.com"]
             if case == "smtp_configuration":
                 args += ["-e","SMTP_HOST=smtp.example.com","-e","SMTP_SECURITY=none"]
+            if case in relay_cases:
+                values={"SMTP_AUTH_MODE":"trusted_relay","SMTP_HOST":"mail.example.test","SMTP_PORT":"10025","SMTP_FROM_ADDRESS":"noreply@example.test","SMTP_RELAY_IP":"10.203.41.2","SMTP_SECURITY":"starttls"}
+                if case=="relay_credentials": values["SMTP_USERNAME"]="synthetic-unexpected"
+                if case=="relay_destination": values["SMTP_RELAY_IP"]="8.8.8.8"
+                if case=="relay_plaintext": values["SMTP_SECURITY"]="none"
+                args += [item for key,value in values.items() for item in ("-e",key+"="+value)]
             if case == "otp_policy":
                 args += ["-e","AUTH_OTP_LIFETIME_SECONDS=0"]
             if case == "frontend":
@@ -69,6 +76,7 @@ def run(image):
             failure = next(row for row in fields if row["message"] == "application_startup_failed")
             assert failure["error_code"] != "internal_error"
             expected = {"ownership": "storage", "control_readonly": "control", "database": "database", "keyring": "keyring", "frontend": "frontend", "smtp_configuration":"configuration", "otp_policy":"configuration", "https_cookies":"configuration"}
+            expected.update({case:"configuration" for case in relay_cases})
             assert failure["stage"] == expected[case], f"Incorrect startup stage: {failure}"
             if case == "ownership":
                 assert failure["owner_uid"] == 999 and failure["runtime_uid"] == 65532 and failure["directory_mode"] == "0700"
@@ -76,7 +84,7 @@ def run(image):
                 assert failure["operation"] == "create_directory" and failure["errno"] == 30
             if case in ("database", "keyring", "frontend"):
                 assert any(row["message"] == "embedded_redis_stopped" for row in fields), "Startup failure must stop/reap its child"
-            if case in ("smtp_configuration","otp_policy","https_cookies"):
+            if case in ("smtp_configuration","otp_policy","https_cookies",*relay_cases):
                 assert not any(row["message"]=="embedded_redis_starting" for row in fields), "Unsafe authentication config must fail before starting dependencies"
             assert all(value not in (logs.stdout + logs.stderr) for value in ("synthetic invalid", "synthetic-marker", "synthetic-missing-frontend", "integration-keyring.json"))
             results.append({"case": case, "exit_code": 1, "diagnostic": failure})

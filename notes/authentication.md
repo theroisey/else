@@ -29,9 +29,11 @@ The serving process accepts these settings; none is printed to startup logs:
 | Setting | Default / rule |
 | --- | --- |
 | `SMTP_HOST` | Required configured SMTP hostname; no URL/path |
-| `SMTP_PORT` | 587; integer 1–65535 |
-| `SMTP_USERNAME` | Required for production SMTP |
-| `SMTP_PASSWORD_FILE` | Preferred absolute protected 0400/0600, regular single-link, no-follow credential file, max 4096 bytes; runtime UID or root ownership |
+| `SMTP_PORT` | Credentials default 587; trusted relay requires an explicit port; integer 1–65535 |
+| `SMTP_AUTH_MODE` | `credentials` when absent/blank; `trusted_relay` must be deliberately selected |
+| `SMTP_RELAY_IP` | Required exact RFC1918 IPv4 in trusted-relay mode, forbidden in credentials mode; no default |
+| `SMTP_USERNAME` | Required for production credentials mode; forbidden in trusted-relay mode |
+| `SMTP_PASSWORD_FILE` | Credentials mode only: preferred absolute protected 0400/0600, regular single-link, no-follow credential file, max 4096 bytes; runtime UID or root ownership |
 | `SMTP_PASSWORD` | Alternative secret injection; mutually exclusive with file. Environment secrets can be inspected by privileged host tooling; avoid committed `.env` credentials |
 | `SMTP_FROM_ADDRESS` | Required validated sender address in verified sending domain |
 | `SMTP_FROM_NAME` | Roisey Else |
@@ -48,6 +50,8 @@ All SMTP fields absent/blank disables delivery and makes new code requests fail 
 Use the optional `docker-compose.smtp.example.yml` overlay to mount a protected password file into the existing service. Set the nonsecret SMTP fields in the host environment or private deployment `.env`, and `SMTP_PASSWORD_HOST_FILE` to the protected host file. For file-backed Compose secrets, prepare source ownership/mode for UID 65532; the application refuses world-readable 0444 defaults. Privileged host operators retain trust authority. No second service/image is required. Alternatively, use your hosting platform's protected environment-secret injection with `SMTP_PASSWORD`. The protected application keyring is provisioned and backed up automatically; SMTP credentials must be recovered through your secret manager, never inserted into application bundles.
 
 Complete provider setup separately: verify sending-domain ownership, SPF authorization, DKIM signing, DMARC policy/alignment and delivery reputation; confirm provider quotas and test arrival in actual user mailboxes. Fixture success does not verify any of these. Never send test codes to arbitrary customer addresses. Behind a shared ingress, the genuine direct peer can be the same for many users; explicitly size `AUTH_OTP_PEER_REQUESTS` for legitimate sign-ins and enforce additional edge limits. Do not trust spoofable `X-Forwarded-For`/`CF-Connecting-IP` headers. Five guesses per challenge, 100 peer verification attempts/15 minutes, 1000 global verification attempts/15 minutes, 100 queued messages and 6000 retained challenges are fixed security bounds.
+
+For an independently administered Stalwart server, [Private Stalwart SMTP Relay](stalwart-relay.md) describes deliberate accountless delivery over a dedicated internal Docker network. Trusted-relay mode rejects every nonempty username/password/password-file setting and plaintext transport, pins TCP to `SMTP_RELAY_IP`, and verifies TLS against the DNS name in `SMTP_HOST`. It never performs SMTP AUTH. Private IP ownership is enforced by Docker and the Stalwart listener/MAIL/RCPT policies, not by this client flag. Keep credentials mode unless those independent controls and the installed Stalwart schema have been verified. No SMTP or sender-domain account is created by the application; existing server domain/signing/bounce arrangements remain operator responsibilities.
 
 For isolated development, `SMTP_SECURITY=none` is accepted only with numeric loopback SMTP and the explicitly insecure loopback application origin. Do not use this in production. The unshipped `runtime-fixture` helper supplies a controlled loopback SMTP sink for native and exact-image tests. It writes synthetic codes only to an owned temporary fixture directory, never application telemetry, CI traces or production assets. Fixtures reset their own rate history between unrelated workflow scenarios; dedicated security tests exercise genuine durable limiting.
 

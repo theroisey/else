@@ -1,0 +1,16 @@
+# Apply in the SEPARATE Stalwart project after changing this service key to its
+# existing service name. Keep every existing explicit network in effective config.
+# There is deliberately no image, volume, environment or ports replacement here.
+services:
+  stalwart:
+    networks:
+      default: {}
+      else_mail_internal:
+        ipv4_address: ${ELSE_MAIL_STALWART_IP:?Set Stalwart dedicated IPv4}
+        aliases:
+          - ${ELSE_MAIL_TLS_HOST:?Set its existing certificate DNS hostname}
+
+networks:
+  else_mail_internal:
+    name: ${ELSE_MAIL_NETWORK:?Set the pre-created internal network}
+    external: true

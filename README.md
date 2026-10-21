@@ -92,6 +92,8 @@ For public hosting, set the exact HTTPS origin and `AUTH_COOKIE_SECURE=true`, th
 
 Compose uses `ghcr.io/theroisey/else:latest` and the fixed `roisey-else-data` volume. Redis starts automatically inside the same container and listens only on private loopback. It stores disposable report projections, has no published port, and writes no persistent cache files.
 
+Authenticated SMTP remains the default for email-code sign-in. If you already operate Stalwart, an explicit `SMTP_AUTH_MODE=trusted_relay` can send without an SMTP account through a dedicated private network and verified TLS. Follow [Private Stalwart SMTP Relay](notes/stalwart-relay.md) for the pinned private destination, separate-project Compose overlays, server-side authorization and verification. The relay must not be enabled merely because containers share a network; public SMTP port 25 stays unchanged.
+
 ## Updates and everyday operation
 
 ```sh

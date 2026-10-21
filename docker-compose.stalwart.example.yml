@@ -1,0 +1,24 @@
+# Optional overlay for the existing Else service. Provision the external INTERNAL
+# bridge first; inspect address conflicts and both projects' effective networks.
+# Do not combine with the credential-file SMTP overlay.
+services:
+  else:
+    environment:
+      SMTP_AUTH_MODE: trusted_relay
+      SMTP_HOST: ${ELSE_MAIL_TLS_HOST:?Set the certificate DNS hostname}
+      SMTP_RELAY_IP: ${ELSE_MAIL_STALWART_IP:?Set Stalwart dedicated IPv4}
+      SMTP_PORT: '10025'
+      SMTP_SECURITY: starttls
+      SMTP_FROM_ADDRESS: ${ELSE_MAIL_SENDER:?Set the authorized sender}
+      SMTP_USERNAME: ''
+      SMTP_PASSWORD: ''
+      SMTP_PASSWORD_FILE: ''
+    networks:
+      default: {}
+      else_mail_internal:
+        ipv4_address: ${ELSE_MAIL_APP_IP:?Set Else dedicated IPv4}
+
+networks:
+  else_mail_internal:
+    name: ${ELSE_MAIL_NETWORK:?Set the pre-created internal network}
+    external: true

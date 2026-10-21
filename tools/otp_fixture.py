@@ -24,6 +24,7 @@ class MailFixture:
                 self.port = choice.getsockname()[1]
         atexit.register(self.close)
         self.environment = {'SMTP_HOST':'127.0.0.1','SMTP_PORT':str(self.port),'SMTP_SECURITY':'none','SMTP_FROM_ADDRESS':'fixture@example.com','SMTP_USERNAME':'','SMTP_PASSWORD':'','SMTP_PASSWORD_FILE':'','SMTP_FROM_NAME':'Roisey Else','SMTP_TIMEOUT_SECONDS':'2'}
+        self.environment.update(SMTP_AUTH_MODE='credentials', SMTP_RELAY_IP='')
 
     def start(self, container=None, directory="/var/lib/roisey-else"):
         self.container = container
