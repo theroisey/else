@@ -244,7 +244,7 @@ fn document(tx: &Transaction<'_>, id: &str, detail: bool) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::auth::{Auth, Login};
+    use crate::auth::Auth;
 
     #[tokio::test]
     async fn revisions_scopes_archive_and_audit_rollback() {
@@ -252,21 +252,11 @@ mod tests {
         let path = directory.path().join("else.sqlite3");
         let db = Database::open(&path, true).unwrap();
         let auth = Auth::new(db.clone()).unwrap();
-        auth.bootstrap(
-            "admin@example.com".into(),
-            "Synthetic administrator".into(),
-            "synthetic-password".into(),
-        )
-        .await
-        .unwrap();
+        auth.bootstrap("admin@example.com".into(), "Synthetic administrator".into())
+            .await
+            .unwrap();
         let actor = auth
-            .login(
-                Login {
-                    email: "admin@example.com".into(),
-                    password: "synthetic-password".into(),
-                },
-                audit::request_id(),
-            )
+            .test_login("admin@example.com".into(), audit::request_id())
             .await
             .unwrap()
             .session

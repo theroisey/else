@@ -17,6 +17,7 @@ import urllib.error
 import urllib.request
 import uuid
 import runtime_fixture
+from otp_fixture import MailFixture
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = "/var/lib/roisey-else"
@@ -39,8 +40,10 @@ def run(args):
             selected.bind(("127.0.0.1", 0))
             port = selected.getsockname()[1]
         origin = f"http://127.0.0.1:{port}"
+        mail=MailFixture(container_mode=True)
         common = ["--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--memory=256m", "--cpus=2",
                   "-e", "AUTH_PUBLIC_ORIGIN=" + origin, "-e", "AUTH_COOKIE_SECURE=false"]
+        common += [item for key,value in mail.environment.items() for item in ("-e",key+"="+value)]
         config = json.loads(output("image", "inspect", args.image))[0]
         assert config["Config"]["User"] == "65532:65532", "runtime must default to non-root"
         assert config["Config"]["Entrypoint"] == ["/roisey-else"]
@@ -132,7 +135,7 @@ def run(args):
 
         try:
             original = volume("-source")
-            login = {"email": "image.synthetic@example.com", "display_name": "Synthetic image operator", "password": "synthetic image test password"}
+            login = {"email": "image.synthetic@example.com", "display_name": "Synthetic image operator"}
             operator(original, "bootstrap", payload=json.dumps(login))
             name = start(original, "-app")
             # Docker top lists processes; Rust owns the one private Redis child.
@@ -214,7 +217,10 @@ def run(args):
             request("/%2e%2e/private", expected=404)
             request("/api/v1/releases", expected=404)
             request("/api/v1/auth/session", expected=401)
-            request("/api/v1/auth/login", "POST", {k: login[k] for k in ("email", "password")})
+            mail.start(name)
+            challenge,_=request("/api/v1/auth/otp/request","POST",{"email":login["email"]},202)
+            otp_code=mail.code(login["email"])
+            request("/api/v1/auth/otp/verify","POST",{"challenge_id":challenge["data"]["challenge_id"],"code":otp_code})
             client, _ = request("/api/v1/clients", "POST", {"name": "Synthetic persistent account"}, 201)
             root = "/api/v1/clients/" + client["data"]["id"]
             request(root + "/tasks", "POST", {"title": "Synthetic task", "due_at": "2020-01-01T00:00:00Z"}, 201)
@@ -282,7 +288,7 @@ def run(args):
             assert len(key_after["keys"]) == len(key_before["keys"]) + 1
             assert all(k in key_after["keys"] for k in key_before["keys"])
             stop(recovered, "TERM")
-            private = [login["password"], "Synthetic persistent account", "9007199254740993", "key_base64"]
+            private = [otp_code, "Synthetic persistent account", "9007199254740993", "key_base64"]
             for container in containers:
                 result = docker("logs", container, capture_output=True, text=True)
                 logs = result.stdout + result.stderr

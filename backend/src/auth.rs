@@ -5,41 +5,21 @@ use crate::{
     security::{self, Actor},
     validation,
 };
-use argon2::{
-    Algorithm, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier, Version,
-    password_hash::SaltString,
-};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::{Duration, SecondsFormat, Utc};
 use rand::RngCore;
 use rusqlite::{OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-    time::{Duration as StdDuration, Instant},
-};
 use subtle::ConstantTimeEq;
-use tokio::sync::Semaphore;
 
+pub mod mail;
+pub mod otp;
 mod refresh;
 
 #[derive(Clone)]
 pub struct Auth {
     pub db: Database,
-    work: Arc<Semaphore>,
-    dummy_hash: String,
-    limiter: Arc<Mutex<LoginBuckets>>,
-}
-
-type LoginBuckets = HashMap<[u8; 32], (Instant, u8)>;
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Login {
-    pub email: String,
-    pub password: String,
 }
 
 #[derive(Serialize)]
@@ -70,53 +50,14 @@ pub struct LoginResult {
     pub refresh_expires_at: String,
 }
 
-fn argon() -> Argon2<'static> {
-    Argon2::new(
-        Algorithm::Argon2id,
-        Version::V0x13,
-        Params::new(19 * 1024, 2, 1, Some(32)).expect("fixed Argon2 parameters"),
-    )
-}
-
-pub fn hash_password(password: &str) -> Result<String> {
-    if !(12..=128).contains(&password.len()) {
-        return Err(Error::Invalid("invalid_request"));
-    }
-    let mut salt = [0u8; 16];
-    rand::rng().fill_bytes(&mut salt);
-    let salt = SaltString::encode_b64(&salt).map_err(|_| Error::Internal)?;
-    argon()
-        .hash_password(password.as_bytes(), &salt)
-        .map(|v| v.to_string())
-        .map_err(|_| Error::Internal)
-}
-
-fn verify_password(hash: &str, password: &str) -> bool {
-    let Ok(parsed) = PasswordHash::new(hash) else {
-        return false;
-    };
-    let mut salt = [0u8; 64];
-    if parsed
-        .salt
-        .and_then(|s| s.decode_b64(&mut salt).ok())
-        .map(|s| s.len())
-        != Some(16)
-    {
-        return false;
-    }
-    // Stored password hashes use exactly these reviewed bounds. Never run attacker-controlled cost parameters.
-    if parsed.algorithm.as_str() != "argon2id"
-        || parsed.version != Some(19)
-        || parsed.params.get_decimal("m") != Some(19 * 1024)
-        || parsed.params.get_decimal("t") != Some(2)
-        || parsed.params.get_decimal("p") != Some(1)
-        || parsed.hash.as_ref().map(|h| h.len()) != Some(32)
-    {
-        return false;
-    }
-    argon()
-        .verify_password(password.as_bytes(), &parsed)
-        .is_ok()
+/// Identity addresses must also be representable by the reviewed SMTP parser.
+/// This never rewrites persisted legacy addresses.
+pub(crate) fn email(value: &str) -> Result<String> {
+    let normalized = validation::email(value)?;
+    normalized
+        .parse::<lettre::Address>()
+        .map_err(|_| Error::Invalid("invalid_request"))?;
+    Ok(normalized)
 }
 
 pub fn secret() -> (String, Vec<u8>) {
@@ -140,167 +81,83 @@ fn digest(raw: &str) -> Result<Vec<u8>> {
 
 impl Auth {
     pub fn new(db: Database) -> Result<Self> {
-        Ok(Self {
-            db,
-            work: Arc::new(Semaphore::new(2)),
-            dummy_hash: hash_password(&secret().0)?,
-            limiter: Arc::new(Mutex::new(HashMap::new())),
-        })
+        Ok(Self { db })
     }
 
-    pub fn limit(&self, peer: &str, email: &str) -> Result<()> {
-        let key: [u8; 32] =
-            Sha256::digest(format!("{peer}\0{}", email.trim().to_ascii_lowercase())).into();
-        let mut buckets = self.limiter.lock().map_err(|_| Error::Internal)?;
-        let now = Instant::now();
-        if let Some((started, count)) = buckets.get_mut(&key)
-            && now.duration_since(*started) < StdDuration::from_secs(900)
-        {
-            if *count >= 5 {
-                return Err(Error::Response(
-                    http::StatusCode::TOO_MANY_REQUESTS,
-                    "authentication_rate_limited",
-                    "Authentication is temporarily unavailable.",
-                ));
-            }
-            *count += 1;
-            return Ok(());
-        }
-        if buckets.len() >= 10000 {
-            buckets
-                .retain(|_, (start, _)| now.duration_since(*start) < StdDuration::from_secs(900));
-            if buckets.len() >= 10000 {
-                return Err(Error::Busy);
-            }
-        }
-        buckets.insert(key, (now, 1));
-        Ok(())
-    }
-
-    pub async fn hash(&self, password: String) -> Result<String> {
-        let permit = self
-            .work
-            .clone()
-            .try_acquire_owned()
-            .map_err(|_| Error::Busy)?;
-        tokio::task::spawn_blocking(move || {
-            let _permit = permit;
-            hash_password(&password)
-        })
-        .await
-        .map_err(|_| Error::Internal)?
-    }
-
-    pub async fn login(&self, input: Login, request_id: String) -> Result<LoginResult> {
-        let invalid = || {
-            Error::Response(
-                http::StatusCode::UNAUTHORIZED,
-                "invalid_credentials",
-                "Email or password is incorrect.",
-            )
-        };
-        let email = validation::email(&input.email).map_err(|_| invalid())?;
-        if !(12..=128).contains(&input.password.len()) {
-            return Err(invalid());
-        }
-        let stored = self
-            .db
-            .read(move |tx| {
-                Ok(tx
-                    .query_row(
-                        "SELECT id,password_hash FROM users WHERE email=?1 AND status='active'",
-                        [email],
-                        |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)),
-                    )
-                    .optional()?)
-            })
-            .await?;
-        let hash = stored
-            .as_ref()
-            .map(|v| v.1.clone())
-            .unwrap_or(self.dummy_hash.clone());
-        let expected_hash = hash.clone();
-        let permit = self
-            .work
-            .clone()
-            .try_acquire_owned()
-            .map_err(|_| Error::Busy)?;
-        let valid = tokio::task::spawn_blocking(move || {
-            let _permit = permit;
-            verify_password(&hash, &input.password)
-        })
-        .await
-        .map_err(|_| Error::Internal)?;
-        let Some((user_id, _)) = stored.filter(|_| valid) else {
-            return Err(invalid());
-        };
+    /// Called only inside admitted OTP consumption or explicitly isolated fixtures.
+    pub(crate) fn establish(
+        tx: &rusqlite::Transaction<'_>,
+        user_id: String,
+        request_id: String,
+    ) -> Result<LoginResult> {
         let (token, token_hash) = secret();
         let (csrf, csrf_hash) = secret();
         let (refresh, refresh_hash) = secret();
         let session_id = validation::new_id();
+        let now = validation::now();
         let expires =
             (Utc::now() + Duration::hours(12)).to_rfc3339_opts(SecondsFormat::Micros, true);
         let refresh_expires =
             (Utc::now() + Duration::days(7)).to_rfc3339_opts(SecondsFormat::Micros, true);
-        let refresh_expires_at = refresh_expires.clone();
-        let result = self
-            .db
-            .write(move |tx| {
-                let current: String = tx
-                    .query_row(
-                        "SELECT password_hash FROM users WHERE id=?1 AND status='active'",
-                        [&user_id],
-                        |r| r.get(0),
-                    )
-                    .optional()?
-                    .ok_or_else(invalid)?;
-                if current != expected_hash {
-                    return Err(invalid());
-                }
-                let now = validation::now();
-                tx.execute(
-                    "INSERT INTO sessions VALUES (?1,?2,?3,?4,?5,?6,NULL)",
-                    params![session_id, user_id, token_hash, csrf_hash, now, expires],
-                )?;
-                tx.execute(
-                    "INSERT INTO session_refresh_tokens VALUES (?1,?2,?3,?4,?5,NULL)",
-                    params![refresh_hash, session_id, csrf_hash, now, refresh_expires],
-                )?;
-                refresh::cleanup(tx, &now)?;
-                tx.execute(
-                    "UPDATE users SET last_login_at=?1 WHERE id=?2",
-                    params![now, user_id],
-                )?;
-                let actor = Actor::session(user_id, session_id, csrf_hash, request_id);
-                audit::mutation(
-                    tx,
-                    &actor,
-                    "session",
-                    &actor.session_id,
-                    None,
-                    "created",
-                    (
-                        None,
-                        Snapshot {
-                            exists: Some(true),
-                            ..Snapshot::default()
-                        },
-                    ),
-                )?;
-                Ok(Session {
-                    user: user(tx, &actor.user_id)?,
-                    actor,
-                    expires_at: expires,
-                })
-            })
-            .await?;
+        let current = user(tx, &user_id)?;
+        tx.execute(
+            "INSERT INTO sessions VALUES (?1,?2,?3,?4,?5,?6,NULL)",
+            params![session_id, user_id, token_hash, csrf_hash, now, expires],
+        )?;
+        tx.execute(
+            "INSERT INTO session_refresh_tokens VALUES (?1,?2,?3,?4,?5,NULL)",
+            params![refresh_hash, session_id, csrf_hash, now, refresh_expires],
+        )?;
+        refresh::cleanup(tx, &now)?;
+        tx.execute(
+            "UPDATE users SET last_login_at=?1 WHERE id=?2",
+            params![now, user_id],
+        )?;
+        let actor = Actor::session(user_id, session_id, csrf_hash, request_id);
+        audit::mutation(
+            tx,
+            &actor,
+            "session",
+            &actor.session_id,
+            None,
+            "created",
+            (
+                None,
+                Snapshot {
+                    exists: Some(true),
+                    ..Default::default()
+                },
+            ),
+        )?;
         Ok(LoginResult {
-            session: result,
+            session: Session {
+                actor,
+                user: current,
+                expires_at: expires,
+            },
             token,
             csrf,
             refresh,
-            refresh_expires_at,
+            refresh_expires_at: refresh_expires,
         })
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn test_login(
+        &self,
+        email: String,
+        request_id: String,
+    ) -> Result<LoginResult> {
+        self.db
+            .write(move |tx| {
+                let id = tx.query_row(
+                    "SELECT id FROM users WHERE email=?1 AND status='active'",
+                    [email],
+                    |r| r.get(0),
+                )?;
+                Self::establish(tx, id, request_id)
+            })
+            .await
     }
 
     pub async fn current(&self, token: &str, request_id: String) -> Result<Session> {
@@ -382,10 +239,10 @@ impl Auth {
         }).await
     }
 
-    pub async fn bootstrap(&self, email: String, name: String, password: String) -> Result<String> {
-        let email = validation::email(&email)?;
+    pub async fn bootstrap(&self, email: String, name: String) -> Result<String> {
+        let email = self::email(&email)?;
         let name = validation::text(&name, 100, true, false)?;
-        let hash = self.hash(password).await?;
+        let hash = "!passwordless";
         self.db.write(move |tx| {
             let initialized:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM users)",[],|r|r.get(0))?;
             if initialized {return Err(Error::Conflict("already_initialized"));}
@@ -416,78 +273,4 @@ fn user(tx: &rusqlite::Transaction<'_>, id: &str) -> Result<User> {
     )?;
     user.permissions = security::grants(tx, id)?;
     Ok(user)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn session_revocation_csrf_and_atomic_audit() {
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("else.sqlite3");
-        let auth = Auth::new(Database::open(&path, true).unwrap()).unwrap();
-        auth.bootstrap(
-            "Admin@Example.com".into(),
-            "Synthetic administrator".into(),
-            "synthetic-password".into(),
-        )
-        .await
-        .unwrap();
-        assert!(
-            auth.bootstrap(
-                "other@example.com".into(),
-                "Other".into(),
-                "synthetic-password".into()
-            )
-            .await
-            .is_err()
-        );
-        let login = auth
-            .login(
-                Login {
-                    email: "admin@example.com".into(),
-                    password: "synthetic-password".into(),
-                },
-                audit::request_id(),
-            )
-            .await
-            .unwrap();
-        assert!(Auth::csrf(&login.session.actor, &login.csrf, &login.csrf));
-        assert!(!Auth::csrf(&login.session.actor, &login.csrf, "wrong"));
-        assert!(
-            login
-                .session
-                .user
-                .permissions
-                .iter()
-                .any(|g| g.permission == "users.manage")
-        );
-        let conn = crate::db::connection(&path).unwrap();
-        conn.execute_batch("CREATE TRIGGER reject_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(ABORT,'synthetic failure'); END;").unwrap();
-        assert!(auth.logout(login.session.actor.clone()).await.is_err());
-        assert!(
-            auth.current(&login.token, audit::request_id())
-                .await
-                .is_ok()
-        );
-        conn.execute_batch("DROP TRIGGER reject_audit;").unwrap();
-        auth.logout(login.session.actor).await.unwrap();
-        assert!(
-            auth.current(&login.token, audit::request_id())
-                .await
-                .is_err()
-        );
-    }
-
-    #[test]
-    fn retained_password_hash_and_bounded_cost_policy() {
-        let hash = hash_password("synthetic-password").unwrap();
-        assert!(verify_password(&hash, "synthetic-password"));
-        assert!(!verify_password(&hash, "different-password"));
-        assert!(!verify_password(
-            &hash.replace("m=19456", "m=9999999"),
-            "synthetic-password"
-        ));
-    }
 }

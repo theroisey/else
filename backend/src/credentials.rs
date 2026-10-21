@@ -38,6 +38,7 @@ struct Ring {
 struct Material {
     cipher: Aes256Gcm,
     fingerprint: [u8; 32],
+    otp_key: ring::hmac::Key,
 }
 pub struct Envelope(Vec<u8>);
 pub struct Binding<'a> {
@@ -67,6 +68,7 @@ pub fn label(raw: &str) -> bool {
 }
 pub fn purpose(provider: &str) -> Result<&'static str> {
     match provider {
+        "auth_email" => Ok("authentication"),
         "meta_ads" => Ok("access_token"),
         "ga4" | "woocommerce" => Ok("provider_credential"),
         _ => Err(Error::Internal),
@@ -75,7 +77,13 @@ pub fn purpose(provider: &str) -> Result<&'static str> {
 impl Binding<'_> {
     fn valid(&self) -> bool {
         validation::id(self.client).is_ok()
-            && validation::id(self.connection).is_ok()
+            && (validation::id(self.connection).is_ok()
+                || (self.provider == "auth_email"
+                    && self.connection.len() == 43
+                    && self
+                        .connection
+                        .bytes()
+                        .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))))
             && purpose(self.provider).is_ok_and(|p| p == self.purpose)
     }
     fn associated(&self, header: &[u8]) -> Vec<u8> {
@@ -192,6 +200,14 @@ impl Keyring {
                 Material {
                     cipher,
                     fingerprint,
+                    otp_key: ring::hmac::Key::new(
+                        ring::hmac::HMAC_SHA256,
+                        ring::hmac::sign(
+                            &ring::hmac::Key::new(ring::hmac::HMAC_SHA256, &key),
+                            b"roisey-else/otp-key/v1",
+                        )
+                        .as_ref(),
+                    ),
                 },
             );
         }
@@ -202,6 +218,16 @@ impl Keyring {
             active: document.active_key_id,
             keys,
         })))
+    }
+    pub(crate) fn otp_digest(&self, label: &str, fields: &[&str]) -> Result<Vec<u8>> {
+        let material = self.0.keys.get(label).ok_or(Error::Internal)?;
+        let mut context = ring::hmac::Context::with_key(&material.otp_key);
+        context.update(b"roisey-else/authentication/v1\0");
+        for field in fields {
+            context.update(&(field.len() as u64).to_be_bytes());
+            context.update(field.as_bytes());
+        }
+        Ok(context.sign().as_ref().to_vec())
     }
     pub fn load(path: &Path) -> Result<Self> {
         if !path.is_absolute()
@@ -288,7 +314,7 @@ impl Keyring {
                 return Err(Error::Internal);
             }
         }
-        let mut statement=connection.prepare("SELECT DISTINCT k.key_label,k.fingerprint FROM integration_credentials c JOIN integration_encryption_keys k ON k.id=c.key_id")?;
+        let mut statement=connection.prepare("SELECT DISTINCT k.key_label,k.fingerprint FROM integration_credentials c JOIN integration_encryption_keys k ON k.id=c.key_id UNION SELECT k.key_label,k.fingerprint FROM auth_email_outbox o JOIN integration_encryption_keys k ON k.id=o.key_id WHERE o.envelope IS NOT NULL UNION SELECT k.key_label,k.fingerprint FROM auth_otp_challenges c JOIN integration_encryption_keys k ON k.key_label=c.key_label WHERE c.state IN ('queued','sending','delivered') AND c.expires_at>unixepoch('now')")?;
         let identities = statement.query_map([], |r| {
             Ok((r.get::<_, String>(0)?, r.get::<_, Vec<u8>>(1)?))
         })?;
@@ -360,7 +386,7 @@ pub fn provision(path: &Path, connection: &Connection) -> Result<()> {
         return Ok(());
     }
     let stored: bool = connection.query_row(
-        "SELECT EXISTS(SELECT 1 FROM integration_credentials)",
+        "SELECT EXISTS(SELECT 1 FROM integration_encryption_keys) OR EXISTS(SELECT 1 FROM integration_credentials)",
         [],
         |r| r.get(0),
     )?;

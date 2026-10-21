@@ -13,7 +13,7 @@ use std::{
 use tokio::sync::Semaphore;
 
 pub(crate) const SCHEMA: &str = include_str!("../migrations/sqlite/000001_initial.sql");
-pub const SCHEMA_VERSION: u16 = 9;
+pub const SCHEMA_VERSION: u16 = 10;
 const SECOND_SCHEMA: &str = include_str!("../migrations/sqlite/000002_runtime_cleanup.sql");
 const OPERATIONS_SCHEMA: &str = include_str!("../migrations/sqlite/000003_operations.sql");
 const FINANCE_SCHEMA: &str = include_str!("../migrations/sqlite/000004_commercial_finance.sql");
@@ -34,6 +34,7 @@ const MIGRATIONS: &[&str] = &[
     REFRESH_SCHEMA,
     MCP_SCHEMA,
     FINANCIAL_INTELLIGENCE_SCHEMA,
+    include_str!("../migrations/sqlite/000010_email_otp.sql"),
 ];
 pub(crate) fn migration_records() -> Vec<(i64, String)> {
     MIGRATIONS

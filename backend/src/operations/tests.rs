@@ -5,16 +5,16 @@ fn input<T: serde::de::DeserializeOwned>(v: Value) -> T {
     validation::json(&serde_json::to_vec(&v).unwrap()).unwrap()
 }
 async fn staff_user(f: &Fixture, name: &str, brand: &str) -> Actor {
-    let user=administration::create_user(&f.auth,f.actor.clone(),input(json!({"email":format!("{name}@example.com"),"display_name":name,"password":"synthetic-password"}))).await.unwrap();
+    let user = administration::create_user(
+        &f.auth,
+        f.actor.clone(),
+        input(json!({"email":format!("{name}@example.com"),"display_name":name})),
+    )
+    .await
+    .unwrap();
     f.connection().execute("INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES (?1,?2,'00000000-0000-4000-8000-000000000006','client',?3,?4)",params![validation::new_id(),user.id,brand,validation::now()]).unwrap();
     f.auth
-        .login(
-            crate::auth::Login {
-                email: format!("{name}@example.com"),
-                password: "synthetic-password".into(),
-            },
-            crate::audit::request_id(),
-        )
+        .test_login(format!("{name}@example.com"), crate::audit::request_id())
         .await
         .unwrap()
         .session
@@ -620,8 +620,20 @@ async fn employee_template_has_no_finance_and_own_task_rights_are_record_scoped(
 async fn team_assignments_grant_only_scoped_operations_and_revoke_managed_access() {
     use super::team;
     let f = Fixture::new().await;
-    let leader=administration::create_user(&f.auth,f.actor.clone(),input(json!({"email":"leader@example.com","display_name":"Synthetic advertising leader","password":"synthetic-password"}))).await.unwrap();
-    let employee=administration::create_user(&f.auth,f.actor.clone(),input(json!({"email":"member@example.com","display_name":"Synthetic team member","password":"synthetic-password"}))).await.unwrap();
+    let leader = administration::create_user(
+        &f.auth,
+        f.actor.clone(),
+        input(json!({"email":"leader@example.com","display_name":"Synthetic advertising leader"})),
+    )
+    .await
+    .unwrap();
+    let employee = administration::create_user(
+        &f.auth,
+        f.actor.clone(),
+        input(json!({"email":"member@example.com","display_name":"Synthetic team member"})),
+    )
+    .await
+    .unwrap();
     let team_id = validation::new_id();
     let mut team = team::create(
         &f.db,
@@ -632,26 +644,14 @@ async fn team_assignments_grant_only_scoped_operations_and_revoke_managed_access
     .unwrap();
     let leader_actor = f
         .auth
-        .login(
-            crate::auth::Login {
-                email: "leader@example.com".into(),
-                password: "synthetic-password".into(),
-            },
-            crate::audit::request_id(),
-        )
+        .test_login("leader@example.com".into(), crate::audit::request_id())
         .await
         .unwrap()
         .session
         .actor;
     let member_actor = f
         .auth
-        .login(
-            crate::auth::Login {
-                email: "member@example.com".into(),
-                password: "synthetic-password".into(),
-            },
-            crate::audit::request_id(),
-        )
+        .test_login("member@example.com".into(), crate::audit::request_id())
         .await
         .unwrap()
         .session
@@ -757,7 +757,7 @@ async fn team_assignments_grant_only_scoped_operations_and_revoke_managed_access
             .unwrap()
     );
     assert_eq!(f.connection().query_row("SELECT count(*) FROM brand_staff_assignments WHERE user_id=?1 AND revoked_at IS NOT NULL",[employee.id],|r|r.get::<_,i64>(0)).unwrap(),1);
-    let next=administration::create_user(&f.auth,f.actor.clone(),input(json!({"email":"synthetic-next-leader@example.com","display_name":"Synthetic next leader","password":"synthetic-password"}))).await.unwrap();
+    let next=administration::create_user(&f.auth,f.actor.clone(),input(json!({"email":"synthetic-next-leader@example.com","display_name":"Synthetic next leader"}))).await.unwrap();
     let current = team::read(&f.db, f.actor.clone(), team_id.clone())
         .await
         .unwrap();

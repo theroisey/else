@@ -48,8 +48,16 @@ fn command(arguments: &[&str]) -> serde_json::Value {
     }
     reply(&mut BufReader::new(socket))
 }
+#[path = "smtp_fixture.inc"]
+mod smtp_fixture;
 fn main() {
     let action = std::env::args().nth(1).unwrap_or_else(|| "inspect".into());
+    if matches!(action.as_str(), "smtp" | "smtp-read") {
+        let root = std::env::args().nth(2).expect("owned fixture root");
+        let argument = std::env::args().nth(3).expect("fixture argument");
+        smtp_fixture::run(&action, std::path::Path::new(&root), &argument);
+        return;
+    }
     assert_eq!(
         fs::read_to_string("/proc/1/comm").unwrap().trim(),
         "roisey-else"

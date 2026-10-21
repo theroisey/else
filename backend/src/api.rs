@@ -1,6 +1,9 @@
 use crate::{
     activity, administration, audit_reader,
-    auth::{Auth, Login},
+    auth::{
+        Auth,
+        otp::{Otp, RequestCode, VerifyCode},
+    },
     billing, clients,
     config::Config,
     db::Database,
@@ -66,6 +69,7 @@ pub struct Api {
     pub config: Config,
     pub db: Database,
     pub auth: Auth,
+    pub otp: Otp,
     pub vault: crate::vault::Vault,
     pub synchronization: crate::synchronization::Synchronization,
     pub report_cache: crate::cache::ReportCache,
@@ -124,20 +128,72 @@ impl Api {
         }
         if route == ["auth", "login"] {
             no_query(&request)?;
+            return Err(Error::Response(
+                StatusCode::GONE,
+                "password_login_retired",
+                "Sign in using an email verification code.",
+            ));
+        }
+        if route == ["auth", "otp", "request"] || route == ["auth", "otp", "verify"] {
+            no_query(&request)?;
             if method != "POST" {
                 return Err(Error::Method("POST"));
             }
             if request.body.len() > 4096 {
                 return Err(Error::Invalid("invalid_request"));
             }
-            let input: Login = validation::json(&request.body)?;
-            self.auth.limit(&request.peer, &input.email)?;
-            let login = self.auth.login(input, request.request_id.clone()).await?;
+            if route[2] == "request" {
+                let input: RequestCode = validation::json(&request.body)?;
+                let nonce = cookie(&request.headers, self.config.otp_cookie())
+                    .filter(|v| {
+                        v.len() == 43
+                            && v.bytes()
+                                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
+                    })
+                    .unwrap_or_else(|| crate::auth::secret().0);
+                let challenge = self
+                    .otp
+                    .request(input, request.peer.clone(), &nonce)
+                    .await?;
+                let mut reply = Reply::data(202, challenge)?;
+                let secure = if self.config.secure_cookie {
+                    "; Secure"
+                } else {
+                    ""
+                };
+                reply.cookies.push(format!(
+                    "{}={nonce}; Path=/; Max-Age=900; HttpOnly; SameSite=Strict{secure}",
+                    self.config.otp_cookie()
+                ));
+                return Ok(reply);
+            }
+            let input: VerifyCode = validation::json(&request.body)?;
+            let nonce =
+                cookie(&request.headers, self.config.otp_cookie()).ok_or(Error::Unauthorized)?;
+            let login = self
+                .otp
+                .verify(
+                    input,
+                    request.peer.clone(),
+                    &nonce,
+                    request.request_id.clone(),
+                )
+                .await?;
+            let mut cookies = self.login_cookies(&login);
+            cookies.push(format!(
+                "{}=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict{}",
+                self.config.otp_cookie(),
+                if self.config.secure_cookie {
+                    "; Secure"
+                } else {
+                    ""
+                }
+            ));
             return Ok(Reply {
                 status: 200,
                 body: Some(login.session.document()),
                 binary: None,
-                cookies: self.login_cookies(&login),
+                cookies,
             });
         }
         if route == ["auth", "refresh"]

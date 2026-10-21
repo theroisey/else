@@ -1,3 +1,4 @@
+import { completeEmailSignIn } from './otp'
 import { test, expect } from '@playwright/test'
 import { database } from './database'
 import { buttonStyles } from '../src/components/ui/button-styles'
@@ -14,10 +15,7 @@ test('keeps long account titles, shared button contrast and keyboard focus usabl
   await page
     .getByLabel('Email', { exact: true })
     .fill('css.layout.owner.fixture@example.com')
-  await page
-    .getByLabel('Password', { exact: true })
-    .fill('clearly synthetic browser password')
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await completeEmailSignIn(page)
   await expect(
     page.getByRole('table', { name: 'User accounts', exact: true }),
   ).toBeVisible()

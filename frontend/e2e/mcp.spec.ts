@@ -1,3 +1,4 @@
+import { completeEmailSignIn } from './otp'
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { createHash, randomUUID } from 'node:crypto'
@@ -15,10 +16,7 @@ test.beforeAll(() => {
 async function login(page: Page, path: string) {
   await page.goto(path)
   await page.getByLabel('Email', { exact: true }).fill(email)
-  await page
-    .getByLabel('Password', { exact: true })
-    .fill('clearly synthetic browser password')
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await completeEmailSignIn(page)
   await expect(
     page.getByRole('navigation', { name: 'Application', exact: true }),
   ).toBeVisible()

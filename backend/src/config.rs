@@ -10,6 +10,8 @@ pub struct Config {
     pub key_file: PathBuf,
     pub key_provision: bool,
     pub key_restored: bool,
+    pub smtp: Option<crate::auth::mail::MailConfig>,
+    pub otp_policy: crate::auth::otp::Policy,
 }
 
 impl Config {
@@ -46,6 +48,7 @@ impl Config {
             || !(parsed.scheme() == "https"
                 || (parsed.scheme() == "http" && local && !secure_cookie))
             || (secure_cookie && parsed.scheme() != "https")
+            || (parsed.scheme() == "https" && !secure_cookie)
         {
             return Err("invalid_public_origin");
         }
@@ -75,6 +78,8 @@ impl Config {
         {
             return Err("integration_key_startup_failed");
         }
+        let smtp = crate::auth::mail::MailConfig::load(local && !secure_cookie)?;
+        let otp_policy = crate::auth::otp::Policy::load()?;
         Ok(Self {
             address,
             database,
@@ -84,7 +89,17 @@ impl Config {
             key_file,
             key_provision,
             key_restored,
+            smtp,
+            otp_policy,
         })
+    }
+
+    pub fn otp_cookie(&self) -> &'static str {
+        if self.secure_cookie {
+            "__Host-else_preauth"
+        } else {
+            "else_preauth"
+        }
     }
 
     pub fn session_cookie(&self) -> &'static str {

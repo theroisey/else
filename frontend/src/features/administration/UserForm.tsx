@@ -1,5 +1,5 @@
 import { copy, useLocale } from '../../i18n/index'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Button, Dialog, TextField } from '../../components/ui'
 import { useAdministration } from './hooks'
@@ -26,15 +26,12 @@ export function UserForm({
   const [reloadError, setReloadError] = useState('')
   const [reloading, setReloading] = useState(false)
   const busy = pending || reloading
-  const password = useRef<HTMLInputElement>(null)
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (busy) return
-    const secret = user ? undefined : (password.current?.value ?? '')
-    const invalid = profileErrors(email, name, secret)
+    const invalid = profileErrors(email, name)
     setErrors(invalid)
     if (Object.keys(invalid).length) return
-    if (password.current) password.current.value = ''
     const saved = await run(() =>
       user
         ? request(`/users/${user.id}`, {
@@ -50,7 +47,6 @@ export function UserForm({
             body: {
               email: email.trim().toLowerCase(),
               display_name: name.trim(),
-              password: secret,
             },
           }),
     )
@@ -92,7 +88,7 @@ export function UserForm({
               'administration',
             )
           : copy(
-              'New accounts start without roles. Passwords are cleared after submission.',
+              'New accounts start without roles and sign in with an email verification code.',
               'administration',
             )
       }
@@ -120,6 +116,15 @@ export function UserForm({
         <TextField
           label={copy('Email', 'administration')}
           type="email"
+          readOnly={Boolean(user)}
+          description={
+            user
+              ? copy(
+                  'Registered email changes require verified operator recovery.',
+                  'administration',
+                )
+              : ''
+          }
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -127,21 +132,6 @@ export function UserForm({
           error={copy(errors.email, 'administration') ?? ''}
           disabled={busy}
         />
-        {!user ? (
-          <TextField
-            ref={password}
-            label={copy('Initial password', 'administration')}
-            type="password"
-            autoComplete="new-password"
-            required
-            description={copy(
-              '12–128 bytes. Share through your approved secure channel.',
-              'administration',
-            )}
-            error={copy(errors.password, 'administration') ?? ''}
-            disabled={busy}
-          />
-        ) : null}
         {error ? (
           <p className="text-danger-ink" role="alert">
             {copy(error, 'administration')}

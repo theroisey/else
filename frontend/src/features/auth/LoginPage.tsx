@@ -1,6 +1,6 @@
 import { copy, useLocale } from '../../i18n/index'
 import { LanguageControl } from '../../i18n/LanguageControl'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { Brand } from '../../components/brand/Brand'
@@ -9,7 +9,9 @@ import { faArrowRightToBracket } from '@fortawesome/free-solid-svg-icons'
 import { Button, TextField } from '../../components/ui'
 import { safeReturnTo } from '../shell/navigation'
 import { useAuth } from './auth-context'
-import { AuthError } from './auth-service'
+import { isAccountEmail } from './email'
+import { AuthError, requestCode } from './auth-service'
+import type { OtpChallenge } from './auth-service'
 import { AuthPending, AuthUnavailable } from './AuthGuard'
 import { warmWorkspace } from '../../app/prefetch'
 
@@ -18,54 +20,113 @@ export function LoginPage() {
   const auth = useAuth()
   const location = useLocation()
   const emailRef = useRef<HTMLInputElement>(null)
-  const passwordRef = useRef<HTMLInputElement>(null)
-  const [errors, setErrors] = useState({ email: '', password: '' })
+  const codeRef = useRef<HTMLInputElement>(null)
+  const target = useRef('')
+  const active = useRef(false)
+  const [challenge, setChallenge] = useState<OtpChallenge | null>(null)
+  const [issued, setIssued] = useState(0)
+  const [now, setNow] = useState(0)
+  const [errors, setErrors] = useState({ email: '', code: '' })
+  const [maskedEmail, setMaskedEmail] = useState('')
   const [message, setMessage] = useState('')
   const [pending, setPending] = useState(false)
+  const remaining = challenge
+    ? Math.max(0, challenge.expires_in - Math.floor((now - issued) / 1000))
+    : 0
+  const cooldown = challenge
+    ? Math.max(0, challenge.resend_after - Math.floor((now - issued) / 1000))
+    : 0
+  useEffect(() => {
+    if (!challenge) return
+    codeRef.current?.focus()
+    const tick = window.setInterval(() => setNow(performance.now()), 1000)
+    return () => window.clearInterval(tick)
+  }, [challenge])
+  useEffect(
+    () => () => {
+      if (codeRef.current) codeRef.current.value = ''
+      target.current = ''
+    },
+    [],
+  )
 
   if (auth.status === 'checking') return <AuthPending />
   if (auth.status === 'unavailable') return <AuthUnavailable />
   if (auth.status === 'signed-in')
     return <Navigate to={safeReturnTo(location.state?.returnTo)} replace />
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (pending) return
-    const email = emailRef.current?.value ?? ''
-    const submittedPassword = passwordRef.current?.value ?? ''
-    const invalidEmail =
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-      email.trim().length > 254
-    const invalidPassword =
-      !submittedPassword ||
-      new TextEncoder().encode(submittedPassword).length > 128
-    setErrors({
-      email: invalidEmail ? 'Enter your email address.' : '',
-      password: invalidPassword
-        ? 'Enter a password of no more than 128 bytes.'
-        : '',
-    })
-    setMessage('')
-    if (invalidEmail || invalidPassword) {
-      if (invalidEmail) emailRef.current?.focus()
-      else passwordRef.current?.focus()
-      return
-    }
-    if (passwordRef.current) passwordRef.current.value = ''
+  function failure(error: unknown) {
+    setMessage(
+      error instanceof AuthError
+        ? error.message
+        : 'Unable to sign in. Try again.',
+    )
+  }
+  async function send(email: string) {
+    if (active.current) return
+    active.current = true
     setPending(true)
-    warmWorkspace(safeReturnTo(location.state?.returnTo))
+    setMessage('')
     try {
-      await auth.login(email.trim().toLowerCase(), submittedPassword)
+      const next = await requestCode(email)
+      target.current = email
+      setMaskedEmail(email.replace(/^(.).*(@.*)$/u, '$1•••$2'))
+      const time = performance.now()
+      setIssued(time)
+      setNow(time)
+      setChallenge(next)
+      if (codeRef.current) codeRef.current.value = ''
+      warmWorkspace(safeReturnTo(location.state?.returnTo))
     } catch (error) {
-      setMessage(
-        error instanceof AuthError
-          ? error.message
-          : 'Unable to sign in. Try again.',
-      )
-      window.requestAnimationFrame(() => passwordRef.current?.focus())
+      failure(error)
     } finally {
+      active.current = false
       setPending(false)
     }
+  }
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (active.current) return
+    setMessage('')
+    if (!challenge) {
+      const email = (emailRef.current?.value ?? '').trim().toLowerCase()
+      if (!isAccountEmail(email)) {
+        setErrors({ email: 'Enter your email address.', code: '' })
+        emailRef.current?.focus()
+        return
+      }
+      setErrors({ email: '', code: '' })
+      await send(email)
+      return
+    }
+    const code = codeRef.current?.value ?? ''
+    if (!/^[0-9]{6}$/.test(code)) {
+      setErrors({ email: '', code: 'Enter the six-digit verification code.' })
+      codeRef.current?.focus()
+      return
+    }
+    if (codeRef.current) codeRef.current.value = ''
+    setErrors({ email: '', code: '' })
+    active.current = true
+    setPending(true)
+    try {
+      await auth.verifyCode(challenge.challenge_id, code)
+    } catch (error) {
+      failure(error)
+      window.requestAnimationFrame(() => codeRef.current?.focus())
+    } finally {
+      active.current = false
+      setPending(false)
+    }
+  }
+  function anotherEmail() {
+    if (active.current) return
+    if (codeRef.current) codeRef.current.value = ''
+    setChallenge(null)
+    setMessage('')
+    setErrors({ email: '', code: '' })
+    target.current = ''
+    window.requestAnimationFrame(() => emailRef.current?.focus())
   }
 
   return (
@@ -95,10 +156,20 @@ export function LoginPage() {
             id="login-title"
             className="mt-3 text-3xl font-display font-normal tracking-tight"
           >
-            {copy('Sign in', 'auth')}
+            {copy(challenge ? 'Check your email' : 'Sign in', 'auth')}
           </h1>
           <p className="mt-3 leading-6 text-muted">
-            {copy('Use your Roisey Else account to continue.', 'auth')}
+            {copy(
+              challenge
+                ? 'If this address belongs to an active account, a verification code will arrive shortly.'
+                : 'Enter your registered email. We will send a single-use sign-in code.',
+              'auth',
+            )}
+            {challenge ? (
+              <span className="mt-2 block break-all font-medium text-foreground">
+                {maskedEmail}
+              </span>
+            ) : null}
           </p>
           {auth.expired ? (
             <p
@@ -116,26 +187,54 @@ export function LoginPage() {
             noValidate
             aria-busy={pending}
           >
-            <TextField
-              ref={emailRef}
-              label={copy('Email', 'auth')}
-              name="email"
-              type="email"
-              autoComplete="username"
-              required
-              error={copy(errors.email, 'auth')}
-              disabled={pending}
-            />
-            <TextField
-              ref={passwordRef}
-              label={copy('Password', 'auth')}
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              error={copy(errors.password, 'auth')}
-              disabled={pending}
-            />
+            {!challenge ? (
+              <TextField
+                ref={emailRef}
+                label={copy('Email', 'auth')}
+                name="email"
+                enterKeyHint="next"
+                type="email"
+                autoComplete="username"
+                maxLength={254}
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+                error={copy(errors.email, 'auth')}
+                disabled={pending}
+              />
+            ) : (
+              <>
+                <TextField
+                  ref={codeRef}
+                  label={copy('Verification code', 'auth')}
+                  name="code"
+                  enterKeyHint="go"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  spellCheck={false}
+                  className="text-center font-mono text-2xl tracking-[0.35em] tabular-nums"
+                  onInput={(event) => {
+                    event.currentTarget.value = event.currentTarget.value
+                      .replace(/[^0-9]/g, '')
+                      .slice(0, 6)
+                  }}
+                  error={copy(errors.code, 'auth')}
+                  disabled={pending}
+                />
+                <p className="text-xs text-muted" role="status" aria-live="off">
+                  {remaining
+                    ? `${copy('Code expires in', 'auth')} ${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`
+                    : copy(
+                        'Your code has expired. Request a new code.',
+                        'auth',
+                      )}
+                </p>
+              </>
+            )}
             {message ? (
               <p className="text-sm leading-6 text-danger-ink" role="alert">
                 {copy(message, 'auth')}
@@ -146,10 +245,45 @@ export function LoginPage() {
               variant="primary"
               icon={faArrowRightToBracket}
               loading={pending}
-              loadingLabel={copy('Signing in', 'auth')}
+              loadingLabel={copy(
+                challenge ? 'Verifying code…' : 'Sending code…',
+                'auth',
+              )}
+              disabled={Boolean(challenge && !remaining)}
             >
-              {copy('Sign in', 'auth')}
+              {copy(
+                challenge ? 'Verify and sign in' : 'Continue with email',
+                'auth',
+              )}
             </Button>
+            {challenge ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Button
+                  variant="ghost"
+                  disabled={pending || cooldown > 0}
+                  onClick={() => {
+                    void send(target.current)
+                  }}
+                >
+                  {cooldown
+                    ? `${copy('Resend code in', 'auth')} ${cooldown}s`
+                    : copy('Send a new code', 'auth')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={anotherEmail}
+                >
+                  {copy('Use another email', 'auth')}
+                </Button>
+              </div>
+            ) : null}
+            <p className="text-xs leading-6 text-muted">
+              {copy(
+                'No email? Check spam or contact your administrator. Never share your code.',
+                'auth',
+              )}
+            </p>
           </form>
         </section>
       </main>

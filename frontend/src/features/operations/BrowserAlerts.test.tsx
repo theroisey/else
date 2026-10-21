@@ -18,7 +18,7 @@ beforeEach(() => {
 })
 afterEach(() => { localStorage.clear() })
 function setup() {
-  render(<AuthContext value={{ status: 'signed-in', expired: false, session: { user: { id: actor, email: 'alerts.fixture@example.com', display_name: 'Synthetic alert reviewer', permissions: [] }, session: { expires_at: '2099-01-01T00:00:00Z' } }, login: vi.fn(), logout: vi.fn(), refresh: vi.fn() }}><BrowserAlerts /></AuthContext>)
+  render(<AuthContext value={{ status: 'signed-in', expired: false, session: { user: { id: actor, email: 'alerts.fixture@example.com', display_name: 'Synthetic alert reviewer', permissions: [] }, session: { expires_at: '2099-01-01T00:00:00Z' } }, verifyCode: vi.fn(), logout: vi.fn(), refresh: vi.fn() }}><BrowserAlerts /></AuthContext>)
 }
 it('asks for native permission only on a deliberate click and keeps per-account opt-in', async () => {
   setup()

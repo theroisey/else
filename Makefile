@@ -39,7 +39,7 @@ backend: redis-artifacts ## Run local Pingora on :8080 (use make frontend separa
 dev: frontend-build ## Build initial assets and run backend; make frontend adds HMR
 	$(MAKE) backend
 
-dev-bootstrap: ## Create the first local administrator with a private password prompt
+dev-bootstrap: ## Create the first local administrator without a password
 	DATABASE_PATH='$(DEV_DATA)/else.sqlite3' FRONTEND_DIRECTORY='$(CURDIR)/frontend/dist' AUTH_PUBLIC_ORIGIN='$(DEV_ORIGIN)' AUTH_COOKIE_SECURE=false $(PYTHON) tools/bootstrap.py -- $(CARGO) run --locked --bin roisey-else -- bootstrap
 
 backend-release: ## Compile static production binary; native musl tooling required
@@ -56,7 +56,7 @@ check-changed: ## Check affected local source; shared changes retain full tests
 	$(PYTHON) tools/check-changed.py
 
 test-http: frontend-build redis-artifacts ## Verify real Pingora HTTP and both shutdown signals
-	$(CARGO) build --locked --workspace
+	$(CARGO) build --locked --workspace --bin roisey-else --example runtime-fixture
 	$(PYTHON) backend/tests/http_smoke.py --binary $(CARGO_TARGET_DIR)/debug/roisey-else --frontend frontend/dist --signal TERM
 	$(PYTHON) backend/tests/http_smoke.py --binary $(CARGO_TARGET_DIR)/debug/roisey-else --frontend frontend/dist --signal INT
 
@@ -112,7 +112,7 @@ logs: ## Follow structured application logs
 migrate: ## Verify/apply additive SQLite migrations on the fixed data volume
 	$(COMPOSE) run --rm --no-deps else migrate
 
-bootstrap: ## Create the first administrator with a private password prompt
+bootstrap: ## Create the first administrator without a password
 	$(PYTHON) tools/bootstrap.py -- $(COMPOSE) run --rm --no-deps -T else bootstrap
 
 key-inventory: ## Read retained-key counts; actor attribution JSON on stdin

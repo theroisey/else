@@ -18,7 +18,7 @@ def docker(*args, **options):
 
 def run(image):
     results = []
-    for case in ("ownership", "control_readonly", "database", "keyring", "frontend"):
+    for case in ("ownership", "control_readonly", "database", "keyring", "frontend", "smtp_configuration", "otp_policy", "https_cookies"):
         identity = "else-startup-test-" + uuid.uuid4().hex
         created_volume = created_container = False
         try:
@@ -30,6 +30,12 @@ def run(image):
                 # storage. No service runs and no customer volume is selected.
                 docker("run", "--rm", "--name", identity + "-seed", "--network", "none", "--user", "999:999", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--mount", f"type=volume,src={identity},dst=/data", "--entrypoint", "/bin/sh", artifact, "-ec", "chmod 0700 /data\nprintf synthetic > /data/synthetic-marker", stdout=subprocess.DEVNULL, timeout=10)
             args = ["--name", identity, "-e", "AUTH_PUBLIC_ORIGIN=http://127.0.0.1:8080", "-e", "AUTH_COOKIE_SECURE=false", "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--mount", f"type=volume,src={identity},dst={DATA}" + (",readonly" if case == "control_readonly" else "")]
+            if case == "https_cookies":
+                args += ["-e","AUTH_PUBLIC_ORIGIN=https://signin.example.com"]
+            if case == "smtp_configuration":
+                args += ["-e","SMTP_HOST=smtp.example.com","-e","SMTP_SECURITY=none"]
+            if case == "otp_policy":
+                args += ["-e","AUTH_OTP_LIFETIME_SECONDS=0"]
             if case == "frontend":
                 args += ["-e", "FRONTEND_DIRECTORY=/synthetic-missing-frontend"]
             docker("create", *args, image, stdout=subprocess.DEVNULL)
@@ -62,7 +68,7 @@ def run(image):
             fields = [json.loads(line)["fields"] for line in (logs.stdout + logs.stderr).splitlines() if line.startswith('{')]
             failure = next(row for row in fields if row["message"] == "application_startup_failed")
             assert failure["error_code"] != "internal_error"
-            expected = {"ownership": "storage", "control_readonly": "control", "database": "database", "keyring": "keyring", "frontend": "frontend"}
+            expected = {"ownership": "storage", "control_readonly": "control", "database": "database", "keyring": "keyring", "frontend": "frontend", "smtp_configuration":"configuration", "otp_policy":"configuration", "https_cookies":"configuration"}
             assert failure["stage"] == expected[case], f"Incorrect startup stage: {failure}"
             if case == "ownership":
                 assert failure["owner_uid"] == 999 and failure["runtime_uid"] == 65532 and failure["directory_mode"] == "0700"
@@ -70,6 +76,8 @@ def run(image):
                 assert failure["operation"] == "create_directory" and failure["errno"] == 30
             if case in ("database", "keyring", "frontend"):
                 assert any(row["message"] == "embedded_redis_stopped" for row in fields), "Startup failure must stop/reap its child"
+            if case in ("smtp_configuration","otp_policy","https_cookies"):
+                assert not any(row["message"]=="embedded_redis_starting" for row in fields), "Unsafe authentication config must fail before starting dependencies"
             assert all(value not in (logs.stdout + logs.stderr) for value in ("synthetic invalid", "synthetic-marker", "synthetic-missing-frontend", "integration-keyring.json"))
             results.append({"case": case, "exit_code": 1, "diagnostic": failure})
         finally:

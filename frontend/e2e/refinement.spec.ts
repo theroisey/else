@@ -1,3 +1,4 @@
+import { completeEmailSignIn } from './otp'
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { database } from './database'
@@ -14,8 +15,7 @@ test.beforeAll(() => {
 async function login(page: Page, email = 'refinement.owner.fixture@example.com', path = '/app/settings') {
   await page.goto(path)
   await page.getByLabel('Email', { exact: true }).fill(email)
-  await page.getByLabel('Password', { exact: true }).fill('clearly synthetic browser password')
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await completeEmailSignIn(page)
   await expect(page.getByRole('navigation', { name: 'Application', exact: true })).toBeVisible()
 }
 

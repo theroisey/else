@@ -1,7 +1,6 @@
 {
   " · Requires global control": " · Necesită control global",
   " · Unavailable at this scope": " · Indisponibil în acest domeniu",
-  "12–128 bytes. Share through your approved secure channel.": "12–128 de octeți. Partajați prin canalul securizat aprobat.",
   "Access assignments": "Atribuiri de acces",
   "Account": "Cont",
   "Account created. Assign roles to grant access.": "Cont creat. Atribuiți roluri pentru a acorda acces.",
@@ -54,7 +53,6 @@
   "Global": "Global",
   "Global assignments cover all clients. Client assignments grant only the role’s client permissions at the exact client scope.": "Atribuirile globale acoperă toți clienții. Atribuirile de client acordă doar permisiunile de client ale rolului, strict pentru clientul ales.",
   "Grant this role to {{value1}} {{value2}}. Review the scope before confirming.": "Acordați acest rol pentru {{value1}} {{value2}}. Verificați domeniul înainte de confirmare.",
-  "Initial password": "Parolă inițială",
   "Invalid account response": "Răspuns de cont nevalid",
   "Invalid administration response.": "Răspuns administrativ nevalid.",
   "Last sign-in": "Ultima autentificare",
@@ -65,7 +63,6 @@
   "Loading users…": "Se încarcă utilizatorii…",
   "Manage account profiles, access assignments and account status.": "Gestionați profilurile conturilor, atribuirile de acces și starea conturilor.",
   "Never": "Niciodată",
-  "New accounts start without roles. Passwords are cleared after submission.": "Conturile noi încep fără roluri. Parolele sunt șterse după trimitere.",
   "Next": "Următor",
   "No active role assignments on this page.": "Nicio atribuire activă de rol pe această pagină.",
   "No roles on this page": "Niciun rol pe această pagină",
@@ -112,7 +109,6 @@
   "Update this account’s profile. Its access and status are managed separately.": "Actualizați profilul acestui cont. Accesul și starea se gestionează separat.",
   "Use 1–100 characters without control characters.": "Folosiți 1–100 de caractere fără caractere de control.",
   "Use a name of 1–100 characters and select at least one permission you control globally.": "Folosiți un nume de 1–100 de caractere și selectați cel puțin o permisiune pe care o controlați global.",
-  "Use a password of 12–128 bytes.": "Folosiți o parolă de 12–128 de octeți.",
   "User accounts": "Conturi de utilizator",
   "Users": "Utilizatori",
   "View only": "Doar vizualizare",
@@ -198,5 +194,7 @@
   "Record audited customer payment reversals": "Înregistrează stornările plăților clienților cu istoric de audit",
   "Read recurring task schedules": "Consultă programările sarcinilor recurente",
   "Manage recurring task schedules": "Gestionează programările sarcinilor recurente",
-  "Manage operational settings": "Gestionează setările operaționale"
+  "Manage operational settings": "Gestionează setările operaționale",
+  "New accounts start without roles and sign in with an email verification code.": "Conturile noi nu au roluri atribuite și se conectează printr-un cod de verificare trimis prin e-mail.",
+  "Registered email changes require verified operator recovery.": "Schimbarea e-mailului înregistrat necesită recuperare verificată de către operator."
 }

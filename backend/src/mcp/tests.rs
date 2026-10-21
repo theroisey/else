@@ -13,6 +13,8 @@ fn config(f: &Fixture) -> Config {
         key_file: f.directory.path().join("key.json"),
         key_provision: true,
         key_restored: false,
+        smtp: None,
+        otp_policy: Default::default(),
     }
 }
 fn query(value: Value) -> Query {
@@ -274,6 +276,12 @@ fn api(f: &Fixture) -> crate::api::Api {
         config: config(f),
         db: f.db.clone(),
         auth: f.auth.clone(),
+        otp: crate::auth::otp::Otp {
+            db: f.db.clone(),
+            ring: ring.clone(),
+            policy: Default::default(),
+            enabled: false,
+        },
         vault: vault.clone(),
         synchronization: crate::synchronization::Synchronization::new(f.db.clone(), vault, ring),
         report_cache: Default::default(),
@@ -696,17 +704,11 @@ async fn separate_employee_and_developer_mcp_identities_preserve_delivery_review
         Some(f.client.clone()),
     )
     .await;
-    let user = crate::administration::create_user(&f.auth, owner.clone(), crate::validation::json(br#"{"email":"mcp-employee@example.com","display_name":"Synthetic advertising employee","password":"synthetic-password"}"#).unwrap()).await.unwrap();
+    let user = crate::administration::create_user(&f.auth, owner.clone(), crate::validation::json(br#"{"email":"mcp-employee@example.com","display_name":"Synthetic advertising employee"}"#).unwrap()).await.unwrap();
     f.connection().execute("INSERT INTO user_roles(id,user_id,role_id,scope_kind,client_id,assigned_at) VALUES (?1,?2,'00000000-0000-4000-8000-000000000006','client',?3,?4)", rusqlite::params![crate::validation::new_id(), user.id, f.client, crate::validation::now()]).unwrap();
     f.actor = f
         .auth
-        .login(
-            crate::auth::Login {
-                email: "mcp-employee@example.com".into(),
-                password: "synthetic-password".into(),
-            },
-            audit::request_id(),
-        )
+        .test_login("mcp-employee@example.com".into(), audit::request_id())
         .await
         .unwrap()
         .session

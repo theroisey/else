@@ -26,7 +26,7 @@ pub async fn inventory(db: &Database, actor: Actor, ring: Keyring) -> Result<Vec
         ring.preflight(tx,false,false)?;let active=ring.active().0;
         let mut counts=Vec::new();
         for (index,(label,digest)) in ring.identities().into_iter().enumerate() {
-            let total:i64=tx.query_row("SELECT count(*) FROM integration_credentials s JOIN integration_encryption_keys k ON k.id=s.key_id WHERE k.key_label=?1 AND k.fingerprint=?2",params![label,digest.as_slice()],|r|r.get(0))?;
+            let total:i64=tx.query_row("SELECT (SELECT count(*) FROM integration_credentials s JOIN integration_encryption_keys k ON k.id=s.key_id WHERE k.key_label=?1 AND k.fingerprint=?2)+(SELECT count(*) FROM auth_otp_challenges c WHERE c.key_label=?1 AND c.state IN ('queued','sending','delivered') AND c.expires_at>unixepoch('now'))",params![label,digest.as_slice()],|r|r.get(0))?;
             let eligible:i64=if label==active {0}else{tx.query_row("SELECT count(*) FROM integration_credentials s JOIN integration_encryption_keys k ON k.id=s.key_id JOIN integration_connections c ON c.id=s.connection_id JOIN clients a ON a.id=c.client_id WHERE k.key_label=?1 AND k.fingerprint=?2 AND s.generation=c.generation AND a.archived_at IS NULL AND c.state IN ('pending','connected','reauthorization_required')",params![label,digest.as_slice()],|r|r.get(0))?};
             counts.push(Count{position:index+1,active:label==active,stored_rows:total.to_string(),eligible_rows:eligible.to_string(),excluded_rows:(total-eligible).to_string()});
         }Ok(counts)

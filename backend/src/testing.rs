@@ -1,12 +1,5 @@
 //! Disposable synthetic fixtures; never compiled into the application.
-use crate::{
-    audit,
-    auth::{Auth, Login},
-    clients,
-    db::Database,
-    security::Actor,
-    validation,
-};
+use crate::{audit, auth::Auth, clients, db::Database, security::Actor, validation};
 use std::os::unix::fs::PermissionsExt;
 
 pub struct Fixture {
@@ -25,21 +18,11 @@ impl Fixture {
         std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
         let db = Database::open(&directory.path().join("else.sqlite3"), true).unwrap();
         let auth = Auth::new(db.clone()).unwrap();
-        auth.bootstrap(
-            "admin@example.com".into(),
-            "Synthetic administrator".into(),
-            "synthetic-password".into(),
-        )
-        .await
-        .unwrap();
+        auth.bootstrap("admin@example.com".into(), "Synthetic administrator".into())
+            .await
+            .unwrap();
         let actor = auth
-            .login(
-                Login {
-                    email: "admin@example.com".into(),
-                    password: "synthetic-password".into(),
-                },
-                audit::request_id(),
-            )
+            .test_login("admin@example.com".into(), audit::request_id())
             .await
             .unwrap()
             .session

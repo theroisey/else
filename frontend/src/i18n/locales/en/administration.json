@@ -1,7 +1,6 @@
 {
   " · Requires global control": " · Requires global control",
   " · Unavailable at this scope": " · Unavailable at this scope",
-  "12–128 bytes. Share through your approved secure channel.": "12–128 bytes. Share through your approved secure channel.",
   "Access assignments": "Access assignments",
   "Account": "Account",
   "Account created. Assign roles to grant access.": "Account created. Assign roles to grant access.",
@@ -54,7 +53,6 @@
   "Global": "Global",
   "Global assignments cover all clients. Client assignments grant only the role’s client permissions at the exact client scope.": "Global assignments cover all clients. Client assignments grant only the role’s client permissions at the exact client scope.",
   "Grant this role to {{value1}} {{value2}}. Review the scope before confirming.": "Grant this role to {{value1}} {{value2}}. Review the scope before confirming.",
-  "Initial password": "Initial password",
   "Invalid account response": "Invalid account response",
   "Invalid administration response.": "Invalid administration response.",
   "Last sign-in": "Last sign-in",
@@ -65,7 +63,6 @@
   "Loading users…": "Loading users…",
   "Manage account profiles, access assignments and account status.": "Manage account profiles, access assignments and account status.",
   "Never": "Never",
-  "New accounts start without roles. Passwords are cleared after submission.": "New accounts start without roles. Passwords are cleared after submission.",
   "Next": "Next",
   "No active role assignments on this page.": "No active role assignments on this page.",
   "No roles on this page": "No roles on this page",
@@ -112,7 +109,6 @@
   "Update this account’s profile. Its access and status are managed separately.": "Update this account’s profile. Its access and status are managed separately.",
   "Use 1–100 characters without control characters.": "Use 1–100 characters without control characters.",
   "Use a name of 1–100 characters and select at least one permission you control globally.": "Use a name of 1–100 characters and select at least one permission you control globally.",
-  "Use a password of 12–128 bytes.": "Use a password of 12–128 bytes.",
   "User accounts": "User accounts",
   "Users": "Users",
   "View only": "View only",
@@ -198,5 +194,7 @@
   "Record audited customer payment reversals": "Record audited customer payment reversals",
   "Read recurring task schedules": "Read recurring task schedules",
   "Manage recurring task schedules": "Manage recurring task schedules",
-  "Manage operational settings": "Manage operational settings"
+  "Manage operational settings": "Manage operational settings",
+  "New accounts start without roles and sign in with an email verification code.": "New accounts start without roles and sign in with an email verification code.",
+  "Registered email changes require verified operator recovery.": "Registered email changes require verified operator recovery."
 }

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Exercise the compiled Pingora process with disposable synthetic data."""
 import argparse
+import sys
+sys.path.insert(0,str(__import__("pathlib").Path(__file__).resolve().parents[2]/"tools"))
+from otp_fixture import MailFixture
 import gzip
 import http.cookiejar
 import json
@@ -23,11 +26,13 @@ def run(binary: Path, frontend: Path, stop_signal: int) -> None:
             selection.bind(("127.0.0.1", 0))
             port = selection.getsockname()[1]
         origin = f"http://127.0.0.1:{port}"
+        mail=MailFixture().start()
         environment = os.environ.copy()
+        environment.update(mail.environment)
         for key in ("INTEGRATION_KEYRING_FILE", "INTEGRATION_KEYRING_MODE"):
             environment.pop(key, None)
         environment.update(HTTP_ADDRESS=f"127.0.0.1:{port}", DATABASE_PATH=str(directory / "else.sqlite3"), FRONTEND_DIRECTORY=str(frontend), AUTH_PUBLIC_ORIGIN=origin, AUTH_COOKIE_SECURE="false")
-        bootstrap = {"email": "smoke@example.com", "display_name": "Synthetic operator", "password": "synthetic-smoke-password"}
+        bootstrap = {"email": "smoke@example.com", "display_name": "Synthetic operator"}
         result = subprocess.run([str(binary), "bootstrap"], input=json.dumps(bootstrap), text=True, env=environment, capture_output=True, timeout=15)
         assert result.returncode == 0, "bootstrap failed"
         cookies = http.cookiejar.CookieJar()
@@ -37,7 +42,8 @@ def run(binary: Path, frontend: Path, stop_signal: int) -> None:
             headers = dict(extra or {})
             data = None if payload is None else json.dumps(payload).encode()
             if payload is not None:
-                headers.update({"Content-Type": "application/json", "Origin": origin})
+                headers.setdefault("Content-Type", "application/json")
+                headers.setdefault("Origin", origin)
                 if csrf:
                     token = next((c.value for c in cookies if c.name == "else_csrf"), "")
                     if token:
@@ -89,11 +95,34 @@ def run(binary: Path, frontend: Path, stop_signal: int) -> None:
                         assert empty == b"" and conditional["Vary"] == "Accept-Encoding"
                     empty, head = request(path, "HEAD")
                     assert empty == b"" and int(head["Content-Length"]) == len(value)
-                login, headers = request("/api/v1/auth/login", "POST", {"email": bootstrap["email"], "password": bootstrap["password"]})
+                request("/api/v1/auth/login", "POST", {"email":bootstrap["email"],"password":"retired-synthetic-password"},expected=410)
+                unknown,_=request("/api/v1/auth/otp/request","POST",{"email":"unknown.fixture@example.com"},expected=202)
+                assert set(unknown["data"])=={"challenge_id","expires_in","resend_after"}
+                assert not any(cookie.name in ("else_session","else_refresh") for cookie in cookies)
+                request("/api/v1/auth/otp/request","POST",{"email":"unknown.fixture@example.com"},expected=429)
+                for invalid_email in ["bad","@example.com","double..dot@example.com"]:
+                    request("/api/v1/auth/otp/request","POST",{"email":invalid_email},expected=400)
+                request("/api/v1/auth/otp/request","POST",{"email":bootstrap["email"],"password":"rejected-extra-field"},expected=400)
+                request("/api/v1/auth/otp/request","POST",{"email":bootstrap["email"]},expected=403,extra={"Origin":"https://attacker.example"})
+                request("/api/v1/auth/otp/request","POST",{"email":bootstrap["email"]},expected=415,extra={"Content-Type":"text/plain"})
+                request("/api/v1/auth/otp/request","POST",{"email":"x"*5000},expected=400)
+                challenge,_=request("/api/v1/auth/otp/request","POST",{"email":bootstrap["email"]},expected=202)
+                assert set(challenge["data"])==set(unknown["data"])
+                assert challenge["data"]["expires_in"]==unknown["data"]["expires_in"]==180
+                code=mail.code(bootstrap["email"])
+                nonce=next(cookie.value for cookie in cookies if cookie.name=="else_preauth")
+                request("/api/v1/auth/otp/verify","POST",{"challenge_id":challenge["data"]["challenge_id"],"code":code},expected=401,extra={"Cookie":"else_preauth="+"A"*43})
+                request("/api/v1/auth/otp/verify","POST",{"challenge_id":challenge["data"]["challenge_id"],"code":f"{(int(code)+1)%1000000:06d}"},expected=401)
+                login,headers=request("/api/v1/auth/otp/verify","POST",{"challenge_id":challenge["data"]["challenge_id"],"code":code})
                 assert login["data"]["user"]["email"] == bootstrap["email"]
-                assert len(headers.get_all("Set-Cookie")) == 3
+                assert len(headers.get_all("Set-Cookie")) == 4
                 assert all("SameSite=Strict" in value for value in headers.get_all("Set-Cookie"))
                 request("/api/v1/auth/session")
+                request("/api/v1/auth/otp/verify","POST",{"challenge_id":challenge["data"]["challenge_id"],"code":code},expected=401,extra={"Cookie":"else_preauth="+nonce})
+                request("/api/v1/auth/session")
+                request("/api/v1/users/"+login["data"]["user"]["id"],"PATCH",{"email":"unverified@example.com","display_name":"Synthetic operator","expected_revision":1},expected=409)
+                unchanged,_=request("/api/v1/users/"+login["data"]["user"]["id"])
+                assert unchanged["data"]["email"]==bootstrap["email"]
                 client, _ = request("/api/v1/clients", "POST", {"name": "Synthetic private client"}, 201)
                 root = "/api/v1/clients/" + client["data"]["id"]
                 request(root + "/tasks", "POST", {"title": "Synthetic attention", "due_at": "2020-01-01T00:00:00Z"}, 201)
@@ -161,7 +190,8 @@ def run(binary: Path, frontend: Path, stop_signal: int) -> None:
                     process.kill()
                     process.wait(timeout=5)
         log = (directory / "server.log").read_text()
-        for private in (bootstrap["password"], "Synthetic private", "synthetic.example.com", "synthetic.invalid", "ck_" + "a" * 40, "cs_" + "b" * 40, "123456", "key_base64"):
+        mail.close()
+        for private in ("retired-synthetic-password", bootstrap["email"], "Synthetic private", "synthetic.example.com", "synthetic.invalid", "ck_" + "a" * 40, "cs_" + "b" * 40, "123456", "key_base64"):
             assert private not in log, "private input leaked to server logs"
         assert (directory / ".control/integration-keyring.json").stat().st_mode & 0o777 == 0o400
         assert (directory / "else.sqlite3").stat().st_mode & 0o777 == 0o600

@@ -9,7 +9,7 @@ publish = false
 aes-gcm = "0.10.3"
 libc = "0.2"
 zeroize = "1.8"
-argon2 = "0.5.3"
+lettre = { version = "=0.11.23", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls", "ring", "rustls-native-certs"] }
 async-trait = "0.1"
 base64 = "0.22"
 bytes = "1"

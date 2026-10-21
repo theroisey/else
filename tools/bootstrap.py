@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Prompt for first-admin credentials without command-line secrets or saved files."""
-import getpass
+"""Prompt for first-admin identity without command-line secrets or saved files."""
 import json
 import subprocess
 import sys
@@ -12,10 +11,7 @@ def main():
     if sys.stdin.isatty():
         email = input("Administrator email: ").strip()
         display_name = input("Display name: ").strip()
-        password = getpass.getpass("Password (at least 12 characters): ")
-        if password != getpass.getpass("Confirm password: "):
-            raise SystemExit("Passwords differ; no administrator was created.")
-        data = json.dumps({"email": email, "display_name": display_name, "password": password}).encode()
+        data = json.dumps({"email": email, "display_name": display_name}).encode()
     else:
         data = sys.stdin.buffer.read(4097)
     if len(data) > 4096:

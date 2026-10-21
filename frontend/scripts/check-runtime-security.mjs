@@ -138,9 +138,11 @@ try {
   }
   stage = 'real failed-login response'
   await page.getByLabel('Email', { exact: true }).fill('csp.synthetic@example.com')
-  await page.getByLabel('Password', { exact: true }).fill('clearly synthetic failed password')
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await expect(page.getByRole('alert')).toHaveText('Email or password is incorrect.')
+
+  await page.getByRole('button', { name: 'Continue with email', exact: true }).click()
+  await page.getByLabel('Verification code',{exact:true}).fill('000000')
+  await page.getByRole('button',{name:'Verify and sign in',exact:true}).click()
+  await expect(page.getByRole('alert')).toHaveText('The code is incorrect or no longer available. Request a new code if needed.')
   stage = 'real API readiness'
   assert.equal(await page.evaluate(async () => (await fetch('/ready')).status), 200)
   stage = 'legitimate UI without CSP violations'

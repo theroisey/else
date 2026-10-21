@@ -23,7 +23,6 @@ it('uses same-origin credentials, CSRF and bounded cursor requests without arbit
     body: {
       email: 'synthetic@example.com',
       display_name: 'Synthetic',
-      password: 'synthetic test password',
     },
   })
   expect(fetcher).toHaveBeenCalledWith(
@@ -81,7 +80,7 @@ it('rejects malformed responses and exposes safe error messages instead of serve
 })
 
 it('matches identity validation and refuses global escalation from a client grant', () => {
-  expect(profileErrors('valid@example.com', 'Valid', 'short')).toHaveProperty('password')
+  expect(profileErrors('valid@example.com', 'Valid')).toEqual({})
   expect(profileErrors('bad', 'Name\ncontrol')).toMatchObject({
     email: expect.any(String),
     name: expect.any(String),

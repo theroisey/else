@@ -1,3 +1,4 @@
+import { completeEmailSignIn } from './otp'
 import { database } from './database'
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
@@ -15,10 +16,7 @@ async function login(page: Page, path = '/app/clients') {
   await page
     .getByLabel('Email', { exact: true })
     .fill('websites.browser.fixture@example.com')
-  await page
-    .getByLabel('Password', { exact: true })
-    .fill('clearly synthetic browser password')
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await completeEmailSignIn(page)
   await expect(
     page.getByRole('navigation', { name: 'Application' }),
   ).toBeVisible()

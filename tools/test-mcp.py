@@ -3,6 +3,7 @@
 Only explicitly owned disposable storage is created. No provider/production data.
 """
 import argparse
+from otp_fixture import MailFixture
 import base64
 import concurrent.futures
 from datetime import datetime, timezone
@@ -49,6 +50,8 @@ def docker(*args, **kw):
     return subprocess.run([os.environ.get('DOCKER', 'docker'), *args], check=True, **kw)
 
 def run(args):
+    if args.benchmark_output and not args.image:
+        raise SystemExit("Cache benchmarks require an explicitly owned disposable image container (--image).")
     with tempfile.TemporaryDirectory(prefix='else-browser-mcp-') as temporary:
         directory = Path(temporary)
         directory.chmod(0o700)
@@ -57,15 +60,18 @@ def run(args):
             selected.bind(('127.0.0.1', 0))
             port = selected.getsockname()[1]
         origin = f'http://127.0.0.1:{port}'
+        mail=MailFixture(container_mode=bool(args.image))
         environment = os.environ.copy()
+        environment.update(mail.environment)
         for key in ('INTEGRATION_KEYRING_FILE', 'INTEGRATION_KEYRING_MODE'):
             environment.pop(key, None)
         environment.update(HTTP_ADDRESS=f'127.0.0.1:{port}', DATABASE_PATH=str(directory/'else.sqlite3'), FRONTEND_DIRECTORY=str(args.frontend.resolve()), AUTH_PUBLIC_ORIGIN=origin, AUTH_COOKIE_SECURE='false')
-        bootstrap = {'email':'mcp-test@example.com','display_name':'Synthetic MCP owner','password':'synthetic-mcp-test-password'}
+        bootstrap = {'email':'mcp-test@example.com','display_name':'Synthetic MCP owner'}
         container = None
         volume = None
         process = None
         common = ['--read-only','--tmpfs','/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777','--cap-drop=ALL','--security-opt=no-new-privileges','--memory=256m','--cpus=2','-e','AUTH_PUBLIC_ORIGIN='+origin,'-e','AUTH_COOKIE_SECURE=false']
+        common += [item for key,value in mail.environment.items() for item in ("-e",key+"="+value)]
         try:
             if args.image:
                 suffix = uuid.uuid4().hex
@@ -85,6 +91,7 @@ def run(args):
                     subprocess.run([str(args.fixture.resolve())],input=report_fixture(),text=True,env=seed_env,check=True,capture_output=True,timeout=20)
                 log=(directory/'server.log').open('wb')
                 process=subprocess.Popen([str(args.binary.resolve()),'serve'],env=environment,stdout=log,stderr=subprocess.STDOUT)
+            mail.start(container, "/testdata")
             cookies=http.cookiejar.CookieJar()
             browser=urllib.request.build_opener(urllib.request.ProxyHandler({}),urllib.request.HTTPCookieProcessor(cookies),NoRedirect())
             machine=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
@@ -121,7 +128,8 @@ def run(args):
                 except (urllib.error.URLError,TimeoutError,ConnectionResetError):
                     assert time.monotonic()<deadline,'MCP test server readiness failed'
                     time.sleep(.05)
-            request('/api/v1/auth/login','POST',{'email':bootstrap['email'],'password':bootstrap['password']},authenticated=True)
+            challenge,_=request('/api/v1/auth/otp/request','POST',{'email':bootstrap['email']},expected=202,authenticated=True)
+            request('/api/v1/auth/otp/verify','POST',{'challenge_id':challenge['data']['challenge_id'],'code':mail.code(bootstrap['email'])},authenticated=True)
             api=lambda path,method='GET',payload=None,expected=200:request('/api/v1/'+path,method,payload,expected,authenticated=True)[0]
             client=REPORT_CLIENT if args.benchmark_output else api('clients','POST',{'name':'Synthetic MCP client'},201)['data']['id']
             other=api('clients','POST',{'name':'Unrelated synthetic client'},201)['data']['id']
@@ -203,24 +211,13 @@ def run(args):
                 for n in range(35):
                     api(f'clients/{client}/tasks','POST',{'title':f'Synthetic workload {n+1}'},201)
                 def usage():
-                    if process:
-                        try:
-                            stat=Path(f'/proc/{process.pid}/stat').read_text().split()
-                            status_text=Path(f'/proc/{process.pid}/status').read_text()
-                            memory=next(int(line.split()[1])*1024 for line in status_text.splitlines() if line.startswith('VmHWM:'))
-                            return {'cpu_seconds':(int(stat[13])+int(stat[14]))/os.sysconf('SC_CLK_TCK'),'peak_rss_bytes':memory}
-                        except (OSError,StopIteration):
-                            return None
+                    assert container and container.startswith('else-mcp-test-')
                     raw=docker('exec',container,'/runtime-fixture','process-usage',capture_output=True,text=True).stdout
                     return json.loads(raw)
                 def evict():
-                    if container:
-                        docker('exec',container,'/runtime-fixture','cache-flush',stdout=subprocess.DEVNULL)
-                    else:
-                        # The owned native server refuses startup when another Redis owns this port.
-                        with socket.create_connection(('127.0.0.1',6379),timeout=2) as sock:
-                            sock.sendall(b'*2\r\n$7\r\nFLUSHDB\r\n$4\r\nSYNC\r\n')
-                            assert sock.recv(128)==b'+OK\r\n'
+                    # Cache mutation is confined to this harness's generated disposable container.
+                    assert container and container.startswith('else-mcp-test-')
+                    docker('exec',container,'/runtime-fixture','cache-flush',stdout=subprocess.DEVNULL)
                 report_args={'client_id':client,'id':REPORT_CONNECTION,'provider':'meta_ads','from':'2026-10-01','to':'2026-10-06'}
                 measured_result=rpc('tools/call',{'name':'else_analytics_report','arguments':report_args})['result']
                 assert measured_result.get('isError') is not True, 'Synthetic stored analytics fixture failed: '+measured_result.get('structuredContent',{}).get('data',{}).get('error',{}).get('code','malformed_result')
@@ -299,6 +296,7 @@ def run(args):
             rpc('ping',credentials=renewed,expected=401)
             print('Native MCP/OAuth HTTP, scoped records, refresh replay, retained mutation and independent-client checks passed'+(' against the actual image.' if args.image else '.'))
         finally:
+            mail.close()
             if process and process.poll() is None:
                 process.send_signal(signal.SIGTERM)
                 try:

@@ -26,6 +26,9 @@ use std::{
 pub(crate) const TABLES: &[&str] = &[
     "users",
     "sessions",
+    "auth_otp_challenges",
+    "auth_otp_rate_events",
+    "auth_email_outbox",
     "session_refresh_tokens",
     "permissions",
     "roles",
@@ -246,6 +249,11 @@ pub fn restore(bundle: &Path, database: &Path, key_file: &Path) -> Result<()> {
             "UPDATE mcp_approvals SET state='revoked',decided_at=?1 WHERE state='pending'",
             [&now],
         )?;
+        tx.execute("UPDATE auth_otp_challenges SET state='invalidated' WHERE state IN ('queued','sending','delivered')",[])?;
+        tx.execute(
+            "UPDATE auth_email_outbox SET state='failed',envelope=NULL WHERE envelope IS NOT NULL",
+            [],
+        )?;
         tx.commit()?;
     }
     if verify(&mut target, &Keyring::parse(&fresh)?)? != counts {
@@ -382,6 +390,31 @@ pub(crate) fn verify(connection: &mut Connection, ring: &Keyring) -> Result<BTre
         return Err(Error::Internal);
     }
     ring.preflight(&tx, false, false)?;
+    {
+        let mut statement=tx.prepare("SELECT o.user_id,o.challenge_id,o.envelope,k.key_label,k.reservations FROM auth_email_outbox o JOIN integration_encryption_keys k ON k.id=o.key_id WHERE o.envelope IS NOT NULL")?;
+        let mut rows = statement.query([])?;
+        while let Some(row) = rows.next()? {
+            let user: String = row.get(0)?;
+            let id: String = row.get(1)?;
+            let raw: Vec<u8> = row.get(2)?;
+            let label: String = row.get(3)?;
+            if row.get::<_, i64>(4)? < 1 || raw.get(2..2 + label.len()) != Some(label.as_bytes()) {
+                return Err(Error::Internal);
+            }
+            let plain = ring.open(
+                &crate::auth::otp::binding(&user, &id),
+                &Envelope::parse(raw)?,
+            )?;
+            let payload: crate::auth::mail::Payload =
+                serde_json::from_slice(&plain).map_err(|_| Error::Internal)?;
+            if validation::email(&payload.email).is_err()
+                || payload.code.len() != 6
+                || !payload.code.bytes().all(|b| b.is_ascii_digit())
+            {
+                return Err(Error::Internal);
+            }
+        }
+    }
     let mut credentials=tx.prepare("SELECT c.client_id,c.id,c.provider,s.purpose,s.envelope,s.generation,c.generation,k.key_label,k.reservations FROM integration_connections c JOIN integration_credentials s ON s.connection_id=c.id JOIN integration_encryption_keys k ON k.id=s.key_id")?;
     let mut rows = credentials.query([])?;
     while let Some(row) = rows.next()? {

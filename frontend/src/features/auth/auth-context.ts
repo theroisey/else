@@ -5,7 +5,7 @@ export interface AuthState {
   status: 'checking' | 'signed-in' | 'signed-out' | 'unavailable'
   session: Session | null
   expired: boolean
-  login: (email: string, password: string) => Promise<void>
+  verifyCode: (challengeId: string, code: string) => Promise<void>
   logout: () => Promise<void>
   refresh: () => Promise<void>
 }

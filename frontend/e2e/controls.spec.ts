@@ -1,3 +1,4 @@
+import { completeEmailSignIn } from './otp'
 import { test, expect } from '@playwright/test'
 
 test('keeps translated client filters aligned, keyboard usable and bounded in both themes', async ({
@@ -8,10 +9,7 @@ test('keeps translated client filters aligned, keyboard usable and bounded in bo
   await page
     .getByLabel('Email', { exact: true })
     .fill('admin.fixture@example.com')
-  await page
-    .getByLabel('Password', { exact: true })
-    .fill('clearly synthetic browser password')
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await completeEmailSignIn(page)
   const filters = page.locator('.clients-filters')
   await expect(filters).toBeVisible()
   const search = filters.locator('input[type="search"]')

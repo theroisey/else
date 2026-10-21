@@ -72,15 +72,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Renew through the server before deciding the authenticated session ended.
         void client.refetchQueries({ queryKey: sessionKey })
       },
-      Math.min(2_147_483_647, Math.max(0, Date.parse(session.session.expires_at) - Date.now())),
+      Math.min(
+        2_147_483_647,
+        Math.max(0, Date.parse(session.session.expires_at) - Date.now()),
+      ),
     )
     return () => window.clearTimeout(timer)
   }, [client, session])
 
-  async function login(email: string, password: string) {
-    // Avoid placing passwords in a mutation cache or browser persistence.
+  async function verifyCode(challengeId: string, code: string) {
+    // Avoid placing verification codes in a mutation cache or browser persistence.
     await client.cancelQueries({ queryKey: sessionKey })
-    const identity = await service.login(email, password)
+    const identity = await service.verifyCode(challengeId, code)
     await client.cancelQueries()
     client.removeQueries({
       predicate: (entry) => entry.queryKey[0] !== 'auth',
@@ -110,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               : 'signed-out',
         session,
         expired: query.data?.expired ?? false,
-        login,
+        verifyCode,
         logout,
         refresh: async () => {
           await query.refetch()

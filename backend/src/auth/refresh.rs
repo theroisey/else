@@ -100,18 +100,11 @@ mod tests {
         auth.bootstrap(
             "refresh.fixture@example.com".into(),
             "Synthetic refresh owner".into(),
-            "synthetic-password".into(),
         )
         .await
         .unwrap();
         let login = auth
-            .login(
-                Login {
-                    email: "refresh.fixture@example.com".into(),
-                    password: "synthetic-password".into(),
-                },
-                audit::request_id(),
-            )
+            .test_login("refresh.fixture@example.com".into(), audit::request_id())
             .await
             .unwrap();
         (directory, auth, login)
@@ -298,13 +291,7 @@ mod tests {
             .is_err()
         );
         let second = auth
-            .login(
-                Login {
-                    email: "refresh.fixture@example.com".into(),
-                    password: "synthetic-password".into(),
-                },
-                audit::request_id(),
-            )
+            .test_login("refresh.fixture@example.com".into(), audit::request_id())
             .await
             .unwrap();
         conn.execute(

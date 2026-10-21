@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium } from '@playwright/test'
+import { completeEmailSignIn } from './otp-fixture.mjs'
 
 const origin = process.env.AUTH_TEST_ORIGIN
 const directory = process.env.AUTH_TEST_DIRECTORY
@@ -182,10 +183,7 @@ try {
                 ? 'browser.fixture@example.com'
                 : 'admin.fixture@example.com',
             )
-          await page
-            .locator('input[type="password"]')
-            .fill('clearly synthetic browser password')
-          await page.locator('button[type="submit"]').click()
+          await completeEmailSignIn(page)
           await page
             .getByRole('heading', { name: 'Today', exact: true })
             .waitFor()

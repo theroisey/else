@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise prebuilt React assets through native Pingora with private synthetic SQLite."""
 import argparse
+import json
 import os
 from pathlib import Path
 import shutil
@@ -12,6 +13,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+from otp_fixture import MailFixture
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -22,7 +24,7 @@ def docker(*args, **kwargs):
 
 def run(args):
     if not args.no_build:
-        subprocess.run([os.environ.get("CARGO", "cargo"), "build", "--locked", "--bin", "roisey-else", "--example", "browser-fixture"], cwd=ROOT, check=True)
+        subprocess.run([os.environ.get("CARGO", "cargo"), "build", "--locked", "--bin", "roisey-else", "--example", "browser-fixture", "--example", "runtime-fixture"], cwd=ROOT, check=True)
         subprocess.run(["make", "frontend-build", "redis-artifacts"], cwd=ROOT, check=True)
     binary = args.binary.resolve()
     fixture = args.fixture_binary.resolve()
@@ -36,7 +38,9 @@ def run(args):
             selected.bind(("127.0.0.1", 0))
             port = selected.getsockname()[1]
         origin = f"http://127.0.0.1:{port}"
+        mail=MailFixture(container_mode=bool(args.image))
         env = os.environ.copy()
+        env.update(mail.environment)
         for key in ("INTEGRATION_KEYRING_FILE", "INTEGRATION_KEYRING_MODE"):
             env.pop(key, None)
         env.update(AUTH_TEST_DIRECTORY=temporary, AUTH_TEST_FIXTURE_BINARY=str(fixture), AUTH_TEST_ORIGIN=origin,
@@ -53,15 +57,25 @@ def run(args):
                        "--user", f"{os.getuid()}:{os.getgid()}", "--memory=256m", "--cpus=2",
                        "--publish", f"127.0.0.1:{port}:8080", "--mount", f"type=bind,src={directory},dst=/testdata",
                        "-e", "DATABASE_PATH=/testdata/else.sqlite3", "-e", "AUTH_PUBLIC_ORIGIN=" + origin,
+                       *[item for key,value in mail.environment.items() for item in ("-e",key+"="+value)],
                        "-e", "AUTH_COOKIE_SECURE=false", args.image, stdout=subprocess.DEVNULL)
                 process = None
             else:
                 process = subprocess.Popen([str(binary), "serve"], env=env, stdout=log, stderr=subprocess.STDOUT)
             try:
+                mail.start(container, "/testdata")
+                env.update(AUTH_TEST_MAIL_ROOT=str(mail.path),AUTH_TEST_MAIL_CONTAINER=container or "",AUTH_TEST_MAIL_BINARY=str(mail.binary))
                 deadline = time.monotonic() + 20
                 while True:
                     stopped = (docker("inspect", "--format", "{{.State.Running}}", container, capture_output=True, text=True).stdout.strip() != "true") if container else process.poll() is not None
                     if stopped:
+                        for line in (directory/"server.log").read_text().splitlines():
+                            try:
+                                fields=json.loads(line).get("fields",{})
+                                if fields.get("error_code"):
+                                    print(json.dumps({key:fields[key] for key in ("stage","error_code","operation","error_kind","errno") if key in fields}))
+                            except json.JSONDecodeError:
+                                pass
                         raise SystemExit("Disposable Pingora browser server exited during startup.")
                     try:
                         with urllib.request.urlopen(origin + "/ready", timeout=2) as response:
@@ -82,6 +96,7 @@ def run(args):
                 if not args.performance_output:
                     subprocess.run([node, str(ROOT / "frontend/scripts/check-public-cache.mjs"), origin], cwd=ROOT, env=env, check=True)
             finally:
+                mail.close()
                 if container:
                     try:
                         if docker("inspect", "--format", "{{.State.Running}}", container, capture_output=True, text=True).stdout.strip() == "true":

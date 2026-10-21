@@ -1,3 +1,4 @@
+import { isAccountEmail } from '../auth/email'
 import { isRecord, isUUID } from '../auth/session'
 import type { Grant } from '../auth/session'
 import { hasPermission, permissionScope } from '../auth/permissions'
@@ -206,26 +207,14 @@ export function canAssign(
     )
   )
 }
-export function profileErrors(email: string, name: string, password?: string) {
+export function profileErrors(email: string, name: string) {
   const errors: Record<string, string> = {}
-  if (
-    !/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(
-      email.trim().toLowerCase(),
-    ) ||
-    email.trim().length > 254
-  )
-    errors.email = 'Enter a valid email address.'
+  if (!isAccountEmail(email)) errors.email = 'Enter a valid email address.'
   if (
     !name.trim() ||
     [...name.trim()].length > 100 ||
     /[\p{Cc}]/u.test(name.trim())
   )
     errors.name = 'Use 1–100 characters without control characters.'
-  if (
-    password !== undefined &&
-    (new TextEncoder().encode(password).length < 12 ||
-      new TextEncoder().encode(password).length > 128)
-  )
-    errors.password = 'Use a password of 12–128 bytes.'
   return errors
 }

@@ -1,7 +1,6 @@
 {
   " · Requires global control": " · Nécessite un contrôle global",
   " · Unavailable at this scope": " · Indisponible dans ce périmètre",
-  "12–128 bytes. Share through your approved secure channel.": "12–128 octets. Partagez via votre canal sécurisé approuvé.",
   "Access assignments": "Attributions d’accès",
   "Account": "Compte",
   "Account created. Assign roles to grant access.": "Compte créé. Attribuez des rôles pour accorder des accès.",
@@ -54,7 +53,6 @@
   "Global": "Global",
   "Global assignments cover all clients. Client assignments grant only the role’s client permissions at the exact client scope.": "Les attributions globales couvrent tous les clients. Les attributions de client accordent uniquement les permissions client du rôle pour le client exact.",
   "Grant this role to {{value1}} {{value2}}. Review the scope before confirming.": "Accordez ce rôle à {{value1}} {{value2}}. Vérifiez le périmètre avant de confirmer.",
-  "Initial password": "Mot de passe initial",
   "Invalid account response": "Réponse de compte non valide",
   "Invalid administration response.": "Réponse d’administration non valide.",
   "Last sign-in": "Dernière connexion",
@@ -65,7 +63,6 @@
   "Loading users…": "Chargement des utilisateurs…",
   "Manage account profiles, access assignments and account status.": "Gérez les profils des comptes, les attributions d’accès et le statut des comptes.",
   "Never": "Jamais",
-  "New accounts start without roles. Passwords are cleared after submission.": "Les nouveaux comptes commencent sans rôles. Les mots de passe sont effacés après l’envoi.",
   "Next": "Suivant",
   "No active role assignments on this page.": "Aucune attribution de rôle active sur cette page.",
   "No roles on this page": "Aucun rôle sur cette page",
@@ -112,7 +109,6 @@
   "Update this account’s profile. Its access and status are managed separately.": "Mettez à jour le profil de ce compte. Ses accès et son statut sont gérés séparément.",
   "Use 1–100 characters without control characters.": "Utilisez de 1 à 100 caractères sans caractères de contrôle.",
   "Use a name of 1–100 characters and select at least one permission you control globally.": "Utilisez un nom de 1 à 100 caractères et sélectionnez au moins une permission que vous contrôlez globalement.",
-  "Use a password of 12–128 bytes.": "Utilisez un mot de passe de 12–128 octets.",
   "User accounts": "Comptes utilisateurs",
   "Users": "Utilisateurs",
   "View only": "Consultation seule",
@@ -198,5 +194,7 @@
   "Record audited customer payment reversals": "Enregistrer les annulations de paiements clients avec une trace d’audit",
   "Read recurring task schedules": "Consulter les plannings des tâches récurrentes",
   "Manage recurring task schedules": "Gérer les plannings des tâches récurrentes",
-  "Manage operational settings": "Gérer les paramètres opérationnels"
+  "Manage operational settings": "Gérer les paramètres opérationnels",
+  "New accounts start without roles and sign in with an email verification code.": "Les nouveaux comptes n’ont aucun rôle et se connectent avec un code de vérification par e-mail.",
+  "Registered email changes require verified operator recovery.": "La modification de l’e-mail enregistré nécessite une récupération vérifiée par l’opérateur."
 }

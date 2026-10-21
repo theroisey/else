@@ -48,17 +48,16 @@ pub async fn user(db: &Database, actor: Actor, id: String) -> Result<Value> {
 pub struct NewUser {
     email: String,
     display_name: String,
-    password: String,
 }
 
 pub async fn create_user(auth: &Auth, actor: Actor, input: NewUser) -> Result<Mutation> {
-    let email = validation::email(&input.email)?;
+    let email = crate::auth::email(&input.email)?;
     let name = validation::text(&input.display_name, 100, true, false)?;
     let check = actor.clone();
     auth.db
         .read(move |tx| security::require(tx, &check, "users.manage", None))
         .await?;
-    let hash = auth.hash(input.password).await?;
+    let hash = "!passwordless";
     auth.db.write(move |tx| {
         security::require(tx,&actor,"users.manage",None)?;
         let id=validation::new_id();let now=validation::now();
@@ -83,10 +82,15 @@ pub async fn update_user(
     id: String,
     input: UserProfile,
 ) -> Result<Mutation> {
-    let email = validation::email(&input.email)?;
+    let email = crate::auth::email(&input.email)?;
     let name = validation::text(&input.display_name, 100, true, false)?;
     db.write(move |tx| {
         security::require(tx, &actor, "users.manage", None)?;
+        let current_email: String =
+            tx.query_row("SELECT email FROM users WHERE id=?1", [&id], |r| r.get(0))?;
+        if current_email != email {
+            return Err(Error::Conflict("email_recovery_required"));
+        }
         let (previous, status): (i64, String) = tx.query_row(
             "SELECT revision,status FROM users WHERE id=?1",
             [&id],
@@ -147,6 +151,7 @@ pub async fn disable_user(
             "UPDATE sessions SET revoked_at=?1 WHERE user_id=?2 AND revoked_at IS NULL",
             params![now, id],
         )?;
+        crate::auth::otp::invalidate(tx, &id)?;
         if had_admin {
             security::preserve_administrator(tx)?;
         }
@@ -396,7 +401,7 @@ fn has_administrator(tx: &Transaction<'_>) -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{auth::Login, testing::Fixture};
+    use crate::testing::Fixture;
 
     #[tokio::test]
     async fn scoped_grants_never_escalate_and_recovery_authority_survives() {
@@ -407,7 +412,6 @@ mod tests {
             NewUser {
                 email: "scoped@example.com".into(),
                 display_name: "Synthetic scoped identity".into(),
-                password: "synthetic-password".into(),
             },
         )
         .await
@@ -437,13 +441,7 @@ mod tests {
         .unwrap();
         let login = f
             .auth
-            .login(
-                Login {
-                    email: "scoped@example.com".into(),
-                    password: "synthetic-password".into(),
-                },
-                audit::request_id(),
-            )
+            .test_login("scoped@example.com".into(), audit::request_id())
             .await
             .unwrap();
         assert!(
@@ -524,4 +522,65 @@ mod tests {
             Err(Error::Conflict("system_role"))
         ));
     }
+}
+
+/// Trusted host-only recovery; actor ID is attribution, never operator authentication.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecoverEmail {
+    pub actor_id: String,
+    pub user_id: String,
+    pub email: String,
+    pub expected_revision: i64,
+    pub confirm: bool,
+}
+pub async fn recover_email(db: &Database, input: RecoverEmail) -> Result<Mutation> {
+    if !input.confirm {
+        return Err(Error::Invalid("confirmation_required"));
+    }
+    let actor = Actor::operator(input.actor_id)?;
+    let id = validation::id(&input.user_id)?;
+    let email = crate::auth::email(&input.email)?;
+    db.write(move |tx| {
+        security::require(tx, &actor, "users.manage", None)?;
+        security::require(tx, &actor, "roles.manage", None)?;
+        let (previous, status, old): (i64, String, String) = tx.query_row(
+            "SELECT revision,status,email FROM users WHERE id=?1",
+            [&id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )?;
+        let revision = next_revision(previous, input.expected_revision)?;
+        if old == email {
+            return Err(Error::Conflict("conflict"));
+        }
+        let now = validation::now();
+        tx.execute(
+            "UPDATE users SET email=?1,revision=?2,updated_at=?3 WHERE id=?4",
+            params![email, revision, now, id],
+        )?;
+        tx.execute(
+            "UPDATE sessions SET revoked_at=?1 WHERE user_id=?2 AND revoked_at IS NULL",
+            params![now, id],
+        )?;
+        crate::auth::otp::invalidate(tx, &id)?;
+        // Recovery also revokes delegated OAuth access, not merely browser cookies.
+        tx.execute(
+            "UPDATE mcp_grants SET revoked_at=?1 WHERE user_id=?2 AND revoked_at IS NULL",
+            params![now, id],
+        )?;
+        audit::mutation(
+            tx,
+            &actor,
+            "user",
+            &id,
+            None,
+            "updated",
+            (
+                Some(user_snapshot(previous, &status)),
+                user_snapshot(revision, &status),
+            ),
+        )?;
+        Ok(Mutation { id, revision })
+    })
+    .await
 }

@@ -1,7 +1,6 @@
 {
   " · Requires global control": " · Genel denetim gerektirir",
   " · Unavailable at this scope": " · Bu kapsamda kullanılamıyor",
-  "12–128 bytes. Share through your approved secure channel.": "12–128 bayt. Onaylı güvenli kanalınız üzerinden paylaşın.",
   "Access assignments": "Erişim atamaları",
   "Account": "Hesap",
   "Account created. Assign roles to grant access.": "Hesap oluşturuldu. Erişim vermek için roller atayın.",
@@ -54,7 +53,6 @@
   "Global": "Genel",
   "Global assignments cover all clients. Client assignments grant only the role’s client permissions at the exact client scope.": "Genel atamalar tüm müşterileri kapsar. Müşteri atamaları yalnızca rolün müşteri izinlerini tam müşteri kapsamında verir.",
   "Grant this role to {{value1}} {{value2}}. Review the scope before confirming.": "Bu rolü {{value1}} {{value2}} için atayın. Onaylamadan önce kapsamı inceleyin.",
-  "Initial password": "İlk parola",
   "Invalid account response": "Hesap yanıtı geçersiz",
   "Invalid administration response.": "Yönetim yanıtı geçersiz.",
   "Last sign-in": "Son oturum açma",
@@ -65,7 +63,6 @@
   "Loading users…": "Kullanıcılar yükleniyor…",
   "Manage account profiles, access assignments and account status.": "Hesap profillerini, erişim atamalarını ve hesap durumunu yönetin.",
   "Never": "Hiçbir zaman",
-  "New accounts start without roles. Passwords are cleared after submission.": "Yeni hesaplar rolsüz başlar. Parolalar gönderimden sonra temizlenir.",
   "Next": "Sonraki",
   "No active role assignments on this page.": "Bu sayfada etkin rol ataması yok.",
   "No roles on this page": "Bu sayfada rol yok",
@@ -112,7 +109,6 @@
   "Update this account’s profile. Its access and status are managed separately.": "Bu hesabın profilini güncelleyin. Erişimi ve durumu ayrı yönetilir.",
   "Use 1–100 characters without control characters.": "Kontrol karakterleri olmadan 1–100 karakter kullanın.",
   "Use a name of 1–100 characters and select at least one permission you control globally.": "1–100 karakterlik bir ad kullanın ve genel olarak denetlediğiniz en az bir izin seçin.",
-  "Use a password of 12–128 bytes.": "12–128 bayt uzunluğunda bir parola kullanın.",
   "User accounts": "Kullanıcı hesapları",
   "Users": "Kullanıcılar",
   "View only": "Yalnızca görüntüleme",
@@ -198,5 +194,7 @@
   "Record audited customer payment reversals": "Müşteri ödeme iadelerini denetim kaydıyla kaydet",
   "Read recurring task schedules": "Tekrarlayan görev planlarını görüntüle",
   "Manage recurring task schedules": "Tekrarlayan görev planlarını yönet",
-  "Manage operational settings": "Operasyon ayarlarını yönet"
+  "Manage operational settings": "Operasyon ayarlarını yönet",
+  "New accounts start without roles and sign in with an email verification code.": "Yeni hesaplar rol atanmadan oluşturulur ve e-posta doğrulama koduyla giriş yapar.",
+  "Registered email changes require verified operator recovery.": "Kayıtlı e-posta değişikliği, operatörün doğrulanmış kurtarma işlemini gerektirir."
 }

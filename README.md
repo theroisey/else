@@ -72,7 +72,7 @@ make up
 make bootstrap
 ```
 
-The bootstrap command privately prompts for the first administrator's email, display name, and password. It works once on an empty installation. Open [http://localhost:8080](http://localhost:8080) and sign in. There is no preset password or demo account.
+The bootstrap command prompts for the first administrator's registered email and display name, without a password. It works once on an empty installation. Configure verified SMTP delivery before sign-in; then open [http://localhost:8080](http://localhost:8080), enter your email and paste the six-digit code. There is no public registration or password fallback. See [passwordless setup and recovery](notes/authentication.md).
 
 If access to the repository or container package is private, authenticate your Git and Docker clients first. Docker registry authentication belongs to the host; the application does not need a GitHub token.
 
@@ -196,6 +196,8 @@ No public application license has been declared. Third-party dependency and font
 
 Use the question icon in the header for a short guide to the current section. Settings includes Light/Dark/System appearance and optional browser alerts. Alerts require browser permission and an open panel (background tabs are supported); private details remain inside the application. No closed-browser push provider is required.
 
-New sign-ins receive rotating, HttpOnly refresh cookies with a fixed seven-day limit. Access sessions retain their twelve-hour lifetime, renew automatically while authorized, and end on logout, account disablement, expiry or detected token reuse. Legacy sessions are not silently upgraded. Schema 8 is additive; take a verified checkpoint after upgrading and use a schema-compatible artifact for rollback. No production database reset is involved.
+Sign-in now uses a six-digit email verification code for existing active accounts. Codes expire after three minutes, can be used once, and can be resent after one minute. Check spam or contact an administrator if delivery fails; never share a code. Mailbox access is the authentication factor, so email OTP is not phishing-resistant. New accounts need no password. Existing valid sessions remain valid and current permissions still apply. Schema 10 adds private challenges, durable abuse limits and an encrypted temporary SMTP outbox; existing identities, roles and business records are preserved. The old password endpoint is retired.
+
+New sign-ins receive rotating, HttpOnly refresh cookies with a fixed seven-day limit. Access sessions retain their twelve-hour lifetime, renew automatically while authorized, and end on logout, account disablement, expiry or detected token reuse. Legacy sessions are not silently upgraded. Schema 10 is additive; take a verified checkpoint before upgrading and a new checkpoint afterward, and use a schema-compatible artifact for rollback. No production database reset is involved.
 
 Production serves a small application entry with route and locale chunks, separate CSS/fonts and the small pre-paint theme script. For day-to-day development, `make check-changed` runs source-impact checks; the full `make check` and image/browser gates remain required before release.

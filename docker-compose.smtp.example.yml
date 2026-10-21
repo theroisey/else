@@ -1,0 +1,14 @@
+# Optional overlay for the SAME service/image. Store the source secret in a
+# protected private file readable by UID 65532; Compose file-backed secrets do
+# not reliably remap uid/gid/mode. Never commit the source file.
+# docker compose -f docker-compose.yml -f docker-compose.smtp.example.yml up -d
+services:
+  else:
+    environment:
+      SMTP_PASSWORD_FILE: /run/secrets/smtp_password
+      SMTP_PASSWORD: ''
+    secrets:
+      - smtp_password
+secrets:
+  smtp_password:
+    file: ${SMTP_PASSWORD_HOST_FILE:?Set an absolute protected SMTP password file}

@@ -13,7 +13,7 @@ import * as service from './auth-service'
 
 vi.mock('./auth-service', () => ({
   currentSession: vi.fn(),
-  login: vi.fn(),
+  verifyCode: vi.fn(),
   logout: vi.fn(),
 }))
 vi.mock('../../i18n/preferences', () => ({

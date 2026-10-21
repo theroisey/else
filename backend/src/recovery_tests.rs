@@ -17,6 +17,22 @@ async fn online_backup_and_fresh_key_restore_preserve_finance_identity_history_a
     crate::credentials::provision(&key_file, &f.connection()).unwrap();
     let ring = Keyring::load(&key_file).unwrap();
     let vault = Vault::new(f.db.clone(), ring.clone());
+    let otp = crate::auth::otp::Otp {
+        db: f.db.clone(),
+        ring: ring.clone(),
+        policy: Default::default(),
+        enabled: true,
+    };
+    let challenge = otp
+        .request(
+            crate::auth::otp::RequestCode {
+                email: "admin@example.com".into(),
+            },
+            "recovery-fixture".into(),
+            &crate::auth::secret().0,
+        )
+        .await
+        .unwrap();
     let id = integrations::create(
         &f.db,
         f.actor.clone(),
@@ -114,6 +130,36 @@ async fn online_backup_and_fresh_key_restore_preserve_finance_identity_history_a
     let counts = verify(&mut captured, &ring).unwrap();
     let mut restored = db::connection(&target).unwrap();
     assert_eq!(verify(&mut restored, &restored_ring).unwrap(), counts);
+    assert_eq!(
+        restored
+            .query_row::<String, _, _>(
+                "SELECT state FROM auth_otp_challenges WHERE id=?1",
+                [&challenge.challenge_id],
+                |r| r.get(0)
+            )
+            .unwrap(),
+        "invalidated"
+    );
+    assert_eq!(
+        restored
+            .query_row::<i64, _, _>(
+                "SELECT count(*) FROM auth_email_outbox WHERE envelope IS NOT NULL",
+                [],
+                |r| r.get(0)
+            )
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        captured
+            .query_row::<i64, _, _>(
+                "SELECT count(*) FROM auth_email_outbox WHERE envelope IS NOT NULL",
+                [],
+                |r| r.get(0)
+            )
+            .unwrap(),
+        1
+    );
     restored_ring.preflight(&restored, true, true).unwrap();
     let database = db::Database::open(&target, true).unwrap();
     assert_eq!(

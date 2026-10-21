@@ -1,3 +1,4 @@
+import { completeEmailSignIn } from './otp'
 import { test, expect, type Page } from '@playwright/test'
 import { database } from './database'
 const client = 'f9111111-1111-4111-8111-111111111111',
@@ -13,10 +14,7 @@ async function login(page: Page) {
   await page
     .getByLabel('Email', { exact: true })
     .fill('financial.owner.fixture@example.com')
-  await page
-    .getByLabel('Password', { exact: true })
-    .fill('clearly synthetic browser password')
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await completeEmailSignIn(page)
   await expect(
     page.getByRole('heading', { name: 'Financial Dashboard', exact: true }),
   ).toBeVisible()

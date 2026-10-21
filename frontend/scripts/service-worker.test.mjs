@@ -154,6 +154,9 @@ test('preserves the original network Request and serves verified public code fro
   )
   for (const url of [
     '/api/v1/auth/session',
+    '/api/v1/auth/otp/request',
+    '/api/v1/auth/otp/verify',
+    '/api/v1/auth/refresh',
     '/login',
     '/app/clients',
     '/startup.js',
@@ -165,6 +168,9 @@ test('preserves the original network Request and serves verified public code fro
       await f.dispatch('fetch', new Request(new URL(url, origin))),
       undefined,
     )
+  }
+  for (const route of ['/api/v1/auth/otp/request', '/api/v1/auth/otp/verify']) {
+    assert.equal(await f.dispatch('fetch', new Request(origin+route, {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})), undefined)
   }
   assert.equal(
     await f.dispatch(

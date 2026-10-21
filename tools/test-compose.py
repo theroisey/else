@@ -14,6 +14,7 @@ import urllib.error
 import urllib.request
 import uuid
 import runtime_fixture
+from otp_fixture import MailFixture
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = "/var/lib/roisey-else"
@@ -29,6 +30,7 @@ def main(image, evidence):
     origin = f"http://127.0.0.1:{port}"
     environment.update(APP_PORT=str(port), AUTH_PUBLIC_ORIGIN=origin, AUTH_COOKIE_SECURE="false")
     docker = os.environ.get("DOCKER", "docker")
+    mail=MailFixture(container_mode=True)
     created = False
     with tempfile.TemporaryDirectory(prefix=identity) as temporary:
         env_file = Path(temporary) / "empty.env"
@@ -39,7 +41,7 @@ def main(image, evidence):
 
         def isolated(volume, container):
             # Fixture-only names/image; the production file has no selection knobs.
-            override.write_text(json.dumps({"services": {"else": {"image": image, "container_name": container}}, "volumes": {"else_data": {"name": volume}}}))
+            override.write_text(json.dumps({"services": {"else": {"image": image, "container_name": container,"environment":mail.environment}}, "volumes": {"else_data": {"name": volume}}}))
 
         def compose(*arguments, **kwargs):
             return subprocess.run([*command, *arguments], cwd=ROOT, env=environment, check=True, **kwargs)
@@ -99,9 +101,12 @@ def main(image, evidence):
             subprocess.run([docker, "cp", identity + ":" + DATA + "/else.sqlite3", str(Path(temporary) / "fresh.sqlite3")], check=True, stdout=subprocess.DEVNULL)
             runtime_fixture.install(identity)
             runtime = runtime_fixture.inspect(identity)
-            login = {"email": "compose.synthetic@example.com", "display_name": "Synthetic operator", "password": "synthetic compose password"}
+            login = {"email": "compose.synthetic@example.com", "display_name": "Synthetic operator"}
             workflow("bootstrap", input=json.dumps(login), text=True, stdout=subprocess.DEVNULL)
-            actor = request("/api/v1/auth/login", {key: login[key] for key in ("email", "password")})["data"]["user"]["id"]
+            mail.start(identity)
+            challenge=request("/api/v1/auth/otp/request",{"email":login["email"]},202)
+            otp_code=mail.code(login["email"])
+            actor=request("/api/v1/auth/otp/verify",{"challenge_id":challenge["data"]["challenge_id"],"code":otp_code})["data"]["user"]["id"]
             client = request("/api/v1/clients", {"name": "Synthetic retained Compose account"}, 201)["data"]["id"]
             inventory = workflow("key-inventory", input=json.dumps({"actor_id": actor}), text=True, capture_output=True)
             counts = json.loads(inventory.stdout.splitlines()[-1])
@@ -131,7 +136,7 @@ def main(image, evidence):
             sequence = [row["message"] for row in fields]
             expected_sequence = ["application_starting", "data_directory_ready", "embedded_redis_starting", "embedded_redis_ready", "database_ready", "migrations_ready", "keyring_ready", "frontend_ready", "server_listening"]
             assert sequence[:len(expected_sequence)] == expected_sequence
-            assert all(value not in (logs.stdout + logs.stderr) for value in (login["password"], "Synthetic retained Compose account", "key_base64"))
+            assert all(value not in (logs.stdout + logs.stderr) for value in (otp_code, "Synthetic retained Compose account", "key_base64"))
             compose("up", "--detach", "--force-recreate", "--wait", "--wait-timeout", "60", stdout=subprocess.DEVNULL)
             assert request("/api/v1/clients/" + client)["data"]["name"] == "Synthetic retained Compose account"
             workflow("backup", "BACKUP_NAME=verified", stdout=subprocess.DEVNULL)

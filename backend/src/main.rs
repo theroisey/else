@@ -57,7 +57,7 @@ fn run() -> Result<(), Failure> {
     }
     if command == "help" {
         println!(
-            "Roisey Else: serve | health | migrate | bootstrap | backup | restore | key-inventory | rotate-credentials\nBootstrap and key operations read bounded JSON from stdin. Backup/restore use BACKUP_DIRECTORY."
+            "Roisey Else: serve | health | migrate | bootstrap | backup | restore | key-inventory | rotate-credentials | recover-email\nBootstrap and key operations read bounded JSON from stdin. Backup/restore use BACKUP_DIRECTORY."
         );
         return Ok(());
     }
@@ -76,7 +76,13 @@ fn run() -> Result<(), Failure> {
     }
     if !matches!(
         command,
-        "serve" | "migrate" | "bootstrap" | "backup" | "key-inventory" | "rotate-credentials"
+        "serve"
+            | "migrate"
+            | "bootstrap"
+            | "backup"
+            | "recover-email"
+            | "key-inventory"
+            | "rotate-credentials"
     ) {
         return Err(Failure::new("configuration", "invalid_command"));
     }
@@ -98,8 +104,10 @@ fn run() -> Result<(), Failure> {
         println!("Database and retained keys backed up and verified.");
         return Ok(());
     }
-    if matches!(command, "key-inventory" | "rotate-credentials")
-        && config.database.symlink_metadata().is_err()
+    if matches!(
+        command,
+        "key-inventory" | "rotate-credentials" | "recover-email"
+    ) && config.database.symlink_metadata().is_err()
     {
         return Err(Failure::from("database_unavailable"));
     }
@@ -111,13 +119,33 @@ fn run() -> Result<(), Failure> {
         println!("Database migrations verified.");
         return Ok(());
     }
+    if command == "recover-email" {
+        let mut raw = zeroize::Zeroizing::new(Vec::new());
+        std::io::stdin()
+            .take(4097)
+            .read_to_end(&mut raw)
+            .map_err(|_| "invalid_recovery_input")?;
+        if raw.len() > 4096 {
+            return Err(Failure::from("invalid_recovery_input"));
+        }
+        let input = roisey_else::validation::json(&raw).map_err(|_| "invalid_recovery_input")?;
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .enable_all()
+            .build()
+            .map_err(|_| "runtime_failed")?;
+        runtime
+            .block_on(roisey_else::administration::recover_email(&db, input))
+            .map_err(|e| e.code())?;
+        println!("Registered mailbox changed; previous sessions and pending codes revoked.");
+        return Ok(());
+    }
     if command == "bootstrap" {
         #[derive(Deserialize)]
         #[serde(deny_unknown_fields)]
         struct Input {
             email: String,
             display_name: String,
-            password: String,
         }
         let mut data = zeroize::Zeroizing::new(Vec::new());
         std::io::stdin()
@@ -136,7 +164,7 @@ fn run() -> Result<(), Failure> {
             .map_err(|_| "runtime_failed")?;
         let auth = Auth::new(db).map_err(|e| e.code())?;
         runtime
-            .block_on(auth.bootstrap(input.email, input.display_name, input.password))
+            .block_on(auth.bootstrap(input.email, input.display_name))
             .map_err(|e| e.code())?;
         println!("Initial administrator created.");
         return Ok(());
@@ -192,6 +220,24 @@ fn serve(config: Config) -> Result<(), Failure> {
         .map_err(|e| Failure::domain("keyring", "keyring_initialization_failed", e))?;
     drop(key_connection);
     tracing::info!("keyring_ready");
+    let otp = roisey_else::auth::otp::Otp {
+        db: db.clone(),
+        ring: ring.clone(),
+        policy: config.otp_policy.clone(),
+        enabled: config.smtp.is_some(),
+    };
+    let mail_worker = config
+        .smtp
+        .clone()
+        .map(|smtp| roisey_else::auth::mail::Worker::new(otp.clone(), smtp))
+        .transpose()
+        .map_err(|e| Failure::domain("email", "email_initialization_failed", e))?;
+    if mail_worker.is_none() {
+        tracing::warn!(
+            error_code = "email_not_configured",
+            "auth_email_unavailable"
+        );
+    }
     let vault = roisey_else::vault::Vault::new(db.clone(), ring.clone());
     let synchronization =
         roisey_else::synchronization::Synchronization::new(db.clone(), vault.clone(), ring);
@@ -212,6 +258,7 @@ fn serve(config: Config) -> Result<(), Failure> {
                 config: config.clone(),
                 db,
                 auth,
+                otp,
                 vault,
                 synchronization,
                 report_cache,
@@ -235,6 +282,12 @@ fn serve(config: Config) -> Result<(), Failure> {
     let mut server = Server::new_with_opt_and_conf(None, conf);
     server.bootstrap();
     server.add_service(listener);
+    if let Some(worker) = mail_worker {
+        server.add_service(pingora_core::services::background::background_service(
+            "authentication_mail",
+            worker,
+        ));
+    }
     server.add_service(pingora_core::services::background::background_service(
         "provider_sync",
         worker,

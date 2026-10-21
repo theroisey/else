@@ -34,6 +34,11 @@ const json = (status: number, body: unknown) =>
 const unauthorized = () =>
   json(401, { error: { code: 'authentication_required' } })
 
+const challengeResponse = () =>
+  json(202, {
+    data: { challenge_id: 'a'.repeat(43), expires_in: 180, resend_after: 60 },
+  })
+
 // Session lifecycle is independent of the operational landing query.
 function renderApp(path = '/app/portfolio') {
   const client = createQueryClient()
@@ -53,19 +58,20 @@ afterEach(() => {
 })
 
 describe('cookie session UI', () => {
-  it('keeps typing outside React state and clears the password before transport', async () => {
+  it('keeps typing outside React state and clears the code before transport', async () => {
     let commits = 0
     let clearedAtTransport = false
     vi.stubGlobal(
       'fetch',
       vi.fn((input: RequestInfo | URL) => {
-        if (String(input).endsWith('/api/v1/auth/login')) {
+        if (String(input).endsWith('/api/v1/auth/otp/verify')) {
           clearedAtTransport =
-            (screen.getByLabelText('Password') as HTMLInputElement).value === ''
-          return Promise.resolve(
-            json(401, { error: { code: 'invalid_credentials' } }),
-          )
+            (screen.getByLabelText('Verification code') as HTMLInputElement)
+              .value === ''
+          return Promise.resolve(json(401, { error: { code: 'invalid_code' } }))
         }
+        if (String(input).endsWith('/api/v1/auth/otp/request'))
+          return Promise.resolve(challengeResponse())
         return Promise.resolve(unauthorized())
       }),
     )
@@ -90,15 +96,20 @@ describe('cookie session UI', () => {
       screen.getByLabelText('Email'),
       'synthetic.fixture@example.com',
     )
-    await user.type(screen.getByLabelText('Password'), 'synthetic input only')
     expect(commits).toBe(baseline)
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument()
     await user.click(
-      screen.getByRole('button', { name: 'Sign in' }),
+      screen.getByRole('button', { name: 'Continue with email' }),
     )
+    await screen.findByLabelText('Verification code')
+    const codeBaseline = commits
+    await user.type(screen.getByLabelText('Verification code'), '042817')
+    expect(commits).toBe(codeBaseline)
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }))
     expect(clearedAtTransport).toBe(true)
-    expect(screen.getByLabelText('Password')).toHaveValue('')
+    expect(screen.getByLabelText('Verification code')).toHaveValue('')
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Email or password is incorrect.',
+      'The code is incorrect or no longer available. Request a new code if needed.',
     )
   })
   it('hides protected content while checking and redirects unauthenticated deep links', async () => {
@@ -126,37 +137,40 @@ describe('cookie session UI', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })
 
-  it('validates inputs, clears passwords after attempts and uses safe generic failures', async () => {
+  it('validates inputs, clears codes after attempts and uses safe generic failures', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(unauthorized())
+      .mockResolvedValueOnce(challengeResponse())
       .mockResolvedValue(
         json(401, {
-          error: { code: 'invalid_credentials', message: 'unsafe-test-secret' },
+          error: { code: 'invalid_code', message: 'unsafe-test-secret' },
         }),
       )
     vi.stubGlobal('fetch', fetchMock)
     renderApp('/login')
     await screen.findByRole('heading', { name: 'Sign in' })
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Continue with email' }),
+    )
     expect(screen.getByRole('textbox', { name: 'Email' })).toHaveFocus()
     expect(fetchMock).toHaveBeenCalledTimes(1)
     await user.type(
       screen.getByLabelText('Email'),
       'browser.fixture@example.com',
     )
-    await user.type(
-      screen.getByLabelText('Password'),
-      'synthetic fixture password',
+    await user.click(
+      screen.getByRole('button', { name: 'Continue with email' }),
     )
-    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+    await user.type(await screen.findByLabelText('Verification code'), '042817')
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Email or password is incorrect.',
+      'The code is incorrect or no longer available. Request a new code if needed.',
     )
-    expect(screen.getByLabelText('Password')).toHaveValue('')
+    expect(screen.getByLabelText('Verification code')).toHaveValue('')
     expect(screen.queryByText('unsafe-test-secret')).not.toBeInTheDocument()
-    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({
       credentials: 'same-origin',
       cache: 'no-store',
       redirect: 'error',
@@ -171,17 +185,18 @@ describe('cookie session UI', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(unauthorized())
+      .mockResolvedValueOnce(challengeResponse())
       .mockResolvedValue(json(200, { data: identity }))
     vi.stubGlobal('fetch', fetchMock)
     const client = renderApp('/app/portfolio')
     await screen.findByRole('heading', { name: 'Sign in' })
     const user = userEvent.setup()
     await user.type(screen.getByLabelText('Email'), identity.user.email)
-    await user.type(
-      screen.getByLabelText('Password'),
-      'synthetic fixture password',
+    await user.click(
+      screen.getByRole('button', { name: 'Continue with email' }),
     )
-    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+    await user.type(await screen.findByLabelText('Verification code'), '042817')
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }))
     expect(
       await screen.findByRole('heading', { name: 'Operations workspace' }),
     ).toBeInTheDocument()

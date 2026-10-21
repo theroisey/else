@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Bounded 500-client/100-user rehearsal against the exact image, never live data."""
 import argparse
+from otp_fixture import MailFixture
 from concurrent.futures import ThreadPoolExecutor
 import http.client
 import json
@@ -84,12 +85,14 @@ def run(args):
             selected.bind(("127.0.0.1", 0))
             port = selected.getsockname()[1]
         origin = f"http://127.0.0.1:{port}"
+        mail=MailFixture(container_mode=True)
         created = False
         try:
             docker("run", "--detach", "--name", name, "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777", "--cap-drop=ALL", "--security-opt=no-new-privileges",
                    "--memory=256m", "--cpus=2", "--user", f"{os.getuid()}:{os.getgid()}", "--publish", f"127.0.0.1:{port}:8080",
                    "--mount", f"type=bind,src={directory},dst=/testdata", "-e", "DATABASE_PATH=/testdata/else.sqlite3",
-                   "-e", "AUTH_PUBLIC_ORIGIN=" + origin, "-e", "AUTH_COOKIE_SECURE=false", args.image, stdout=subprocess.DEVNULL)
+                   "-e", "AUTH_PUBLIC_ORIGIN=" + origin, "-e", "AUTH_COOKIE_SECURE=false", "-e", "AUTH_OTP_PEER_REQUESTS=150",
+                   *[item for key,value in mail.environment.items() for item in ("-e",key+"="+value)], args.image, stdout=subprocess.DEVNULL)
             created = True
             deadline = time.monotonic() + 30
             while True:
@@ -105,17 +108,23 @@ def run(args):
                     pass
                 assert time.monotonic() < deadline, "capacity runtime readiness timed out"
                 time.sleep(0.05)
+            mail.start(name,"/testdata")
             sessions = []
             for user in range(1, 101):
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
-                body = json.dumps({"email": f"capacity.{user}@example.com", "password": "clearly synthetic browser password"})
-                connection.request("POST", "/api/v1/auth/login", body, {"Content-Type": "application/json", "Origin": origin})
-                response = connection.getresponse()
-                assert response.status == 200, "capacity synthetic login failed"
-                cookies = [value.split(";", 1)[0] for key, value in response.getheaders() if key.lower() == "set-cookie"]
-                response.read()
-                connection.close()
-                sessions.append(("; ".join(cookies), next(value.split("=", 1)[1] for value in cookies if value.startswith("else_csrf="))))
+                body=json.dumps({"email":f"capacity.{user}@example.com"})
+                connection.request("POST","/api/v1/auth/otp/request",body,{"Content-Type":"application/json","Origin":origin})
+                response=connection.getresponse()
+                assert response.status==202,"capacity synthetic code request failed"
+                challenge=json.loads(response.read())["data"]["challenge_id"]
+                binding="; ".join(value.split(";",1)[0] for key,value in response.getheaders() if key.lower()=="set-cookie")
+                code=mail.code(f"capacity.{user}@example.com")
+                connection.request("POST","/api/v1/auth/otp/verify",json.dumps({"challenge_id":challenge,"code":code}),{"Content-Type":"application/json","Origin":origin,"Cookie":binding})
+                response=connection.getresponse()
+                assert response.status==200,"capacity synthetic OTP verification failed"
+                cookies=[value.split(";",1)[0] for key,value in response.getheaders() if key.lower()=="set-cookie"]
+                response.read();connection.close()
+                sessions.append(("; ".join(cookies),next(value.split("=",1)[1] for value in cookies if value.startswith("else_csrf="))))
             barrier = threading.Barrier(100, timeout=15)
             root = "/api/v1/clients/" + CLIENT
             paths = ["/api/v1/clients?limit=25", "/api/v1/today", "/api/v1/tasks?limit=25&status=active", root + "/overview", root + "/tasks?limit=25", root + "/reminders?limit=25",

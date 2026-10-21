@@ -69,7 +69,10 @@ function setup(
   const fetcher = vi.fn((url: string, init: RequestInit = {}) => {
     const custom = override(url, init)
     if (custom) return Promise.resolve(custom)
-    if (url.startsWith('/api/v1/notifications?') || url === '/api/v1/auth/preferences')
+    if (
+      url.startsWith('/api/v1/notifications?') ||
+      url === '/api/v1/auth/preferences'
+    )
       return Promise.resolve(json({ data: { locale: null } }))
     if (url === '/api/v1/auth/session')
       return Promise.resolve(json({ data: session }))
@@ -129,7 +132,9 @@ it('denies deep links and avoids administration requests without the exact view 
   expect(
     fetcher.mock.calls.every(
       ([path]) =>
-        path === '/api/v1/auth/session' || path.startsWith('/api/v1/notifications?') || path === '/api/v1/auth/preferences',
+        path === '/api/v1/auth/session' ||
+        path.startsWith('/api/v1/notifications?') ||
+        path === '/api/v1/auth/preferences',
     ),
   ).toBe(true)
   expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument()
@@ -236,7 +241,7 @@ it('moves between bounded pages using the server cursor and restores the previou
   ).toBeInTheDocument()
 })
 
-it('validates creation and clears the password after a failed request without caching it', async () => {
+it('creates accounts without passwords and preserves identity input after a failed request', async () => {
   const { client, fetcher } = setup('/app/users', identity, (path, init) =>
     path === '/api/v1/users' && init?.method === 'POST'
       ? json(
@@ -255,13 +260,17 @@ it('validates creation and clears the password after a failed request without ca
   )
   await u.type(dialog.getByLabelText('Display name'), 'Created Fixture')
   await u.type(dialog.getByLabelText('Email'), 'created@example.com')
-  await u.type(
-    dialog.getByLabelText('Initial password'),
-    'clearly synthetic test password',
-  )
   await u.click(dialog.getByRole('button', { name: 'Create account' }))
   expect(await dialog.findByRole('alert')).toHaveTextContent('record changed')
-  expect(dialog.getByLabelText('Initial password')).toHaveValue('')
+  expect(dialog.queryByLabelText('Initial password')).not.toBeInTheDocument()
+  expect(dialog.getByLabelText('Email')).toHaveValue('created@example.com')
+  const creation = fetcher.mock.calls.find(
+    ([, init]) => init?.method === 'POST',
+  )
+  expect(JSON.parse(String(creation?.[1]?.body))).toEqual({
+    email: 'created@example.com',
+    display_name: 'Created Fixture',
+  })
   expect(
     JSON.stringify(
       client
@@ -362,13 +371,11 @@ it('keeps built-in role definitions read only even for a role administrator', as
       ? json(page([{ ...role, system_role: true }]))
       : undefined,
   )
-  await userEvent
-    .setup()
-    .click(
-      await screen.findByRole('button', {
-        name: 'View permissions for Custom Viewer',
-      }),
-    )
+  await userEvent.setup().click(
+    await screen.findByRole('button', {
+      name: 'View permissions for Custom Viewer',
+    }),
+  )
   const checkbox = await screen.findByRole('checkbox', { name: /clients.view/ })
   expect(checkbox).toBeDisabled()
   expect(
