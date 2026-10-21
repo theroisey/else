@@ -1,6 +1,7 @@
 # Optional overlay for the existing Else service. Provision the external INTERNAL
 # bridge first; inspect address conflicts and both projects' effective networks.
 # Do not combine with the credential-file SMTP overlay.
+# Keep `default` only if Else already uses it; retain all existing explicit nets.
 services:
   else:
     environment:

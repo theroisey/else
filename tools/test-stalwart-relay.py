@@ -66,7 +66,7 @@ if case=='public':
 elif case in ('unauthorized','plaintext','sender','null-sender'):
  code,_=c.mail('' if case=='null-sender' else 'forged@example.test' if case=='sender' else 'noreply@example.test')
  assert code>=400
-elif case=='proxy':
+elif case in ('proxy','trusted-proxy'):
  c.close()
  with socket.create_connection((host,10025),timeout=5) as raw:
   raw.recv(1024)
@@ -188,6 +188,7 @@ def run(args):
             client("plaintext")
             client("unauthorized",ip=unauthorized)
             client("proxy",ip=unauthorized)
+            client("trusted-proxy")
             client("limits")
             client("oversize")
             client("concurrency")

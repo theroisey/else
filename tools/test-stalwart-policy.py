@@ -28,6 +28,7 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(listener["bind"],{"10.200.44.2:10025":True})
         self.assertTrue(listener["useTls"])
         self.assertFalse(listener["tlsImplicit"])
+        self.assertEqual(listener["overrideProxyTrustedNetworks"],{"::1/128":True})
     def test_refuses_unsupported_version_and_unsafe_identities(self):
         for source,server,sender,version in [
             ("8.8.8.8","10.0.0.2","noreply@example.test",policy.VERSION),

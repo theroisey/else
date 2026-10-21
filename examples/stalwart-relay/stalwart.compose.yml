@@ -1,6 +1,8 @@
 # Apply in the SEPARATE Stalwart project after changing this service key to its
 # existing service name. Keep every existing explicit network in effective config.
 # There is deliberately no image, volume, environment or ports replacement here.
+# Keep `default` only if this service already uses it; existing explicit nets
+# remain inherited from its base Compose configuration.
 services:
   stalwart:
     networks:

@@ -59,8 +59,9 @@ def generate(existing, source, server, sender, version):
         "NetworkListener": {
             "name":LISTENER, "bind":{f"{server}:10025":True}, "protocol":"smtp",
             "useTls":True, "tlsImplicit":False, "tlsTimeout":10000, "maxConnections":2,
-            # A nonempty override avoids inheriting broadly trusted PROXY sources.
-            "overrideProxyTrustedNetworks":{"192.0.2.1/32":True},
+            # Empty means inheritance in this release. An IPv4-bound listener
+            # cannot have an IPv6 loopback peer, so no actual source is trusted.
+            "overrideProxyTrustedNetworks":{"::1/128":True},
         },
         "MtaInboundThrottle": {
             "enable":True, "description":"Else dedicated connection budget",
